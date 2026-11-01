@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Forge.Data.Records;
+using Forge.EditorApp.Tools;
 using UnityEngine;
 
 namespace Forge.EditorApp
@@ -53,14 +54,22 @@ namespace Forge.EditorApp
             var world = session.World;
             GUILayout.Label($"<b>Forge Editor</b>  —  {session.ActivePluginId}{(session.IsDirty ? " *" : "")}", RichLabel());
 
-            GUILayout.Label("Palette (1-9)");
+            var selecting = _context.ActiveTool == ToolKind.Select;
+            if (GUILayout.Toggle(selecting, selecting ? "Select / Move  ◀" : "Select / Move (Esc)", GUI.skin.button) && !selecting)
+                _context.ActiveTool = ToolKind.Select;
+            GUILayout.Label($"Selected: {_context.Selection.Count}");
+
+            GUILayout.Label("Place (1-9)");
             var palette = world.Records.OfType<BaseObjectRecord>().OrderBy(r => r.Id).ToList();
             for (var i = 0; i < palette.Count; i++)
             {
-                var selected = palette[i].Id == _context.SelectedBaseId;
-                var label = $"{(i < 9 ? (i + 1) + ". " : "")}{palette[i].DisplayName}{(selected ? "  ◀" : "")}";
-                if (GUILayout.Toggle(selected, label, GUI.skin.button) && !selected)
+                var active = !selecting && palette[i].Id == _context.SelectedBaseId;
+                var label = $"{(i < 9 ? (i + 1) + ". " : "")}{palette[i].DisplayName}{(active ? "  ◀" : "")}";
+                if (GUILayout.Toggle(active, label, GUI.skin.button) && !active)
+                {
                     _context.SelectedBaseId = palette[i].Id;
+                    _context.ActiveTool = ToolKind.Place;
+                }
             }
 
             GUILayout.Space(6f);
@@ -85,7 +94,10 @@ namespace Forge.EditorApp
             GUILayout.Label(_context.Status);
 
             GUILayout.Space(6f);
-            GUILayout.Label("Click: place   Del: delete under cursor\nRight-drag: look   WASD/QE: fly   Shift: fast");
+            GUILayout.Label(
+                "Select: click / Shift+click, drag gizmo arrows or center ball\n" +
+                "Del: delete selection   Esc: cancel / deselect\n" +
+                "Hold right mouse: look + WASD/QE fly, Shift fast");
 
             GUILayout.EndVertical();
             if (Event.current.type == EventType.Repaint)

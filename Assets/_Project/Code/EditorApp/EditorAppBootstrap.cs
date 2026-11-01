@@ -29,20 +29,23 @@ namespace Forge.EditorApp
 
         // Runtime-only state; see EditorOverlay for why these are [NonSerialized].
         [NonSerialized] WorldView _view;
-        [NonSerialized] EditSession _session;
+        [NonSerialized] EditorContext _context;
+        [NonSerialized] SelectionHighlighter _highlighter;
 
         void Start()
         {
             try
             {
-                var context = CreateContext();
-                _session = context.Session;
+                _context = CreateContext();
                 _view = new WorldView(transform, new PrimitiveAssetCatalog());
-                _view.Sync(_session.World.Records);
-                _session.WorldChanged += OnWorldChanged;
+                _view.Sync(_context.Session.World.Records);
+                _highlighter = new SelectionHighlighter(_context.Selection, _view);
 
-                _controller.Initialize(context);
-                _overlay.Initialize(context);
+                _context.Session.WorldChanged += OnWorldChanged;
+                _context.Selection.Changed += _highlighter.Refresh;
+
+                _controller.Initialize(_context, _view);
+                _overlay.Initialize(_context);
             }
             catch (Exception ex) when (ex is DataValidationException || ex is IOException)
             {
@@ -53,12 +56,22 @@ namespace Forge.EditorApp
 
         void OnDestroy()
         {
-            if (_session != null)
-                _session.WorldChanged -= OnWorldChanged;
+            if (_context != null)
+            {
+                _context.Session.WorldChanged -= OnWorldChanged;
+                _context.Selection.Changed -= _highlighter.Refresh;
+            }
+
             _view?.Dispose();
         }
 
-        void OnWorldChanged(ResolvedWorld world) => _view.Sync(world.Records);
+        // Order matters: rebuild the scene, drop selections of vanished records, then re-tint.
+        void OnWorldChanged(ResolvedWorld world)
+        {
+            _view.Sync(world.Records);
+            _context.Selection.Prune(world.Records);
+            _highlighter.Refresh();
+        }
 
         EditorContext CreateContext()
         {

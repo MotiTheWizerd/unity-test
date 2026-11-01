@@ -126,6 +126,12 @@ one in the active plugin.
 - `IsDirty` compares the current state id with the id saved by `MarkSaved`, so undoing
   back to the saved point clears the dirty flag.
 - History is capped (`UndoHistory.DefaultCapacity` = 256). Making a new edit clears redo.
+- `Selection` is an ordered set of record ids. It's pruned after every world change, so
+  undoing a placement or deleting a record drops it from the selection.
+- `ObjectEdits.Move/Delete` act on any number of placed objects as one undo step.
+  Moving a master's object creates an override in the active plugin.
+- `Geometry.DragMath` holds the engine-free ray math for translate handles
+  (axis projection, plane intersection).
 
 ## Runtime editor (Forge.EditorApp)
 
@@ -134,9 +140,20 @@ one in the active plugin.
   then wires `EditSession` → `WorldView` → tools and UI through a shared `EditorContext`.
 - `WorldView.Sync(store)` diffs by record reference (records are immutable), so only
   changed records are rebuilt. `RecordLink` maps scene objects back to record ids.
-- Controls: click places the selected palette item, Del deletes the placed object under
-  the cursor, 1–9 select from the palette, Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) undo and
-  redo, Ctrl+S saves, right-drag + WASD/QE flies the camera.
+- **Tools** (`Tools/IEditorTool`): exactly one is active, chosen through `EditorContext.ActiveTool`.
+  `EditorController` handles global shortcuts and passes a filtered `ToolInput` to the
+  active tool. Clicks over the UI panel and while the right mouse button is held are removed.
+  - `SelectMoveTool`: click / Shift+click to select. Drag a gizmo arrow (axis) or the center ball
+    (horizontal plane). The drag previews on the scene objects and commits one
+    `ObjectEdits.Move` on release; Esc cancels and resets the preview. Del deletes the selection.
+  - `PlaceTool`: click a surface to place the palette object, which becomes the selection. Esc returns to Select.
+- `ScenePicker` owns all raycasts. Gizmo handles live on the **`ForgeGizmo`** layer
+  (TagManager), so world picks and handle picks never interfere.
+- `TranslateGizmo` is built from primitives, tinted with property blocks and sized to the
+  camera distance. `SelectionHighlighter` tints selected objects (property blocks, so shared
+  materials are never touched).
+- Controls: 1–9 or the palette → Place tool; Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
+  (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly.
 - Runtime-only fields on MonoBehaviours are `[NonSerialized]` (see CLAUDE.md, play-mode reload).
 
 ---
@@ -184,4 +201,5 @@ and the condition for removing it, and is listed here.
 | `Data.Json/Converters.cs` `HeightFieldConverter` | Terrain heights embedded in plugin JSON as base64 | Keeps a plugin a single file for the walking skeleton | Plugins become packages (folder/zip) with binary side files for heightmaps and assets |
 | `Editing/EditSession.cs` `Resolve` | Whole load order re-resolved on every edit | Simple and obviously correct at prototype scale | Edits feel slow on large worlds → incremental resolution |
 | `EditorApp/EditorOverlay.cs` | Immediate-mode GUI (OnGUI) panel | Fastest way to a usable skeleton | Editor UI design (Phase 4) → UI Toolkit |
+| `EditorApp/Gizmos/TranslateGizmo.cs` | Gizmo uses the default lit material, so terrain can hide it | No custom always-on-top shader yet | Gizmo occlusion bothers users → overlay shader or a separate camera layer |
 | `EditorApp/EditorController.cs` | Input read by polling devices, not an Input Actions asset | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset |

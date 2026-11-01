@@ -29,6 +29,27 @@ namespace Forge.World
 
         public int PresentedCount => _presented.Count;
 
+        /// <summary>The scene object presenting <paramref name="id"/>, if any.</summary>
+        public bool TryGetObject(RecordId id, out GameObject gameObject)
+        {
+            var found = _presented.TryGetValue(id, out var presented);
+            gameObject = found ? presented.GameObject : null;
+            return found;
+        }
+
+        /// <summary>
+        /// Snaps placed objects back to their record transforms, discarding any
+        /// preview a tool applied directly to the scene (e.g. a cancelled drag).
+        /// </summary>
+        public void ResetTransforms(IEnumerable<RecordId> ids)
+        {
+            foreach (var id in ids ?? Enumerable.Empty<RecordId>())
+            {
+                if (_presented.TryGetValue(id, out var presented) && presented.Record is PlacedObjectRecord placed)
+                    ApplyTransform(presented.GameObject.transform, placed);
+            }
+        }
+
         public void Sync(IRecordStore store)
         {
             if (store == null)
@@ -91,10 +112,15 @@ namespace Forge.World
 
             var go = _catalog.Instantiate(baseRecord?.AssetKey, _root);
             go.name = placed.Id.ToString();
-            go.transform.localPosition = placed.Position.ToUnity();
-            go.transform.localRotation = placed.Rotation.ToUnity();
-            go.transform.localScale = Vector3.one * placed.Scale;
+            ApplyTransform(go.transform, placed);
             return go;
+        }
+
+        static void ApplyTransform(Transform transform, PlacedObjectRecord placed)
+        {
+            transform.localPosition = placed.Position.ToUnity();
+            transform.localRotation = placed.Rotation.ToUnity();
+            transform.localScale = Vector3.one * placed.Scale;
         }
 
         void Remove(RecordId id)
