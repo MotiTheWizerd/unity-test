@@ -1,0 +1,16 @@
+{
+    "name": "Forge.Data",
+    "rootNamespace": "Forge.Data",
+    "references": [
+        "Forge.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}
