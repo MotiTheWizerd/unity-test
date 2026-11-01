@@ -6,6 +6,7 @@ using Forge.Data.Records;
 using Forge.Data.Serialization;
 using Forge.EditorApp.Tools;
 using Forge.Editing;
+using Forge.Editing.Terrain;
 
 namespace Forge.EditorApp
 {
@@ -17,6 +18,8 @@ namespace Forge.EditorApp
     public sealed class EditorContext
     {
         readonly PluginFileStore _activeStore;
+        float _brushRadius = 8f;
+        float _brushStrength = 0.5f;
 
         public EditorContext(EditSession session, PluginFileStore activeStore)
         {
@@ -36,6 +39,24 @@ namespace Forge.EditorApp
 
         /// <summary>Base object the place tool creates.</summary>
         public RecordId SelectedBaseId { get; set; }
+
+        public BrushMode BrushMode { get; set; } = BrushMode.Raise;
+
+        /// <summary>Brush radius in meters; clamped to the brush's valid range.</summary>
+        public float BrushRadius
+        {
+            get => _brushRadius;
+            set => _brushRadius = Math.Max(BrushSettings.MinRadius, Math.Min(BrushSettings.MaxRadius, value));
+        }
+
+        /// <summary>Brush strength in (0, 1]; clamped.</summary>
+        public float BrushStrength
+        {
+            get => _brushStrength;
+            set => _brushStrength = Math.Max(0.05f, Math.Min(1f, value));
+        }
+
+        public BrushSettings CurrentBrush() => new BrushSettings(BrushMode, BrushRadius, BrushStrength);
 
         public string Status { get; private set; }
 

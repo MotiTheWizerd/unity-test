@@ -7,5 +7,8 @@ namespace Forge.EditorApp.Tools
 
         /// <summary>Click on a surface to place the selected palette object.</summary>
         Place,
+
+        /// <summary>Paint on the terrain to raise, lower, flatten or smooth it.</summary>
+        Sculpt,
     }
 }

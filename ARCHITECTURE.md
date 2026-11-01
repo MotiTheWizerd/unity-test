@@ -109,6 +109,8 @@ one in the active plugin.
 - Conflict awareness only checks *direct* masters, not transitive ones.
 - Two namespaces defining the same chunk coordinate: the world view shows the
   lowest id and logs a warning.
+- Sculpting doesn't move placed objects, so they can float or sink after terrain edits
+  (no "drop to ground" yet). Sculpting only edits existing chunks and never creates new ones.
 
 ---
 
@@ -132,14 +134,24 @@ one in the active plugin.
   Moving a master's object creates an override in the active plugin.
 - `Geometry.DragMath` holds the engine-free ray math for translate handles
   (axis projection, plane intersection).
+- **Terrain sculpting** (`Editing/Terrain`): a `SculptStroke` snapshots the terrain and
+  keeps a working copy. Dabs (`BrushSettings`: Raise / Lower / Flatten / Smooth, radius,
+  strength, smoothstep falloff) run on the **global sample grid**: pass 1 computes every
+  new height from the pre-dab state, pass 2 writes each sample into *every* chunk that
+  shares it. That's why chunk seams can't open. `TerrainEdits.Commit` writes the changed
+  chunks as one undo step, as overrides of the master's chunk records.
+- Tool pattern for long gestures (move drag, sculpt stroke): **preview on the scene, commit
+  one edit on release, reset the preview on cancel or failure**. The session is never touched mid-gesture.
 
 ## Runtime editor (Forge.EditorApp)
 
 - `EditorAppBootstrap` is the composition root. It loads base plugins from StreamingAssets and the
   active plugin from the user folder (or creates it with all base plugins as masters),
   then wires `EditSession` → `WorldView` → tools and UI through a shared `EditorContext`.
-- `WorldView.Sync(store)` diffs by record reference (records are immutable), so only
-  changed records are rebuilt. `RecordLink` maps scene objects back to record ids.
+- `WorldView.Sync(store)` diffs by record reference (records are immutable): unchanged →
+  skipped, record changed → **updated in place** (transform / terrain heights), dependency
+  (e.g. base object) changed → rebuilt. `RecordLink` maps scene objects back to record ids.
+  `PreviewTerrain`/`ResetTerrain` and `ResetTransforms` support tool previews.
 - **Tools** (`Tools/IEditorTool`): exactly one is active, chosen through `EditorContext.ActiveTool`.
   `EditorController` handles global shortcuts and passes a filtered `ToolInput` to the
   active tool. Clicks over the UI panel and while the right mouse button is held are removed.
@@ -147,6 +159,9 @@ one in the active plugin.
     (horizontal plane). The drag previews on the scene objects and commits one
     `ObjectEdits.Move` on release; Esc cancels and resets the preview. Del deletes the selection.
   - `PlaceTool`: click a surface to place the palette object, which becomes the selection. Esc returns to Select.
+  - `SculptTool` (B): hold left mouse on the terrain. Dabs fire at a fixed 30/s (independent of
+    frame rate, capped per frame) and preview live, and the stroke commits on release. `[` / `]`
+    change the radius. `BrushCursor` draws a ring that follows the ground, colored by mode.
 - `ScenePicker` owns all raycasts. Gizmo handles live on the **`ForgeGizmo`** layer
   (TagManager), so world picks and handle picks never interfere.
 - `TranslateGizmo` is built from primitives, tinted with property blocks and sized to the

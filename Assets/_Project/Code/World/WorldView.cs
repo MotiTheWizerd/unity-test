@@ -13,13 +13,14 @@ namespace Forge.World
     /// <summary>
     /// Presents a record store in the scene and keeps it in sync. Records are
     /// immutable, so a changed record is simply a different instance: Sync only
-    /// rebuilds what actually changed.
+    /// touches what actually changed, updating objects in place where possible.
     /// </summary>
     public sealed class WorldView : IDisposable
     {
         readonly Transform _root;
         readonly IAssetCatalog _catalog;
         readonly Dictionary<RecordId, Presented> _presented = new Dictionary<RecordId, Presented>();
+        readonly Dictionary<ChunkCoord, RecordId> _chunks = new Dictionary<ChunkCoord, RecordId>();
 
         public WorldView(Transform root, IAssetCatalog catalog)
         {
@@ -50,6 +51,23 @@ namespace Forge.World
             }
         }
 
+        /// <summary>Shows preview heights on a chunk without changing any record (e.g. during a sculpt stroke).</summary>
+        public void PreviewTerrain(ChunkCoord coord, HeightField heights)
+        {
+            if (_chunks.TryGetValue(coord, out var id) && _presented.TryGetValue(id, out var presented))
+                TerrainChunkBuilder.ApplyHeights(presented.GameObject, heights);
+        }
+
+        /// <summary>Restores chunks to their record heights, discarding previews.</summary>
+        public void ResetTerrain(IEnumerable<ChunkCoord> coords)
+        {
+            foreach (var coord in coords ?? Enumerable.Empty<ChunkCoord>())
+            {
+                if (_chunks.TryGetValue(coord, out var id) && _presented.TryGetValue(id, out var presented) && presented.Record is TerrainChunkRecord chunk)
+                    TerrainChunkBuilder.ApplyHeights(presented.GameObject, chunk.Heights);
+            }
+        }
+
         public void Sync(IRecordStore store)
         {
             if (store == null)
@@ -58,27 +76,31 @@ namespace Forge.World
             foreach (var id in _presented.Keys.Where(id => !store.Contains(id)).ToList())
                 Remove(id);
 
-            var claimedChunks = new Dictionary<ChunkCoord, RecordId>();
+            _chunks.Clear();
             // Ordered so duplicate-chunk resolution is deterministic.
             foreach (var record in store.All.OrderBy(r => r.Id))
             {
                 switch (record)
                 {
                     case TerrainChunkRecord chunk:
-                        if (claimedChunks.TryGetValue(chunk.Coord, out var owner))
+                        if (_chunks.TryGetValue(chunk.Coord, out var owner))
                         {
                             Debug.LogWarning($"[Forge] Terrain chunk {chunk.Coord} is defined by both '{owner}' and '{chunk.Id}'; showing '{owner}'.");
                             Remove(chunk.Id);
                             continue;
                         }
 
-                        claimedChunks.Add(chunk.Coord, chunk.Id);
-                        Present(chunk, null, () => TerrainChunkBuilder.Build(chunk, _root));
+                        _chunks.Add(chunk.Coord, chunk.Id);
+                        Present(chunk, null,
+                            () => TerrainChunkBuilder.Build(chunk, _root),
+                            go => TerrainChunkBuilder.ApplyHeights(go, chunk.Heights));
                         break;
 
                     case PlacedObjectRecord placed:
                         store.TryGet(placed.BaseId, out var baseRecord);
-                        Present(placed, baseRecord, () => BuildPlaced(placed, baseRecord as BaseObjectRecord));
+                        Present(placed, baseRecord,
+                            () => BuildPlaced(placed, baseRecord as BaseObjectRecord),
+                            go => ApplyTransform(go.transform, placed));
                         break;
                 }
             }
@@ -90,13 +112,24 @@ namespace Forge.World
                 Remove(id);
         }
 
-        // Rebuilds only when the record (or the base it depends on) is a different instance.
-        void Present(Record record, Record dependency, Func<GameObject> build)
+        // Records are immutable, so reference equality tells what changed:
+        // same record and dependency → nothing to do; only the record changed →
+        // update the existing object in place; the dependency changed → rebuild.
+        void Present(Record record, Record dependency, Func<GameObject> build, Action<GameObject> update)
         {
             if (_presented.TryGetValue(record.Id, out var current))
             {
-                if (ReferenceEquals(current.Record, record) && ReferenceEquals(current.Dependency, dependency))
+                if (ReferenceEquals(current.Dependency, dependency))
+                {
+                    if (!ReferenceEquals(current.Record, record))
+                    {
+                        update(current.GameObject);
+                        _presented[record.Id] = new Presented(record, dependency, current.GameObject);
+                    }
+
                     return;
+                }
+
                 Remove(record.Id);
             }
 

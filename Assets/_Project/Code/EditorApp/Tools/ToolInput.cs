@@ -5,9 +5,10 @@ namespace Forge.EditorApp.Tools
     /// <summary>One frame of pointer and key input, already filtered by the controller (e.g. UI hits removed).</summary>
     public readonly struct ToolInput
     {
-        public ToolInput(Ray ray, bool primaryPressed, bool primaryHeld, bool primaryReleased, bool additive, bool cancel, bool delete)
+        public ToolInput(Ray ray, bool primaryPressed, bool primaryHeld, bool primaryReleased, bool additive, bool cancel, bool delete, float deltaTime)
         {
             Ray = ray;
+            DeltaTime = deltaTime;
             PrimaryPressed = primaryPressed;
             PrimaryHeld = primaryHeld;
             PrimaryReleased = primaryReleased;
@@ -32,5 +33,8 @@ namespace Forge.EditorApp.Tools
         public bool Cancel { get; }
 
         public bool Delete { get; }
+
+        /// <summary>Seconds since the previous frame (unscaled), for time-based tools like brushes.</summary>
+        public float DeltaTime { get; }
     }
 }

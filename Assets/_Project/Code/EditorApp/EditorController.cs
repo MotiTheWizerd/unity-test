@@ -11,7 +11,7 @@ namespace Forge.EditorApp
 {
     /// <summary>
     /// Routes input: global shortcuts (Ctrl+S save, Ctrl+Z / Ctrl+Y or
-    /// Ctrl+Shift+Z undo/redo, 1-9 palette) are handled here; everything else is
+    /// Ctrl+Shift+Z undo/redo, 1-9 palette, B sculpt, [ ] brush size) are handled here; everything else is
     /// passed to the active tool. Pointer clicks over the UI panel are filtered out.
     /// </summary>
     public sealed class EditorController : MonoBehaviour
@@ -32,6 +32,7 @@ namespace Forge.EditorApp
             {
                 { ToolKind.Select, new SelectMoveTool(context, view, picker, _camera) },
                 { ToolKind.Place, new PlaceTool(context, picker) },
+                { ToolKind.Sculpt, new SculptTool(context, view, picker) },
             };
         }
 
@@ -64,7 +65,8 @@ namespace Forge.EditorApp
                 primaryReleased: mouse.leftButton.wasReleasedThisFrame,
                 additive: keyboard.shiftKey.isPressed,
                 cancel: keyboard.escapeKey.wasPressedThisFrame,
-                delete: keyboard.deleteKey.wasPressedThisFrame);
+                delete: keyboard.deleteKey.wasPressedThisFrame,
+                deltaTime: Time.unscaledDeltaTime);
 
             _tools[_activeKind.Value].Tick(input);
         }
@@ -80,6 +82,21 @@ namespace Forge.EditorApp
                 else if (keyboard.yKey.wasPressedThisFrame || (keyboard.zKey.wasPressedThisFrame && keyboard.shiftKey.isPressed))
                     _context.Redo();
                 return;
+            }
+
+            // Hold right mouse = flying; the camera owns the keyboard then.
+            if (Mouse.current.rightButton.isPressed)
+                return;
+
+            if (keyboard.bKey.wasPressedThisFrame)
+                _context.ActiveTool = ToolKind.Sculpt;
+
+            if (_context.ActiveTool == ToolKind.Sculpt)
+            {
+                if (keyboard.leftBracketKey.wasPressedThisFrame)
+                    _context.BrushRadius /= 1.25f;
+                if (keyboard.rightBracketKey.wasPressedThisFrame)
+                    _context.BrushRadius *= 1.25f;
             }
 
             var palette = _context.Session.World.Records.OfType<BaseObjectRecord>().OrderBy(r => r.Id).ToList();

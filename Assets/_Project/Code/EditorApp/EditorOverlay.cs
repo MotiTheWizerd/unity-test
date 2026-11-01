@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Forge.Data.Records;
 using Forge.EditorApp.Tools;
+using Forge.Editing.Terrain;
 using UnityEngine;
 
 namespace Forge.EditorApp
@@ -59,6 +60,8 @@ namespace Forge.EditorApp
                 _context.ActiveTool = ToolKind.Select;
             GUILayout.Label($"Selected: {_context.Selection.Count}");
 
+            DrawSculptSection();
+
             GUILayout.Label("Place (1-9)");
             var palette = world.Records.OfType<BaseObjectRecord>().OrderBy(r => r.Id).ToList();
             for (var i = 0; i < palette.Count; i++)
@@ -97,6 +100,7 @@ namespace Forge.EditorApp
             GUILayout.Label(
                 "Select: click / Shift+click, drag gizmo arrows or center ball\n" +
                 "Del: delete selection   Esc: cancel / deselect\n" +
+                "B: sculpt (hold left mouse)   [ ]: brush size\n" +
                 "Hold right mouse: look + WASD/QE fly, Shift fast");
 
             GUILayout.EndVertical();
@@ -107,6 +111,29 @@ namespace Forge.EditorApp
             }
 
             GUILayout.EndArea();
+        }
+
+        void DrawSculptSection()
+        {
+            var sculpting = _context.ActiveTool == ToolKind.Sculpt;
+            if (GUILayout.Toggle(sculpting, sculpting ? "Sculpt terrain  ◀" : "Sculpt terrain (B)", GUI.skin.button) && !sculpting)
+                _context.ActiveTool = ToolKind.Sculpt;
+            if (!sculpting)
+                return;
+
+            GUILayout.BeginHorizontal();
+            foreach (BrushMode mode in Enum.GetValues(typeof(BrushMode)))
+            {
+                if (GUILayout.Toggle(_context.BrushMode == mode, mode.ToString(), GUI.skin.button))
+                    _context.BrushMode = mode;
+            }
+
+            GUILayout.EndHorizontal();
+            GUILayout.Label($"Radius: {_context.BrushRadius:0.0} m   ([ ] keys)");
+            _context.BrushRadius = GUILayout.HorizontalSlider(_context.BrushRadius, BrushSettings.MinRadius, 32f);
+            GUILayout.Label($"Strength: {_context.BrushStrength:0.00}");
+            _context.BrushStrength = GUILayout.HorizontalSlider(_context.BrushStrength, 0.05f, 1f);
+            GUILayout.Space(4f);
         }
 
         static GUIStyle RichLabel() => new GUIStyle(GUI.skin.label) { richText = true };

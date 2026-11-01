@@ -49,6 +49,23 @@ namespace Forge.EditorApp.Tools
         public bool TryPickWorld(Ray ray, out RaycastHit hit) =>
             Physics.Raycast(ray, out hit, _maxDistance, _worldMask);
 
+        /// <summary>Nearest terrain hit, looking through any placed objects in front of it.</summary>
+        public bool TryPickTerrain(Ray ray, out RaycastHit hit)
+        {
+            hit = default;
+            var found = false;
+            foreach (var candidate in Physics.RaycastAll(ray, _maxDistance, _worldMask))
+            {
+                if (candidate.collider is TerrainCollider && (!found || candidate.distance < hit.distance))
+                {
+                    hit = candidate;
+                    found = true;
+                }
+            }
+
+            return found;
+        }
+
         /// <summary>The placed object under the ray, if the first world hit is one.</summary>
         public bool TryPickPlacedObject(Ray ray, IRecordStore records, out RecordId id)
         {
