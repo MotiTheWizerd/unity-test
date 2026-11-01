@@ -35,6 +35,18 @@ namespace Forge.EditorApp
 
         public void Report(string message) => Status = message;
 
+        public void Undo()
+        {
+            var description = Session.UndoDescription;
+            Report(Session.Undo() ? $"Undid: {description}" : "Nothing to undo");
+        }
+
+        public void Redo()
+        {
+            var description = Session.RedoDescription;
+            Report(Session.Redo() ? $"Redid: {description}" : "Nothing to redo");
+        }
+
         /// <summary>Saves the active plugin; failures are reported, not thrown, so any UI can call it.</summary>
         public bool Save()
         {

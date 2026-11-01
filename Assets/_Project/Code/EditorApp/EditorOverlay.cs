@@ -64,6 +64,18 @@ namespace Forge.EditorApp
             }
 
             GUILayout.Space(6f);
+            GUILayout.BeginHorizontal();
+            GUI.enabled = session.CanUndo;
+            if (GUILayout.Button("Undo (Ctrl+Z)"))
+                _context.Undo();
+            GUI.enabled = session.CanRedo;
+            if (GUILayout.Button("Redo (Ctrl+Y)"))
+                _context.Redo();
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
+            if (session.CanUndo)
+                GUILayout.Label($"Undo: {session.UndoDescription}");
+
             if (GUILayout.Button(session.IsDirty ? "Save (Ctrl+S) *" : "Save (Ctrl+S)"))
                 _context.Save();
 

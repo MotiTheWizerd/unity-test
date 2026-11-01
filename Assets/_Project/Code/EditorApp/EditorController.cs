@@ -11,7 +11,8 @@ namespace Forge.EditorApp
     /// <summary>
     /// Translates input into edits: click places the selected object on the
     /// surface under the cursor, Delete removes the object under the cursor,
-    /// 1-9 picks from the palette, Ctrl+S saves.
+    /// 1-9 picks from the palette, Ctrl+S saves, Ctrl+Z / Ctrl+Y (or
+    /// Ctrl+Shift+Z) undo and redo.
     /// </summary>
     public sealed class EditorController : MonoBehaviour
     {
@@ -32,8 +33,15 @@ namespace Forge.EditorApp
 
             HandlePaletteKeys(keyboard);
 
-            if (keyboard.ctrlKey.isPressed && keyboard.sKey.wasPressedThisFrame)
-                _context.Save();
+            if (keyboard.ctrlKey.isPressed)
+            {
+                if (keyboard.sKey.wasPressedThisFrame)
+                    _context.Save();
+                else if (keyboard.zKey.wasPressedThisFrame && !keyboard.shiftKey.isPressed)
+                    _context.Undo();
+                else if (keyboard.yKey.wasPressedThisFrame || (keyboard.zKey.wasPressedThisFrame && keyboard.shiftKey.isPressed))
+                    _context.Redo();
+            }
 
             var pointer = mouse.position.ReadValue();
             if (_overlay.IsPointerOverPanel(pointer))
@@ -65,13 +73,13 @@ namespace Forge.EditorApp
                 return;
 
             var id = _context.Session.NewId("ref");
-            _context.Session.Put(new PlacedObjectRecord(
-                id,
-                _context.SelectedBaseId,
-                hit.point.ToNumerics(),
-                System.Numerics.Quaternion.Identity,
-                1f));
-            _context.Report($"Placed {id}");
+            var name = _context.Session.World.Records.TryGet(_context.SelectedBaseId, out var baseRecord) && baseRecord is BaseObjectRecord b
+                ? b.DisplayName
+                : _context.SelectedBaseId.ToString();
+            _context.Session.Put(
+                new PlacedObjectRecord(id, _context.SelectedBaseId, hit.point.ToNumerics(), System.Numerics.Quaternion.Identity, 1f),
+                $"Place {name}");
+            _context.Report($"Placed {name} ({id})");
         }
 
         void DeleteAt(Vector2 pointer)
@@ -83,7 +91,7 @@ namespace Forge.EditorApp
             if (link == null || !_context.Session.World.Records.TryGet(link.RecordId, out var record) || !(record is PlacedObjectRecord))
                 return;
 
-            _context.Session.Delete(link.RecordId);
+            _context.Session.Delete(link.RecordId, $"Delete {link.RecordId.Name}");
             _context.Report($"Deleted {link.RecordId}");
         }
 

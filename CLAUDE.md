@@ -28,6 +28,11 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
   objects up via `RecordLink`, not by name.
 - Regenerate the base plugin with the menu item `Forge/Generate Core Plugin`
   (`execute_menu_item`). It is deterministic.
+- While the Editor window is unfocused, play mode doesn't advance frames (`Time.frameCount`
+  stays put), so `Object.Destroy` stays pending and child counts look too high. Check
+  `WorldView.PresentedCount` instead of counting scene children.
+- If Moti is in play mode (`EditorApplication.isPlaying`), don't stop it. Compile and test
+  after he exits.
 - Verify the running editor: `manage_editor play`, then `execute_code` (reflection on
   `EditorController._context`) and `manage_camera screenshot` with `view_position`/`view_target`.
 

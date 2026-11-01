@@ -112,6 +112,21 @@ one in the active plugin.
 
 ---
 
+## Editing and undo (Forge.Editing)
+
+- `EditSession` = read-only masters + one active plugin. For each record id, the active
+  plugin is in one of three `EntryState`s: **Absent**, **Written** (add/override) or
+  **Deleted** (deletes a master's record). `Put` and `Delete` only set entry states.
+- Every edit becomes an `EditStep`: the list of `RecordChange`s (id, before, after).
+  **Undo** re-applies the befores in reverse, **redo** re-applies the afters. New tools
+  get undo for free as long as they edit through the session.
+- `Batch(description, action)` groups several edits into one undo step with a single
+  validation. Any failure rolls back the whole batch. Edits that end where they
+  started are dropped.
+- `IsDirty` compares the current state id with the id saved by `MarkSaved`, so undoing
+  back to the saved point clears the dirty flag.
+- History is capped (`UndoHistory.DefaultCapacity` = 256). Making a new edit clears redo.
+
 ## Runtime editor (Forge.EditorApp)
 
 - `EditorAppBootstrap` is the composition root. It loads base plugins from StreamingAssets and the
@@ -120,7 +135,8 @@ one in the active plugin.
 - `WorldView.Sync(store)` diffs by record reference (records are immutable), so only
   changed records are rebuilt. `RecordLink` maps scene objects back to record ids.
 - Controls: click places the selected palette item, Del deletes the placed object under
-  the cursor, 1–9 select from the palette, Ctrl+S saves, right-drag + WASD/QE flies the camera.
+  the cursor, 1–9 select from the palette, Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) undo and
+  redo, Ctrl+S saves, right-drag + WASD/QE flies the camera.
 - Runtime-only fields on MonoBehaviours are `[NonSerialized]` (see CLAUDE.md, play-mode reload).
 
 ---
