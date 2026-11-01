@@ -25,6 +25,8 @@ namespace Forge.Data.Records
 
         public HeightField Heights { get; }
 
+        public TerrainChunkRecord WithHeights(HeightField heights) => new TerrainChunkRecord(Id, Coord, heights);
+
         public static RecordId IdFor(string ns, ChunkCoord coord) => new RecordId(ns, NameFor(coord));
 
         // "c" prefix keeps negative coordinates valid record names, e.g. "terrain/c-1_0".
