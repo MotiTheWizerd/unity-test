@@ -21,8 +21,7 @@ namespace Forge.Editing
             if (delta == Vector3.Zero)
                 return 0;
 
-            var positions = PlacedObjects(session, ids).ToDictionary(p => p.Id, p => p.Position + delta);
-            return SetPositions(session, positions, "Move");
+            return Transform(session, ids, p => p.WithPosition(p.Position + delta), "Move");
         }
 
         /// <summary>
@@ -32,25 +31,42 @@ namespace Forge.Editing
         /// </summary>
         public static int SetPositions(EditSession session, IReadOnlyDictionary<RecordId, Vector3> positions, string verb)
         {
-            if (session == null)
-                throw new ArgumentNullException(nameof(session));
             if (positions == null)
                 throw new ArgumentNullException(nameof(positions));
+
+            return Transform(session, positions.Keys, p => p.WithPosition(positions[p.Id]), verb);
+        }
+
+        /// <summary>
+        /// The one commit path for every transform (move, rotate, scale, drop):
+        /// applies <paramref name="change"/> to each placed object in <paramref name="ids"/>
+        /// as one undo step described with <paramref name="verb"/>. Objects whose transform
+        /// doesn't change are skipped. Returns how many changed.
+        /// </summary>
+        public static int Transform(EditSession session, IEnumerable<RecordId> ids, Func<PlacedObjectRecord, PlacedObjectRecord> change, string verb)
+        {
+            if (session == null)
+                throw new ArgumentNullException(nameof(session));
+            if (change == null)
+                throw new ArgumentNullException(nameof(change));
             if (string.IsNullOrWhiteSpace(verb))
                 throw new ArgumentException("A verb is required to describe the edit.", nameof(verb));
 
-            var targets = PlacedObjects(session, positions.Keys)
-                .Where(p => p.Position != positions[p.Id])
+            var changes = PlacedObjects(session, ids)
+                .Select(original => (Original: original, Changed: change(original)))
+                .Where(c => !c.Original.HasSameTransform(c.Changed))
                 .ToList();
-            if (targets.Count == 0)
+            if (changes.Count == 0)
                 return 0;
+            if (changes.Any(c => c.Changed.Id != c.Original.Id || c.Changed.BaseId != c.Original.BaseId))
+                throw new ArgumentException("A transform change must keep the record's id and base object.", nameof(change));
 
-            session.Batch(Describe(verb, targets), () =>
+            session.Batch(Describe(verb, changes.Select(c => c.Original).ToList()), () =>
             {
-                foreach (var placed in targets)
-                    session.Put(placed.WithPosition(positions[placed.Id]));
+                foreach (var c in changes)
+                    session.Put(c.Changed);
             });
-            return targets.Count;
+            return changes.Count;
         }
 
         /// <summary>Deletes every placed object in <paramref name="ids"/>. Returns how many were deleted.</summary>

@@ -43,6 +43,13 @@ namespace Forge.Data.Records
         public PlacedObjectRecord WithScale(float scale) =>
             new PlacedObjectRecord(Id, BaseId, Position, Rotation, scale);
 
+        public PlacedObjectRecord WithTransform(Vector3 position, Quaternion rotation, float scale) =>
+            new PlacedObjectRecord(Id, BaseId, position, rotation, scale);
+
+        /// <summary>True when position, rotation and scale are exactly equal.</summary>
+        public bool HasSameTransform(PlacedObjectRecord other) =>
+            other != null && Position == other.Position && Rotation == other.Rotation && Scale == other.Scale;
+
         static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }
 }

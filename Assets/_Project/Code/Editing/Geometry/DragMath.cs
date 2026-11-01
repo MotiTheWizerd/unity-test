@@ -4,7 +4,7 @@ using System.Numerics;
 namespace Forge.Editing.Geometry
 {
     /// <summary>
-    /// Ray math behind translate handles: dragging along an axis and across a plane.
+    /// Ray math behind gizmo handles: dragging along an axis, across a plane, and around an axis.
     /// Engine-free so it can be unit-tested and reused by any front end.
     /// </summary>
     public static class DragMath
@@ -33,6 +33,20 @@ namespace Forge.Editing.Geometry
             var e = Vector3.Dot(r, w);
             t = (b * e - d) / denominator;
             return !float.IsNaN(t) && !float.IsInfinity(t);
+        }
+
+        /// <summary>
+        /// The angle in radians that turns <paramref name="from"/> towards <paramref name="to"/>
+        /// around <paramref name="axis"/>, in (-π, π], with the sign convention of
+        /// <see cref="Quaternion.CreateFromAxisAngle"/>. Both vectors are projected onto the
+        /// plane perpendicular to the axis first.
+        /// </summary>
+        public static float SignedAngle(Vector3 from, Vector3 to, Vector3 axis)
+        {
+            var n = Vector3.Normalize(axis);
+            var a = from - n * Vector3.Dot(from, n);
+            var b = to - n * Vector3.Dot(to, n);
+            return (float)Math.Atan2(Vector3.Dot(n, Vector3.Cross(a, b)), Vector3.Dot(a, b));
         }
 
         /// <summary>Intersects the ray with a plane. Fails when the ray is parallel to it or points away.</summary>
