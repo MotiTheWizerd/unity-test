@@ -22,14 +22,16 @@ Assets/_Project/
     Data/        Forge.Data    — engine-free world data model: records, plugins, serialization contracts
     Data.Json/   Forge.Data.Json — JSON plugin format (Newtonsoft), engine-free
     Editing/     Forge.Editing — engine-free edit session (masters + active plugin)
-    World/       Forge.World   — Unity presentation: terrain chunks, placed objects
+    Streaming/   Forge.Streaming — engine-free chunk index and streaming window
+    World/       Forge.World   — Unity presentation: terrain chunks, placed objects, streamer
     EditorApp/   Forge.EditorApp — the runtime editor: bootstrap, tools, camera, UI
     UnityEditor/ Forge.UnityEditor — dev tools inside the Unity Editor (Forge menu)
   Tests/
     EditMode/    Forge.Tests.EditMode — unit and architecture tests
   Scenes/        Main.unity (editor scene: EditorApp + Main Camera)
-  Settings/      URP, input and volume assets
+  Settings/      URP, input and volume assets; Worlds/ holds the WorldProfile assets
 Assets/StreamingAssets/Plugins/   shipped base plugins (forge.core.json = our "Skyrim.esm")
+Assets/StreamingAssets/StressWorld/  generated stress-test world (git-ignored, Forge/Generate Stress World)
 <persistentDataPath>/Plugins/     user plugins; the active plugin (forge.user) is saved here
 ```
 
@@ -47,7 +49,9 @@ Dependencies point **down** only. Cycles are impossible, because asmdefs reject 
         EditorApp            (Game)
        /    |    \             |
  Editing  World  Data.Json   World
-       \    |    /
+    |       |                  |
+    |   Streaming          Streaming
+     \      |      /
           Data
             |
           Core
@@ -111,6 +115,9 @@ one in the active plugin.
   lowest id and logs a warning.
 - Sculpting doesn't move placed objects. Use drop to ground (End) on them afterwards;
   there's no automatic follow yet. Sculpting only edits existing chunks and never creates new ones.
+- The edge of the streamed area is a hard cut (no fog, distant LOD or impostors yet).
+  Plugins load whole into memory at startup, so only the *scene* streams, not the *data*. A
+  30 MB JSON plugin takes ~1.3 s to load.
 - Drop to ground samples the terrain under the object's pivot only. On steep slopes, part of
   the base can float or clip, and objects aren't tilted to match the slope.
 
@@ -146,11 +153,39 @@ one in the active plugin.
 - Tool pattern for long gestures (move drag, sculpt stroke): **preview on the scene, commit
   one edit on release, reset the preview on cancel or failure**. The session is never touched mid-gesture.
 
+## Streaming (Forge.Streaming + Forge.World)
+
+- `ChunkIndex` (engine-free) groups the presentable records by chunk: a terrain record per
+  coordinate (lowest id wins on duplicates) and placed objects by the chunk under their
+  position (`WorldGrid.ChunkOf`).
+- `ChunkWindow` (engine-free) plans loads and unloads around a focus chunk: load within
+  `LoadRadius`, unload beyond `UnloadRadius` (the gap is hysteresis), loads nearest first.
+- `WorldView` presents **only loaded chunks**. `LoadChunk` / `UnloadChunk` add or remove a
+  chunk's records. `Sync` applies a new world version to the loaded chunks only. Loaded
+  coordinates include empty ones, so content added there later appears.
+- `WorldStreamer` follows the camera. It unloads at once and loads within a per-frame time
+  budget (`EditorAppBootstrap`: radius 6 / 8 chunks, 4 ms). A new chunk starts only if the
+  average build time still fits. Terrains use `allowAutoConnect`, so LOD edges stitch.
+- Measured on the stress world (25,394 records: 1,024 chunks = 2 × 2 km, ~24k objects,
+  30 MB JSON), with Unity unfocused, so this is CPU work only and excludes render and destroy cost:
+  - startup: load plugins 1,312 ms, resolve 9 ms, first view 211 ms (113 chunks, 2,615 objects)
+  - flying at 80 m/s: streaming p50 3.0 ms / p95 4.6 ms / max 9.4 ms per frame, no frame over 16 ms
+  - chunk build: ~2.7 ms on average, never more than 12 chunks of backlog
+  - **one edit: 22–55 ms**, made of full resolve (8–20 ms), index rebuild (6–15 ms) and sync,
+    all proportional to world size (see *Shortcuts*)
+- The overlay's **Performance** section shows these numbers live: chunks, build times,
+  worst frame and hitches (>50 ms), last edit and startup phases.
+
 ## Runtime editor (Forge.EditorApp)
 
-- `EditorAppBootstrap` is the composition root. It loads base plugins from StreamingAssets and the
-  active plugin from the user folder (or creates it with all base plugins as masters),
-  then wires `EditSession` → `WorldView` → tools and UI through a shared `EditorContext`.
+- `EditorAppBootstrap` is the composition root. It opens a **`WorldProfile`** (ScriptableObject in
+  `Settings/Worlds`): the base plugin folders under StreamingAssets and the active plugin id.
+  `DefaultWorld` = `Plugins` + `forge.user`. `StressWorld` = `Plugins` + `StressWorld` +
+  `forge.stress_edits`. Each world has its own edit plugin, because a plugin may only override its
+  masters' records. A missing base folder fails loudly instead of opening a smaller world.
+  It then wires `EditSession` → `WorldView` + `WorldStreamer` → tools and UI through a shared `EditorContext`.
+- `EditorContext.Palette` caches the base objects per world version. UI and shortcuts read it
+  every frame, and scanning 25k records per frame would cost real time.
 - `WorldView.Sync(store)` diffs by record reference (records are immutable): unchanged →
   skipped, record changed → **updated in place** (transform / terrain heights), dependency
   (e.g. base object) changed → rebuilt. `RecordLink` maps scene objects back to record ids.
@@ -221,7 +256,8 @@ and the condition for removing it, and is listed here.
 |-------|------|-----|-------------|
 | `Packages/manifest.json` | MCP for Unity tracks the git default branch, not a release tag | Fast setup. The exact commit is locked in `packages-lock.json` | Pin to a release tag on the next package update |
 | `Data.Json/Converters.cs` `HeightFieldConverter` | Terrain heights embedded in plugin JSON as base64 | Keeps a plugin a single file for the walking skeleton | Plugins become packages (folder/zip) with binary side files for heightmaps and assets |
-| `Editing/EditSession.cs` `Resolve` | Whole load order re-resolved on every edit | Simple and obviously correct at prototype scale | Edits feel slow on large worlds → incremental resolution |
+| `Editing/EditSession.cs` `Resolve` | Whole load order re-resolved on every edit | Simple and obviously correct at prototype scale | **Measured: 8–20 ms per edit at 25k records.** Next: incremental resolution from the changed ids of each step |
+| `World/WorldView.cs` `Sync` | Whole `ChunkIndex` rebuilt on every world change | Same reason as above | **Measured: 6–15 ms at 25k records.** Fix together with incremental resolution |
 | `EditorApp/EditorOverlay.cs` | Immediate-mode GUI (OnGUI) panel | Fastest way to a usable skeleton | Editor UI design (Phase 4) → UI Toolkit |
 | `EditorApp/Gizmos/TranslateGizmo.cs` | Gizmo uses the default lit material, so terrain can hide it | No custom always-on-top shader yet | Gizmo occlusion bothers users → overlay shader or a separate camera layer |
 | `EditorApp/EditorController.cs` | Input read by polling devices, not an Input Actions asset | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset |

@@ -5,6 +5,7 @@
         "Forge.Data",
         "Forge.Data.Json",
         "Forge.Editing",
+        "Forge.Streaming",
         "Forge.World",
         "Unity.InputSystem"
     ],

@@ -46,7 +46,7 @@ namespace Forge.UnityEditor
 
             for (var cz = -ChunkRadius; cz <= ChunkRadius; cz++)
             for (var cx = -ChunkRadius; cx <= ChunkRadius; cx++)
-                records.Add(TerrainChunk(new ChunkCoord(cx, cz)));
+                records.Add(ProceduralTerrain.Chunk(PluginId, new ChunkCoord(cx, cz)));
 
             // A ring of pillars around the origin, standing on the terrain.
             for (var i = 0; i < 6; i++)
@@ -57,7 +57,7 @@ namespace Forge.UnityEditor
                 records.Add(new PlacedObjectRecord(
                     new RecordId(PluginId, $"ref/pillar_{i + 1:D2}"),
                     new RecordId(PluginId, "pillar"),
-                    new Vector3(x, HeightAt(x, z) + 1f, z),
+                    new Vector3(x, ProceduralTerrain.HeightAt(x, z) + 1f, z),
                     Quaternion.Identity,
                     1f));
             }
@@ -68,21 +68,5 @@ namespace Forge.UnityEditor
         static BaseObjectRecord BaseObject(string name, string displayName, string assetKey) =>
             new BaseObjectRecord(new RecordId(PluginId, name), displayName, assetKey);
 
-        static TerrainChunkRecord TerrainChunk(ChunkCoord coord)
-        {
-            var step = WorldGrid.ChunkSize / (WorldGrid.DefaultHeightmapResolution - 1);
-            var heights = HeightField.FromFunction(
-                (x, z) => HeightAt(coord.X * WorldGrid.ChunkSize + x * step, coord.Z * WorldGrid.ChunkSize + z * step));
-            return new TerrainChunkRecord(TerrainChunkRecord.IdFor(PluginId, coord), coord, heights);
-        }
-
-        // Smooth rolling hills in world space, so neighbouring chunks share edges exactly.
-        static float HeightAt(float worldX, float worldZ)
-        {
-            var h = 20f
-                    + 10f * (float)Math.Sin(worldX * 0.045f) * (float)Math.Cos(worldZ * 0.04f)
-                    + 4f * (float)Math.Sin((worldX + worldZ) * 0.11f);
-            return Math.Max(0f, Math.Min(WorldGrid.MaxTerrainHeight, h));
-        }
     }
 }

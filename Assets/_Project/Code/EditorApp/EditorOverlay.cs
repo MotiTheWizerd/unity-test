@@ -1,6 +1,5 @@
 using System;
-using System.Linq;
-using Forge.Data.Records;
+using Forge.EditorApp.Diagnostics;
 using Forge.EditorApp.Tools;
 using Forge.Editing.Terrain;
 using UnityEngine;
@@ -23,13 +22,15 @@ namespace Forge.EditorApp
         // from turning these into empty values that look like real state.
         [NonSerialized] EditorContext _context;
         [NonSerialized] EditorCommands _commands;
+        [NonSerialized] EditorDiagnostics _diagnostics;
         [NonSerialized] string _fatal;
         [NonSerialized] Rect _panel = new Rect(Margin, Margin, Width, 0f);
 
-        public void Initialize(EditorContext context, EditorCommands commands)
+        public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics)
         {
             _context = context;
             _commands = commands;
+            _diagnostics = diagnostics;
         }
 
         public void ShowFatal(string message) => _fatal = message;
@@ -74,7 +75,7 @@ namespace Forge.EditorApp
             DrawSculptSection();
 
             GUILayout.Label("Place (1-9)");
-            var palette = world.Records.OfType<BaseObjectRecord>().OrderBy(r => r.Id).ToList();
+            var palette = _context.Palette;
             for (var i = 0; i < palette.Count; i++)
             {
                 var active = !selecting && palette[i].Id == _context.SelectedBaseId;
@@ -106,6 +107,8 @@ namespace Forge.EditorApp
             GUILayout.Label($"Load order: {string.Join(" → ", world.LoadOrder)}");
             GUILayout.Label($"Records: {world.Records.Count}   Conflicts: {world.Conflicts.Count}   Warnings: {world.Warnings.Count}");
             GUILayout.Label(_context.Status);
+
+            DrawPerformanceSection();
 
             GUILayout.Space(6f);
             GUILayout.Label(
@@ -146,6 +149,22 @@ namespace Forge.EditorApp
             GUILayout.Label($"Strength: {_context.BrushStrength:0.00}");
             _context.BrushStrength = GUILayout.HorizontalSlider(_context.BrushStrength, 0.05f, 1f);
             GUILayout.Space(4f);
+        }
+
+        void DrawPerformanceSection()
+        {
+            var d = _diagnostics;
+            var stats = d.Streamer.Stats;
+            GUILayout.Space(6f);
+            GUILayout.Label("<b>Performance</b>", RichLabel());
+            GUILayout.Label(
+                $"Chunks loaded: {d.View.LoadedChunks.Count} (radius {d.Streamer.Window.LoadRadius})   pending: {stats.PendingLoads}\n" +
+                $"Objects shown: {d.View.PresentedCount}\n" +
+                $"Chunk build: avg {stats.AverageBuildMs:0.0} ms, max {stats.MaxBuildMs:0.0} ms\n" +
+                $"Built {stats.ChunksBuilt}, unloaded {stats.ChunksUnloaded}, last step {stats.LastStepMs:0.0} ms\n" +
+                $"Worst frame (2 s): {d.Frames.WorstMs:0} ms   hitches: {d.Frames.Hitches}\n" +
+                $"Last edit: {_context.LastEditMs:0.0} ms\n" +
+                $"Startup: load {d.LoadPluginsMs:0} + resolve {d.ResolveMs:0} + view {d.FirstViewMs:0} ms");
         }
 
         static GUIStyle RichLabel() => new GUIStyle(GUI.skin.label) { richText = true };

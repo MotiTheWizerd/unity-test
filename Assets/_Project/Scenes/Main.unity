@@ -506,7 +506,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 28ed1a993b3138443bc141ed250f497f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Forge.EditorApp::Forge.EditorApp.EditorAppBootstrap
-  _activePluginId: forge.user
+  _profile: {fileID: 11400000, guid: 0c8ad6c44f77baf4db63612762626a73, type: 2}
+  _focus: {fileID: 330585546}
+  _loadRadius: 6
+  _unloadRadius: 8
+  _frameBudgetMs: 4
   _controller: {fileID: 1624300795}
   _overlay: {fileID: 1624300794}
 --- !u!4 &1624300797

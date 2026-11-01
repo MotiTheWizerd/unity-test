@@ -2,7 +2,8 @@
     "name": "Forge.World",
     "rootNamespace": "Forge.World",
     "references": [
-        "Forge.Data"
+        "Forge.Data",
+        "Forge.Streaming"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

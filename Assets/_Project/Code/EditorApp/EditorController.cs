@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Forge.Data.Records;
 using Forge.EditorApp.Tools;
 using Forge.World;
 using UnityEngine;
@@ -106,7 +105,7 @@ namespace Forge.EditorApp
                     _context.BrushRadius *= 1.25f;
             }
 
-            var palette = _context.Session.World.Records.OfType<BaseObjectRecord>().OrderBy(r => r.Id).ToList();
+            var palette = _context.Palette;
             for (var i = 0; i < Math.Min(9, palette.Count); i++)
             {
                 if (keyboard[Key.Digit1 + i].wasPressedThisFrame)

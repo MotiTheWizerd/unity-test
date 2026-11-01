@@ -14,6 +14,9 @@ namespace Forge.World
 
             var go = Terrain.CreateTerrainGameObject(data);
             go.name = chunk.Id.ToString();
+            // Lets Unity connect neighbouring chunks so their LOD edges match. The
+            // streamer marks connectivity dirty whenever chunks come and go.
+            go.GetComponent<Terrain>().allowAutoConnect = true;
             go.transform.SetParent(parent, false);
             go.transform.localPosition = new Vector3(chunk.Coord.X * WorldGrid.ChunkSize, 0f, chunk.Coord.Z * WorldGrid.ChunkSize);
             return go;

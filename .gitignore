@@ -9,6 +9,10 @@
 /[Mm]emoryCaptures/
 /[Rr]ecordings/
 
+# Generated stress-test world (large; regenerate with Forge/Generate Stress World)
+/[Aa]ssets/StreamingAssets/StressWorld/
+/[Aa]ssets/StreamingAssets/StressWorld.meta
+
 # Asset store / crash / profiler artifacts
 /[Aa]ssets/AssetStoreTools*
 /[Aa]ssets/Plugins/Editor/JetBrains*

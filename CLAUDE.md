@@ -28,6 +28,10 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
   objects up via `RecordLink`, not by name.
 - Regenerate the base plugin with the menu item `Forge/Generate Core Plugin`
   (`execute_menu_item`). It is deterministic.
+- Stress world: `Forge/Generate Stress World` (git-ignored output, ~30 MB), then point
+  `EditorAppBootstrap._profile` at `Settings/Worlds/StressWorld.asset`. Commit the scene with
+  `DefaultWorld` only. Streaming can be measured headless by moving `_focus` and calling
+  `WorldStreamer.Tick` via `execute_code`; real frame times need Moti flying with the window focused.
 - While the Editor window is unfocused, play mode doesn't advance frames (`Time.frameCount`
   stays put), so `Object.Destroy` stays pending and child counts look too high. Check
   `WorldView.PresentedCount` instead of counting scene children.

@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Forge.Data;
+using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Data.Serialization;
 using Forge.EditorApp.Tools;
@@ -20,16 +23,39 @@ namespace Forge.EditorApp
         readonly PluginFileStore _activeStore;
         float _brushRadius = 8f;
         float _brushStrength = 0.5f;
+        ResolvedWorld _paletteWorld;
+        IReadOnlyList<BaseObjectRecord> _palette;
 
         public EditorContext(EditSession session, PluginFileStore activeStore)
         {
             Session = session ?? throw new ArgumentNullException(nameof(session));
             _activeStore = activeStore ?? throw new ArgumentNullException(nameof(activeStore));
-            SelectedBaseId = session.World.Records.OfType<BaseObjectRecord>().Select(r => r.Id).OrderBy(id => id).FirstOrDefault();
+            SelectedBaseId = Palette.Select(r => r.Id).FirstOrDefault();
             Status = $"Loaded {session.World.LoadOrder.Count} plugin(s).";
         }
 
         public EditSession Session { get; }
+
+        /// <summary>
+        /// Base objects the place tool offers, sorted by id. Cached per world version,
+        /// because UI and shortcuts read it every frame and a large world has many records.
+        /// </summary>
+        public IReadOnlyList<BaseObjectRecord> Palette
+        {
+            get
+            {
+                if (!ReferenceEquals(_paletteWorld, Session.World))
+                {
+                    _paletteWorld = Session.World;
+                    _palette = _paletteWorld.Records.OfType<BaseObjectRecord>().OrderBy(r => r.Id).ToArray();
+                }
+
+                return _palette;
+            }
+        }
+
+        /// <summary>Time the last world-changing edit, undo or redo took, including the scene update.</summary>
+        public double LastEditMs { get; private set; }
 
         public Selection Selection { get; } = new Selection();
 
@@ -70,7 +96,7 @@ namespace Forge.EditorApp
         {
             try
             {
-                edit();
+                Timed(edit);
                 return true;
             }
             catch (Exception ex) when (ex is DataValidationException || ex is ArgumentException || ex is InvalidOperationException)
@@ -84,13 +110,28 @@ namespace Forge.EditorApp
         public void Undo()
         {
             var description = Session.UndoDescription;
-            Report(Session.Undo() ? $"Undid: {description}" : "Nothing to undo");
+            var undone = false;
+            Timed(() => undone = Session.Undo());
+            Report(undone ? $"Undid: {description}" : "Nothing to undo");
         }
 
         public void Redo()
         {
             var description = Session.RedoDescription;
-            Report(Session.Redo() ? $"Redid: {description}" : "Nothing to redo");
+            var redone = false;
+            Timed(() => redone = Session.Redo());
+            Report(redone ? $"Redid: {description}" : "Nothing to redo");
+        }
+
+        // Records the duration only when the world actually changed, so rejected
+        // or no-op actions don't overwrite the last real measurement.
+        void Timed(Action action)
+        {
+            var before = Session.World;
+            var clock = Stopwatch.StartNew();
+            action();
+            if (!ReferenceEquals(before, Session.World))
+                LastEditMs = clock.Elapsed.TotalMilliseconds;
         }
 
         /// <summary>Saves the active plugin; failures are reported, not thrown, so any UI can call it.</summary>
