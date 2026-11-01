@@ -34,6 +34,8 @@ namespace Forge.Data.Json
                     new RecordIdConverter(),
                     new Vector3Converter(),
                     new QuaternionConverter(),
+                    new ChunkCoordConverter(),
+                    new HeightFieldConverter(),
                 },
                 Formatting = Formatting.Indented,
                 TypeNameHandling = TypeNameHandling.None,

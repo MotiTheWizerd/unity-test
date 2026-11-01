@@ -20,6 +20,7 @@ namespace Forge.Data.Records
             var registry = new RecordTypeRegistry();
             registry.Register<BaseObjectRecord>("base_object");
             registry.Register<PlacedObjectRecord>("placed_object");
+            registry.Register<TerrainChunkRecord>("terrain_chunk");
             return registry;
         }
 

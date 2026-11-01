@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Forge.Data.Records;
+using Forge.Data.Terrain;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -117,6 +118,81 @@ namespace Forge.Data.Json
             }
 
             return _bodySerializer = body;
+        }
+    }
+
+    /// <summary>Writes chunk coordinates as compact [x, z] arrays.</summary>
+    sealed class ChunkCoordConverter : JsonConverter<ChunkCoord>
+    {
+        public override void WriteJson(JsonWriter writer, ChunkCoord value, JsonSerializer serializer)
+        {
+            writer.WriteStartArray();
+            writer.WriteValue(value.X);
+            writer.WriteValue(value.Z);
+            writer.WriteEndArray();
+        }
+
+        public override ChunkCoord ReadJson(JsonReader reader, Type objectType, ChunkCoord existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            var array = JArray.Load(reader);
+            if (array.Count != 2)
+                throw new JsonSerializationException($"Expected [x, z] at {reader.Path}.");
+            return new ChunkCoord(array[0].Value<int>(), array[1].Value<int>());
+        }
+    }
+
+    /// <summary>
+    /// Writes a height field as its resolution plus base64-encoded little-endian
+    /// float32 samples.
+    /// </summary>
+    /// <remarks>
+    /// SHORTCUT: heights are embedded in the plugin JSON. Remove when plugins
+    /// become packages with binary side files (see ARCHITECTURE.md).
+    /// </remarks>
+    sealed class HeightFieldConverter : JsonConverter<HeightField>
+    {
+        const string ResolutionProperty = "resolution";
+        const string DataProperty = "data";
+
+        public override void WriteJson(JsonWriter writer, HeightField value, JsonSerializer serializer)
+        {
+            var samples = value.ToArray();
+            var bytes = new byte[samples.Length * sizeof(float)];
+            Buffer.BlockCopy(samples, 0, bytes, 0, bytes.Length);
+            if (!BitConverter.IsLittleEndian)
+                ReverseEachFloat(bytes);
+
+            writer.WriteStartObject();
+            writer.WritePropertyName(ResolutionProperty);
+            writer.WriteValue(value.Resolution);
+            writer.WritePropertyName(DataProperty);
+            writer.WriteValue(Convert.ToBase64String(bytes));
+            writer.WriteEndObject();
+        }
+
+        public override HeightField ReadJson(JsonReader reader, Type objectType, HeightField existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            var json = JObject.Load(reader);
+            var resolution = json.Value<int?>(ResolutionProperty)
+                ?? throw new JsonSerializationException($"Missing '{ResolutionProperty}' at {json.Path}.");
+            var data = json.Value<string>(DataProperty)
+                ?? throw new JsonSerializationException($"Missing '{DataProperty}' at {json.Path}.");
+
+            var bytes = Convert.FromBase64String(data);
+            if (bytes.Length % sizeof(float) != 0)
+                throw new JsonSerializationException($"Height data at {json.Path} is not a whole number of floats.");
+            if (!BitConverter.IsLittleEndian)
+                ReverseEachFloat(bytes);
+
+            var samples = new float[bytes.Length / sizeof(float)];
+            Buffer.BlockCopy(bytes, 0, samples, 0, bytes.Length);
+            return new HeightField(resolution, samples);
+        }
+
+        static void ReverseEachFloat(byte[] bytes)
+        {
+            for (var i = 0; i < bytes.Length; i += sizeof(float))
+                Array.Reverse(bytes, i, sizeof(float));
         }
     }
 
