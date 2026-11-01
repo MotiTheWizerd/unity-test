@@ -1,0 +1,16 @@
+{
+    "name": "Forge.Editing",
+    "rootNamespace": "Forge.Editing",
+    "references": [
+        "Forge.Data"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

@@ -11,7 +11,7 @@ namespace Forge.Tests
     /// </summary>
     public class ArchitectureTests
     {
-        static readonly string[] EngineFreeAssemblies = { "Forge.Core", "Forge.Data", "Forge.Data.Json" };
+        static readonly string[] EngineFreeAssemblies = { "Forge.Core", "Forge.Data", "Forge.Data.Json", "Forge.Editing" };
 
         [TestCaseSource(nameof(EngineFreeAssemblies))]
         public void EngineFreeAssembly_DoesNotReferenceUnity(string assemblyName)

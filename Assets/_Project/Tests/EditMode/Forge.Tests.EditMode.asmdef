@@ -6,7 +6,8 @@
         "UnityEditor.TestRunner",
         "Forge.Core",
         "Forge.Data",
-        "Forge.Data.Json"
+        "Forge.Data.Json",
+        "Forge.Editing"
     ],
     "includePlatforms": [
         "Editor"

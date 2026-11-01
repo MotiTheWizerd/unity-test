@@ -10,6 +10,9 @@ namespace Forge.Data.Serialization
     /// </summary>
     public interface IPluginSerializer
     {
+        /// <summary>File extension for this format, including the dot, e.g. ".json".</summary>
+        string FileExtension { get; }
+
         void Write(Plugin plugin, TextWriter writer);
 
         /// <exception cref="DataValidationException">The content is malformed or violates plugin rules.</exception>

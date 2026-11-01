@@ -45,6 +45,8 @@ namespace Forge.Data.Json
             });
         }
 
+        public string FileExtension => ".json";
+
         public void Write(Plugin plugin, TextWriter writer)
         {
             if (plugin == null)
