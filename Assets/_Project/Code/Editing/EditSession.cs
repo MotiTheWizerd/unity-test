@@ -17,7 +17,7 @@ namespace Forge.Editing
     /// </summary>
     public sealed class EditSession
     {
-        readonly IReadOnlyList<Plugin> _masters;
+        readonly MasterLayer _masters;
         readonly PluginManifest _activeManifest;
         readonly SortedDictionary<RecordId, Record> _records = new SortedDictionary<RecordId, Record>();
         readonly SortedSet<RecordId> _deletions = new SortedSet<RecordId>();
@@ -40,7 +40,7 @@ namespace Forge.Editing
             if (active == null)
                 throw new ArgumentNullException(nameof(active));
 
-            _masters = LoadOrderSorter.Sort(masters ?? Enumerable.Empty<Plugin>());
+            _masters = MasterLayer.Build(LoadOrderSorter.Sort(masters ?? Enumerable.Empty<Plugin>()));
             _activeManifest = active.Manifest;
             _history = new UndoHistory(historyCapacity);
             foreach (var record in active.Records)
@@ -287,12 +287,8 @@ namespace Forge.Editing
             WorldChanged?.Invoke(world);
         }
 
-        // SHORTCUT: re-resolves the whole load order on every edit. Fine at
-        // prototype scale; replace with incremental resolution for large worlds.
-        ResolvedWorld Resolve()
-        {
-            var loadOrder = new List<Plugin>(_masters) { BuildActivePlugin() };
-            return LoadOrderResolver.Resolve(loadOrder);
-        }
+        // Masters are resolved once; each edit only layers the active plugin over
+        // them, so its cost follows the size of the active plugin, not the world.
+        ResolvedWorld Resolve() => _masters.Overlay(BuildActivePlugin());
     }
 }

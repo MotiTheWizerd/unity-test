@@ -5,10 +5,13 @@ using Forge.Data.Records;
 
 namespace Forge.Data.Plugins
 {
-    /// <summary>Immutable record store produced by <see cref="LoadOrderResolver"/>.</summary>
+    /// <summary>Immutable record store produced by resolving a load order.</summary>
     public sealed class RecordStore : IRecordStore
     {
         readonly IReadOnlyDictionary<RecordId, Entry> _entries;
+
+        // Typed views, built on first use. Safe to cache because the store never changes.
+        readonly Dictionary<Type, object> _byType = new Dictionary<Type, object>();
 
         internal RecordStore(IReadOnlyDictionary<RecordId, Entry> entries)
         {
@@ -33,21 +36,19 @@ namespace Forge.Data.Plugins
             return false;
         }
 
-        public T Get<T>(RecordId id) where T : Record
-        {
-            if (!_entries.TryGetValue(id, out var entry))
-                throw new KeyNotFoundException($"Record '{id}' does not exist.");
-            if (entry.Record is T typed)
-                return typed;
-            throw new InvalidCastException($"Record '{id}' is a {entry.Record.GetType().Name}, not a {typeof(T).Name}.");
-        }
+        public T Get<T>(RecordId id) where T : Record => RecordLookup.Get<T>(this, id);
 
-        public IEnumerable<T> OfType<T>() where T : Record => All.OfType<T>();
+        public IEnumerable<T> OfType<T>() where T : Record
+        {
+            if (!_byType.TryGetValue(typeof(T), out var typed))
+                _byType.Add(typeof(T), typed = All.OfType<T>().ToArray());
+            return (T[])typed;
+        }
 
         public string GetSource(RecordId id) =>
             _entries.TryGetValue(id, out var entry)
                 ? entry.SourcePluginId
-                : throw new KeyNotFoundException($"Record '{id}' does not exist.");
+                : throw RecordLookup.Missing(id);
 
         internal readonly struct Entry
         {

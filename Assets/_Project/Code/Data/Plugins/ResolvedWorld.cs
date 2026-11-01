@@ -26,5 +26,19 @@ namespace Forge.Data.Plugins
 
         /// <summary>Suspicious but legal data, e.g. overriding a record no master defines.</summary>
         public IReadOnlyList<string> Warnings { get; }
+
+        /// <summary>
+        /// The ids whose records differ from <paramref name="earlier"/>. Known cheaply
+        /// only when both worlds layer an active plugin over the same masters
+        /// (<see cref="MasterLayer.Overlay"/>); otherwise returns false and callers
+        /// treat everything as changed.
+        /// </summary>
+        public bool TryGetChangesSince(ResolvedWorld earlier, out IReadOnlyCollection<RecordId> changed)
+        {
+            changed = Records is LayeredRecordStore now && earlier?.Records is LayeredRecordStore then
+                ? now.ChangedSince(then)
+                : null;
+            return changed != null;
+        }
     }
 }
