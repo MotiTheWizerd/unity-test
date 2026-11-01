@@ -24,8 +24,8 @@ namespace Forge.World
         readonly IAssetCatalog _catalog;
         readonly Dictionary<RecordId, Presented> _presented = new Dictionary<RecordId, Presented>();
         readonly HashSet<ChunkCoord> _loaded = new HashSet<ChunkCoord>();
-        IRecordStore _store;
-        ChunkIndex _index = ChunkIndex.Empty;
+        ResolvedWorld _world;
+        ChunkIndex _index = new ChunkIndex();
 
         public WorldView(Transform root, IAssetCatalog catalog)
         {
@@ -78,20 +78,36 @@ namespace Forge.World
             }
         }
 
-        /// <summary>Switches to a new version of the world and brings the loaded chunks up to date.</summary>
-        public void Sync(IRecordStore store)
+        /// <summary>
+        /// Switches to a new version of the world and brings the loaded chunks up to
+        /// date. When the world can tell what changed since the last version (the
+        /// editor's case), only the affected chunks are touched; otherwise everything is re-indexed.
+        /// </summary>
+        public void Sync(ResolvedWorld world)
         {
-            _store = store ?? throw new ArgumentNullException(nameof(store));
-            // SHORTCUT: rebuilds the whole index on every world change (~6-15 ms at
-            // 25k records). Make it incremental together with EditSession.Resolve,
-            // from the record ids each edit step already knows it changed.
-            _index = ChunkIndex.Build(store);
+            if (world == null)
+                throw new ArgumentNullException(nameof(world));
 
-            foreach (var shadowed in _index.ShadowedTerrain)
-            {
-                _index.TryGetTerrain(shadowed.Coord, out var owner);
-                Debug.LogWarning($"[Forge] Terrain chunk {shadowed.Coord} is defined by both '{owner.Id}' and '{shadowed.Id}'; showing '{owner.Id}'.");
-            }
+            var previous = _world;
+            _world = world;
+            if (world.TryGetChangesSince(previous, out var changed) && OnlyPresentableRecords(previous.Records, changed))
+                ApplyChanges(changed);
+            else
+                Rebuild();
+        }
+
+        // Base objects are dependencies of many placed objects; a change to one
+        // is rare (no tool edits them yet) and simply falls back to a rebuild.
+        bool OnlyPresentableRecords(IRecordStore previous, IEnumerable<RecordId> changed) =>
+            changed.All(id => IsPresentableOrAbsent(previous, id) && IsPresentableOrAbsent(_world.Records, id));
+
+        static bool IsPresentableOrAbsent(IRecordStore store, RecordId id) =>
+            !store.TryGet(id, out var record) || record is PlacedObjectRecord || record is TerrainChunkRecord;
+
+        void Rebuild()
+        {
+            _index = ChunkIndex.Build(_world.Records);
+            WarnShadowed(_index.ShadowedTerrain);
 
             // Drop what vanished, was shadowed, or moved into a chunk that isn't loaded.
             var wanted = new HashSet<RecordId>(_loaded.SelectMany(IdsIn));
@@ -100,6 +116,27 @@ namespace Forge.World
 
             foreach (var coord in _loaded)
                 PresentChunk(coord);
+        }
+
+        void ApplyChanges(IReadOnlyCollection<RecordId> changed)
+        {
+            var dirty = _index.Update(_world.Records, changed);
+            WarnShadowed(dirty.SelectMany(_index.ShadowedAt));
+
+            foreach (var id in changed)
+            {
+                if (_presented.ContainsKey(id) && !(_index.TryLocate(id, out var coord) && _loaded.Contains(coord)))
+                    Remove(id);
+            }
+
+            foreach (var coord in dirty.Where(_loaded.Contains))
+                PresentChunk(coord);
+        }
+
+        static void WarnShadowed(IEnumerable<TerrainChunkRecord> shadowed)
+        {
+            foreach (var chunk in shadowed)
+                Debug.LogWarning($"[Forge] Terrain chunk {chunk.Coord} is defined by more than one plugin; '{chunk.Id}' is hidden by the record with the lowest id.");
         }
 
         /// <summary>Presents everything in the chunk. Returns how many records it holds (0 if already loaded).</summary>
@@ -131,6 +168,10 @@ namespace Forge.World
 
         int PresentChunk(ChunkCoord coord)
         {
+            // A newly winning terrain record replaces the one shown so far.
+            foreach (var shadowed in _index.ShadowedAt(coord))
+                Remove(shadowed.Id);
+
             var count = 0;
             if (_index.TryGetTerrain(coord, out var chunk))
             {
@@ -142,7 +183,7 @@ namespace Forge.World
 
             foreach (var placed in _index.ObjectsIn(coord))
             {
-                _store.TryGet(placed.BaseId, out var baseRecord);
+                _world.Records.TryGet(placed.BaseId, out var baseRecord);
                 Present(placed, baseRecord,
                     () => BuildPlaced(placed, baseRecord as BaseObjectRecord),
                     go => ApplyTransform(go.transform, placed));

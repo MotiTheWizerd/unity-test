@@ -68,7 +68,7 @@ namespace Forge.EditorApp
 
                 _view = new WorldView(transform, new PrimitiveAssetCatalog());
                 _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs);
-                _view.Sync(_context.Session.World.Records);
+                _view.Sync(_context.Session.World);
                 _streamer.LoadAll(_focus.position);
                 var viewMs = Lap(clock);
 
@@ -117,7 +117,7 @@ namespace Forge.EditorApp
         // Order matters: rebuild the scene, drop selections of vanished records, then re-tint.
         void OnWorldChanged(ResolvedWorld world)
         {
-            _view.Sync(world.Records);
+            _view.Sync(world);
             _context.Selection.Prune(world.Records);
             _highlighter.Refresh();
         }

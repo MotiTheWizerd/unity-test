@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Forge.Data;
@@ -57,9 +58,86 @@ namespace Forge.Tests.Streaming
         [Test]
         public void EmptyIndex_HasNothing()
         {
-            Assert.That(ChunkIndex.Empty.TerrainCount, Is.Zero);
-            Assert.That(ChunkIndex.Empty.ObjectsIn(new ChunkCoord(0, 0)), Is.Empty);
+            var index = new ChunkIndex();
+
+            Assert.That(index.TerrainCount, Is.Zero);
+            Assert.That(index.ObjectsIn(new ChunkCoord(0, 0)), Is.Empty);
         }
+
+        [Test]
+        public void Update_MovesObjectBetweenChunks_AndReportsBothAsDirty()
+        {
+            var before = TestRecords.Plugin("core", TestRecords.Base("core:rock"), PlacedAt("core:ref/a", 10f, 10f), PlacedAt("core:ref/b", 20f, 10f));
+            var after = TestRecords.Plugin("core", TestRecords.Base("core:rock"), PlacedAt("core:ref/a", 100f, 10f), PlacedAt("core:ref/b", 20f, 10f));
+            var index = ChunkIndex.Build(Store(before));
+
+            var dirty = index.Update(Store(after), new[] { RecordId.Parse("core:ref/a") });
+
+            Assert.That(dirty, Is.EquivalentTo(new[] { new ChunkCoord(0, 0), new ChunkCoord(1, 0) }));
+            Assert.That(Names(index.ObjectsIn(new ChunkCoord(0, 0))), Is.EqualTo(new[] { "ref/b" }));
+            Assert.That(Names(index.ObjectsIn(new ChunkCoord(1, 0))), Is.EqualTo(new[] { "ref/a" }));
+            Assert.That(index.ObjectCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Update_TerrainWinnerChanges_WhenALowerIdAppearsOrGoes()
+        {
+            var core = TestRecords.Plugin("core", Chunk("core", 0, 0));
+            var withMod = LoadOrderResolver.Resolve(new[] { core, TestRecords.Plugin("amod", new[] { "core" }, Chunk("amod", 0, 0)) });
+            var index = ChunkIndex.Build(Store(core));
+            var modChunk = TerrainChunkRecord.IdFor("amod", new ChunkCoord(0, 0));
+
+            index.Update(withMod.Records, new[] { modChunk });
+
+            Assert.That(index.TryGetTerrain(new ChunkCoord(0, 0), out var winner) && winner.Id == modChunk, Is.True);
+            Assert.That(index.TryLocate(RecordId.Parse("core:terrain/c0_0"), out _), Is.False, "shadowed terrain is not shown");
+            Assert.That(index.TryLocate(modChunk, out _), Is.True);
+
+            index.Update(Store(core), new[] { modChunk });
+
+            Assert.That(index.TryGetTerrain(new ChunkCoord(0, 0), out winner) && winner.Id.Namespace == "core", Is.True);
+            Assert.That(index.ShadowedAt(new ChunkCoord(0, 0)), Is.Empty);
+        }
+
+        [Test]
+        public void RandomMovesAddsAndRemoves_MatchAFreshBuild()
+        {
+            var random = new System.Random(7);
+            var model = new Dictionary<int, PlacedObjectRecord>();
+            for (var i = 0; i < 40; i++)
+                model[i] = RandomPlaced(i, random);
+            var index = ChunkIndex.Build(StoreOf(model.Values));
+
+            for (var step = 0; step < 300; step++)
+            {
+                var i = random.Next(40);
+                if (random.Next(4) == 0 && model.ContainsKey(i))
+                    model.Remove(i);
+                else
+                    model[i] = RandomPlaced(i, random);
+                var store = StoreOf(model.Values);
+
+                index.Update(store, new[] { IdOf(i) });
+
+                var fresh = ChunkIndex.Build(store);
+                Assert.That(index.ObjectCount, Is.EqualTo(fresh.ObjectCount), $"step {step}");
+                for (var x = -3; x <= 3; x++)
+                for (var z = -3; z <= 3; z++)
+                {
+                    var coord = new ChunkCoord(x, z);
+                    Assert.That(index.ObjectsIn(coord), Is.EqualTo(fresh.ObjectsIn(coord)), $"step {step}, chunk {coord}");
+                }
+            }
+        }
+
+        static RecordId IdOf(int i) => RecordId.Parse($"core:ref/o{i:D2}");
+
+        // Positions within chunks -3..2 on both axes.
+        static PlacedObjectRecord RandomPlaced(int i, System.Random random) =>
+            PlacedAt(IdOf(i).ToString(), (float)(random.NextDouble() * 384 - 192), (float)(random.NextDouble() * 384 - 192));
+
+        static IRecordStore StoreOf(IEnumerable<PlacedObjectRecord> placed) =>
+            Store(TestRecords.Plugin("core", placed.Cast<Record>().Prepend(TestRecords.Base("core:rock")).ToArray()));
 
         static IRecordStore Store(Plugin plugin) => LoadOrderResolver.Resolve(new[] { plugin }).Records;
 

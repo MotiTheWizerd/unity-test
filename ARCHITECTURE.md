@@ -97,6 +97,13 @@ one in the active plugin.
   direct master, so it silently discards another plugin's change. Conflicts are reported, not blocked.
 - **Warnings**: overriding or deleting a record that doesn't exist.
 - Every validation failure is collected into a single `DataValidationException`.
+- The per-record rules live in `ResolutionRules`, and the fold lives in `MasterLayer.Build`
+  (`LoadOrderResolver.Resolve` is just that). `MasterLayer.Overlay(top)` layers one more plugin over
+  an already-resolved load order without re-reading it, through a `LayeredRecordStore` that
+  shares the master store. It costs time in proportion to the top plugin. `MasterLayerTests`
+  checks it against full resolution on random top plugins: records, sources, conflicts and warnings.
+- `RecordStore.OfType<T>` is cached per type (the store is immutable), so typed scans of
+  the masters (e.g. the palette) are paid once.
 
 **File format** (`JsonPluginSerializer`, format version 1):
 - Deterministic output (records and deletions sorted) for clean diffs.
@@ -125,7 +132,8 @@ one in the active plugin.
 
 ## Editing and undo (Forge.Editing)
 
-- `EditSession` = read-only masters + one active plugin. For each record id, the active
+- `EditSession` = read-only masters (resolved once into a `MasterLayer`) + one active plugin,
+  overlaid after every edit, undo and redo. For each record id, the active
   plugin is in one of three `EntryState`s: **Absent**, **Written** (add/override) or
   **Deleted** (deletes a master's record). `Put` and `Delete` only set entry states.
 - Every edit becomes an `EditStep`: the list of `RecordChange`s (id, before, after).
@@ -161,8 +169,12 @@ one in the active plugin.
 - `ChunkWindow` (engine-free) plans loads and unloads around a focus chunk: load within
   `LoadRadius`, unload beyond `UnloadRadius` (the gap is hysteresis), loads nearest first.
 - `WorldView` presents **only loaded chunks**. `LoadChunk` / `UnloadChunk` add or remove a
-  chunk's records. `Sync` applies a new world version to the loaded chunks only. Loaded
-  coordinates include empty ones, so content added there later appears.
+  chunk's records. Loaded coordinates include empty ones, so content added there later appears.
+- `WorldView.Sync(world)` is **incremental** when `ResolvedWorld.TryGetChangesSince` knows the
+  changed ids, which it does when both worlds layer over the same `MasterLayer`.
+  `ChunkIndex.Update` re-indexes just those ids and returns the dirty chunks, and only loaded
+  dirty chunks are re-presented. A change to a non-presentable record (e.g. a base object, which
+  many placed objects depend on) falls back to a full rebuild.
 - `WorldStreamer` follows the camera. It unloads at once and loads within a per-frame time
   budget (`EditorAppBootstrap`: radius 6 / 8 chunks, 4 ms). A new chunk starts only if the
   average build time still fits. Terrains use `allowAutoConnect`, so LOD edges stitch.
@@ -171,8 +183,8 @@ one in the active plugin.
   - startup: load plugins 1,312 ms, resolve 9 ms, first view 211 ms (113 chunks, 2,615 objects)
   - flying at 80 m/s: streaming p50 3.0 ms / p95 4.6 ms / max 9.4 ms per frame, no frame over 16 ms
   - chunk build: ~2.7 ms on average, never more than 12 chunks of backlog
-  - **one edit: 22–55 ms**, made of full resolve (8–20 ms), index rebuild (6–15 ms) and sync,
-    all proportional to world size (see *Shortcuts*)
+  - one edit (move + undo): **p50 0.04 ms, p95 0.11 ms** with layered resolution and incremental
+    index updates. Before that it took 22–55 ms (a full resolve plus a full index rebuild per edit).
 - The overlay's **Performance** section shows these numbers live: chunks, build times,
   worst frame and hitches (>50 ms), last edit and startup phases.
 
@@ -256,8 +268,6 @@ and the condition for removing it, and is listed here.
 |-------|------|-----|-------------|
 | `Packages/manifest.json` | MCP for Unity tracks the git default branch, not a release tag | Fast setup. The exact commit is locked in `packages-lock.json` | Pin to a release tag on the next package update |
 | `Data.Json/Converters.cs` `HeightFieldConverter` | Terrain heights embedded in plugin JSON as base64 | Keeps a plugin a single file for the walking skeleton | Plugins become packages (folder/zip) with binary side files for heightmaps and assets |
-| `Editing/EditSession.cs` `Resolve` | Whole load order re-resolved on every edit | Simple and obviously correct at prototype scale | **Measured: 8–20 ms per edit at 25k records.** Next: incremental resolution from the changed ids of each step |
-| `World/WorldView.cs` `Sync` | Whole `ChunkIndex` rebuilt on every world change | Same reason as above | **Measured: 6–15 ms at 25k records.** Fix together with incremental resolution |
 | `EditorApp/EditorOverlay.cs` | Immediate-mode GUI (OnGUI) panel | Fastest way to a usable skeleton | Editor UI design (Phase 4) → UI Toolkit |
 | `EditorApp/Gizmos/TranslateGizmo.cs` | Gizmo uses the default lit material, so terrain can hide it | No custom always-on-top shader yet | Gizmo occlusion bothers users → overlay shader or a separate camera layer |
 | `EditorApp/EditorController.cs` | Input read by polling devices, not an Input Actions asset | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset |
