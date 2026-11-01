@@ -61,6 +61,16 @@ namespace Forge.EditorApp
 
         public ToolKind ActiveTool { get; set; } = ToolKind.Select;
 
+        /// <summary>What dragging the select tool's gizmo does.</summary>
+        public TransformMode TransformMode { get; private set; } = TransformMode.Move;
+
+        /// <summary>Switches to the select tool in <paramref name="mode"/> (W / E / R and the panel buttons).</summary>
+        public void SelectTransformMode(TransformMode mode)
+        {
+            TransformMode = mode;
+            ActiveTool = ToolKind.Select;
+        }
+
         public string ActivePluginPath => _activeStore.PathFor(Session.ActivePluginId);
 
         /// <summary>Base object the place tool creates.</summary>

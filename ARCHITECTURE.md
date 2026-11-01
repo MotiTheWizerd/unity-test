@@ -29,6 +29,8 @@ Assets/_Project/
   Tests/
     EditMode/    Forge.Tests.EditMode — unit and architecture tests
   Scenes/        Main.unity (editor scene: EditorApp + Main Camera)
+  Shaders/       GizmoOverlay.shader (always-on-top gizmos)
+  Materials/     GizmoOverlay.mat
   Settings/      URP, input and volume assets; Worlds/ holds the WorldProfile assets
 Assets/StreamingAssets/Plugins/   shipped base plugins (forge.core.json = our "Skyrim.esm")
 Assets/StreamingAssets/StressWorld/  generated stress-test world (git-ignored, Forge/Generate Stress World)
@@ -147,11 +149,18 @@ one in the active plugin.
 - History is capped (`UndoHistory.DefaultCapacity` = 256). Making a new edit clears redo.
 - `Selection` is an ordered set of record ids. It's pruned after every world change, so
   undoing a placement or deleting a record drops it from the selection.
-- `ObjectEdits.Move/SetPositions/Delete` act on any number of placed objects as one undo step.
-  `Move` is built on `SetPositions`, which also serves absolute moves like drop to ground.
-  Moving a master's object creates an override in the active plugin.
-- `Geometry.DragMath` holds the engine-free ray math for translate handles
-  (axis projection, plane intersection).
+- `ObjectEdits.Transform(ids, change, verb)` is **the one commit path for every transform**:
+  one undo step, and objects whose transform doesn't change are skipped. `Move`, `SetPositions`
+  (drop to ground) and gizmo drags all go through it. Changing a master's object creates an
+  override in the active plugin. `ObjectEdits.Delete` deletes many objects as one step.
+- **Gizmo drags** (`Editing/Transforms`) are engine-free `ITransformDrag`s, fed pointer rays:
+  `MoveDrag` (axis or plane), `RotateDrag` (around a world axis through the pivot; the angle
+  accumulates past ±180°) and `ScaleDrag` (uniform, a ratio of distances along an axis or radially
+  on a plane). Preview and commit both call `drag.Apply(original)`, so what is shown is what gets saved.
+  Snap steps: 0.5 m, 15°, ×0.1. Several objects turn and scale around the shared pivot.
+  Scale is uniform, because `PlacedObjectRecord` has a single scale (as in the Creation Kit).
+- `Geometry.DragMath` / `DragConstraint` hold the engine-free ray math: projecting onto an axis,
+  intersecting a plane, and the signed angle around an axis.
 - **Terrain sculpting** (`Editing/Terrain`): a `SculptStroke` snapshots the terrain and
   keeps a working copy. Dabs (`BrushSettings`: Raise / Lower / Flatten / Smooth, radius,
   strength, smoothstep falloff) run on the **global sample grid**: pass 1 computes every
@@ -205,9 +214,11 @@ one in the active plugin.
 - **Tools** (`Tools/IEditorTool`): exactly one is active, chosen through `EditorContext.ActiveTool`.
   `EditorController` handles global shortcuts and passes a filtered `ToolInput` to the
   active tool. Clicks over the UI panel and while the right mouse button is held are removed.
-  - `SelectMoveTool`: click / Shift+click to select. Drag a gizmo arrow (axis) or the center ball
-    (horizontal plane). The drag previews on the scene objects and commits one
-    `ObjectEdits.Move` on release; Esc cancels and resets the preview. Del deletes the selection.
+  - `SelectTransformTool`: click / Shift+click to select. Drag the gizmo of the current
+    `TransformMode` (W move, E rotate, R scale; Ctrl snaps). Move: arrows (axis) or center ball
+    (ground plane). Rotate: X/Y/Z rings. Scale: axis cubes or center cube (camera-facing plane).
+    The drag previews through `WorldView.PreviewObject` and commits one `ObjectEdits.Transform`
+    on release. Esc cancels and resets the preview. Del deletes the selection.
   - `PlaceTool`: click a surface to place the palette object, which becomes the selection. Esc returns to Select.
   - `SculptTool` (B): hold left mouse on the terrain. Dabs fire at a fixed 30/s (independent of
     frame rate, capped per frame) and preview live, and the stroke commits on release. `[` / `]`
@@ -218,10 +229,13 @@ one in the active plugin.
   the surface. The whole selection is one undo step.
 - `ScenePicker` owns all raycasts. Gizmo handles live on the **`ForgeGizmo`** layer
   (TagManager), so world picks and handle picks never interfere.
-- `TranslateGizmo` is built from primitives, tinted with property blocks and sized to the
-  camera distance. `SelectionHighlighter` tints selected objects (property blocks, so shared
+- `Gizmo` is the shared gizmo machinery: primitive parts tagged with their `GizmoHandle`, hover
+  and axis tint through property blocks, and a constant on-screen size. `GizmoShapes` describes the
+  translate, rotate (rings of cylinder segments) and scale shapes. Parts use the
+  `GizmoOverlay` material (`Shaders/GizmoOverlay.shader`, ZTest Always, unlit), so terrain never hides
+  a handle. The material is assigned on `EditorController`. `SelectionHighlighter` tints selected objects (property blocks, so shared
   materials are never touched).
-- Controls: 1–9 or the palette → Place tool; Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
+- Controls: W / E / R → move / rotate / scale (Select tool); 1–9 or the palette → Place tool; Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
   (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly.
 - Runtime-only fields on MonoBehaviours are `[NonSerialized]` (see CLAUDE.md, play-mode reload).
 
@@ -269,5 +283,4 @@ and the condition for removing it, and is listed here.
 | `Packages/manifest.json` | MCP for Unity tracks the git default branch, not a release tag | Fast setup. The exact commit is locked in `packages-lock.json` | Pin to a release tag on the next package update |
 | `Data.Json/Converters.cs` `HeightFieldConverter` | Terrain heights embedded in plugin JSON as base64 | Keeps a plugin a single file for the walking skeleton | Plugins become packages (folder/zip) with binary side files for heightmaps and assets |
 | `EditorApp/EditorOverlay.cs` | Immediate-mode GUI (OnGUI) panel | Fastest way to a usable skeleton | Editor UI design (Phase 4) → UI Toolkit |
-| `EditorApp/Gizmos/TranslateGizmo.cs` | Gizmo uses the default lit material, so terrain can hide it | No custom always-on-top shader yet | Gizmo occlusion bothers users → overlay shader or a separate camera layer |
 | `EditorApp/EditorController.cs` | Input read by polling devices, not an Input Actions asset | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset |

@@ -61,6 +61,16 @@ namespace Forge.World
             }
         }
 
+        /// <summary>
+        /// Shows <paramref name="preview"/>'s transform on the object presenting that record,
+        /// without changing any record (e.g. during a gizmo drag). Undo it with <see cref="ResetTransforms"/>.
+        /// </summary>
+        public void PreviewObject(PlacedObjectRecord preview)
+        {
+            if (preview != null && _presented.TryGetValue(preview.Id, out var presented))
+                ApplyTransform(presented.GameObject.transform, preview);
+        }
+
         /// <summary>Shows preview heights on a chunk without changing any record (e.g. during a sculpt stroke).</summary>
         public void PreviewTerrain(ChunkCoord coord, HeightField heights)
         {

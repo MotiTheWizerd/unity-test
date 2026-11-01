@@ -7,11 +7,12 @@ using Object = UnityEngine.Object;
 namespace Forge.EditorApp.Gizmos
 {
     /// <summary>
-    /// Runtime translate handle: X/Y/Z arrows plus a center sphere for horizontal
-    /// moves. Built from primitives on a dedicated layer, kept at a constant
-    /// on-screen size. Purely visual; drag logic lives in the tool.
+    /// A runtime gizmo: parts built from primitives on the gizmo layer, each tagged
+    /// with the handle it belongs to, tinted on hover and kept at a constant on-screen
+    /// size. Purely visual. <see cref="GizmoShapes"/> describes the move, rotate and
+    /// scale shapes, and the drag logic lives in the tool.
     /// </summary>
-    public sealed class TranslateGizmo : IDisposable
+    public sealed class Gizmo : IDisposable
     {
         const float ScreenSizeFactor = 0.1f;
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
@@ -19,32 +20,22 @@ namespace Forge.EditorApp.Gizmos
         static readonly Color HoverColor = new Color(1f, 0.85f, 0.1f);
 
         readonly GameObject _root;
+        readonly int _layer;
+        readonly Material _material;
         readonly Dictionary<GizmoHandle, List<Renderer>> _renderers = new Dictionary<GizmoHandle, List<Renderer>>();
         readonly MaterialPropertyBlock _block = new MaterialPropertyBlock();
         GizmoHandle? _highlighted;
 
-        public TranslateGizmo(int layer)
+        /// <param name="material">
+        /// Material for every part, normally the always-on-top GizmoOverlay. Null keeps
+        /// the primitives' default material, which the world can hide.
+        /// </param>
+        public Gizmo(string name, int layer, Material material)
         {
-            _root = new GameObject("TranslateGizmo");
+            _root = new GameObject(name);
             _root.SetActive(false);
-
-            BuildArrow(GizmoHandle.AxisX, Vector3.right, Quaternion.Euler(0f, 0f, -90f), layer);
-            BuildArrow(GizmoHandle.AxisY, Vector3.up, Quaternion.identity, layer);
-            BuildArrow(GizmoHandle.AxisZ, Vector3.forward, Quaternion.Euler(90f, 0f, 0f), layer);
-            AddPart(GizmoHandle.PlaneXZ, PrimitiveType.Sphere, Vector3.zero, Quaternion.identity, Vector3.one * 0.16f, layer);
-
-            ApplyColors();
-        }
-
-        public static Vector3 AxisDirection(GizmoHandle handle)
-        {
-            switch (handle)
-            {
-                case GizmoHandle.AxisX: return Vector3.right;
-                case GizmoHandle.AxisY: return Vector3.up;
-                case GizmoHandle.AxisZ: return Vector3.forward;
-                default: return Vector3.zero;
-            }
+            _layer = layer;
+            _material = material;
         }
 
         public void Show(Vector3 pivot, Camera camera)
@@ -62,7 +53,8 @@ namespace Forge.EditorApp.Gizmos
             if (_highlighted == handle)
                 return;
             _highlighted = handle;
-            ApplyColors();
+            foreach (var pair in _renderers)
+                Tint(pair.Key, pair.Value);
         }
 
         public void Dispose()
@@ -71,18 +63,13 @@ namespace Forge.EditorApp.Gizmos
                 Object.Destroy(_root);
         }
 
-        void BuildArrow(GizmoHandle handle, Vector3 axis, Quaternion rotation, int layer)
-        {
-            AddPart(handle, PrimitiveType.Cylinder, axis * 0.5f, rotation, new Vector3(0.08f, 0.5f, 0.08f), layer);
-            AddPart(handle, PrimitiveType.Cube, axis * 1.05f, rotation, Vector3.one * 0.2f, layer);
-        }
-
-        void AddPart(GizmoHandle handle, PrimitiveType type, Vector3 position, Quaternion rotation, Vector3 scale, int layer)
+        /// <summary>Adds a primitive in gizmo space (1 unit = the gizmo's on-screen size).</summary>
+        public void AddPart(GizmoHandle handle, PrimitiveType type, Vector3 position, Quaternion rotation, Vector3 scale)
         {
             var part = GameObject.CreatePrimitive(type);
             part.name = handle.ToString();
-            if (layer >= 0)
-                part.layer = layer;
+            if (_layer >= 0)
+                part.layer = _layer;
             part.transform.SetParent(_root.transform, false);
             part.transform.localPosition = position;
             part.transform.localRotation = rotation;
@@ -90,24 +77,24 @@ namespace Forge.EditorApp.Gizmos
             part.AddComponent<GizmoHandlePart>().Handle = handle;
 
             var renderer = part.GetComponent<Renderer>();
+            if (_material != null)
+                renderer.sharedMaterial = _material;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
 
             if (!_renderers.TryGetValue(handle, out var list))
                 _renderers[handle] = list = new List<Renderer>();
             list.Add(renderer);
+            Tint(handle, new[] { renderer });
         }
 
-        void ApplyColors()
+        void Tint(GizmoHandle handle, IEnumerable<Renderer> renderers)
         {
-            foreach (var pair in _renderers)
-            {
-                var color = pair.Key == _highlighted ? HoverColor : BaseColor(pair.Key);
-                _block.SetColor(BaseColorId, color);
-                _block.SetColor(ColorId, color);
-                foreach (var renderer in pair.Value)
-                    renderer.SetPropertyBlock(_block);
-            }
+            var color = handle == _highlighted ? HoverColor : BaseColor(handle);
+            _block.SetColor(BaseColorId, color);
+            _block.SetColor(ColorId, color);
+            foreach (var renderer in renderers)
+                renderer.SetPropertyBlock(_block);
         }
 
         static Color BaseColor(GizmoHandle handle)

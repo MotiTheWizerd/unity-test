@@ -62,8 +62,15 @@ namespace Forge.EditorApp
             GUILayout.Label($"<b>Forge Editor</b>  —  {session.ActivePluginId}{(session.IsDirty ? " *" : "")}", RichLabel());
 
             var selecting = _context.ActiveTool == ToolKind.Select;
-            if (GUILayout.Toggle(selecting, selecting ? "Select / Move  ◀" : "Select / Move (Esc)", GUI.skin.button) && !selecting)
-                _context.ActiveTool = ToolKind.Select;
+            GUILayout.BeginHorizontal();
+            foreach (TransformMode mode in Enum.GetValues(typeof(TransformMode)))
+            {
+                var active = selecting && _context.TransformMode == mode;
+                if (GUILayout.Toggle(active, $"{mode} ({ShortcutOf(mode)})", GUI.skin.button) && !active)
+                    _context.SelectTransformMode(mode);
+            }
+
+            GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
             GUILayout.Label($"Selected: {_context.Selection.Count}");
             GUI.enabled = !_context.Selection.IsEmpty;
@@ -112,7 +119,8 @@ namespace Forge.EditorApp
 
             GUILayout.Space(6f);
             GUILayout.Label(
-                "Select: click / Shift+click, drag gizmo arrows or center ball\n" +
+                "Select: click / Shift+click, then drag the gizmo\n" +
+                "W move, E rotate, R scale; hold Ctrl to snap\n" +
                 "Del: delete selection   End: drop to ground\n" +
                 "Esc: cancel / deselect\n" +
                 "B: sculpt (hold left mouse)   [ ]: brush size\n" +
@@ -165,6 +173,17 @@ namespace Forge.EditorApp
                 $"Worst frame (2 s): {d.Frames.WorstMs:0} ms   hitches: {d.Frames.Hitches}\n" +
                 $"Last edit: {_context.LastEditMs:0.0} ms\n" +
                 $"Startup: load {d.LoadPluginsMs:0} + resolve {d.ResolveMs:0} + view {d.FirstViewMs:0} ms");
+        }
+
+        static string ShortcutOf(TransformMode mode)
+        {
+            switch (mode)
+            {
+                case TransformMode.Move: return "W";
+                case TransformMode.Rotate: return "E";
+                case TransformMode.Scale: return "R";
+                default: return "";
+            }
         }
 
         static GUIStyle RichLabel() => new GUIStyle(GUI.skin.label) { richText = true };

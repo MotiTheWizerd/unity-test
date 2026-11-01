@@ -10,7 +10,8 @@ namespace Forge.EditorApp
 {
     /// <summary>
     /// Routes input: global shortcuts (Ctrl+S save, Ctrl+Z / Ctrl+Y or
-    /// Ctrl+Shift+Z undo/redo, 1-9 palette, B sculpt, [ ] brush size, End drop to ground) are handled here; everything else is
+    /// Ctrl+Shift+Z undo/redo, 1-9 palette, B sculpt, W/E/R move/rotate/scale,
+    /// [ ] brush size, End drop to ground) are handled here; everything else is
     /// passed to the active tool. Pointer clicks over the UI panel are filtered out.
     /// </summary>
     public sealed class EditorController : MonoBehaviour
@@ -18,6 +19,9 @@ namespace Forge.EditorApp
         [SerializeField] Camera _camera;
         [SerializeField] EditorOverlay _overlay;
         [SerializeField] float _maxRayDistance = 2000f;
+
+        [SerializeField, Tooltip("Always-on-top material for gizmos (Forge/GizmoOverlay).")]
+        Material _gizmoMaterial;
 
         [NonSerialized] EditorContext _context;
         [NonSerialized] Dictionary<ToolKind, IEditorTool> _tools;
@@ -33,7 +37,7 @@ namespace Forge.EditorApp
             Commands = new EditorCommands(context, view, picker);
             _tools = new Dictionary<ToolKind, IEditorTool>
             {
-                { ToolKind.Select, new SelectMoveTool(context, view, picker, _camera) },
+                { ToolKind.Select, new SelectTransformTool(context, view, picker, _camera, _gizmoMaterial) },
                 { ToolKind.Place, new PlaceTool(context, picker) },
                 { ToolKind.Sculpt, new SculptTool(context, view, picker) },
             };
@@ -69,6 +73,7 @@ namespace Forge.EditorApp
                 additive: keyboard.shiftKey.isPressed,
                 cancel: keyboard.escapeKey.wasPressedThisFrame,
                 delete: keyboard.deleteKey.wasPressedThisFrame,
+                snap: keyboard.ctrlKey.isPressed,
                 deltaTime: Time.unscaledDeltaTime);
 
             _tools[_activeKind.Value].Tick(input);
@@ -93,6 +98,13 @@ namespace Forge.EditorApp
 
             if (keyboard.bKey.wasPressedThisFrame)
                 _context.ActiveTool = ToolKind.Sculpt;
+
+            if (keyboard.wKey.wasPressedThisFrame)
+                _context.SelectTransformMode(TransformMode.Move);
+            else if (keyboard.eKey.wasPressedThisFrame)
+                _context.SelectTransformMode(TransformMode.Rotate);
+            else if (keyboard.rKey.wasPressedThisFrame)
+                _context.SelectTransformMode(TransformMode.Scale);
 
             if (keyboard.endKey.wasPressedThisFrame)
                 Commands.DropSelectionToGround();
