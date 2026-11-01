@@ -1,0 +1,16 @@
+{
+    "name": "Forge.Streaming",
+    "rootNamespace": "Forge.Streaming",
+    "references": [
+        "Forge.Data"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

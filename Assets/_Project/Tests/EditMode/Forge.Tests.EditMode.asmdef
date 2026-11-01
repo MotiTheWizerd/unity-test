@@ -7,7 +7,8 @@
         "Forge.Core",
         "Forge.Data",
         "Forge.Data.Json",
-        "Forge.Editing"
+        "Forge.Editing",
+        "Forge.Streaming"
     ],
     "includePlatforms": [
         "Editor"

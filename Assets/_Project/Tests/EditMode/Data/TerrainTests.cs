@@ -55,6 +55,17 @@ namespace Forge.Tests.Data
             Assert.Throws<ArgumentOutOfRangeException>(() => HeightField.Flat(float.NaN, 17));
         }
 
+        [TestCase(0f, 0f, 0, 0)]
+        [TestCase(63.9f, 10f, 0, 0)]
+        [TestCase(64f, 0f, 1, 0)]
+        [TestCase(-0.01f, 0f, -1, 0)]
+        [TestCase(-64f, -64.5f, -1, -2)]
+        [TestCase(200f, -130f, 3, -3)]
+        public void ChunkOf_FloorsWorldPositionToChunk(float x, float z, int expectedX, int expectedZ)
+        {
+            Assert.That(WorldGrid.ChunkOf(x, z), Is.EqualTo(new ChunkCoord(expectedX, expectedZ)));
+        }
+
         [TestCase(0, 0, "terrain/c0_0")]
         [TestCase(-1, 2, "terrain/c-1_2")]
         [TestCase(3, -4, "terrain/c3_-4")]
