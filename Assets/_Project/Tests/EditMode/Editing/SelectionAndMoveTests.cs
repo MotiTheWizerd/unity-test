@@ -130,6 +130,36 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void SetPositions_IsOneUndoStepAndSkipsUnchanged()
+        {
+            var session = NewSession();
+            var positions = new System.Collections.Generic.Dictionary<RecordId, Vector3>
+            {
+                { Ref1, new Vector3(1, 7, 0) },
+                { Ref2, new Vector3(3, 0, 0) }, // already there
+                { Tree, new Vector3(9, 9, 9) }, // not a placed object
+            };
+
+            var moved = ObjectEdits.SetPositions(session, positions, "Drop");
+
+            Assert.That(moved, Is.EqualTo(1));
+            Assert.That(PositionOf(session, Ref1), Is.EqualTo(new Vector3(1, 7, 0)));
+            Assert.That(session.UndoDescription, Is.EqualTo("Drop ref/1"));
+            session.Undo();
+            Assert.That(PositionOf(session, Ref1), Is.EqualTo(new Vector3(1, 0, 0)));
+        }
+
+        [Test]
+        public void SetPositions_NothingToChange_RecordsNothing()
+        {
+            var session = NewSession();
+            var positions = new System.Collections.Generic.Dictionary<RecordId, Vector3> { { Ref1, new Vector3(1, 0, 0) } };
+
+            Assert.That(ObjectEdits.SetPositions(session, positions, "Drop"), Is.EqualTo(0));
+            Assert.That(session.CanUndo, Is.False);
+        }
+
+        [Test]
         public void Delete_RemovesAllInOneUndoStep()
         {
             var session = NewSession();

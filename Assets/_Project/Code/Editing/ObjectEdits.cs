@@ -18,15 +18,37 @@ namespace Forge.Editing
         {
             if (session == null)
                 throw new ArgumentNullException(nameof(session));
-
-            var targets = PlacedObjects(session, ids);
-            if (targets.Count == 0 || delta == Vector3.Zero)
+            if (delta == Vector3.Zero)
                 return 0;
 
-            session.Batch(Describe("Move", targets), () =>
+            var positions = PlacedObjects(session, ids).ToDictionary(p => p.Id, p => p.Position + delta);
+            return SetPositions(session, positions, "Move");
+        }
+
+        /// <summary>
+        /// Sets absolute positions for placed objects (e.g. drop to ground) as one undo step
+        /// described with <paramref name="verb"/>. Objects already at their target are skipped.
+        /// Returns how many moved.
+        /// </summary>
+        public static int SetPositions(EditSession session, IReadOnlyDictionary<RecordId, Vector3> positions, string verb)
+        {
+            if (session == null)
+                throw new ArgumentNullException(nameof(session));
+            if (positions == null)
+                throw new ArgumentNullException(nameof(positions));
+            if (string.IsNullOrWhiteSpace(verb))
+                throw new ArgumentException("A verb is required to describe the edit.", nameof(verb));
+
+            var targets = PlacedObjects(session, positions.Keys)
+                .Where(p => p.Position != positions[p.Id])
+                .ToList();
+            if (targets.Count == 0)
+                return 0;
+
+            session.Batch(Describe(verb, targets), () =>
             {
                 foreach (var placed in targets)
-                    session.Put(placed.WithPosition(placed.Position + delta));
+                    session.Put(placed.WithPosition(positions[placed.Id]));
             });
             return targets.Count;
         }

@@ -45,7 +45,7 @@ namespace Forge.EditorApp
                 _context.Selection.Changed += _highlighter.Refresh;
 
                 _controller.Initialize(_context, _view);
-                _overlay.Initialize(_context);
+                _overlay.Initialize(_context, _controller.Commands);
             }
             catch (Exception ex) when (ex is DataValidationException || ex is IOException)
             {

@@ -109,8 +109,10 @@ one in the active plugin.
 - Conflict awareness only checks *direct* masters, not transitive ones.
 - Two namespaces defining the same chunk coordinate: the world view shows the
   lowest id and logs a warning.
-- Sculpting doesn't move placed objects, so they can float or sink after terrain edits
-  (no "drop to ground" yet). Sculpting only edits existing chunks and never creates new ones.
+- Sculpting doesn't move placed objects. Use drop to ground (End) on them afterwards;
+  there's no automatic follow yet. Sculpting only edits existing chunks and never creates new ones.
+- Drop to ground samples the terrain under the object's pivot only. On steep slopes, part of
+  the base can float or clip, and objects aren't tilted to match the slope.
 
 ---
 
@@ -130,7 +132,8 @@ one in the active plugin.
 - History is capped (`UndoHistory.DefaultCapacity` = 256). Making a new edit clears redo.
 - `Selection` is an ordered set of record ids. It's pruned after every world change, so
   undoing a placement or deleting a record drops it from the selection.
-- `ObjectEdits.Move/Delete` act on any number of placed objects as one undo step.
+- `ObjectEdits.Move/SetPositions/Delete` act on any number of placed objects as one undo step.
+  `Move` is built on `SetPositions`, which also serves absolute moves like drop to ground.
   Moving a master's object creates an override in the active plugin.
 - `Geometry.DragMath` holds the engine-free ray math for translate handles
   (axis projection, plane intersection).
@@ -162,6 +165,10 @@ one in the active plugin.
   - `SculptTool` (B): hold left mouse on the terrain. Dabs fire at a fixed 30/s (independent of
     frame rate, capped per frame) and preview live, and the stroke commits on release. `[` / `]`
     change the radius. `BrushCursor` draws a ring that follows the ground, colored by mode.
+- `EditorCommands` holds one-shot actions shared by shortcuts and UI buttons.
+  `DropSelectionToGround` (End) finds the terrain under each selected object, looking through
+  other objects, and moves the object so the lowest point of its renderer bounds rests on
+  the surface. The whole selection is one undo step.
 - `ScenePicker` owns all raycasts. Gizmo handles live on the **`ForgeGizmo`** layer
   (TagManager), so world picks and handle picks never interfere.
 - `TranslateGizmo` is built from primitives, tinted with property blocks and sized to the

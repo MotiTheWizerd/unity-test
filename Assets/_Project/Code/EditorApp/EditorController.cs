@@ -11,7 +11,7 @@ namespace Forge.EditorApp
 {
     /// <summary>
     /// Routes input: global shortcuts (Ctrl+S save, Ctrl+Z / Ctrl+Y or
-    /// Ctrl+Shift+Z undo/redo, 1-9 palette, B sculpt, [ ] brush size) are handled here; everything else is
+    /// Ctrl+Shift+Z undo/redo, 1-9 palette, B sculpt, [ ] brush size, End drop to ground) are handled here; everything else is
     /// passed to the active tool. Pointer clicks over the UI panel are filtered out.
     /// </summary>
     public sealed class EditorController : MonoBehaviour
@@ -24,10 +24,14 @@ namespace Forge.EditorApp
         [NonSerialized] Dictionary<ToolKind, IEditorTool> _tools;
         [NonSerialized] ToolKind? _activeKind;
 
+        /// <summary>One-shot actions, shared with the UI. Available after <see cref="Initialize"/>.</summary>
+        public EditorCommands Commands { get; private set; }
+
         public void Initialize(EditorContext context, WorldView view)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             var picker = new ScenePicker(_maxRayDistance);
+            Commands = new EditorCommands(context, view, picker);
             _tools = new Dictionary<ToolKind, IEditorTool>
             {
                 { ToolKind.Select, new SelectMoveTool(context, view, picker, _camera) },
@@ -90,6 +94,9 @@ namespace Forge.EditorApp
 
             if (keyboard.bKey.wasPressedThisFrame)
                 _context.ActiveTool = ToolKind.Sculpt;
+
+            if (keyboard.endKey.wasPressedThisFrame)
+                Commands.DropSelectionToGround();
 
             if (_context.ActiveTool == ToolKind.Sculpt)
             {

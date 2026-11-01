@@ -22,10 +22,15 @@ namespace Forge.EditorApp
         // Runtime-only state. [NonSerialized] stops Unity's play-mode script reload
         // from turning these into empty values that look like real state.
         [NonSerialized] EditorContext _context;
+        [NonSerialized] EditorCommands _commands;
         [NonSerialized] string _fatal;
         [NonSerialized] Rect _panel = new Rect(Margin, Margin, Width, 0f);
 
-        public void Initialize(EditorContext context) => _context = context;
+        public void Initialize(EditorContext context, EditorCommands commands)
+        {
+            _context = context;
+            _commands = commands;
+        }
 
         public void ShowFatal(string message) => _fatal = message;
 
@@ -58,7 +63,13 @@ namespace Forge.EditorApp
             var selecting = _context.ActiveTool == ToolKind.Select;
             if (GUILayout.Toggle(selecting, selecting ? "Select / Move  ◀" : "Select / Move (Esc)", GUI.skin.button) && !selecting)
                 _context.ActiveTool = ToolKind.Select;
+            GUILayout.BeginHorizontal();
             GUILayout.Label($"Selected: {_context.Selection.Count}");
+            GUI.enabled = !_context.Selection.IsEmpty;
+            if (GUILayout.Button("Drop to ground (End)"))
+                _commands.DropSelectionToGround();
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
 
             DrawSculptSection();
 
@@ -99,7 +110,8 @@ namespace Forge.EditorApp
             GUILayout.Space(6f);
             GUILayout.Label(
                 "Select: click / Shift+click, drag gizmo arrows or center ball\n" +
-                "Del: delete selection   Esc: cancel / deselect\n" +
+                "Del: delete selection   End: drop to ground\n" +
+                "Esc: cancel / deselect\n" +
                 "B: sculpt (hold left mouse)   [ ]: brush size\n" +
                 "Hold right mouse: look + WASD/QE fly, Shift fast");
 
