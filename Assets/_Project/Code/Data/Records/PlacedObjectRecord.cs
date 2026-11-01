@@ -34,6 +34,15 @@ namespace Forge.Data.Records
 
         public float Scale { get; }
 
+        public PlacedObjectRecord WithPosition(Vector3 position) =>
+            new PlacedObjectRecord(Id, BaseId, position, Rotation, Scale);
+
+        public PlacedObjectRecord WithRotation(Quaternion rotation) =>
+            new PlacedObjectRecord(Id, BaseId, Position, rotation, Scale);
+
+        public PlacedObjectRecord WithScale(float scale) =>
+            new PlacedObjectRecord(Id, BaseId, Position, Rotation, scale);
+
         static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }
 }

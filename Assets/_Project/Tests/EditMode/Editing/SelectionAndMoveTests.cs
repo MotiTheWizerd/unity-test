@@ -1,0 +1,215 @@
+using System.Linq;
+using System.Numerics;
+using Forge.Data;
+using Forge.Data.Records;
+using Forge.Editing;
+using Forge.Editing.Geometry;
+using NUnit.Framework;
+using static Forge.Tests.Data.TestRecords;
+
+namespace Forge.Tests.Editing
+{
+    public class SelectionTests
+    {
+        static readonly RecordId A = RecordId.Parse("core:a");
+        static readonly RecordId B = RecordId.Parse("core:b");
+
+        [Test]
+        public void SetToggleClear_MaintainOrderAndRaiseChanged()
+        {
+            var selection = new Selection();
+            var changes = 0;
+            selection.Changed += () => changes++;
+
+            selection.Set(A);
+            selection.Toggle(B);
+            Assert.That(selection.Ids, Is.EqualTo(new[] { A, B }));
+
+            selection.Toggle(A);
+            Assert.That(selection.Ids, Is.EqualTo(new[] { B }));
+
+            selection.Clear();
+            Assert.That(selection.IsEmpty, Is.True);
+            Assert.That(changes, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void RedundantChanges_DoNotRaiseChanged()
+        {
+            var selection = new Selection();
+            selection.Set(A);
+            var changes = 0;
+            selection.Changed += () => changes++;
+
+            selection.Set(A);
+            selection.Replace(new[] { A, A });
+            new Selection().Clear();
+
+            Assert.That(changes, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void DefaultIds_AreIgnored()
+        {
+            var selection = new Selection();
+
+            selection.Toggle(default);
+            selection.Replace(new[] { default(RecordId), A });
+
+            Assert.That(selection.Ids, Is.EqualTo(new[] { A }));
+        }
+
+        [Test]
+        public void Prune_DropsIdsMissingFromTheWorld()
+        {
+            var session = new EditSession(new[] { Plugin("core", Base("core:a")) }, Plugin("user", new[] { "core" }));
+            var selection = new Selection();
+            selection.Replace(new[] { A, B });
+
+            selection.Prune(session.World.Records);
+
+            Assert.That(selection.Ids, Is.EqualTo(new[] { A }));
+        }
+    }
+
+    public class ObjectEditsTests
+    {
+        static EditSession NewSession() =>
+            new EditSession(
+                new[]
+                {
+                    Plugin("core",
+                        Base("core:tree"),
+                        Placed("core:ref/1", "core:tree", x: 1f),
+                        Placed("core:ref/2", "core:tree", x: 3f)),
+                },
+                Plugin("user", new[] { "core" }));
+
+        static readonly RecordId Ref1 = RecordId.Parse("core:ref/1");
+        static readonly RecordId Ref2 = RecordId.Parse("core:ref/2");
+        static readonly RecordId Tree = RecordId.Parse("core:tree");
+
+        static Vector3 PositionOf(EditSession s, RecordId id) => s.World.Records.Get<PlacedObjectRecord>(id).Position;
+
+        [Test]
+        public void Move_ShiftsAllPlacedObjectsInOneUndoStep()
+        {
+            var session = NewSession();
+
+            var moved = ObjectEdits.Move(session, new[] { Ref1, Ref2, Tree }, new Vector3(0, 2, 5));
+
+            Assert.That(moved, Is.EqualTo(2), "The base object is not a placed object and is skipped.");
+            Assert.That(PositionOf(session, Ref1), Is.EqualTo(new Vector3(1, 2, 5)));
+            Assert.That(PositionOf(session, Ref2), Is.EqualTo(new Vector3(3, 2, 5)));
+            Assert.That(session.UndoDescription, Is.EqualTo("Move 2 objects"));
+
+            session.Undo();
+            Assert.That(PositionOf(session, Ref1), Is.EqualTo(new Vector3(1, 0, 0)));
+            Assert.That(PositionOf(session, Ref2), Is.EqualTo(new Vector3(3, 0, 0)));
+        }
+
+        [Test]
+        public void Move_MasterObject_BecomesOverride()
+        {
+            var session = NewSession();
+
+            ObjectEdits.Move(session, new[] { Ref1 }, Vector3.UnitY);
+
+            Assert.That(session.World.Records.GetSource(Ref1), Is.EqualTo("user"));
+            Assert.That(session.UndoDescription, Is.EqualTo("Move ref/1"));
+        }
+
+        [Test]
+        public void Move_ZeroDeltaOrNothingSelected_DoesNothing()
+        {
+            var session = NewSession();
+
+            Assert.That(ObjectEdits.Move(session, new[] { Ref1 }, Vector3.Zero), Is.EqualTo(0));
+            Assert.That(ObjectEdits.Move(session, new RecordId[0], Vector3.UnitX), Is.EqualTo(0));
+            Assert.That(session.CanUndo, Is.False);
+        }
+
+        [Test]
+        public void Delete_RemovesAllInOneUndoStep()
+        {
+            var session = NewSession();
+
+            var deleted = ObjectEdits.Delete(session, new[] { Ref1, Ref2 });
+
+            Assert.That(deleted, Is.EqualTo(2));
+            Assert.That(session.World.Records.Contains(Ref1), Is.False);
+            session.Undo();
+            Assert.That(session.World.Records.Contains(Ref1), Is.True);
+            Assert.That(session.World.Records.Contains(Ref2), Is.True);
+        }
+
+        [Test]
+        public void Pivot_IsAveragePosition()
+        {
+            var session = NewSession();
+
+            Assert.That(ObjectEdits.Pivot(session, new[] { Ref1, Ref2 }), Is.EqualTo(new Vector3(2, 0, 0)));
+            Assert.That(ObjectEdits.Pivot(session, new[] { Tree }), Is.Null);
+        }
+
+        [Test]
+        public void PlacedObject_WithMethods_KeepOtherFields()
+        {
+            var original = Placed("core:ref/1", "core:tree", x: 1f);
+
+            var moved = original.WithPosition(new Vector3(9, 9, 9)).WithScale(2f);
+
+            Assert.That(moved.Id, Is.EqualTo(original.Id));
+            Assert.That(moved.BaseId, Is.EqualTo(original.BaseId));
+            Assert.That(moved.Rotation, Is.EqualTo(original.Rotation));
+            Assert.That(moved.Position, Is.EqualTo(new Vector3(9, 9, 9)));
+            Assert.That(moved.Scale, Is.EqualTo(2f));
+        }
+    }
+
+    public class DragMathTests
+    {
+        [Test]
+        public void ProjectOnAxis_FindsClosestPointAlongAxis()
+        {
+            // Camera looking straight down at x = 5 onto the X axis.
+            var ok = DragMath.TryProjectOnAxis(new Vector3(5, 10, 0), -Vector3.UnitY, Vector3.Zero, Vector3.UnitX, out var t);
+
+            Assert.That(ok, Is.True);
+            Assert.That(t, Is.EqualTo(5f).Within(1e-4f));
+        }
+
+        [Test]
+        public void ProjectOnAxis_WorksForSkewedRays()
+        {
+            // Ray passes above the Y axis at height 3, looking along +X.
+            var ok = DragMath.TryProjectOnAxis(new Vector3(-10, 3, 0), Vector3.UnitX, Vector3.Zero, Vector3.UnitY, out var t);
+
+            Assert.That(ok, Is.True);
+            Assert.That(t, Is.EqualTo(3f).Within(1e-4f));
+        }
+
+        [Test]
+        public void ProjectOnAxis_ParallelRay_Fails()
+        {
+            Assert.That(DragMath.TryProjectOnAxis(Vector3.UnitY, Vector3.UnitX, Vector3.Zero, Vector3.UnitX, out _), Is.False);
+        }
+
+        [Test]
+        public void IntersectPlane_HitsGroundPlane()
+        {
+            var ok = DragMath.TryIntersectPlane(new Vector3(0, 10, 0), Vector3.Normalize(new Vector3(1, -1, 0)), Vector3.Zero, Vector3.UnitY, out var hit);
+
+            Assert.That(ok, Is.True);
+            Assert.That(hit.X, Is.EqualTo(10f).Within(1e-4f));
+            Assert.That(hit.Y, Is.EqualTo(0f).Within(1e-4f));
+        }
+
+        [Test]
+        public void IntersectPlane_ParallelOrBehind_Fails()
+        {
+            Assert.That(DragMath.TryIntersectPlane(new Vector3(0, 10, 0), Vector3.UnitX, Vector3.Zero, Vector3.UnitY, out _), Is.False);
+            Assert.That(DragMath.TryIntersectPlane(new Vector3(0, 10, 0), Vector3.UnitY, Vector3.Zero, Vector3.UnitY, out _), Is.False);
+        }
+    }
+}
