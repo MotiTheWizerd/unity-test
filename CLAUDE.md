@@ -12,6 +12,14 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
   succeeding, so verify with `get_info` before retrying.
 - The console line `[WebSocket] Unexpected receive error: WebSocket is not initialised`
   after a domain reload is harmless.
+- Changes made via MCP (e.g. build settings) may only live in memory. Run
+  `execute_menu_item("File/Save Project")` before committing.
+- **asmdef pitfall:** if an assembly uses `overrideReferences: true`, it must also list
+  every precompiled DLL (e.g. `Newtonsoft.Json.dll`) used by the assemblies it references.
+  Otherwise Unity **silently drops** the reference and you get "namespace not found".
+  Check `Library/Bee/artifacts/*/<Assembly>.rsp` to see the real references.
+- Test count lower than expected = a stale test DLL. Read the console for compile errors.
+- Commit with the Bash tool (heredoc). PowerShell 5.1 `-Encoding utf8` adds a BOM.
 
 ## Definition of done for a change
 

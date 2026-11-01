@@ -11,7 +11,7 @@ namespace Forge.Tests
     /// </summary>
     public class ArchitectureTests
     {
-        static readonly string[] EngineFreeAssemblies = { "Forge.Core", "Forge.Data" };
+        static readonly string[] EngineFreeAssemblies = { "Forge.Core", "Forge.Data", "Forge.Data.Json" };
 
         [TestCaseSource(nameof(EngineFreeAssemblies))]
         public void EngineFreeAssembly_DoesNotReferenceUnity(string assemblyName)
@@ -37,6 +37,19 @@ namespace Forge.Tests
 
             Assert.That(forgeRefs, Is.Empty,
                 $"Forge.Core is the bottom layer but references: {string.Join(", ", forgeRefs)}");
+        }
+
+        [Test]
+        public void DataModel_DoesNotDependOnSerializationLibraries()
+        {
+            var references = Assembly.Load("Forge.Data")
+                .GetReferencedAssemblies()
+                .Select(r => r.Name)
+                .ToArray();
+
+            Assert.That(references, Has.None.StartsWith("Newtonsoft"),
+                "Serialization libraries belong in format modules such as Forge.Data.Json.");
+            Assert.That(references, Has.None.EqualTo("Forge.Data.Json"));
         }
     }
 }

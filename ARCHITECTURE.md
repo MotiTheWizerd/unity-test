@@ -19,7 +19,8 @@ never goes there.
 Assets/_Project/
   Code/
     Core/        Forge.Core    — engine-free primitives (IDs, results, math, utils)
-    Data/        Forge.Data    — engine-free world data model: records, plugins, serialization
+    Data/        Forge.Data    — engine-free world data model: records, plugins, serialization contracts
+    Data.Json/   Forge.Data.Json — JSON plugin format (Newtonsoft), engine-free
   Tests/
     EditMode/    Forge.Tests.EditMode — unit and architecture tests
   Scenes/        Main.unity (bootstrap scene)
@@ -42,12 +43,15 @@ Dependencies point **down** only. Cycles are impossible, because asmdefs reject 
 ```
 EditorApp   Game
       \     /
-       World
-         |
-       Data
+       World ──── Data.Json
+         |       /
+       Data ────
          |
        Core
 ```
+
+- Serialization libraries never enter `Forge.Data`. Each file format is its own
+  module (`Forge.Data.Json` today, binary later) implementing `IPluginSerializer`.
 
 - `Forge.Core` and `Forge.Data` set `noEngineReferences: true`. They cannot touch
   `UnityEngine`. This keeps the domain portable, fast to test and independent
@@ -58,6 +62,42 @@ EditorApp   Game
 
 Unity treats any folder named `Editor` as editor-only code that is stripped from
 builds. Our **runtime** editor is therefore `EditorApp`, never `Editor`.
+
+---
+
+## Data model (Forge.Data)
+
+**Record ids** are namespaced strings, `namespace:name` (e.g. `forge.core:trees/oak_01`).
+They are lowercase ASCII, and the namespace is the id of the plugin that defines the record. Ids
+never depend on load order (unlike Skyrim FormIDs), so they don't get renumbered or collide.
+
+**Records** are immutable. Editing creates a new instance that overrides the old
+one in the active plugin.
+- `BaseObjectRecord`: a definition (display name, asset key).
+- `PlacedObjectRecord`: an instance in the world (base id, position, rotation, scale).
+- New record types must be registered in `RecordTypeRegistry.CreateDefault()`.
+
+**Plugins** = manifest (`id`, `version`, `masters`) + records + deletions.
+- A plugin may *define* records only in its own namespace.
+- It may *override* or *delete* records only in the namespaces of its masters.
+
+**Load order** (`LoadOrderResolver`):
+- Masters must load before their dependents. Duplicates and missing masters are errors.
+- v1 rule: **the last plugin to touch a record wins the whole record**.
+- **Conflict**: an override whose plugin does not list the previous winner as a
+  direct master, so it silently discards another plugin's change. Conflicts are reported, not blocked.
+- **Warnings**: overriding or deleting a record that doesn't exist.
+- Every validation failure is collected into a single `DataValidationException`.
+
+**File format** (`JsonPluginSerializer`, format version 1):
+- Deterministic output (records and deletions sorted) for clean diffs.
+- Record types go through the closed registry only. `TypeNameHandling` is
+  never used, `$type` metadata is rejected, and unknown fields are errors. Plugin files are untrusted input.
+
+**Known v1 limits** (deliberate, revisit when needed):
+- No field-level merge between conflicting overrides.
+- Conflict awareness only checks *direct* masters, not transitive ones.
+- Terrain records are not designed yet (Phase 3).
 
 ---
 
