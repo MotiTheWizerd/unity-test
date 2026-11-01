@@ -20,6 +20,16 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
   Check `Library/Bee/artifacts/*/<Assembly>.rsp` to see the real references.
 - Test count lower than expected = a stale test DLL. Read the console for compile errors.
 - Commit with the Bash tool (heredoc). PowerShell 5.1 `-Encoding utf8` adds a BOM.
+- **Play-mode script reload:** with "Recompile And Continue Playing", Unity reloads the
+  domain mid-play and re-serializes *private* fields. Non-serializable runtime state
+  becomes null and strings become `""`. Mark runtime-only fields `[NonSerialized]`.
+  The editor pref `ScriptCompilationDuringPlay` is set to 1 (recompile after playing).
+- `Transform.Find` treats `/` as a path separator, and record ids contain `/`, so look
+  objects up via `RecordLink`, not by name.
+- Regenerate the base plugin with the menu item `Forge/Generate Core Plugin`
+  (`execute_menu_item`). It is deterministic.
+- Verify the running editor: `manage_editor play`, then `execute_code` (reflection on
+  `EditorController._context`) and `manage_camera screenshot` with `view_position`/`view_target`.
 
 ## Definition of done for a change
 

@@ -1,0 +1,19 @@
+{
+    "name": "Forge.UnityEditor",
+    "rootNamespace": "Forge.UnityEditor",
+    "references": [
+        "Forge.Data",
+        "Forge.Data.Json"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -21,34 +21,39 @@ Assets/_Project/
     Core/        Forge.Core    — engine-free primitives (IDs, results, math, utils)
     Data/        Forge.Data    — engine-free world data model: records, plugins, serialization contracts
     Data.Json/   Forge.Data.Json — JSON plugin format (Newtonsoft), engine-free
+    Editing/     Forge.Editing — engine-free edit session (masters + active plugin)
+    World/       Forge.World   — Unity presentation: terrain chunks, placed objects
+    EditorApp/   Forge.EditorApp — the runtime editor: bootstrap, tools, camera, UI
+    UnityEditor/ Forge.UnityEditor — dev tools inside the Unity Editor (Forge menu)
   Tests/
     EditMode/    Forge.Tests.EditMode — unit and architecture tests
-  Scenes/        Main.unity (bootstrap scene)
+  Scenes/        Main.unity (editor scene: EditorApp + Main Camera)
   Settings/      URP, input and volume assets
+Assets/StreamingAssets/Plugins/   shipped base plugins (forge.core.json = our "Skyrim.esm")
+<persistentDataPath>/Plugins/     user plugins; the active plugin (forge.user) is saved here
 ```
 
 Planned modules (each is created when its first code arrives, not before):
 
 | Assembly         | Engine?  | Purpose                                                     |
 |------------------|----------|-------------------------------------------------------------|
-| `Forge.World`    | Unity    | Presents data in Unity: terrain chunks, placed objects, streaming |
-| `Forge.EditorApp`| Unity    | The runtime editor application: tools, UI, commands, undo  |
 | `Forge.Game`     | Unity    | The game runtime: player and gameplay over the same data   |
-| `Forge.UnityEditor` | Editor only | Dev-time tooling inside the Unity Editor (if ever needed) |
 
 ### Dependency rule
 
 Dependencies point **down** only. Cycles are impossible, because asmdefs reject them.
 
 ```
-EditorApp   Game
-      \     /
-       World ──── Data.Json
-         |       /
-       Data ────
-         |
-       Core
+        EditorApp            (Game)
+       /    |    \             |
+ Editing  World  Data.Json   World
+       \    |    /
+          Data
+            |
+          Core
 ```
+
+`Forge.UnityEditor` is editor-only tooling and may reference anything below EditorApp.
 
 - Serialization libraries never enter `Forge.Data`. Each file format is its own
   module (`Forge.Data.Json` today, binary later) implementing `IPluginSerializer`.
@@ -94,10 +99,29 @@ one in the active plugin.
 - Record types go through the closed registry only. `TypeNameHandling` is
   never used, `$type` metadata is rejected, and unknown fields are errors. Plugin files are untrusted input.
 
+**Terrain**: the world is a grid of `WorldGrid.ChunkSize` (64 m) chunks. A
+`TerrainChunkRecord` holds a `HeightField` (2^n+1 samples per edge, meters in
+[0, `MaxTerrainHeight`]). Its record name is derived from its coordinate
+(`terrain/c{x}_{z}`), so mods reshape terrain by *overriding* the master's chunk.
+
 **Known v1 limits** (deliberate, revisit when needed):
 - No field-level merge between conflicting overrides.
 - Conflict awareness only checks *direct* masters, not transitive ones.
-- Terrain records are not designed yet (Phase 3).
+- Two namespaces defining the same chunk coordinate: the world view shows the
+  lowest id and logs a warning.
+
+---
+
+## Runtime editor (Forge.EditorApp)
+
+- `EditorAppBootstrap` is the composition root. It loads base plugins from StreamingAssets and the
+  active plugin from the user folder (or creates it with all base plugins as masters),
+  then wires `EditSession` → `WorldView` → tools and UI through a shared `EditorContext`.
+- `WorldView.Sync(store)` diffs by record reference (records are immutable), so only
+  changed records are rebuilt. `RecordLink` maps scene objects back to record ids.
+- Controls: click places the selected palette item, Del deletes the placed object under
+  the cursor, 1–9 select from the palette, Ctrl+S saves, right-drag + WASD/QE flies the camera.
+- Runtime-only fields on MonoBehaviours are `[NonSerialized]` (see CLAUDE.md, play-mode reload).
 
 ---
 
@@ -141,3 +165,7 @@ and the condition for removing it, and is listed here.
 | Where | What | Why | Remove when |
 |-------|------|-----|-------------|
 | `Packages/manifest.json` | MCP for Unity tracks the git default branch, not a release tag | Fast setup. The exact commit is locked in `packages-lock.json` | Pin to a release tag on the next package update |
+| `Data.Json/Converters.cs` `HeightFieldConverter` | Terrain heights embedded in plugin JSON as base64 | Keeps a plugin a single file for the walking skeleton | Plugins become packages (folder/zip) with binary side files for heightmaps and assets |
+| `Editing/EditSession.cs` `Resolve` | Whole load order re-resolved on every edit | Simple and obviously correct at prototype scale | Edits feel slow on large worlds → incremental resolution |
+| `EditorApp/EditorOverlay.cs` | Immediate-mode GUI (OnGUI) panel | Fastest way to a usable skeleton | Editor UI design (Phase 4) → UI Toolkit |
+| `EditorApp/EditorController.cs` | Input read by polling devices, not an Input Actions asset | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset |
