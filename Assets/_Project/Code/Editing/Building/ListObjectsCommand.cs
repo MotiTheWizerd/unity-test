@@ -27,7 +27,7 @@ namespace Forge.Editing.Building
             public string Search { get; set; }
         }
 
-        public sealed class Result
+        public sealed class Result : ICommandResult
         {
             public Result(string summary, IReadOnlyList<Entry> objects)
             {

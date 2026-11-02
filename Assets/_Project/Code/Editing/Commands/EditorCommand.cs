@@ -7,7 +7,9 @@ namespace Forge.Editing.Commands
     /// Base of every command: checks the typed arguments against their <see cref="ParamAttribute"/>s, then
     /// runs. <typeparamref name="TResult"/> is plain data that tells the caller what happened.
     /// </summary>
-    public abstract class EditorCommand<TArguments, TResult> : IEditorCommand where TArguments : class
+    public abstract class EditorCommand<TArguments, TResult> : IEditorCommand
+        where TArguments : class
+        where TResult : ICommandResult
     {
         /// <summary>Longest command name; tool protocols cap names at 64 characters.</summary>
         public const int MaxNameLength = 64;
@@ -35,7 +37,7 @@ namespace Forge.Editing.Commands
             return Run(arguments);
         }
 
-        object IEditorCommand.Execute(object arguments)
+        ICommandResult IEditorCommand.Execute(object arguments)
         {
             if (arguments != null && !(arguments is TArguments))
                 throw new ArgumentException($"{Name} takes {typeof(TArguments).Name}, not {arguments.GetType().Name}.", nameof(arguments));

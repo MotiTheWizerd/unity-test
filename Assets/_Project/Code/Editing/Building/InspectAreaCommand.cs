@@ -42,7 +42,7 @@ namespace Forge.Editing.Building
             public int? Samples { get; set; }
         }
 
-        public sealed class Result
+        public sealed class Result : ICommandResult
         {
             internal Result(string summary, TerrainInfo terrain, int objectCount, IReadOnlyList<PlacedObjectInfo> objects)
             {

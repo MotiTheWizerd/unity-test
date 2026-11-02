@@ -20,6 +20,6 @@ namespace Forge.Editing.Commands
         Type ArgumentsType { get; }
 
         /// <summary>Checks <paramref name="arguments"/> against their parameters, then runs. Throws <see cref="CommandException"/> when refused.</summary>
-        object Execute(object arguments);
+        ICommandResult Execute(object arguments);
     }
 }

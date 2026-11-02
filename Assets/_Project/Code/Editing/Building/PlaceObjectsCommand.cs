@@ -48,7 +48,7 @@ namespace Forge.Editing.Building
             public float? Scale { get; set; }
         }
 
-        public sealed class Result
+        public sealed class Result : ICommandResult
         {
             internal Result(string summary, IReadOnlyList<PlacedObjectInfo> placed, IReadOnlyList<Skip> skipped)
             {

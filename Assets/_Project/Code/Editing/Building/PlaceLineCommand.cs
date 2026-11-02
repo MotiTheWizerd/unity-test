@@ -51,7 +51,7 @@ namespace Forge.Editing.Building
             public float? RandomGap { get; set; }
         }
 
-        public sealed class Result
+        public sealed class Result : ICommandResult
         {
             internal Result(string summary, float length, IReadOnlyList<string> ids)
             {

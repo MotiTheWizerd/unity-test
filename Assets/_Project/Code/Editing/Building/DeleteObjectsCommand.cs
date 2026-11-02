@@ -28,7 +28,7 @@ namespace Forge.Editing.Building
             public List<string> Ids { get; set; }
         }
 
-        public sealed class Result
+        public sealed class Result : ICommandResult
         {
             internal Result(string summary, int removed, IReadOnlyList<string> missing)
             {

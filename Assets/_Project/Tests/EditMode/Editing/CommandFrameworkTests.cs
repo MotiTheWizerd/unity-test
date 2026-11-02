@@ -9,7 +9,14 @@ namespace Forge.Tests.Editing
 {
     public class CommandFrameworkTests
     {
-        sealed class EchoCommand : EditorCommand<EchoCommand.Arguments, string>
+        sealed class Echo : ICommandResult
+        {
+            public Echo(string summary) => Summary = summary;
+
+            public string Summary { get; }
+        }
+
+        sealed class EchoCommand : EditorCommand<EchoCommand.Arguments, Echo>
         {
             public EchoCommand(string name = "echo") : base(name, "Says the text back.")
             {
@@ -33,7 +40,7 @@ namespace Forge.Tests.Editing
                 public string Text { get; set; }
             }
 
-            protected override string Run(Arguments arguments) => arguments.Text;
+            protected override Echo Run(Arguments arguments) => new Echo(arguments.Text);
         }
 
         sealed class Undescribed
@@ -79,7 +86,7 @@ namespace Forge.Tests.Editing
         {
             var command = new EchoCommand();
 
-            Assert.That(command.Execute(new EchoCommand.Arguments { Text = "hi", Volume = 2 }), Is.EqualTo("hi"));
+            Assert.That(command.Execute(new EchoCommand.Arguments { Text = "hi", Volume = 2 }).Summary, Is.EqualTo("hi"));
 
             var missing = Assert.Throws<CommandException>(() => command.Execute(new EchoCommand.Arguments()));
             Assert.That(missing.Message, Does.Contain("'text' is required"));

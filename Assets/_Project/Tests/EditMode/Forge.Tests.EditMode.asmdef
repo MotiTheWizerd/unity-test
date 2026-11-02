@@ -8,6 +8,7 @@
         "Forge.Data",
         "Forge.Data.Json",
         "Forge.Editing",
+        "Forge.Agent",
         "Forge.Streaming",
         "Forge.World"
     ],
