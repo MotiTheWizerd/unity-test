@@ -78,6 +78,9 @@ namespace Forge.EditorApp
 
         public BrushMode BrushMode { get; set; } = BrushMode.Raise;
 
+        /// <summary>Whether sculpting carries placed objects up and down with the ground.</summary>
+        public bool ObjectsFollowTerrain { get; set; } = true;
+
         /// <summary>Brush radius in meters; clamped to the brush's valid range.</summary>
         public float BrushRadius
         {

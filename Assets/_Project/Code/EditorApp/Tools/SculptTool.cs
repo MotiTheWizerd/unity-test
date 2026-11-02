@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Forge.Data;
 using Forge.Editing.Terrain;
 using Forge.EditorApp.Gizmos;
 using Forge.World;
@@ -21,7 +23,9 @@ namespace Forge.EditorApp.Tools
         readonly WorldView _view;
         readonly ScenePicker _picker;
         readonly BrushCursor _cursor;
+        readonly HashSet<RecordId> _previewedObjects = new HashSet<RecordId>();
         SculptStroke _stroke;
+        TerrainFollower _follower;
         float _dabTimer;
 
         public SculptTool(EditorContext context, WorldView view, ScenePicker picker)
@@ -93,11 +97,12 @@ namespace Forge.EditorApp.Tools
         void BeginStroke(Vector3 point)
         {
             var brush = _context.CurrentBrush();
-            _context.TryEdit("Sculpt", () =>
-                _stroke = new SculptStroke(_context.Session.World.Records, brush, Flat(point)));
+            var world = _context.Session.World.Records;
+            _context.TryEdit("Sculpt", () => _stroke = new SculptStroke(world, brush, Flat(point)));
             if (_stroke == null)
                 return;
 
+            _follower = _context.ObjectsFollowTerrain ? new TerrainFollower(world) : null;
             _dabTimer = 0f;
             Dab(point);
         }
@@ -106,21 +111,32 @@ namespace Forge.EditorApp.Tools
         {
             foreach (var coord in _stroke.ApplyDab(Flat(point)))
                 _view.PreviewTerrain(coord, _stroke.HeightsOf(coord));
+
+            if (_follower == null)
+                return;
+            foreach (var placed in _follower.Follow(_stroke))
+            {
+                _view.PreviewObject(placed);
+                _previewedObjects.Add(placed.Id);
+            }
         }
 
         void CommitStroke()
         {
             var stroke = _stroke;
-            _stroke = null;
+            var follower = _follower;
+            EndStroke();
             var chunks = 0;
-            if (_context.TryEdit("Sculpt", () => chunks = TerrainEdits.Commit(_context.Session, stroke)))
+            if (_context.TryEdit("Sculpt", () => chunks = TerrainEdits.Commit(_context.Session, stroke, follower)))
             {
+                // The committed records now drive the scene; nothing left to reset.
+                _previewedObjects.Clear();
                 if (chunks > 0)
                     _context.Report($"Sculpted {chunks} chunk(s) ({stroke.Brush.Mode})");
             }
             else
             {
-                _view.ResetTerrain(stroke.TouchedChunks);
+                ResetPreview(stroke);
             }
         }
 
@@ -128,8 +144,22 @@ namespace Forge.EditorApp.Tools
         {
             if (_stroke == null)
                 return;
-            _view.ResetTerrain(_stroke.TouchedChunks);
+            var stroke = _stroke;
+            EndStroke();
+            ResetPreview(stroke);
+        }
+
+        void EndStroke()
+        {
             _stroke = null;
+            _follower = null;
+        }
+
+        void ResetPreview(SculptStroke stroke)
+        {
+            _view.ResetTerrain(stroke.TouchedChunks);
+            _view.ResetTransforms(_previewedObjects);
+            _previewedObjects.Clear();
         }
 
         static System.Numerics.Vector2 Flat(Vector3 point) => new System.Numerics.Vector2(point.x, point.z);

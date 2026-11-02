@@ -56,7 +56,15 @@ namespace Forge.Editing.Terrain
         public IReadOnlyCollection<ChunkCoord> TouchedChunks => _touched;
 
         /// <summary>Current (working) height at a world XZ position, bilinearly interpolated; null outside the terrain.</summary>
-        public float? SampleHeight(Vector2 world)
+        public float? SampleHeight(Vector2 world) => Sample(world, original: false);
+
+        /// <summary>
+        /// How far the stroke has raised (positive) or lowered (negative) the ground at a
+        /// world XZ position so far; null outside the terrain.
+        /// </summary>
+        public float? HeightChangeAt(Vector2 world) => Sample(world, original: false) - Sample(world, original: true);
+
+        float? Sample(Vector2 world, bool original)
         {
             var gx = world.X / _spacing;
             var gz = world.Y / _spacing;
@@ -65,10 +73,10 @@ namespace Forge.Editing.Terrain
             var fx = gx - x0;
             var fz = gz - z0;
 
-            var h00 = GlobalHeight(x0, z0);
-            var h10 = GlobalHeight(x0 + 1, z0);
-            var h01 = GlobalHeight(x0, z0 + 1);
-            var h11 = GlobalHeight(x0 + 1, z0 + 1);
+            var h00 = GlobalHeight(x0, z0, original);
+            var h10 = GlobalHeight(x0 + 1, z0, original);
+            var h01 = GlobalHeight(x0, z0 + 1, original);
+            var h11 = GlobalHeight(x0 + 1, z0 + 1, original);
             if (h00 == null || h10 == null || h01 == null || h11 == null)
                 return null;
 
@@ -169,7 +177,7 @@ namespace Forge.Editing.Terrain
 
         static float Clamp(float height) => Math.Max(0f, Math.Min(WorldGrid.MaxTerrainHeight, height));
 
-        float? GlobalHeight(int gx, int gz)
+        float? GlobalHeight(int gx, int gz, bool original = false)
         {
             var cells = _resolution - 1;
             var coord = new ChunkCoord(FloorDiv(gx, cells), FloorDiv(gz, cells));
@@ -178,7 +186,7 @@ namespace Forge.Editing.Terrain
 
             var x = gx - coord.X * cells;
             var z = gz - coord.Z * cells;
-            return _working.TryGetValue(coord, out var heights) ? heights[z * _resolution + x] : chunk.Heights[x, z];
+            return !original && _working.TryGetValue(coord, out var heights) ? heights[z * _resolution + x] : chunk.Heights[x, z];
         }
 
         // A global sample on a chunk edge or corner belongs to up to four chunks.

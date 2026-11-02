@@ -122,8 +122,8 @@ one in the active plugin.
 - Conflict awareness only checks *direct* masters, not transitive ones.
 - Two namespaces defining the same chunk coordinate: the world view shows the
   lowest id and logs a warning.
-- Sculpting doesn't move placed objects. Use drop to ground (End) on them afterwards;
-  there's no automatic follow yet. Sculpting only edits existing chunks and never creates new ones.
+- Sculpting only edits existing chunks and never creates new ones. Objects follow the ground
+  by its height change under their pivot only (no tilting to the new slope).
 - The edge of the streamed area is a hard cut (no fog, distant LOD or impostors yet).
   Plugins load whole into memory at startup, so only the *scene* streams, not the *data*. A
   30 MB JSON plugin takes ~1.3 s to load.
@@ -167,6 +167,12 @@ one in the active plugin.
   new height from the pre-dab state, pass 2 writes each sample into *every* chunk that
   shares it. That's why chunk seams can't open. `TerrainEdits.Commit` writes the changed
   chunks as one undo step, as overrides of the master's chunk records.
+- **Objects follow sculpted terrain** (`TerrainFollower`, toggle "Objects follow terrain", on by
+  default). Each placed object on a touched chunk moves vertically by
+  `SculptStroke.HeightChangeAt` its position, so its clearance above the ground is kept (resting,
+  floating or buried). It is data-only, so unloaded objects follow too. Objects are grouped by
+  chunk once per stroke. The tool previews them on every dab, and `TerrainEdits.Commit` writes
+  terrain and moved objects as the same single undo step.
 - Tool pattern for long gestures (move drag, sculpt stroke): **preview on the scene, commit
   one edit on release, reset the preview on cancel or failure**. The session is never touched mid-gesture.
 

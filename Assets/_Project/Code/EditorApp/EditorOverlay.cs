@@ -156,6 +156,7 @@ namespace Forge.EditorApp
             _context.BrushRadius = GUILayout.HorizontalSlider(_context.BrushRadius, BrushSettings.MinRadius, 32f);
             GUILayout.Label($"Strength: {_context.BrushStrength:0.00}");
             _context.BrushStrength = GUILayout.HorizontalSlider(_context.BrushStrength, 0.05f, 1f);
+            _context.ObjectsFollowTerrain = GUILayout.Toggle(_context.ObjectsFollowTerrain, " Objects follow terrain");
             GUILayout.Space(4f);
         }
 
