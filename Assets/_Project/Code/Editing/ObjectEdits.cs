@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using Forge.Data;
 using Forge.Data.Records;
+using Forge.Editing.Placement;
 
 namespace Forge.Editing
 {
@@ -13,6 +14,37 @@ namespace Forge.Editing
     /// </summary>
     public static class ObjectEdits
     {
+        /// <summary>Name prefix of the ids new placed objects get in the active plugin, e.g. "user:ref/000042".</summary>
+        public const string PlacedIdPrefix = "ref";
+
+        /// <summary>
+        /// Creates a placed object for each of <paramref name="placements"/> as one undo step described with
+        /// <paramref name="description"/>. Returns the new records, in the same order.
+        /// </summary>
+        public static IReadOnlyList<PlacedObjectRecord> Place(EditSession session, IReadOnlyList<ObjectPlacement> placements, string description)
+        {
+            if (session == null)
+                throw new ArgumentNullException(nameof(session));
+            if (placements == null)
+                throw new ArgumentNullException(nameof(placements));
+            if (string.IsNullOrWhiteSpace(description))
+                throw new ArgumentException("A description is required for the undo step.", nameof(description));
+            if (placements.Count == 0)
+                return Array.Empty<PlacedObjectRecord>();
+
+            // All ids up front: each id stays free until its record is put.
+            var ids = session.NewIds(PlacedIdPrefix, placements.Count);
+            var records = placements
+                .Select((p, i) => new PlacedObjectRecord(ids[i], p.BaseId, p.Pose.Position, p.Pose.Rotation, p.Scale))
+                .ToList();
+            session.Batch(description, () =>
+            {
+                foreach (var record in records)
+                    session.Put(record);
+            });
+            return records;
+        }
+
         /// <summary>Moves every placed object in <paramref name="ids"/> by <paramref name="delta"/>. Returns how many moved.</summary>
         public static int Move(EditSession session, IEnumerable<RecordId> ids, Vector3 delta)
         {

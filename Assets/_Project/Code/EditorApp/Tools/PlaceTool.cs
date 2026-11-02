@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Forge.Data.Records;
+using Forge.Editing;
 using Forge.Editing.Placement;
 using Forge.EditorApp.Gizmos;
 using Forge.World;
@@ -170,25 +172,16 @@ namespace Forge.EditorApp.Tools
             if (_poses.Count == 0)
                 return;
 
-            var session = _context.Session;
-            var ids = session.NewIds("ref", _poses.Count);
-            var records = new List<PlacedObjectRecord>(_poses.Count);
-            for (var i = 0; i < _poses.Count; i++)
-            {
-                var pose = _poses[i];
-                records.Add(new PlacedObjectRecord(ids[i], baseObject.Id, pose.Position.ToNumerics(), pose.Rotation.ToNumerics(), pose.Scale));
-            }
-
+            var placements = _poses
+                .Select(p => new ObjectPlacement(baseObject.Id, new ObjectPose(p.Position.ToNumerics(), p.Rotation.ToNumerics()), p.Scale))
+                .ToList();
             var name = baseObject.DisplayName;
-            var description = records.Count == 1 ? $"Place {name}" : $"Place {records.Count} {name}";
-            if (_context.TryEdit("Place", () => session.Batch(description, () =>
-                {
-                    foreach (var record in records)
-                        session.Put(record);
-                })))
+            var description = placements.Count == 1 ? $"Place {name}" : $"Place {placements.Count} {name}";
+            IReadOnlyList<PlacedObjectRecord> records = null;
+            if (_context.TryEdit("Place", () => records = ObjectEdits.Place(_context.Session, placements, description)))
             {
-                _context.Selection.Replace(ids);
-                _context.Report(records.Count == 1 ? $"Placed {name} ({ids[0]})" : $"Placed {records.Count} × {name}");
+                _context.Selection.Replace(records.Select(r => r.Id));
+                _context.Report(records.Count == 1 ? $"Placed {name} ({records[0].Id})" : $"Placed {records.Count} × {name}");
                 // A fresh variation for the next one, so repeated clicks don't stamp copies.
                 _context.RerollPlacement();
             }
