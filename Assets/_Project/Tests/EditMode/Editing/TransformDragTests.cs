@@ -135,6 +135,17 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void FitDistance_FitsTheSphereInTheNarrowerFieldOfView()
+        {
+            // 90° vertical FOV on a square view: the sphere touches the frustum at 45° from the axis.
+            Assert.That(ViewMath.FitDistance(1f, 90f, 1f), Is.EqualTo((float)Math.Sqrt(2)).Within(Tolerance));
+            // A tall, narrow view is limited horizontally, so it needs more distance.
+            Assert.That(ViewMath.FitDistance(1f, 90f, 0.5f), Is.GreaterThan(ViewMath.FitDistance(1f, 90f, 2f)));
+            Assert.That(ViewMath.FitDistance(0f, 60f, 1.5f), Is.EqualTo(0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ViewMath.FitDistance(1f, 0f, 1f));
+        }
+
+        [Test]
         public void SignedAngle_MatchesCreateFromAxisAngle()
         {
             var from = Vector3.UnitX;

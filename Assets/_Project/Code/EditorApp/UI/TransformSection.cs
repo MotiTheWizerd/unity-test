@@ -4,12 +4,13 @@ using UnityEngine.UIElements;
 
 namespace Forge.EditorApp.UI
 {
-    /// <summary>Move / Rotate / Scale modes, the selection count and drop to ground.</summary>
+    /// <summary>Move / Rotate / Scale modes, the selection count, frame and drop to ground.</summary>
     public sealed class TransformSection : IPanelSection
     {
         readonly EditorContext _context;
         readonly ChoiceRow<TransformMode> _modes;
         readonly Label _selection;
+        readonly Button _frame;
         readonly Button _drop;
 
         public TransformSection(VisualElement root, EditorContext context, EditorCommands commands)
@@ -23,6 +24,8 @@ namespace Forge.EditorApp.UI
                 mode => $"{mode} ({ShortcutOf(mode)})",
                 context.SelectTransformMode);
             _selection = PanelElements.Required<Label>(root, "selection-count");
+            _frame = PanelElements.Required<Button>(root, "frame-selection");
+            _frame.clicked += commands.FrameSelection;
             _drop = PanelElements.Required<Button>(root, "drop-to-ground");
             _drop.clicked += commands.DropSelectionToGround;
         }
@@ -31,7 +34,9 @@ namespace Forge.EditorApp.UI
         {
             _modes.Refresh(_context.ActiveTool == ToolKind.Select ? _context.TransformMode : (TransformMode?)null);
             PanelElements.SetText(_selection, $"Selected: {_context.Selection.Count}");
-            _drop.SetEnabled(!_context.Selection.IsEmpty);
+            var any = !_context.Selection.IsEmpty;
+            _frame.SetEnabled(any);
+            _drop.SetEnabled(any);
         }
 
         // SHORTCUT: mirrors the keys hard-coded in EditorController; both move to the

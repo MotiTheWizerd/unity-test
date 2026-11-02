@@ -20,12 +20,39 @@ namespace Forge.EditorApp
         readonly EditorContext _context;
         readonly WorldView _view;
         readonly ScenePicker _picker;
+        readonly ICameraRig _camera;
 
-        public EditorCommands(EditorContext context, WorldView view, ScenePicker picker)
+        public EditorCommands(EditorContext context, WorldView view, ScenePicker picker, ICameraRig camera)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _picker = picker ?? throw new ArgumentNullException(nameof(picker));
+            _camera = camera ?? throw new ArgumentNullException(nameof(camera));
+        }
+
+        /// <summary>Glides the camera so the whole selection fills the view (F).</summary>
+        public void FrameSelection()
+        {
+            var found = false;
+            var combined = default(Bounds);
+            foreach (var id in _context.Selection.Ids)
+            {
+                if (!_view.TryGetObject(id, out var go) || !TryGetBounds(go, out var bounds))
+                    continue;
+                if (found)
+                    combined.Encapsulate(bounds);
+                else
+                    combined = bounds;
+                found = true;
+            }
+
+            if (!found)
+            {
+                _context.Report("Frame: nothing selected");
+                return;
+            }
+
+            _camera.Frame(combined.center, combined.extents.magnitude);
         }
 
         /// <summary>

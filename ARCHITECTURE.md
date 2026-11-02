@@ -233,7 +233,7 @@ one in the active plugin.
 - `EditorCommands` holds one-shot actions shared by shortcuts and UI buttons.
   `DropSelectionToGround` (End) finds the terrain under each selected object, looking through
   other objects, and moves the object so the lowest point of its renderer bounds rests on
-  the surface. The whole selection is one undo step.
+  the surface. The whole selection is one undo step. `FrameSelection` (F) frames the selection.
 - `ScenePicker` owns all raycasts. Gizmo handles live on the **`ForgeGizmo`** layer
   (TagManager), so world picks and handle picks never interfere.
 - `Gizmo` is the shared gizmo machinery: primitive parts tagged with their `GizmoHandle`, hover
@@ -253,7 +253,14 @@ one in the active plugin.
   `SelectPlacement`) or `EditorCommands`. The controller only sees `IPointerBlocker`
   (`EditorPanel.IsPointerOverUI` uses `panel.Pick`; the full-screen root ignores picking).
 - Controls: W / E / R → move / rotate / scale (Select tool); 1–9 or the palette → Place tool; Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
-  (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly.
+  (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly; wheel
+  dollies towards the point under the cursor; hold middle mouse to pan (the grabbed point stays under
+  the cursor); F frames the selection.
+- `FlyCamera` (implements `ICameraRig`) gets the UI blocker and a depth probe (`ScenePicker.TryPickWorld`)
+  from the controller: wheel and pan never start over the panel, and both scale with the depth under the
+  cursor. `EditorCommands.FrameSelection` fits the selection's combined renderer bounds through
+  `ICameraRig.Frame`. The fit distance is the engine-free `ViewMath.FitDistance` (narrower of the vertical
+  and horizontal FOV), and the camera glides there with `SmoothDamp`.
 - Runtime-only fields on MonoBehaviours are `[NonSerialized]` (see CLAUDE.md, play-mode reload).
 
 ---

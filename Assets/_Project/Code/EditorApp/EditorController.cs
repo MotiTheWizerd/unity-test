@@ -11,12 +11,13 @@ namespace Forge.EditorApp
     /// <summary>
     /// Routes input: global shortcuts (Ctrl+S save, Ctrl+Z / Ctrl+Y or
     /// Ctrl+Shift+Z undo/redo, 1-9 palette, B sculpt, W/E/R move/rotate/scale,
-    /// [ ] brush size, End drop to ground) are handled here; everything else is
+    /// [ ] brush size, End drop to ground, F frame selection) are handled here; everything else is
     /// passed to the active tool. Pointer clicks over the UI panel are filtered out.
     /// </summary>
     public sealed class EditorController : MonoBehaviour
     {
         [SerializeField] Camera _camera;
+        [SerializeField] FlyCamera _flyCamera;
         [SerializeField] float _maxRayDistance = 2000f;
 
         [SerializeField, Tooltip("Always-on-top material for gizmos (Forge/GizmoOverlay).")]
@@ -36,7 +37,8 @@ namespace Forge.EditorApp
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
             var picker = new ScenePicker(_maxRayDistance);
-            Commands = new EditorCommands(context, view, picker);
+            _flyCamera.Initialize(ui, ray => picker.TryPickWorld(ray, out var hit) ? hit.distance : (float?)null);
+            Commands = new EditorCommands(context, view, picker, _flyCamera);
             _tools = new Dictionary<ToolKind, IEditorTool>
             {
                 { ToolKind.Select, new SelectTransformTool(context, view, picker, _camera, _gizmoMaterial) },
@@ -110,6 +112,9 @@ namespace Forge.EditorApp
 
             if (keyboard.endKey.wasPressedThisFrame)
                 Commands.DropSelectionToGround();
+
+            if (keyboard.fKey.wasPressedThisFrame)
+                Commands.FrameSelection();
 
             if (_context.ActiveTool == ToolKind.Sculpt)
             {

@@ -12,7 +12,8 @@
                     <ui:VisualElement name="transform-modes" class="forge-row forge-choices" />
                     <ui:VisualElement class="forge-row forge-spaced">
                         <ui:Label name="selection-count" class="forge-grow" />
-                        <ui:Button name="drop-to-ground" text="Drop to ground (End)" />
+                        <ui:Button name="frame-selection" text="Frame (F)" />
+                        <ui:Button name="drop-to-ground" text="Drop (End)" />
                     </ui:VisualElement>
                 </ui:VisualElement>
 
@@ -53,7 +54,7 @@
                 </ui:Foldout>
 
                 <ui:Foldout text="Controls" value="false" class="forge-foldout">
-                    <ui:Label class="forge-muted" text="Click / Shift+click: select&#10;W move · E rotate · R scale · Ctrl snaps&#10;Del: delete · End: drop to ground&#10;Esc: cancel / deselect&#10;B: sculpt (hold left mouse) · [ ]: brush size&#10;1-9: place object&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · WASD/QE fly · Shift fast" />
+                    <ui:Label class="forge-muted" text="Click / Shift+click: select&#10;W move · E rotate · R scale · Ctrl snaps&#10;Del: delete · End: drop to ground · F: frame&#10;Esc: cancel / deselect&#10;B: sculpt (hold left mouse) · [ ]: brush size&#10;1-9: place object&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
                 </ui:Foldout>
             </ui:ScrollView>
         </ui:VisualElement>
