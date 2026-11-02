@@ -12,8 +12,8 @@ namespace Forge.Editing
     /// <summary>
     /// The editor's working state: read-only master plugins plus one active plugin
     /// that receives every change, exactly like the Creation Kit's "active file".
-    /// Every edit is validated, recorded as an undoable <see cref="EditStep"/>, and
-    /// rolled back entirely if it would leave the world invalid.
+    /// Every edit is validated, recorded as an undoable <see cref="EditStep"/> (or collected
+    /// by the open <see cref="EditDraft"/>), and rolled back entirely if it would leave the world invalid.
     /// </summary>
     public sealed class EditSession
     {
@@ -23,9 +23,8 @@ namespace Forge.Editing
         readonly SortedSet<RecordId> _deletions = new SortedSet<RecordId>();
         readonly UndoHistory _history;
 
-        // Changes of the batch in progress, in first-touched order, one per record id.
-        readonly List<RecordChange> _pending = new List<RecordChange>();
-        readonly Dictionary<RecordId, RecordChange> _pendingById = new Dictionary<RecordId, RecordChange>();
+        // Changes of the batch in progress.
+        readonly ChangeSet _pending = new ChangeSet();
         string _pendingDescription;
         int _batchDepth;
 
@@ -58,8 +57,11 @@ namespace Forge.Editing
 
         public ResolvedWorld World { get; private set; }
 
+        /// <summary>The draft collecting edits for review, or null; see <see cref="BeginDraft"/>.</summary>
+        public EditDraft Draft { get; private set; }
+
         /// <summary>True when the active plugin differs from what was last saved (or loaded).</summary>
-        public bool IsDirty => _history.CurrentStateId != _savedStateId;
+        public bool IsDirty => _history.CurrentStateId != _savedStateId || (Draft?.HasChanges ?? false);
 
         public bool CanUndo => _history.CanUndo;
 
@@ -126,11 +128,27 @@ namespace Forge.Editing
                 CommitPending();
         }
 
+        /// <summary>
+        /// Starts collecting edits into a draft instead of the undo history: every edit still applies and
+        /// publishes the world at once, but only <see cref="EditDraft.Accept"/> records them, as one step.
+        /// </summary>
+        public EditDraft BeginDraft()
+        {
+            if (_batchDepth > 0)
+                throw new InvalidOperationException("Cannot begin a draft while a batch is in progress.");
+            if (Draft != null)
+                throw new InvalidOperationException("A draft is already open; accept or discard it first.");
+
+            return Draft = new EditDraft(this);
+        }
+
         /// <summary>Reverts the last step. Returns false when there is nothing to undo.</summary>
         public bool Undo()
         {
             if (_batchDepth > 0)
                 throw new InvalidOperationException("Cannot undo while a batch is in progress.");
+            if (Draft != null)
+                throw new InvalidOperationException("Cannot undo while a draft is open; accept or discard it first.");
             if (!_history.CanUndo)
                 return false;
 
@@ -146,6 +164,8 @@ namespace Forge.Editing
         {
             if (_batchDepth > 0)
                 throw new InvalidOperationException("Cannot redo while a batch is in progress.");
+            if (Draft != null)
+                throw new InvalidOperationException("Cannot redo while a draft is open; accept or discard it first.");
             if (!_history.CanRedo)
                 return false;
 
@@ -188,7 +208,48 @@ namespace Forge.Editing
         public Plugin BuildActivePlugin() => new Plugin(_activeManifest, _records.Values, _deletions);
 
         /// <summary>Marks the current state as saved; undoing or redoing away from it makes the session dirty again.</summary>
-        public void MarkSaved() => _savedStateId = _history.CurrentStateId;
+        public void MarkSaved()
+        {
+            // A saved draft could still be discarded, leaving the file ahead of the session.
+            if (Draft != null)
+                throw new InvalidOperationException("Cannot mark the session saved while a draft is open; accept or discard it first.");
+            _savedStateId = _history.CurrentStateId;
+        }
+
+        internal void AcceptDraft(EditDraft draft, string description)
+        {
+            EnsureOpen(draft);
+            if (string.IsNullOrWhiteSpace(description))
+                throw new ArgumentException("A description is required for the draft's undo step.", nameof(description));
+
+            var changes = draft.Changes;
+            Draft = null;
+            if (changes.Count > 0)
+                _history.Record(new EditStep(_nextStepId++, description, changes));
+        }
+
+        internal void DiscardDraft(EditDraft draft)
+        {
+            EnsureOpen(draft);
+            var collected = draft.Collected;
+            Draft = null;
+            if (collected.Count == 0)
+                return;
+
+            for (var i = collected.Count - 1; i >= 0; i--)
+                ApplyState(collected[i].Id, collected[i].Before);
+            Publish(Resolve());
+        }
+
+        void EnsureOpen(EditDraft draft)
+        {
+            if (draft == null)
+                throw new ArgumentNullException(nameof(draft));
+            if (_batchDepth > 0)
+                throw new InvalidOperationException("Cannot close a draft while a batch is in progress.");
+            if (!ReferenceEquals(Draft, draft))
+                throw new InvalidOperationException("This draft is not open.");
+        }
 
         EntryState GetEntry(RecordId id)
         {
@@ -204,17 +265,7 @@ namespace Forge.Editing
             if (before.Equals(after))
                 return;
 
-            if (_pendingById.TryGetValue(id, out var existing))
-            {
-                existing.After = after;
-            }
-            else
-            {
-                var change = new RecordChange(id, before, after);
-                _pending.Add(change);
-                _pendingById.Add(id, change);
-            }
-
+            _pending.Track(id, before, after);
             ApplyState(id, after);
         }
 
@@ -255,7 +306,7 @@ namespace Forge.Editing
         void CommitPending()
         {
             // Changes that ended where they started (e.g. put then delete) are no-ops.
-            var changes = _pending.Where(c => !c.Before.Equals(c.After)).ToList();
+            var changes = _pending.Effective();
             var description = _pendingDescription;
             if (changes.Count == 0)
             {
@@ -275,21 +326,24 @@ namespace Forge.Editing
             }
 
             ClearPending();
-            _history.Record(new EditStep(_nextStepId++, description, changes));
+            if (Draft != null)
+                Draft.Collect(changes);
+            else
+                _history.Record(new EditStep(_nextStepId++, description, changes));
             Publish(world);
         }
 
         void DiscardPending()
         {
-            for (var i = _pending.Count - 1; i >= 0; i--)
-                ApplyState(_pending[i].Id, _pending[i].Before);
+            var pending = _pending.All;
+            for (var i = pending.Count - 1; i >= 0; i--)
+                ApplyState(pending[i].Id, pending[i].Before);
             ClearPending();
         }
 
         void ClearPending()
         {
             _pending.Clear();
-            _pendingById.Clear();
             _pendingDescription = null;
         }
 

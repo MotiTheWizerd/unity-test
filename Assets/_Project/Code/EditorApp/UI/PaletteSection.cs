@@ -5,6 +5,7 @@ using Forge.Data;
 using Forge.Data.Records;
 using Forge.EditorApp.Tools;
 using Forge.Editing.Palette;
+using Forge.Editing.Placement;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -164,7 +165,7 @@ namespace Forge.EditorApp.UI
         {
             var slider = PanelElements.Required<Slider>(root, name);
             slider.lowValue = 0f;
-            slider.highValue = EditorContext.MaxPlacementGap;
+            slider.highValue = RowGap.Max;
             slider.RegisterValueChangedCallback(e => set(e.newValue));
             return slider;
         }

@@ -11,7 +11,7 @@ namespace Forge.EditorApp.Tools
     /// <summary>
     /// Shows a see-through copy of the palette's base object resting on the surface under the
     /// pointer, turned by <see cref="EditorContext.PlacementYaw"/> ([ / ]) plus its drawn variation,
-    /// and tilted to the slope when its rules ask for it (<see cref="GroundFit"/>).
+    /// and tilted to the slope when its rules ask for it (<see cref="ObjectSeating"/>).
     /// A click places it exactly there. Holding and dragging paints a row (<see cref="PlacementStroke"/>):
     /// a new object each time the pointer is clear of the last one plus the gap, Shift for a straight
     /// line. The row previews as ghosts and is placed as one undo step on release; Esc drops it.
@@ -22,18 +22,18 @@ namespace Forge.EditorApp.Tools
         readonly EditorContext _context;
         readonly ScenePicker _picker;
         readonly PlacementGhost _ghost;
-        readonly SlopeAlignment _slopes;
+        readonly ObjectSeating _seating;
         readonly List<PlacementPose> _poses = new List<PlacementPose>();
         PlacementStroke _stroke;
         PlacementPose _pressPose;
         bool _pressOnTerrain;
 
-        public PlaceTool(EditorContext context, ScenePicker picker, PlacementGhost ghost, SlopeAlignment slopes)
+        public PlaceTool(EditorContext context, ScenePicker picker, PlacementGhost ghost, ObjectSeating seating)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _picker = picker ?? throw new ArgumentNullException(nameof(picker));
             _ghost = ghost ?? throw new ArgumentNullException(nameof(ghost));
-            _slopes = slopes ?? throw new ArgumentNullException(nameof(slopes));
+            _seating = seating ?? throw new ArgumentNullException(nameof(seating));
         }
 
         public void Activate() =>
@@ -149,17 +149,11 @@ namespace Forge.EditorApp.Tools
             }
         }
 
-        // The object's lowest point rests on `ground`; the pivot-to-bottom distance grows with the scale. On terrain,
-        // objects that align to the slope are seated by GroundFit, as dropping and sculpting do; others stay upright.
+        // The object rests on `ground`, seated the way the world-building commands seat it too.
         PlacementPose PoseAt(BaseObjectRecord baseObject, Vector3 ground, bool onTerrain, float yawDegrees, float scale)
         {
-            var slopeShape = onTerrain ? _slopes.ShapeToAlign(baseObject.Id) : null;
-            if (slopeShape.HasValue && GroundFit.TryPose(Flat(ground), slopeShape.Value, yawDegrees, scale,
-                    _picker.TerrainHeightAt, GroundFit.DefaultMaxTiltDegrees, out var pivot, out var rotation))
-                return new PlacementPose(ground, pivot.ToUnity(), rotation.ToUnity(), scale);
-
-            var lift = _ghost.Shape.PivotAboveBottom * scale;
-            return new PlacementPose(ground, ground + Vector3.up * lift, Quaternion.Euler(0f, yawDegrees, 0f), scale);
+            var pose = _seating.Seat(baseObject, ground.ToNumerics(), onTerrain, yawDegrees, scale);
+            return new PlacementPose(ground, pose.Position.ToUnity(), pose.Rotation.ToUnity(), scale);
         }
 
         void ShowGhosts(IReadOnlyList<PlacementPose> poses)

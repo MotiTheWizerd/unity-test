@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -25,11 +24,8 @@ namespace Forge.EditorApp
         readonly PluginFileStore _activeStore;
         float _brushRadius = 8f;
         float _brushStrength = 0.5f;
-        readonly Random _random = new Random();
-        readonly Dictionary<RecordId, GapSettings> _gaps = new Dictionary<RecordId, GapSettings>();
         ResolvedWorld _paletteWorld;
         ObjectPalette _palette;
-        bool _randomizePlacement = true;
 
         public EditorContext(EditSession session, PluginFileStore activeStore)
         {
@@ -40,6 +36,9 @@ namespace Forge.EditorApp
         }
 
         public EditSession Session { get; }
+
+        /// <summary>Placement settings, shared by the place tool and the world-building commands.</summary>
+        public PlacementOptions PlacementOptions { get; } = new PlacementOptions(new Random());
 
         /// <summary>
         /// Base objects the place tool offers, by category. Cached per world version,
@@ -81,6 +80,10 @@ namespace Forge.EditorApp
         /// <summary>Base object the place tool creates.</summary>
         public RecordId SelectedBaseId { get; set; }
 
+        /// <summary>The record of <see cref="SelectedBaseId"/>, or null if it names no base object.</summary>
+        public BaseObjectRecord SelectedBaseObject =>
+            Session.World.Records.TryGet(SelectedBaseId, out var record) ? record as BaseObjectRecord : null;
+
         /// <summary>Switches to the place tool with <paramref name="baseId"/> (1-9 and the palette buttons).</summary>
         public void SelectPlacement(RecordId baseId)
         {
@@ -107,10 +110,10 @@ namespace Forge.EditorApp
         /// <summary>Whether new objects get their base object's random variation (turn and scale).</summary>
         public bool RandomizePlacement
         {
-            get => _randomizePlacement;
+            get => PlacementOptions.Randomize;
             set
             {
-                _randomizePlacement = value;
+                PlacementOptions.Randomize = value;
                 RerollPlacement();
             }
         }
@@ -122,73 +125,63 @@ namespace Forge.EditorApp
         public void RerollPlacement() => PlacementRoll = DrawPlacementRoll();
 
         /// <summary>A fresh variation for the selected object (identity when randomizing is off), e.g. for each object of a painted row.</summary>
-        public PlacementRoll DrawPlacementRoll() =>
-            RandomizePlacement ? PlacementRoll.Draw(SelectedPlacementRules, _random) : PlacementRoll.Identity;
+        public PlacementRoll DrawPlacementRoll() => PlacementOptions.DrawRoll(SelectedBaseObject);
 
         /// <summary>Whether the selected object gets a random heading, so a painted row keeps it instead of following the drag.</summary>
-        public bool PlacementHasRandomYaw => RandomizePlacement && (SelectedPlacementRules?.RandomYaw ?? false);
+        public bool PlacementHasRandomYaw => PlacementOptions.KeepsOwnHeading(SelectedBaseObject);
 
         /// <summary>Whether the selected object can vary at all (the "Random turn &amp; size" toggle matters).</summary>
         public bool PlacementCanVary => PlacementRoll.CanVary(SelectedPlacementRules);
 
         /// <summary>Whether placing, dropping and sculpting tilt objects to the slope when their base object asks for it (fences, rocks).</summary>
-        public bool AlignPlacementToSlope { get; set; } = true;
+        public bool AlignPlacementToSlope
+        {
+            get => PlacementOptions.AlignToSlope;
+            set => PlacementOptions.AlignToSlope = value;
+        }
 
         /// <summary>Whether objects of <paramref name="baseId"/> are tilted to the slope: their rules ask for it and the toggle is on.</summary>
         public bool AlignsToSlope(RecordId baseId) =>
-            AlignPlacementToSlope && Session.World.Records.TryGet(baseId, out var record) && ((record as BaseObjectRecord)?.Placement?.AlignToSlope ?? false);
+            Session.World.Records.TryGet(baseId, out var record) && PlacementOptions.TiltsToSlope(record as BaseObjectRecord);
 
         /// <summary>Whether the selected object's rules tilt it to the slope at all (the toggle matters).</summary>
         public bool PlacementCanAlignToSlope => SelectedPlacementRules?.AlignToSlope ?? false;
 
-        /// <summary>Largest gap the panel offers between painted objects, in meters.</summary>
-        public const float MaxPlacementGap = 20f;
-
         /// <summary>Meters left between painted objects; remembered per base object (fences 0, trees roomier).</summary>
         public float PlacementGap
         {
-            get => SelectedGap().Gap;
-            set => _gaps[SelectedBaseId] = new GapSettings(Clamp(value, 0f, MaxPlacementGap), SelectedGap().RandomExtra);
+            get => SelectedGap.Gap;
+            set => SetSelectedGap(RowGap.Clamped(value, SelectedGap.RandomExtra));
         }
 
         /// <summary>Up to this many extra meters, drawn per gap, so painted rows don't look regular.</summary>
         public float PlacementGapRandom
         {
-            get => SelectedGap().RandomExtra;
-            set => _gaps[SelectedBaseId] = new GapSettings(SelectedGap().Gap, Clamp(value, 0f, MaxPlacementGap));
+            get => SelectedGap.RandomExtra;
+            set => SetSelectedGap(RowGap.Clamped(SelectedGap.Gap, value));
         }
 
         /// <summary>The gap before the next painted object: <see cref="PlacementGap"/> plus a random part of <see cref="PlacementGapRandom"/>.</summary>
-        public float DrawPlacementGap()
+        public float DrawPlacementGap() => PlacementOptions.DrawGap(SelectedGap);
+
+        RowGap SelectedGap
         {
-            var settings = SelectedGap();
-            return settings.Gap + (float)_random.NextDouble() * settings.RandomExtra;
+            get
+            {
+                var baseObject = SelectedBaseObject;
+                return baseObject != null ? PlacementOptions.GapFor(baseObject) : default;
+            }
         }
 
-        // Until the user sets it, natural things (those that vary) get some room; built things touch.
-        GapSettings SelectedGap() =>
-            _gaps.TryGetValue(SelectedBaseId, out var settings) ? settings
-            : PlacementCanVary ? new GapSettings(1f, 2f)
-            : new GapSettings(0f, 0f);
-
-        static float Clamp(float value, float min, float max) => Math.Max(min, Math.Min(max, value));
-
-        readonly struct GapSettings
+        void SetSelectedGap(RowGap gap)
         {
-            public GapSettings(float gap, float randomExtra)
-            {
-                Gap = gap;
-                RandomExtra = randomExtra;
-            }
-
-            public float Gap { get; }
-
-            public float RandomExtra { get; }
+            var baseObject = SelectedBaseObject;
+            if (baseObject != null)
+                PlacementOptions.SetGap(baseObject, gap);
         }
 
         /// <summary>The selected base object's placement rules, or null if it has none.</summary>
-        public PlacementRules SelectedPlacementRules =>
-            Session.World.Records.TryGet(SelectedBaseId, out var record) ? (record as BaseObjectRecord)?.Placement : null;
+        public PlacementRules SelectedPlacementRules => SelectedBaseObject?.Placement;
 
         public BrushMode BrushMode { get; set; } = BrushMode.Raise;
 

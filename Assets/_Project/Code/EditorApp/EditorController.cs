@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Forge.EditorApp.Gizmos;
 using Forge.EditorApp.Tools;
+using Forge.Editing.Placement;
 using Forge.World;
 using Forge.World.Assets;
 using UnityEngine;
@@ -46,12 +47,13 @@ namespace Forge.EditorApp
             var picker = new ScenePicker(_maxRayDistance);
             var shapes = new AssetShapes(assets);
             var slopes = new SlopeAlignment(context, shapes);
+            var seating = new ObjectSeating(picker.TerrainHeightAt, slopes.ShapeToAlign, shapes.ShapeOf);
             _flyCamera.Initialize(ui, ray => picker.TryPickWorld(ray, out var hit) ? hit.distance : (float?)null);
             Commands = new EditorCommands(context, view, picker, _flyCamera, slopes);
             _tools = new Dictionary<ToolKind, IEditorTool>
             {
                 { ToolKind.Select, new SelectTransformTool(context, view, picker, _camera, _gizmoMaterial) },
-                { ToolKind.Place, new PlaceTool(context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), slopes) },
+                { ToolKind.Place, new PlaceTool(context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
                 { ToolKind.Sculpt, new SculptTool(context, view, picker, slopes) },
             };
         }
