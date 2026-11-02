@@ -256,6 +256,17 @@ one in the active plugin.
     whole degrees, hundredths of scale) is drawn from the base object's variation ahead of the click, so the ghost
     shows it; it is redrawn after each placement and on choosing an object. Trees, bushes and rocks vary; built
     things have no variation and are placed exactly.
+    **Painting rows**: holding and dragging runs an engine-free `PlacementStroke` (`Forge.Editing.Placement`). The
+    next object is set down once the pointer is clear of the last one: half of each `Footprint` (horizontal bounds
+    at scale 1, measured by the ghost) along the drag, plus the gap, at exactly that distance, so gap 0 makes
+    fences meet end to end. Objects without a random heading turn their length (local +X) along the drag; the
+    rest keep their drawn heading. Shift lays a straight row from the press point to the pointer, re-laid live.
+    Each position's variation and gap are drawn once, so re-laying doesn't flicker. The first object keeps the
+    clicked spot (stacking still works); the others rest on the terrain under them. The row previews as ghosts
+    and is placed on release as one undo step ("Place 5 Wooden Fence"), using `EditSession.NewIds` so
+    the ids are distinct before any is put; Esc drops the row. Gap and random extra (panel sliders, 0–20 m)
+    are remembered per base object for the session: built things start at 0, natural things at 1 m + up to 2 m.
+    Rows on slopes step, since objects aren't tilted to the ground.
   - `SculptTool` (B): hold left mouse on the terrain. Dabs fire at a fixed 30/s (independent of
     frame rate, capped per frame) and preview live, and the stroke commits on release. `[` / `]`
     change the radius. `BrushCursor` draws a ring that follows the ground, colored by mode.
@@ -287,7 +298,8 @@ one in the active plugin.
   `PaletteSection`: a search field (Esc clears) over one foldout per category; folded categories
   stay folded across rebuilds, and a search opens every group with a match. Buttons are plain
   elements, fine for hundreds of objects; a virtualized `ListView` is the next step for thousands.
-- Controls: W / E / R → move / rotate / scale (Select tool); 1–9 or the palette → Place tool (`[` / `]` rotate); Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
+- Controls: W / E / R → move / rotate / scale (Select tool); 1–9 or the palette → Place tool (`[` / `]` rotate,
+  hold + drag paints a row, + Shift a straight one); Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
   (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly; wheel
   dollies towards the point under the cursor; hold middle mouse to pan (the grabbed point stays under
   the cursor); F frames the selection.

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -25,6 +26,7 @@ namespace Forge.EditorApp
         float _brushRadius = 8f;
         float _brushStrength = 0.5f;
         readonly Random _random = new Random();
+        readonly Dictionary<RecordId, GapSettings> _gaps = new Dictionary<RecordId, GapSettings>();
         ResolvedWorld _paletteWorld;
         ObjectPalette _palette;
         bool _randomizePlacement = true;
@@ -117,8 +119,59 @@ namespace Forge.EditorApp
         public PlacementRoll PlacementRoll { get; private set; } = PlacementRoll.Identity;
 
         /// <summary>Draws a new variation for the next placement (after each placement and on a new object).</summary>
-        public void RerollPlacement() =>
-            PlacementRoll = RandomizePlacement ? PlacementRoll.Draw(SelectedVariation, _random) : PlacementRoll.Identity;
+        public void RerollPlacement() => PlacementRoll = DrawPlacementRoll();
+
+        /// <summary>A fresh variation for the selected object (identity when randomizing is off), e.g. for each object of a painted row.</summary>
+        public PlacementRoll DrawPlacementRoll() =>
+            RandomizePlacement ? PlacementRoll.Draw(SelectedVariation, _random) : PlacementRoll.Identity;
+
+        /// <summary>Whether the selected object gets a random heading, so a painted row keeps it instead of following the drag.</summary>
+        public bool PlacementHasRandomYaw => RandomizePlacement && (SelectedVariation?.RandomYaw ?? false);
+
+        /// <summary>Largest gap the panel offers between painted objects, in meters.</summary>
+        public const float MaxPlacementGap = 20f;
+
+        /// <summary>Meters left between painted objects; remembered per base object (fences 0, trees roomier).</summary>
+        public float PlacementGap
+        {
+            get => SelectedGap().Gap;
+            set => _gaps[SelectedBaseId] = new GapSettings(Clamp(value, 0f, MaxPlacementGap), SelectedGap().RandomExtra);
+        }
+
+        /// <summary>Up to this many extra meters, drawn per gap, so painted rows don't look regular.</summary>
+        public float PlacementGapRandom
+        {
+            get => SelectedGap().RandomExtra;
+            set => _gaps[SelectedBaseId] = new GapSettings(SelectedGap().Gap, Clamp(value, 0f, MaxPlacementGap));
+        }
+
+        /// <summary>The gap before the next painted object: <see cref="PlacementGap"/> plus a random part of <see cref="PlacementGapRandom"/>.</summary>
+        public float DrawPlacementGap()
+        {
+            var settings = SelectedGap();
+            return settings.Gap + (float)_random.NextDouble() * settings.RandomExtra;
+        }
+
+        // Until the user sets it, natural things (those with variation) get some room; built things touch.
+        GapSettings SelectedGap() =>
+            _gaps.TryGetValue(SelectedBaseId, out var settings) ? settings
+            : SelectedVariation != null ? new GapSettings(1f, 2f)
+            : new GapSettings(0f, 0f);
+
+        static float Clamp(float value, float min, float max) => Math.Max(min, Math.Min(max, value));
+
+        readonly struct GapSettings
+        {
+            public GapSettings(float gap, float randomExtra)
+            {
+                Gap = gap;
+                RandomExtra = randomExtra;
+            }
+
+            public float Gap { get; }
+
+            public float RandomExtra { get; }
+        }
 
         /// <summary>The selected base object's variation, or null if it has none.</summary>
         public PlacementVariation SelectedVariation =>

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Forge.Data;
@@ -130,6 +131,24 @@ namespace Forge.Tests.Editing
 
             Assert.That(session.NewId("ref").ToString(), Is.EqualTo("user:ref/000008"));
             Assert.That(session.NewId("marker").ToString(), Is.EqualTo("user:marker/000001"));
+        }
+
+        [Test]
+        public void NewIds_ReservesDistinctConsecutiveIds_ForOneBatch()
+        {
+            var session = NewSession(Plugin("user", new[] { "core" }, Placed("user:ref/000007", "core:tree")));
+
+            var ids = session.NewIds("ref", 3);
+            session.Batch("Place 3", () =>
+            {
+                foreach (var id in ids)
+                    session.Put(Placed(id.ToString(), "core:tree"));
+            });
+
+            Assert.That(ids.Select(id => id.ToString()), Is.EqualTo(new[] { "user:ref/000008", "user:ref/000009", "user:ref/000010" }));
+            Assert.That(ids.All(session.World.Records.Contains), Is.True);
+            Assert.That(session.NewId("ref").ToString(), Is.EqualTo("user:ref/000011"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.NewIds("ref", 0));
         }
 
         [Test]

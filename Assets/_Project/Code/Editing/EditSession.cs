@@ -157,19 +157,31 @@ namespace Forge.Editing
         }
 
         /// <summary>Returns an unused id in the active plugin, e.g. "user:ref/000042".</summary>
-        public RecordId NewId(string prefix)
+        public RecordId NewId(string prefix) => NewIds(prefix, 1)[0];
+
+        /// <summary>
+        /// <paramref name="count"/> consecutive unused ids (e.g. for a row of objects created in one
+        /// batch). Calling <see cref="NewId"/> repeatedly before putting the records would return
+        /// the same id each time, because ids are free until a record uses them.
+        /// </summary>
+        public IReadOnlyList<RecordId> NewIds(string prefix, int count)
         {
             if (!Identifiers.IsValidName(prefix))
                 throw new ArgumentException($"Invalid id prefix '{prefix}'.", nameof(prefix));
+            if (count < 1)
+                throw new ArgumentOutOfRangeException(nameof(count), count, "At least one id must be requested.");
 
             var stem = prefix + "/";
-            var next = _records.Keys
+            var first = _records.Keys
                 .Where(id => id.Namespace == ActivePluginId && id.Name.StartsWith(stem, StringComparison.Ordinal))
                 .Select(id => int.TryParse(id.Name.Substring(stem.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n : 0)
                 .DefaultIfEmpty(0)
                 .Max() + 1;
 
-            return new RecordId(ActivePluginId, stem + next.ToString("D6", CultureInfo.InvariantCulture));
+            var ids = new RecordId[count];
+            for (var i = 0; i < count; i++)
+                ids[i] = new RecordId(ActivePluginId, stem + (first + i).ToString("D6", CultureInfo.InvariantCulture));
+            return ids;
         }
 
         /// <summary>Snapshot of the active plugin, ready to save.</summary>

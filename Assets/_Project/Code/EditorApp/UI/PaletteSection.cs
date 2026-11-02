@@ -26,6 +26,9 @@ namespace Forge.EditorApp.UI
         readonly VisualElement _placementOptions;
         readonly Label _rotation;
         readonly Toggle _randomize;
+        readonly VisualElement _strokeOptions;
+        readonly Slider _gap;
+        readonly Slider _gapRandom;
         readonly VisualElement _container;
         readonly Dictionary<RecordId, Button> _buttons = new Dictionary<RecordId, Button>();
 
@@ -48,6 +51,9 @@ namespace Forge.EditorApp.UI
             PanelElements.Required<Button>(root, "rotate-right").clicked += () => _context.RotatePlacement(EditorContext.PlacementStep);
             _randomize = PanelElements.Required<Toggle>(root, "placement-randomize");
             _randomize.RegisterValueChangedCallback(e => _context.RandomizePlacement = e.newValue);
+            _strokeOptions = PanelElements.Required<VisualElement>(root, "stroke-options");
+            _gap = GapSlider(root, "placement-gap", value => _context.PlacementGap = value);
+            _gapRandom = GapSlider(root, "placement-gap-random", value => _context.PlacementGapRandom = value);
             _search.RegisterValueChangedCallback(e => _query = e.newValue ?? string.Empty);
 
             // Esc clears the search (EditorPanel also releases the focus on Esc).
@@ -87,7 +93,12 @@ namespace Forge.EditorApp.UI
                 _randomize.SetValueWithoutNotify(_context.RandomizePlacement);
                 // Objects without variation (houses, walls) are always placed exactly as chosen.
                 _randomize.SetEnabled(varies);
+                // Gaps are remembered per object, so switching objects changes what the sliders show.
+                Mirror(_gap, _context.PlacementGap);
+                Mirror(_gapRandom, _context.PlacementGapRandom);
             }
+
+            PanelElements.SetVisible(_strokeOptions, placing);
             foreach (var pair in _buttons)
                 PanelElements.SetActive(pair.Value, placing && pair.Key == _context.SelectedBaseId);
         }
@@ -140,6 +151,21 @@ namespace Forge.EditorApp.UI
             };
             _buttons.Add(id, button);
             return button;
+        }
+
+        static Slider GapSlider(VisualElement root, string name, Action<float> set)
+        {
+            var slider = PanelElements.Required<Slider>(root, name);
+            slider.lowValue = 0f;
+            slider.highValue = EditorContext.MaxPlacementGap;
+            slider.RegisterValueChangedCallback(e => set(e.newValue));
+            return slider;
+        }
+
+        static void Mirror(Slider slider, float value)
+        {
+            if (!Mathf.Approximately(slider.value, value))
+                slider.SetValueWithoutNotify(value);
         }
 
         static string CategoryLabel(string category) =>
