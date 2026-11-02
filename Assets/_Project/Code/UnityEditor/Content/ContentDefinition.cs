@@ -1,4 +1,5 @@
 using System;
+using Forge.Data.Records;
 
 namespace Forge.UnityEditor.Content
 {
@@ -8,14 +9,18 @@ namespace Forge.UnityEditor.Content
     /// </summary>
     sealed class ContentDefinition
     {
-        public ContentDefinition(string name, string displayName, string category, string assetKey, Action<PrefabBuilder> build)
+        public ContentDefinition(string name, string displayName, string category, string assetKey, Action<PrefabBuilder> build, PlacementVariation variation = null)
         {
             Name = name;
             DisplayName = displayName;
             Category = category;
             AssetKey = assetKey;
             Build = build;
+            Variation = variation;
         }
+
+        /// <summary>Random turn and scale for new instances (nature varies; built things don't).</summary>
+        public PlacementVariation Variation { get; }
 
         /// <summary>Record name inside forge.core, e.g. "tree_pine".</summary>
         public string Name { get; }

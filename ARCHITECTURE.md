@@ -87,7 +87,10 @@ never depend on load order (unlike Skyrim FormIDs), so they don't get renumbered
 **Records** are immutable. Editing creates a new instance that overrides the old
 one in the active plugin.
 - `BaseObjectRecord`: a definition (display name, asset key, optional category such as
-  `Nature/Trees`, normalized by `CategoryPath`; files without a category read as uncategorized).
+  `Nature/Trees`, normalized by `CategoryPath`; files without a category read as uncategorized),
+  and an optional `PlacementVariation` (random heading, scale range) that the editor applies to new
+  instances. Authoring data only: placed objects store their final transform. Absent = placed exactly.
+- Optional fields are omitted from plugin JSON rather than written as `null` (`NullValueHandling.Ignore`).
 - `PlacedObjectRecord`: an instance in the world (base id, position, rotation, scale).
 - New record types must be registered in `RecordTypeRegistry.CreateDefault()`.
 
@@ -249,6 +252,10 @@ one in the active plugin.
     longer sink halfway), turned by `EditorContext.PlacementYaw` (`[` / `]` = 15°, Shift = 90°, or the panel
     buttons). Surfaces include other objects, so things stack. A click places exactly that pose, which becomes
     the selection. Hidden over the panel. Esc returns to Select.
+    With "Random turn & size" on (default), the next placement's `PlacementRoll` (engine-free, `Forge.Editing.Placement`:
+    whole degrees, hundredths of scale) is drawn from the base object's variation ahead of the click, so the ghost
+    shows it; it is redrawn after each placement and on choosing an object. Trees, bushes and rocks vary; built
+    things have no variation and are placed exactly.
   - `SculptTool` (B): hold left mouse on the terrain. Dabs fire at a fixed 30/s (independent of
     frame rate, capped per frame) and preview live, and the stroke commits on release. `[` / `]`
     change the radius. `BrushCursor` draws a ring that follows the ground, colored by mode.

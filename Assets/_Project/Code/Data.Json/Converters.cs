@@ -109,6 +109,7 @@ namespace Forge.Data.Json
                 TypeNameHandling = outer.TypeNameHandling,
                 MetadataPropertyHandling = outer.MetadataPropertyHandling,
                 MissingMemberHandling = outer.MissingMemberHandling,
+                NullValueHandling = outer.NullValueHandling,
                 MaxDepth = outer.MaxDepth,
             };
             foreach (var converter in outer.Converters)

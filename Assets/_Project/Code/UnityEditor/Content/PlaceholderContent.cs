@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Forge.Data.Records;
 using UnityEngine;
 using static Forge.UnityEditor.Content.PlaceholderMaterials;
 
@@ -13,10 +14,10 @@ namespace Forge.UnityEditor.Content
     {
         public static IReadOnlyList<ContentDefinition> All { get; } = new[]
         {
-            new ContentDefinition("tree_pine", "Pine Tree", "Nature/Trees", "nature/tree_pine", PineTree),
-            new ContentDefinition("tree_oak", "Oak Tree", "Nature/Trees", "nature/tree_oak", OakTree),
-            new ContentDefinition("bush", "Bush", "Nature/Plants", "nature/bush", Bush),
-            new ContentDefinition("rock_cluster", "Rock Cluster", "Nature/Rocks", "nature/rock_cluster", RockCluster),
+            new ContentDefinition("tree_pine", "Pine Tree", "Nature/Trees", "nature/tree_pine", PineTree, Varied(0.75f, 1.35f)),
+            new ContentDefinition("tree_oak", "Oak Tree", "Nature/Trees", "nature/tree_oak", OakTree, Varied(0.8f, 1.3f)),
+            new ContentDefinition("bush", "Bush", "Nature/Plants", "nature/bush", Bush, Varied(0.7f, 1.3f)),
+            new ContentDefinition("rock_cluster", "Rock Cluster", "Nature/Rocks", "nature/rock_cluster", RockCluster, Varied(0.6f, 1.5f)),
             new ContentDefinition("house_small", "Small House", "Architecture/Buildings", "architecture/house_small", SmallHouse),
             new ContentDefinition("wall_stone", "Stone Wall", "Architecture/Walls", "architecture/wall_stone", StoneWall),
             new ContentDefinition("fence_wood", "Wooden Fence", "Architecture/Walls", "architecture/fence_wood", WoodenFence),
@@ -26,6 +27,9 @@ namespace Forge.UnityEditor.Content
             new ContentDefinition("bench", "Bench", "Props/Furniture", "props/bench", Bench),
             new ContentDefinition("signpost", "Signpost", "Props/Decor", "props/signpost", Signpost),
         };
+
+        /// <summary>Natural things: any heading, a size within [min, max].</summary>
+        public static PlacementVariation Varied(float minScale, float maxScale) => new PlacementVariation(true, minScale, maxScale);
 
         static Vector3 V(float x, float y, float z) => new Vector3(x, y, z);
 

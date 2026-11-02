@@ -102,6 +102,35 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesPlacementVariation_AndOmitsItWhenAbsent()
+        {
+            var plugin = Plugin("core",
+                new BaseObjectRecord(RecordId.Parse("core:pine"), "Pine", "nature/pine", "Nature/Trees", new PlacementVariation(true, 0.8f, 1.25f)),
+                new BaseObjectRecord(RecordId.Parse("core:house"), "House", "architecture/house"));
+
+            var json = Write(plugin);
+            var copy = Read(json).Records.OfType<BaseObjectRecord>().ToDictionary(r => r.Id.ToString());
+
+            var variation = copy["core:pine"].Variation;
+            Assert.That(variation.RandomYaw, Is.True);
+            Assert.That(variation.MinScale, Is.EqualTo(0.8f));
+            Assert.That(variation.MaxScale, Is.EqualTo(1.25f));
+            Assert.That(copy["core:house"].Variation, Is.Null);
+            Assert.That(Regex.Matches(json, "\"variation\"").Count, Is.EqualTo(1), "No variation is written as nothing, not null.");
+            StringAssert.DoesNotContain("null", json);
+        }
+
+        [Test]
+        public void Read_InvalidPlacementVariation_SurfacesTheModelError()
+        {
+            var plugin = Plugin("core", new BaseObjectRecord(RecordId.Parse("core:pine"), "Pine", "nature/pine", null, new PlacementVariation(false, 1f, 2f)));
+            var json = Write(plugin).Replace("\"maxScale\": 2.0", "\"maxScale\": 0.5");
+
+            var ex = Assert.Throws<DataValidationException>(() => Read(json));
+            StringAssert.Contains("Maximum scale", ex.Message);
+        }
+
+        [Test]
         public void Read_UnknownRecordType_IsRejected()
         {
             var json = Write(SamplePlugin()).Replace("\"base_object\"", "\"System.Diagnostics.Process\"");

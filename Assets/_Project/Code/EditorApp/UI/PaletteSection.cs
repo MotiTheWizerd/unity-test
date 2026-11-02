@@ -25,6 +25,7 @@ namespace Forge.EditorApp.UI
         readonly Label _count;
         readonly VisualElement _placementOptions;
         readonly Label _rotation;
+        readonly Toggle _randomize;
         readonly VisualElement _container;
         readonly Dictionary<RecordId, Button> _buttons = new Dictionary<RecordId, Button>();
 
@@ -45,6 +46,8 @@ namespace Forge.EditorApp.UI
             _rotation = PanelElements.Required<Label>(root, "placement-rotation");
             PanelElements.Required<Button>(root, "rotate-left").clicked += () => _context.RotatePlacement(-EditorContext.PlacementStep);
             PanelElements.Required<Button>(root, "rotate-right").clicked += () => _context.RotatePlacement(EditorContext.PlacementStep);
+            _randomize = PanelElements.Required<Toggle>(root, "placement-randomize");
+            _randomize.RegisterValueChangedCallback(e => _context.RandomizePlacement = e.newValue);
             _search.RegisterValueChangedCallback(e => _query = e.newValue ?? string.Empty);
 
             // Esc clears the search (EditorPanel also releases the focus on Esc).
@@ -73,8 +76,18 @@ namespace Forge.EditorApp.UI
 
             var placing = _context.ActiveTool == ToolKind.Place;
             PanelElements.SetVisible(_placementOptions, placing);
+            PanelElements.SetVisible(_randomize, placing);
             if (placing)
-                PanelElements.SetText(_rotation, $"Rotation {_context.PlacementYaw:0}°");
+            {
+                var roll = _context.PlacementRoll;
+                var varies = _context.SelectedVariation != null;
+                PanelElements.SetText(_rotation, varies && _context.RandomizePlacement
+                    ? $"Rotation {_context.PlacementYaw:0}° + {roll.YawDegrees:0}°, size ×{roll.Scale:0.00}"
+                    : $"Rotation {_context.PlacementYaw:0}°");
+                _randomize.SetValueWithoutNotify(_context.RandomizePlacement);
+                // Objects without variation (houses, walls) are always placed exactly as chosen.
+                _randomize.SetEnabled(varies);
+            }
             foreach (var pair in _buttons)
                 PanelElements.SetActive(pair.Value, placing && pair.Key == _context.SelectedBaseId);
         }

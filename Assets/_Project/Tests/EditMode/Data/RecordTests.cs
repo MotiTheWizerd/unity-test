@@ -39,6 +39,25 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void BaseObject_VariationIsOptional()
+        {
+            var variation = new PlacementVariation(true, 0.8f, 1.2f);
+
+            Assert.That(new BaseObjectRecord(TreeId, "Oak", "trees/oak").Variation, Is.Null);
+            Assert.That(new BaseObjectRecord(TreeId, "Oak", "trees/oak", variation: variation).Variation, Is.SameAs(variation));
+        }
+
+        [TestCase(0f, 1f)]
+        [TestCase(-1f, 1f)]
+        [TestCase(1.2f, 0.8f)]
+        [TestCase(float.NaN, 1f)]
+        [TestCase(1f, float.PositiveInfinity)]
+        public void PlacementVariation_RejectsInvalidScaleRange(float min, float max)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new PlacementVariation(true, min, max));
+        }
+
+        [Test]
         public void BaseObject_RequiresFields()
         {
             Assert.Throws<ArgumentException>(() => new BaseObjectRecord(default, "Oak", "trees/oak"));

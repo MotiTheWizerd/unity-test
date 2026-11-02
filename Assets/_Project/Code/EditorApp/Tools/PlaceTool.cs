@@ -39,15 +39,15 @@ namespace Forge.EditorApp.Tools
                 return;
             }
 
-            if (!TryGetBase(out var baseObject) || input.PointerOverUI || !TryGetPose(input.Ray, baseObject, out var position, out var rotation))
+            if (!TryGetBase(out var baseObject) || input.PointerOverUI || !TryGetPose(input.Ray, baseObject, out var pose))
             {
                 _ghost.Hide();
                 return;
             }
 
-            _ghost.Place(position, rotation);
+            _ghost.Place(pose.Position, pose.Rotation, pose.Scale);
             if (input.PrimaryPressed)
-                Place(baseObject, position, rotation);
+                Place(baseObject, pose);
         }
 
         bool TryGetBase(out BaseObjectRecord baseObject)
@@ -59,30 +59,51 @@ namespace Forge.EditorApp.Tools
         }
 
         // The object's lowest point rests on the surface under the pointer (another object counts,
-        // so things can be stacked), turned around the vertical axis.
-        bool TryGetPose(Ray ray, BaseObjectRecord baseObject, out Vector3 position, out Quaternion rotation)
+        // so things can be stacked), turned by the chosen yaw plus the drawn variation and scaled by it.
+        bool TryGetPose(Ray ray, BaseObjectRecord baseObject, out PlacementPose pose)
         {
-            position = default;
-            rotation = Quaternion.Euler(0f, _context.PlacementYaw, 0f);
+            pose = default;
             if (!_picker.TryPickWorld(ray, out var hit))
                 return false;
 
             _ghost.Use(baseObject.AssetKey);
-            position = hit.point + Vector3.up * _ghost.PivotAboveBottom;
+            var roll = _context.PlacementRoll;
+            var rotation = Quaternion.Euler(0f, _context.PlacementYaw + roll.YawDegrees, 0f);
+            // The pivot-to-bottom distance grows with the scale; yaw doesn't change it.
+            var position = hit.point + Vector3.up * (_ghost.PivotAboveBottom * roll.Scale);
+            pose = new PlacementPose(position, rotation, roll.Scale);
             return true;
         }
 
-        void Place(BaseObjectRecord baseObject, Vector3 position, Quaternion rotation)
+        void Place(BaseObjectRecord baseObject, in PlacementPose pose)
         {
             var session = _context.Session;
             var id = session.NewId("ref");
-            var record = new PlacedObjectRecord(id, baseObject.Id, position.ToNumerics(), rotation.ToNumerics(), 1f);
+            var record = new PlacedObjectRecord(id, baseObject.Id, pose.Position.ToNumerics(), pose.Rotation.ToNumerics(), pose.Scale);
 
             if (_context.TryEdit("Place", () => session.Put(record, $"Place {baseObject.DisplayName}")))
             {
                 _context.Selection.Set(id);
                 _context.Report($"Placed {baseObject.DisplayName} ({id})");
+                // A fresh variation for the next one, so repeated clicks don't stamp copies.
+                _context.RerollPlacement();
             }
+        }
+
+        readonly struct PlacementPose
+        {
+            public PlacementPose(Vector3 position, Quaternion rotation, float scale)
+            {
+                Position = position;
+                Rotation = rotation;
+                Scale = scale;
+            }
+
+            public Vector3 Position { get; }
+
+            public Quaternion Rotation { get; }
+
+            public float Scale { get; }
         }
     }
 }

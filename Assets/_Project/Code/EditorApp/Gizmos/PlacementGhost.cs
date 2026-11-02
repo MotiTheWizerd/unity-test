@@ -44,11 +44,12 @@ namespace Forge.EditorApp.Gizmos
             PivotAboveBottom = MeasurePivotAboveBottom(_instance);
         }
 
-        public void Place(Vector3 position, Quaternion rotation)
+        public void Place(Vector3 position, Quaternion rotation, float scale)
         {
             if (_instance == null)
                 return;
             _instance.transform.SetPositionAndRotation(position, rotation);
+            _instance.transform.localScale = Vector3.one * scale;
             _instance.SetActive(true);
         }
 

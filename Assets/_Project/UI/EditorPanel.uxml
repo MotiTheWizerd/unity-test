@@ -35,6 +35,7 @@
                         <ui:Button name="rotate-left" text="[  -15°" />
                         <ui:Button name="rotate-right" text="+15°  ]" />
                     </ui:VisualElement>
+                    <ui:Toggle name="placement-randomize" label="Random turn &amp; size" class="forge-indented" />
                     <ui:TextField name="palette-search" placeholder-text="Search objects…" class="forge-search" />
                     <ui:Label name="palette-count" class="forge-muted" />
                     <ui:VisualElement name="palette" />

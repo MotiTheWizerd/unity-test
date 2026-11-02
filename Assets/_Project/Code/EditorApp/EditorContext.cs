@@ -9,6 +9,7 @@ using Forge.Data.Serialization;
 using Forge.EditorApp.Tools;
 using Forge.Editing;
 using Forge.Editing.Palette;
+using Forge.Editing.Placement;
 using Forge.Editing.Terrain;
 
 namespace Forge.EditorApp
@@ -23,8 +24,10 @@ namespace Forge.EditorApp
         readonly PluginFileStore _activeStore;
         float _brushRadius = 8f;
         float _brushStrength = 0.5f;
+        readonly Random _random = new Random();
         ResolvedWorld _paletteWorld;
         ObjectPalette _palette;
+        bool _randomizePlacement = true;
 
         public EditorContext(EditSession session, PluginFileStore activeStore)
         {
@@ -81,6 +84,7 @@ namespace Forge.EditorApp
         {
             SelectedBaseId = baseId;
             ActiveTool = ToolKind.Place;
+            RerollPlacement();
         }
 
         /// <summary>Turn per [ / ] press while placing; with Shift, <see cref="PlacementCoarseStep"/>.</summary>
@@ -97,6 +101,28 @@ namespace Forge.EditorApp
             var yaw = (PlacementYaw + degrees) % 360f;
             PlacementYaw = yaw < 0f ? yaw + 360f : yaw;
         }
+
+        /// <summary>Whether new objects get their base object's random variation (turn and scale).</summary>
+        public bool RandomizePlacement
+        {
+            get => _randomizePlacement;
+            set
+            {
+                _randomizePlacement = value;
+                RerollPlacement();
+            }
+        }
+
+        /// <summary>The variation the next placed object gets; the place tool previews it.</summary>
+        public PlacementRoll PlacementRoll { get; private set; } = PlacementRoll.Identity;
+
+        /// <summary>Draws a new variation for the next placement (after each placement and on a new object).</summary>
+        public void RerollPlacement() =>
+            PlacementRoll = RandomizePlacement ? PlacementRoll.Draw(SelectedVariation, _random) : PlacementRoll.Identity;
+
+        /// <summary>The selected base object's variation, or null if it has none.</summary>
+        public PlacementVariation SelectedVariation =>
+            Session.World.Records.TryGet(SelectedBaseId, out var record) ? (record as BaseObjectRecord)?.Variation : null;
 
         public BrushMode BrushMode { get; set; } = BrushMode.Raise;
 

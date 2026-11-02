@@ -25,14 +25,24 @@
       "id": "forge.core:boulder",
       "displayName": "Boulder",
       "assetKey": "primitive/sphere",
-      "category": "Nature/Rocks"
+      "category": "Nature/Rocks",
+      "variation": {
+        "randomYaw": true,
+        "minScale": 0.6,
+        "maxScale": 1.6
+      }
     },
     {
       "type": "base_object",
       "id": "forge.core:bush",
       "displayName": "Bush",
       "assetKey": "nature/bush",
-      "category": "Nature/Plants"
+      "category": "Nature/Plants",
+      "variation": {
+        "randomYaw": true,
+        "minScale": 0.7,
+        "maxScale": 1.3
+      }
     },
     {
       "type": "base_object",
@@ -183,7 +193,12 @@
       "id": "forge.core:rock_cluster",
       "displayName": "Rock Cluster",
       "assetKey": "nature/rock_cluster",
-      "category": "Nature/Rocks"
+      "category": "Nature/Rocks",
+      "variation": {
+        "randomYaw": true,
+        "minScale": 0.6,
+        "maxScale": 1.5
+      }
     },
     {
       "type": "base_object",
@@ -312,14 +327,24 @@
       "id": "forge.core:tree_oak",
       "displayName": "Oak Tree",
       "assetKey": "nature/tree_oak",
-      "category": "Nature/Trees"
+      "category": "Nature/Trees",
+      "variation": {
+        "randomYaw": true,
+        "minScale": 0.8,
+        "maxScale": 1.3
+      }
     },
     {
       "type": "base_object",
       "id": "forge.core:tree_pine",
       "displayName": "Pine Tree",
       "assetKey": "nature/tree_pine",
-      "category": "Nature/Trees"
+      "category": "Nature/Trees",
+      "variation": {
+        "randomYaw": true,
+        "minScale": 0.75,
+        "maxScale": 1.35
+      }
     },
     {
       "type": "base_object",
