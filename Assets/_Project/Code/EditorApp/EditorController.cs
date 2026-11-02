@@ -12,7 +12,8 @@ namespace Forge.EditorApp
     /// Routes input: global shortcuts (Ctrl+S save, Ctrl+Z / Ctrl+Y or
     /// Ctrl+Shift+Z undo/redo, 1-9 palette, B sculpt, W/E/R move/rotate/scale,
     /// [ ] brush size, End drop to ground, F frame selection) are handled here; everything else is
-    /// passed to the active tool. Pointer clicks over the UI panel are filtered out.
+    /// passed to the active tool. Pointer clicks over the UI panel are filtered out, and so are
+    /// shortcuts while a UI text field has the keyboard.
     /// </summary>
     public sealed class EditorController : MonoBehaviour
     {
@@ -24,15 +25,15 @@ namespace Forge.EditorApp
         Material _gizmoMaterial;
 
         [NonSerialized] EditorContext _context;
-        [NonSerialized] IPointerBlocker _ui;
+        [NonSerialized] IInputBlocker _ui;
         [NonSerialized] Dictionary<ToolKind, IEditorTool> _tools;
         [NonSerialized] ToolKind? _activeKind;
 
         /// <summary>One-shot actions, shared with the UI. Available after <see cref="Initialize"/>.</summary>
         public EditorCommands Commands { get; private set; }
 
-        /// <param name="ui">Clicks over this UI are kept from the tools.</param>
-        public void Initialize(EditorContext context, WorldView view, IPointerBlocker ui)
+        /// <param name="ui">Clicks over this UI are kept from the tools; typing into it is kept from the shortcuts.</param>
+        public void Initialize(EditorContext context, WorldView view, IInputBlocker ui)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
@@ -62,7 +63,10 @@ namespace Forge.EditorApp
             if (_context == null || keyboard == null || mouse == null)
                 return;
 
-            HandleShortcuts(keyboard);
+            // Keys typed into a UI text field (palette search, slider inputs) are text, not commands.
+            var typing = _ui.IsKeyboardCaptured;
+            if (!typing)
+                HandleShortcuts(keyboard);
             SwitchToolIfNeeded();
 
             // Right mouse belongs to the fly camera; tools see the left button only.
@@ -75,8 +79,8 @@ namespace Forge.EditorApp
                 primaryHeld: mouse.leftButton.isPressed,
                 primaryReleased: mouse.leftButton.wasReleasedThisFrame,
                 additive: keyboard.shiftKey.isPressed,
-                cancel: keyboard.escapeKey.wasPressedThisFrame,
-                delete: keyboard.deleteKey.wasPressedThisFrame,
+                cancel: keyboard.escapeKey.wasPressedThisFrame && !typing,
+                delete: keyboard.deleteKey.wasPressedThisFrame && !typing,
                 snap: keyboard.ctrlKey.isPressed,
                 deltaTime: Time.unscaledDeltaTime);
 
@@ -124,7 +128,7 @@ namespace Forge.EditorApp
                     _context.BrushRadius *= 1.25f;
             }
 
-            var palette = _context.Palette;
+            var palette = _context.Palette.Objects;
             for (var i = 0; i < Math.Min(9, palette.Count); i++)
             {
                 if (keyboard[Key.Digit1 + i].wasPressedThisFrame)

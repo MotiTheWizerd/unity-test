@@ -98,6 +98,20 @@
     margin: 1px;
 }
 
+.forge-search {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* One foldout per palette category; the toggle reads as a small sub-header. */
+.forge-palette-group {
+    margin-top: 2px;
+}
+
+.forge-palette-group > .unity-foldout__content {
+    margin-left: 4px;
+}
+
 /* Active choice: the selected tool, mode or palette entry. */
 .forge-root Button.is-active {
     background-color: rgb(205, 145, 40);

@@ -8,7 +8,8 @@ namespace Forge.Data.Records
     /// </summary>
     public sealed class BaseObjectRecord : Record
     {
-        public BaseObjectRecord(RecordId id, string displayName, string assetKey)
+        /// <param name="category">Where the palette files it ("Nature/Trees"); null or blank = uncategorized.</param>
+        public BaseObjectRecord(RecordId id, string displayName, string assetKey, string category = null)
             : base(id)
         {
             if (string.IsNullOrWhiteSpace(displayName))
@@ -18,11 +19,15 @@ namespace Forge.Data.Records
 
             DisplayName = displayName;
             AssetKey = assetKey;
+            Category = CategoryPath.Normalize(category);
         }
 
         public string DisplayName { get; }
 
         /// <summary>Engine-agnostic key the presentation layer resolves to a visual asset.</summary>
         public string AssetKey { get; }
+
+        /// <summary>Normalized <see cref="CategoryPath"/>; empty when uncategorized.</summary>
+        public string Category { get; }
     }
 }

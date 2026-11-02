@@ -37,7 +37,7 @@ namespace Forge.EditorApp
         float _framePadding = 1.3f;
 
         [NonSerialized] Camera _camera;
-        [NonSerialized] IPointerBlocker _ui;
+        [NonSerialized] IInputBlocker _ui;
         [NonSerialized] Func<Ray, float?> _depthUnder;
         [NonSerialized] float _yaw;
         [NonSerialized] float _pitch;
@@ -48,7 +48,7 @@ namespace Forge.EditorApp
 
         /// <param name="ui">Wheel and pan gestures don't start over this UI.</param>
         /// <param name="depthUnder">Distance along a ray to the first world surface, or null; used to scale zoom and pan.</param>
-        public void Initialize(IPointerBlocker ui, Func<Ray, float?> depthUnder)
+        public void Initialize(IInputBlocker ui, Func<Ray, float?> depthUnder)
         {
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
             _depthUnder = depthUnder ?? throw new ArgumentNullException(nameof(depthUnder));

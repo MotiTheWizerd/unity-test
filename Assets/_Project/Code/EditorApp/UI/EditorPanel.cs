@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Forge.EditorApp.Diagnostics;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
 namespace Forge.EditorApp.UI
@@ -10,10 +11,10 @@ namespace Forge.EditorApp.UI
     /// The editor's UI Toolkit panel: a side dock and a status bar laid out in
     /// EditorPanel.uxml and styled by EditorPanel.uss. A thin adapter: each section
     /// is its own presenter (<see cref="IPanelSection"/>), and this component only
-    /// composes them, refreshes them every frame and answers whether the pointer is over UI.
+    /// composes them, refreshes them every frame and answers whether the UI owns the input.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
-    public sealed class EditorPanel : MonoBehaviour, IPointerBlocker
+    public sealed class EditorPanel : MonoBehaviour, IInputBlocker
     {
         // Runtime-only state; see CLAUDE.md (play-mode reload) for why these are [NonSerialized].
         [NonSerialized] UIDocument _document;
@@ -60,7 +61,57 @@ namespace Forge.EditorApp.UI
             return panel.Pick(panelPosition) != null;
         }
 
-        void Update() => Refresh();
+        public bool IsKeyboardCaptured
+        {
+            get
+            {
+                // Every text input carries the base text-field class. Focus may land on its inner
+                // element (a TextField) or on the field that hosts it (a Slider with a number box
+                // keeps focus itself), so look both up and down from the focused element.
+                var focused = FocusedElement;
+                if (focused == null)
+                    return false;
+                for (var element = focused; element != null; element = element.parent)
+                {
+                    if (element.ClassListContains(TextFieldClass))
+                        return true;
+                }
+
+                return focused.Q(className: TextFieldClass) != null;
+            }
+        }
+
+        static readonly string TextFieldClass = TextInputBaseField<string>.ussClassName;
+
+        VisualElement FocusedElement => Root?.panel?.focusController?.focusedElement as VisualElement;
+
+        void Update()
+        {
+            ReleaseFocusOnWorldClick();
+            ReleaseFocusOnEscape();
+            Refresh();
+        }
+
+        // Esc always hands the keyboard back to the shortcuts (sections may do more, e.g. clear a search).
+        void ReleaseFocusOnEscape()
+        {
+            var keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
+                FocusedElement?.Blur();
+        }
+
+        // UI Toolkit keeps focus until something else in the panel takes it. Clicking the
+        // world should end typing, so the keyboard goes back to shortcuts and the camera.
+        void ReleaseFocusOnWorldClick()
+        {
+            var mouse = Mouse.current;
+            if (mouse == null)
+                return;
+
+            var pressed = mouse.leftButton.wasPressedThisFrame || mouse.rightButton.wasPressedThisFrame || mouse.middleButton.wasPressedThisFrame;
+            if (pressed && !IsPointerOverUI(mouse.position.ReadValue()))
+                FocusedElement?.Blur();
+        }
 
         void Refresh()
         {

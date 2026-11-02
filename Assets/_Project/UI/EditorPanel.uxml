@@ -30,7 +30,9 @@
 
                 <ui:VisualElement class="forge-section">
                     <ui:Label class="forge-section__header" text="PLACE  (1-9)" />
-                    <ui:VisualElement name="palette" class="forge-palette" />
+                    <ui:TextField name="palette-search" placeholder-text="Search objects…" class="forge-search" />
+                    <ui:Label name="palette-count" class="forge-muted" />
+                    <ui:VisualElement name="palette" />
                 </ui:VisualElement>
 
                 <ui:VisualElement class="forge-section">
@@ -54,7 +56,7 @@
                 </ui:Foldout>
 
                 <ui:Foldout text="Controls" value="false" class="forge-foldout">
-                    <ui:Label class="forge-muted" text="Click / Shift+click: select&#10;W move · E rotate · R scale · Ctrl snaps&#10;Del: delete · End: drop to ground · F: frame&#10;Esc: cancel / deselect&#10;B: sculpt (hold left mouse) · [ ]: brush size&#10;1-9: place object&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
+                    <ui:Label class="forge-muted" text="Click / Shift+click: select&#10;W move · E rotate · R scale · Ctrl snaps&#10;Del: delete · End: drop to ground · F: frame&#10;Esc: cancel / deselect&#10;B: sculpt (hold left mouse) · [ ]: brush size&#10;1-9: place object · type in Search to filter, Esc clears&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
                 </ui:Foldout>
             </ui:ScrollView>
         </ui:VisualElement>

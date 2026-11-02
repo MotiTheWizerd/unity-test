@@ -23,6 +23,22 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void BaseObject_CategoryIsNormalizedAndOptional()
+        {
+            Assert.That(new BaseObjectRecord(TreeId, "Oak", "trees/oak").Category, Is.Empty);
+            Assert.That(new BaseObjectRecord(TreeId, "Oak", "trees/oak", "  ").Category, Is.Empty);
+            Assert.That(new BaseObjectRecord(TreeId, "Oak", "trees/oak", " Nature / Trees ").Category, Is.EqualTo("Nature/Trees"));
+        }
+
+        [TestCase("Nature//Trees")]
+        [TestCase("/Trees")]
+        [TestCase("Nature/ ")]
+        public void BaseObject_RejectsEmptyCategorySegments(string category)
+        {
+            Assert.Throws<ArgumentException>(() => new BaseObjectRecord(TreeId, "Oak", "trees/oak", category));
+        }
+
+        [Test]
         public void BaseObject_RequiresFields()
         {
             Assert.Throws<ArgumentException>(() => new BaseObjectRecord(default, "Oak", "trees/oak"));

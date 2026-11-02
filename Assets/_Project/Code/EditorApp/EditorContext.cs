@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -9,6 +8,7 @@ using Forge.Data.Records;
 using Forge.Data.Serialization;
 using Forge.EditorApp.Tools;
 using Forge.Editing;
+using Forge.Editing.Palette;
 using Forge.Editing.Terrain;
 
 namespace Forge.EditorApp
@@ -24,30 +24,30 @@ namespace Forge.EditorApp
         float _brushRadius = 8f;
         float _brushStrength = 0.5f;
         ResolvedWorld _paletteWorld;
-        IReadOnlyList<BaseObjectRecord> _palette;
+        ObjectPalette _palette;
 
         public EditorContext(EditSession session, PluginFileStore activeStore)
         {
             Session = session ?? throw new ArgumentNullException(nameof(session));
             _activeStore = activeStore ?? throw new ArgumentNullException(nameof(activeStore));
-            SelectedBaseId = Palette.Select(r => r.Id).FirstOrDefault();
+            SelectedBaseId = Palette.Objects.Select(r => r.Id).FirstOrDefault();
             Status = $"Loaded {session.World.LoadOrder.Count} plugin(s).";
         }
 
         public EditSession Session { get; }
 
         /// <summary>
-        /// Base objects the place tool offers, sorted by id. Cached per world version,
+        /// Base objects the place tool offers, by category. Cached per world version,
         /// because UI and shortcuts read it every frame and a large world has many records.
         /// </summary>
-        public IReadOnlyList<BaseObjectRecord> Palette
+        public ObjectPalette Palette
         {
             get
             {
                 if (!ReferenceEquals(_paletteWorld, Session.World))
                 {
                     _paletteWorld = Session.World;
-                    _palette = _paletteWorld.Records.OfType<BaseObjectRecord>().OrderBy(r => r.Id).ToArray();
+                    _palette = ObjectPalette.From(_paletteWorld.Records.OfType<BaseObjectRecord>());
                 }
 
                 return _palette;

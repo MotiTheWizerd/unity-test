@@ -10,19 +10,22 @@
       "type": "base_object",
       "id": "forge.core:boulder",
       "displayName": "Boulder",
-      "assetKey": "primitive/sphere"
+      "assetKey": "primitive/sphere",
+      "category": "Nature/Rocks"
     },
     {
       "type": "base_object",
       "id": "forge.core:crate",
       "displayName": "Crate",
-      "assetKey": "primitive/cube"
+      "assetKey": "primitive/cube",
+      "category": "Props/Containers"
     },
     {
       "type": "base_object",
       "id": "forge.core:pillar",
       "displayName": "Pillar",
-      "assetKey": "primitive/cylinder"
+      "assetKey": "primitive/cylinder",
+      "category": "Architecture"
     },
     {
       "type": "placed_object",
@@ -238,7 +241,8 @@
       "type": "base_object",
       "id": "forge.core:totem",
       "displayName": "Totem",
-      "assetKey": "primitive/capsule"
+      "assetKey": "primitive/capsule",
+      "category": "Props/Decor"
     }
   ],
   "deletions": []

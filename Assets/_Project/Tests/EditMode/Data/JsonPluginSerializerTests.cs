@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Text.RegularExpressions;
 using Forge.Data;
 using Forge.Data.Json;
 using Forge.Data.Plugins;
@@ -43,7 +44,7 @@ namespace Forge.Tests.Data
                         new Vector3(1.5f, -2f, 3.25f),
                         Quaternion.CreateFromYawPitchRoll(0.5f, 0.1f, 0f),
                         2f),
-                    new BaseObjectRecord(RecordId.Parse("core:tree_oak"), "Giant Oak", "trees/oak_giant"),
+                    new BaseObjectRecord(RecordId.Parse("core:tree_oak"), "Giant Oak", "trees/oak_giant", "Nature/Trees"),
                 },
                 new[] { RecordId.Parse("core:rock_01") });
 
@@ -63,6 +64,7 @@ namespace Forge.Tests.Data
             Assert.That(baseObject.Id.ToString(), Is.EqualTo("core:tree_oak"));
             Assert.That(baseObject.DisplayName, Is.EqualTo("Giant Oak"));
             Assert.That(baseObject.AssetKey, Is.EqualTo("trees/oak_giant"));
+            Assert.That(baseObject.Category, Is.EqualTo("Nature/Trees"));
 
             var expected = (PlacedObjectRecord)original.Records.Single(r => r is PlacedObjectRecord);
             var placed = (PlacedObjectRecord)copy.Records.Single(r => r is PlacedObjectRecord);
@@ -85,6 +87,18 @@ namespace Forge.Tests.Data
             StringAssert.Contains("\"baseId\": \"core:tree_oak\"", json);
             Assert.That(json.IndexOf("core:tree_oak\""), Is.LessThan(json.IndexOf("mymod:ref/oak_1")),
                 "Records are written sorted by id.");
+        }
+
+        [Test]
+        public void Read_BaseObjectWithoutCategory_IsUncategorized()
+        {
+            // Plugins written before categories existed have no "category" field.
+            var json = Regex.Replace(Write(SamplePlugin()), @",\s*""category"": ""Nature/Trees""", string.Empty);
+            StringAssert.DoesNotContain("category", json);
+
+            var baseObject = (BaseObjectRecord)Read(json).Records.Single(r => r is BaseObjectRecord);
+
+            Assert.That(baseObject.Category, Is.Empty);
         }
 
         [Test]

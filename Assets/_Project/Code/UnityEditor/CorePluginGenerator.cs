@@ -38,10 +38,10 @@ namespace Forge.UnityEditor
         {
             var records = new List<Record>
             {
-                BaseObject("crate", "Crate", "primitive/cube"),
-                BaseObject("boulder", "Boulder", "primitive/sphere"),
-                BaseObject("pillar", "Pillar", "primitive/cylinder"),
-                BaseObject("totem", "Totem", "primitive/capsule"),
+                BaseObject("crate", "Crate", "primitive/cube", "Props/Containers"),
+                BaseObject("boulder", "Boulder", "primitive/sphere", "Nature/Rocks"),
+                BaseObject("pillar", "Pillar", "primitive/cylinder", "Architecture"),
+                BaseObject("totem", "Totem", "primitive/capsule", "Props/Decor"),
             };
 
             for (var cz = -ChunkRadius; cz <= ChunkRadius; cz++)
@@ -65,8 +65,8 @@ namespace Forge.UnityEditor
             return new Plugin(new PluginManifest(PluginId, "0.1.0"), records);
         }
 
-        static BaseObjectRecord BaseObject(string name, string displayName, string assetKey) =>
-            new BaseObjectRecord(new RecordId(PluginId, name), displayName, assetKey);
+        static BaseObjectRecord BaseObject(string name, string displayName, string assetKey, string category) =>
+            new BaseObjectRecord(new RecordId(PluginId, name), displayName, assetKey, category);
 
     }
 }

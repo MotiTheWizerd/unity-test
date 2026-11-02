@@ -85,7 +85,8 @@ never depend on load order (unlike Skyrim FormIDs), so they don't get renumbered
 
 **Records** are immutable. Editing creates a new instance that overrides the old
 one in the active plugin.
-- `BaseObjectRecord`: a definition (display name, asset key).
+- `BaseObjectRecord`: a definition (display name, asset key, optional category such as
+  `Nature/Trees`, normalized by `CategoryPath`; files without a category read as uncategorized).
 - `PlacedObjectRecord`: an instance in the world (base id, position, rotation, scale).
 - New record types must be registered in `RecordTypeRegistry.CreateDefault()`.
 
@@ -212,8 +213,11 @@ one in the active plugin.
   `forge.stress_edits`. Each world has its own edit plugin, because a plugin may only override its
   masters' records. A missing base folder fails loudly instead of opening a smaller world.
   It then wires `EditSession` → `WorldView` + `WorldStreamer` → tools and UI through a shared `EditorContext`.
-- `EditorContext.Palette` caches the base objects per world version. UI and shortcuts read it
-  every frame, and scanning 25k records per frame would cost real time.
+- `EditorContext.Palette` is an engine-free `ObjectPalette` (`Forge.Editing.Palette`), cached per
+  world version. UI and shortcuts read it every frame, and scanning 25k records per frame would cost
+  real time. Order: category (uncategorized last), then display name, then id; `Groups` holds the
+  same order per category, and 1–9 pick the first nine objects in it. `Filter(query)` keeps objects
+  matching every search term in name, category or id.
 - `WorldView.Sync(store)` diffs by record reference (records are immutable): unchanged →
   skipped, record changed → **updated in place** (transform / terrain heights), dependency
   (e.g. base object) changed → rebuilt. `RecordLink` maps scene objects back to record ids.
@@ -250,8 +254,14 @@ one in the active plugin.
   actions to `EditorContext` / `EditorCommands`, and mirrors state in `Refresh()` every frame,
   because shortcuts change the same state. `ChoiceRow<TEnum>` is the reusable segmented control.
   Actions shared by keys and buttons live once on `EditorContext` (`SelectTransformMode`,
-  `SelectPlacement`) or `EditorCommands`. The controller only sees `IPointerBlocker`
-  (`EditorPanel.IsPointerOverUI` uses `panel.Pick`; the full-screen root ignores picking).
+  `SelectPlacement`) or `EditorCommands`. The controller and camera only see `IInputBlocker`:
+  `IsPointerOverUI` uses `panel.Pick` (the full-screen root ignores picking), and
+  `IsKeyboardCaptured` is true while a text input has focus (or the field hosting one: a Slider
+  with a number box keeps focus itself), so typing never fires shortcuts. A click in the world or
+  Esc releases UI focus; after dragging a brush slider, shortcuts resume on the next world click or Esc.
+  `PaletteSection`: a search field (Esc clears) over one foldout per category; folded categories
+  stay folded across rebuilds, and a search opens every group with a match. Buttons are plain
+  elements, fine for hundreds of objects; a virtualized `ListView` is the next step for thousands.
 - Controls: W / E / R → move / rotate / scale (Select tool); 1–9 or the palette → Place tool; Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
   (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly; wheel
   dollies towards the point under the cursor; hold middle mouse to pan (the grabbed point stays under
