@@ -9,8 +9,8 @@ namespace Forge.Data.Records
     public sealed class BaseObjectRecord : Record
     {
         /// <param name="category">Where the palette files it ("Nature/Trees"); null or blank = uncategorized.</param>
-        /// <param name="variation">How new instances may vary when placed; null = placed exactly as chosen.</param>
-        public BaseObjectRecord(RecordId id, string displayName, string assetKey, string category = null, PlacementVariation variation = null)
+        /// <param name="placement">How the editor places new instances; null = exactly as chosen, upright.</param>
+        public BaseObjectRecord(RecordId id, string displayName, string assetKey, string category = null, PlacementRules placement = null)
             : base(id)
         {
             if (string.IsNullOrWhiteSpace(displayName))
@@ -21,7 +21,7 @@ namespace Forge.Data.Records
             DisplayName = displayName;
             AssetKey = assetKey;
             Category = CategoryPath.Normalize(category);
-            Variation = variation;
+            Placement = placement;
         }
 
         public string DisplayName { get; }
@@ -32,7 +32,7 @@ namespace Forge.Data.Records
         /// <summary>Normalized <see cref="CategoryPath"/>; empty when uncategorized.</summary>
         public string Category { get; }
 
-        /// <summary>Random variation for new instances, or null for none.</summary>
-        public PlacementVariation Variation { get; }
+        /// <summary>Placement rules for new instances, or null: placed exactly as chosen, upright.</summary>
+        public PlacementRules Placement { get; }
     }
 }

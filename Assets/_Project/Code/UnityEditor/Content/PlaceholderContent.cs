@@ -14,22 +14,28 @@ namespace Forge.UnityEditor.Content
     {
         public static IReadOnlyList<ContentDefinition> All { get; } = new[]
         {
-            new ContentDefinition("tree_pine", "Pine Tree", "Nature/Trees", "nature/tree_pine", PineTree, Varied(0.75f, 1.35f)),
-            new ContentDefinition("tree_oak", "Oak Tree", "Nature/Trees", "nature/tree_oak", OakTree, Varied(0.8f, 1.3f)),
-            new ContentDefinition("bush", "Bush", "Nature/Plants", "nature/bush", Bush, Varied(0.7f, 1.3f)),
-            new ContentDefinition("rock_cluster", "Rock Cluster", "Nature/Rocks", "nature/rock_cluster", RockCluster, Varied(0.6f, 1.5f)),
+            // Trees grow straight up whatever the slope; low ground cover and built runs hug it.
+            new ContentDefinition("tree_pine", "Pine Tree", "Nature/Trees", "nature/tree_pine", PineTree, Natural(0.75f, 1.35f, alignToSlope: false)),
+            new ContentDefinition("tree_oak", "Oak Tree", "Nature/Trees", "nature/tree_oak", OakTree, Natural(0.8f, 1.3f, alignToSlope: false)),
+            new ContentDefinition("bush", "Bush", "Nature/Plants", "nature/bush", Bush, Natural(0.7f, 1.3f, alignToSlope: true)),
+            new ContentDefinition("rock_cluster", "Rock Cluster", "Nature/Rocks", "nature/rock_cluster", RockCluster, Natural(0.6f, 1.5f, alignToSlope: true)),
             new ContentDefinition("house_small", "Small House", "Architecture/Buildings", "architecture/house_small", SmallHouse),
-            new ContentDefinition("wall_stone", "Stone Wall", "Architecture/Walls", "architecture/wall_stone", StoneWall),
-            new ContentDefinition("fence_wood", "Wooden Fence", "Architecture/Walls", "architecture/fence_wood", WoodenFence),
+            new ContentDefinition("wall_stone", "Stone Wall", "Architecture/Walls", "architecture/wall_stone", StoneWall, FollowsSlope),
+            new ContentDefinition("fence_wood", "Wooden Fence", "Architecture/Walls", "architecture/fence_wood", WoodenFence, FollowsSlope),
             new ContentDefinition("lamp_post", "Lamp Post", "Props/Lighting", "props/lamp_post", LampPost),
-            new ContentDefinition("campfire", "Campfire", "Props/Lighting", "props/campfire", Campfire),
+            new ContentDefinition("campfire", "Campfire", "Props/Lighting", "props/campfire", Campfire, FollowsSlope),
             new ContentDefinition("barrel", "Barrel", "Props/Containers", "props/barrel", Barrel),
             new ContentDefinition("bench", "Bench", "Props/Furniture", "props/bench", Bench),
             new ContentDefinition("signpost", "Signpost", "Props/Decor", "props/signpost", Signpost),
         };
 
         /// <summary>Natural things: any heading, a size within [min, max].</summary>
-        public static PlacementVariation Varied(float minScale, float maxScale) => new PlacementVariation(true, minScale, maxScale);
+        public static PlacementRules Natural(float minScale, float maxScale, bool alignToSlope) =>
+            new PlacementRules(true, minScale, maxScale, alignToSlope);
+
+        /// <summary>Placed exactly as aimed, but tilted to the ground (fences, walls, a campfire).</summary>
+        // Computed, not a static field: `All` above is initialized first and would see a null field.
+        public static PlacementRules FollowsSlope => new PlacementRules(false, 1f, 1f, true);
 
         static Vector3 V(float x, float y, float z) => new Vector3(x, y, z);
 

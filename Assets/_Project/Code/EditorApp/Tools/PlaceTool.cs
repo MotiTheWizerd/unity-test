@@ -10,7 +10,8 @@ namespace Forge.EditorApp.Tools
 {
     /// <summary>
     /// Shows a see-through copy of the palette's base object resting on the surface under the
-    /// pointer, turned by <see cref="EditorContext.PlacementYaw"/> ([ / ]) plus its drawn variation.
+    /// pointer, turned by <see cref="EditorContext.PlacementYaw"/> ([ / ]) plus its drawn variation,
+    /// and tilted to the slope when its rules ask for it (<see cref="GroundFit"/>).
     /// A click places it exactly there. Holding and dragging paints a row (<see cref="PlacementStroke"/>):
     /// a new object each time the pointer is clear of the last one plus the gap, Shift for a straight
     /// line. The row previews as ghosts and is placed as one undo step on release; Esc drops it.
@@ -27,6 +28,7 @@ namespace Forge.EditorApp.Tools
         readonly List<PlacementPose> _poses = new List<PlacementPose>();
         PlacementStroke _stroke;
         PlacementPose _pressPose;
+        bool _pressOnTerrain;
 
         public PlaceTool(EditorContext context, ScenePicker picker, PlacementGhost ghost)
         {
@@ -84,13 +86,13 @@ namespace Forge.EditorApp.Tools
 
             _ghost.Use(baseObject.AssetKey);
             var roll = _context.PlacementRoll;
-            var pose = PoseAt(hit.point, _context.PlacementYaw + roll.YawDegrees, roll.Scale);
+            var pose = PoseAt(hit.point, hit.collider is TerrainCollider, _context.PlacementYaw + roll.YawDegrees, roll.Scale);
             _poses.Clear();
             _poses.Add(pose);
             ShowGhosts(_poses);
 
             if (input.PrimaryPressed)
-                BeginStroke(pose);
+                BeginStroke(pose, hit.collider is TerrainCollider);
         }
 
         bool TryGetBase(out BaseObjectRecord baseObject)
@@ -101,9 +103,10 @@ namespace Forge.EditorApp.Tools
                    && (baseObject = record as BaseObjectRecord) != null;
         }
 
-        void BeginStroke(PlacementPose pressPose)
+        void BeginStroke(PlacementPose pressPose, bool onTerrain)
         {
             _pressPose = pressPose;
+            _pressOnTerrain = onTerrain;
             _stroke = new PlacementStroke(
                 Flat(pressPose.Ground),
                 _ghost.Footprint,
@@ -135,22 +138,44 @@ namespace Forge.EditorApp.Tools
             for (var i = 0; i < items.Count; i++)
             {
                 var item = items[i];
-                var ground = i == 0 ? _pressPose.Ground : GroundAt(item.Position, _pressPose.Ground.y);
-                _poses.Add(PoseAt(ground, item.YawDegrees, item.Scale));
+                if (i == 0)
+                {
+                    _poses.Add(PoseAt(_pressPose.Ground, _pressOnTerrain, item.YawDegrees, item.Scale));
+                    continue;
+                }
+
+                var onTerrain = TryTerrainAt(item.Position, _pressPose.Ground.y, out var ground);
+                _poses.Add(PoseAt(ground, onTerrain, item.YawDegrees, item.Scale));
             }
         }
 
-        Vector3 GroundAt(System.Numerics.Vector2 position, float fallbackHeight)
+        /// <returns>False (with <paramref name="ground"/> at <paramref name="nearHeight"/>) where there is no terrain.</returns>
+        bool TryTerrainAt(System.Numerics.Vector2 position, float nearHeight, out Vector3 ground)
         {
-            var probe = new Ray(new Vector3(position.X, fallbackHeight + ProbeHeight, position.Y), Vector3.down);
-            return _picker.TryPickTerrain(probe, out var hit)
-                ? hit.point
-                : new Vector3(position.X, fallbackHeight, position.Y);
+            var probe = new Ray(new Vector3(position.X, nearHeight + ProbeHeight, position.Y), Vector3.down);
+            var found = _picker.TryPickTerrain(probe, out var hit);
+            ground = found ? hit.point : new Vector3(position.X, nearHeight, position.Y);
+            return found;
         }
 
-        // The object's lowest point rests on `ground`; the pivot-to-bottom distance grows with the scale.
-        PlacementPose PoseAt(Vector3 ground, float yawDegrees, float scale) =>
-            new PlacementPose(ground, ground + Vector3.up * (_ghost.PivotAboveBottom * scale), Quaternion.Euler(0f, yawDegrees, 0f), scale);
+        // The object's lowest point rests on `ground`; the pivot-to-bottom distance grows with the scale. On terrain,
+        // objects whose rules ask for it are tilted to the ground under their footprint (GroundFit); others stay upright.
+        PlacementPose PoseAt(Vector3 ground, bool onTerrain, float yawDegrees, float scale)
+        {
+            var heading = Quaternion.Euler(0f, yawDegrees, 0f);
+            var lift = _ghost.PivotAboveBottom * scale;
+            if (onTerrain && _context.PlacementAlignsToSlope && GroundFit.TryFit(
+                    Flat(ground), _ghost.Footprint, yawDegrees, scale,
+                    position => TryTerrainAt(position, ground.y, out var sample) ? sample.y : (float?)null,
+                    GroundFit.DefaultMaxTiltDegrees, out var plane))
+            {
+                var up = plane.Up.ToUnity();
+                var center = new Vector3(ground.x, plane.Height, ground.z);
+                return new PlacementPose(ground, center + up * lift, Quaternion.FromToRotation(Vector3.up, up) * heading, scale);
+            }
+
+            return new PlacementPose(ground, ground + Vector3.up * lift, heading, scale);
+        }
 
         void ShowGhosts(IReadOnlyList<PlacementPose> poses)
         {

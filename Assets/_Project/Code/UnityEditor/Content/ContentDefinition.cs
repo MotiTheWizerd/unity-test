@@ -9,18 +9,18 @@ namespace Forge.UnityEditor.Content
     /// </summary>
     sealed class ContentDefinition
     {
-        public ContentDefinition(string name, string displayName, string category, string assetKey, Action<PrefabBuilder> build, PlacementVariation variation = null)
+        public ContentDefinition(string name, string displayName, string category, string assetKey, Action<PrefabBuilder> build, PlacementRules placement = null)
         {
             Name = name;
             DisplayName = displayName;
             Category = category;
             AssetKey = assetKey;
             Build = build;
-            Variation = variation;
+            Placement = placement;
         }
 
-        /// <summary>Random turn and scale for new instances (nature varies; built things don't).</summary>
-        public PlacementVariation Variation { get; }
+        /// <summary>How new instances are placed: nature varies, ground-hugging things follow the slope, the rest stand upright.</summary>
+        public PlacementRules Placement { get; }
 
         /// <summary>Record name inside forge.core, e.g. "tree_pine".</summary>
         public string Name { get; }

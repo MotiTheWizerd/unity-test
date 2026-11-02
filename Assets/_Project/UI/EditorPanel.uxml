@@ -36,6 +36,7 @@
                         <ui:Button name="rotate-right" text="+15°  ]" />
                     </ui:VisualElement>
                     <ui:Toggle name="placement-randomize" label="Random turn &amp; size" class="forge-indented" />
+                    <ui:Toggle name="placement-align-slope" label="Align to slope" class="forge-indented" />
                     <ui:VisualElement name="stroke-options" class="forge-indented">
                         <ui:Slider name="placement-gap" label="Gap (m)" show-input-field="true" />
                         <ui:Slider name="placement-gap-random" label="Random +" show-input-field="true" />

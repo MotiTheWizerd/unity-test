@@ -26,10 +26,11 @@
       "displayName": "Boulder",
       "assetKey": "primitive/sphere",
       "category": "Nature/Rocks",
-      "variation": {
+      "placement": {
         "randomYaw": true,
         "minScale": 0.6,
-        "maxScale": 1.6
+        "maxScale": 1.6,
+        "alignToSlope": true
       }
     },
     {
@@ -38,10 +39,11 @@
       "displayName": "Bush",
       "assetKey": "nature/bush",
       "category": "Nature/Plants",
-      "variation": {
+      "placement": {
         "randomYaw": true,
         "minScale": 0.7,
-        "maxScale": 1.3
+        "maxScale": 1.3,
+        "alignToSlope": true
       }
     },
     {
@@ -49,7 +51,13 @@
       "id": "forge.core:campfire",
       "displayName": "Campfire",
       "assetKey": "props/campfire",
-      "category": "Props/Lighting"
+      "category": "Props/Lighting",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      }
     },
     {
       "type": "base_object",
@@ -63,7 +71,13 @@
       "id": "forge.core:fence_wood",
       "displayName": "Wooden Fence",
       "assetKey": "architecture/fence_wood",
-      "category": "Architecture/Walls"
+      "category": "Architecture/Walls",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      }
     },
     {
       "type": "base_object",
@@ -194,10 +208,11 @@
       "displayName": "Rock Cluster",
       "assetKey": "nature/rock_cluster",
       "category": "Nature/Rocks",
-      "variation": {
+      "placement": {
         "randomYaw": true,
         "minScale": 0.6,
-        "maxScale": 1.5
+        "maxScale": 1.5,
+        "alignToSlope": true
       }
     },
     {
@@ -328,10 +343,11 @@
       "displayName": "Oak Tree",
       "assetKey": "nature/tree_oak",
       "category": "Nature/Trees",
-      "variation": {
+      "placement": {
         "randomYaw": true,
         "minScale": 0.8,
-        "maxScale": 1.3
+        "maxScale": 1.3,
+        "alignToSlope": false
       }
     },
     {
@@ -340,10 +356,11 @@
       "displayName": "Pine Tree",
       "assetKey": "nature/tree_pine",
       "category": "Nature/Trees",
-      "variation": {
+      "placement": {
         "randomYaw": true,
         "minScale": 0.75,
-        "maxScale": 1.35
+        "maxScale": 1.35,
+        "alignToSlope": false
       }
     },
     {
@@ -351,7 +368,13 @@
       "id": "forge.core:wall_stone",
       "displayName": "Stone Wall",
       "assetKey": "architecture/wall_stone",
-      "category": "Architecture/Walls"
+      "category": "Architecture/Walls",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      }
     }
   ],
   "deletions": []

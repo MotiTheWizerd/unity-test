@@ -123,10 +123,22 @@ namespace Forge.EditorApp
 
         /// <summary>A fresh variation for the selected object (identity when randomizing is off), e.g. for each object of a painted row.</summary>
         public PlacementRoll DrawPlacementRoll() =>
-            RandomizePlacement ? PlacementRoll.Draw(SelectedVariation, _random) : PlacementRoll.Identity;
+            RandomizePlacement ? PlacementRoll.Draw(SelectedPlacementRules, _random) : PlacementRoll.Identity;
 
         /// <summary>Whether the selected object gets a random heading, so a painted row keeps it instead of following the drag.</summary>
-        public bool PlacementHasRandomYaw => RandomizePlacement && (SelectedVariation?.RandomYaw ?? false);
+        public bool PlacementHasRandomYaw => RandomizePlacement && (SelectedPlacementRules?.RandomYaw ?? false);
+
+        /// <summary>Whether the selected object can vary at all (the "Random turn &amp; size" toggle matters).</summary>
+        public bool PlacementCanVary => PlacementRoll.CanVary(SelectedPlacementRules);
+
+        /// <summary>Whether placed objects tilt to the slope when their base object asks for it (fences, rocks).</summary>
+        public bool AlignPlacementToSlope { get; set; } = true;
+
+        /// <summary>Whether the selected object will be tilted to the slope: its rules ask for it and the toggle is on.</summary>
+        public bool PlacementAlignsToSlope => AlignPlacementToSlope && (SelectedPlacementRules?.AlignToSlope ?? false);
+
+        /// <summary>Whether the selected object's rules tilt it to the slope at all (the toggle matters).</summary>
+        public bool PlacementCanAlignToSlope => SelectedPlacementRules?.AlignToSlope ?? false;
 
         /// <summary>Largest gap the panel offers between painted objects, in meters.</summary>
         public const float MaxPlacementGap = 20f;
@@ -152,10 +164,10 @@ namespace Forge.EditorApp
             return settings.Gap + (float)_random.NextDouble() * settings.RandomExtra;
         }
 
-        // Until the user sets it, natural things (those with variation) get some room; built things touch.
+        // Until the user sets it, natural things (those that vary) get some room; built things touch.
         GapSettings SelectedGap() =>
             _gaps.TryGetValue(SelectedBaseId, out var settings) ? settings
-            : SelectedVariation != null ? new GapSettings(1f, 2f)
+            : PlacementCanVary ? new GapSettings(1f, 2f)
             : new GapSettings(0f, 0f);
 
         static float Clamp(float value, float min, float max) => Math.Max(min, Math.Min(max, value));
@@ -173,9 +185,9 @@ namespace Forge.EditorApp
             public float RandomExtra { get; }
         }
 
-        /// <summary>The selected base object's variation, or null if it has none.</summary>
-        public PlacementVariation SelectedVariation =>
-            Session.World.Records.TryGet(SelectedBaseId, out var record) ? (record as BaseObjectRecord)?.Variation : null;
+        /// <summary>The selected base object's placement rules, or null if it has none.</summary>
+        public PlacementRules SelectedPlacementRules =>
+            Session.World.Records.TryGet(SelectedBaseId, out var record) ? (record as BaseObjectRecord)?.Placement : null;
 
         public BrushMode BrushMode { get; set; } = BrushMode.Raise;
 

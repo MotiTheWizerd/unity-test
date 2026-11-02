@@ -88,8 +88,10 @@ never depend on load order (unlike Skyrim FormIDs), so they don't get renumbered
 one in the active plugin.
 - `BaseObjectRecord`: a definition (display name, asset key, optional category such as
   `Nature/Trees`, normalized by `CategoryPath`; files without a category read as uncategorized),
-  and an optional `PlacementVariation` (random heading, scale range) that the editor applies to new
-  instances. Authoring data only: placed objects store their final transform. Absent = placed exactly.
+  and optional `PlacementRules` the editor applies to new instances: random heading, scale range, and
+  whether to tilt to the slope. Authoring data only: placed objects store their final transform.
+  Absent = placed exactly as aimed, upright. Records hold no derived properties (serializers write
+  every public property); helpers like `PlacementRoll.CanVary` live in Editing.
 - Optional fields are omitted from plugin JSON rather than written as `null` (`NullValueHandling.Ignore`).
 - `PlacedObjectRecord`: an instance in the world (base id, position, rotation, scale).
 - New record types must be registered in `RecordTypeRegistry.CreateDefault()`.
@@ -266,7 +268,14 @@ one in the active plugin.
     and is placed on release as one undo step ("Place 5 Wooden Fence"), using `EditSession.NewIds` so
     the ids are distinct before any is put; Esc drops the row. Gap and random extra (panel sliders, 0–20 m)
     are remembered per base object for the session: built things start at 0, natural things at 1 m + up to 2 m.
-    Rows on slopes step, since objects aren't tilted to the ground.
+    **Align to slope**: on terrain, objects whose rules ask for it (fences, walls, campfire, bushes, rocks) are tilted by
+    the engine-free `GroundFit`: the terrain is sampled at both ends of the footprint along local X and Z (at least
+    0.25 m out), the plane through those slopes gives the up direction (capped at 35°), and the pivot sits at their
+    average height, so a fence's ends both touch a hillside. Trees, houses and props stay upright. The panel toggle
+    "Align to slope" (default on) turns it off; clicks on top of other objects never tilt. Not re-applied when
+    sculpting moves objects or by Drop (End), which stay vertical-only.
+    The ghosts live under one `PlacementGhosts` scene object. Right mouse always releases UI focus, so flying with
+    WASD never types into the search field, even when the drag starts over the panel.
   - `SculptTool` (B): hold left mouse on the terrain. Dabs fire at a fixed 30/s (independent of
     frame rate, capped per frame) and preview live, and the stroke commits on release. `[` / `]`
     change the radius. `BrushCursor` draws a ring that follows the ground, colored by mode.

@@ -41,7 +41,7 @@ namespace Forge.Data.Json
                 TypeNameHandling = TypeNameHandling.None,
                 MetadataPropertyHandling = MetadataPropertyHandling.Ignore,
                 MissingMemberHandling = MissingMemberHandling.Error,
-                // Optional fields (e.g. a base object's variation) are left out instead of written as null.
+                // Optional fields (e.g. a base object's placement rules) are left out instead of written as null.
                 NullValueHandling = NullValueHandling.Ignore,
                 MaxDepth = 32,
             });

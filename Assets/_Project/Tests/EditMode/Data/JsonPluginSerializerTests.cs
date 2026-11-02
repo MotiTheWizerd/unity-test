@@ -102,28 +102,30 @@ namespace Forge.Tests.Data
         }
 
         [Test]
-        public void RoundTrip_PreservesPlacementVariation_AndOmitsItWhenAbsent()
+        public void RoundTrip_PreservesPlacementRules_AndOmitsThemWhenAbsent()
         {
             var plugin = Plugin("core",
-                new BaseObjectRecord(RecordId.Parse("core:pine"), "Pine", "nature/pine", "Nature/Trees", new PlacementVariation(true, 0.8f, 1.25f)),
+                new BaseObjectRecord(RecordId.Parse("core:pine"), "Pine", "nature/pine", "Nature/Trees", new PlacementRules(true, 0.8f, 1.25f, true)),
                 new BaseObjectRecord(RecordId.Parse("core:house"), "House", "architecture/house"));
 
             var json = Write(plugin);
             var copy = Read(json).Records.OfType<BaseObjectRecord>().ToDictionary(r => r.Id.ToString());
 
-            var variation = copy["core:pine"].Variation;
-            Assert.That(variation.RandomYaw, Is.True);
-            Assert.That(variation.MinScale, Is.EqualTo(0.8f));
-            Assert.That(variation.MaxScale, Is.EqualTo(1.25f));
-            Assert.That(copy["core:house"].Variation, Is.Null);
-            Assert.That(Regex.Matches(json, "\"variation\"").Count, Is.EqualTo(1), "No variation is written as nothing, not null.");
+            var rules = copy["core:pine"].Placement;
+            Assert.That(rules.RandomYaw, Is.True);
+            Assert.That(rules.MinScale, Is.EqualTo(0.8f));
+            Assert.That(rules.MaxScale, Is.EqualTo(1.25f));
+            Assert.That(rules.AlignToSlope, Is.True);
+            Assert.That(copy["core:house"].Placement, Is.Null);
+            Assert.That(Regex.Matches(json, "\"placement\"").Count, Is.EqualTo(1), "No rules are written as nothing, not null.");
             StringAssert.DoesNotContain("null", json);
+            StringAssert.DoesNotContain("varies", json, "Derived properties aren't data.");
         }
 
         [Test]
-        public void Read_InvalidPlacementVariation_SurfacesTheModelError()
+        public void Read_InvalidPlacementRules_SurfaceTheModelError()
         {
-            var plugin = Plugin("core", new BaseObjectRecord(RecordId.Parse("core:pine"), "Pine", "nature/pine", null, new PlacementVariation(false, 1f, 2f)));
+            var plugin = Plugin("core", new BaseObjectRecord(RecordId.Parse("core:pine"), "Pine", "nature/pine", null, new PlacementRules(false, 1f, 2f, false)));
             var json = Write(plugin).Replace("\"maxScale\": 2.0", "\"maxScale\": 0.5");
 
             var ex = Assert.Throws<DataValidationException>(() => Read(json));

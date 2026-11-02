@@ -4,7 +4,7 @@ using Forge.Data.Records;
 namespace Forge.Editing.Placement
 {
     /// <summary>
-    /// One random draw from a <see cref="PlacementVariation"/>: the extra turn and the scale the
+    /// One random draw from a base object's <see cref="PlacementRules"/>: the extra turn and the scale the
     /// next placed instance gets. Drawn ahead of the click, so the preview shows the exact result.
     /// </summary>
     public readonly struct PlacementRoll
@@ -23,19 +23,22 @@ namespace Forge.Editing.Placement
 
         public float Scale { get; }
 
-        /// <summary>Draws from <paramref name="variation"/>; null means <see cref="Identity"/>.</summary>
-        public static PlacementRoll Draw(PlacementVariation variation, Random random)
+        /// <summary>Whether draws from <paramref name="rules"/> differ (a random heading or a scale range).</summary>
+        public static bool CanVary(PlacementRules rules) => rules != null && (rules.RandomYaw || rules.MaxScale > rules.MinScale);
+
+        /// <summary>Draws from <paramref name="rules"/>; null means <see cref="Identity"/>.</summary>
+        public static PlacementRoll Draw(PlacementRules rules, Random random)
         {
             if (random == null)
                 throw new ArgumentNullException(nameof(random));
-            if (variation == null)
+            if (rules == null)
                 return Identity;
 
             // Whole degrees and hundredths of scale: plenty of variety, and plugin files stay readable.
-            var yaw = variation.RandomYaw ? random.Next(360) : 0f;
-            var scale = variation.MinScale + (float)random.NextDouble() * (variation.MaxScale - variation.MinScale);
+            var yaw = rules.RandomYaw ? random.Next(360) : 0f;
+            var scale = rules.MinScale + (float)random.NextDouble() * (rules.MaxScale - rules.MinScale);
             scale = (float)Math.Round(scale, 2);
-            return new PlacementRoll(yaw, Math.Max(variation.MinScale, Math.Min(variation.MaxScale, scale)));
+            return new PlacementRoll(yaw, Math.Max(rules.MinScale, Math.Min(rules.MaxScale, scale)));
         }
     }
 }

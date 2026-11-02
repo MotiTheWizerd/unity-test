@@ -41,11 +41,11 @@ namespace Forge.UnityEditor
             var records = new List<Record>
             {
                 BaseObject("crate", "Crate", "primitive/cube", "Props/Containers"),
-                BaseObject("boulder", "Boulder", "primitive/sphere", "Nature/Rocks", PlaceholderContent.Varied(0.6f, 1.6f)),
+                BaseObject("boulder", "Boulder", "primitive/sphere", "Nature/Rocks", PlaceholderContent.Natural(0.6f, 1.6f, alignToSlope: true)),
                 BaseObject("pillar", "Pillar", "primitive/cylinder", "Architecture"),
                 BaseObject("totem", "Totem", "primitive/capsule", "Props/Decor"),
             };
-            records.AddRange(PlaceholderContent.All.Select(c => BaseObject(c.Name, c.DisplayName, c.AssetKey, c.Category, c.Variation)));
+            records.AddRange(PlaceholderContent.All.Select(c => BaseObject(c.Name, c.DisplayName, c.AssetKey, c.Category, c.Placement)));
 
             for (var cz = -ChunkRadius; cz <= ChunkRadius; cz++)
             for (var cx = -ChunkRadius; cx <= ChunkRadius; cx++)
@@ -68,8 +68,8 @@ namespace Forge.UnityEditor
             return new Plugin(new PluginManifest(PluginId, "0.1.0"), records);
         }
 
-        static BaseObjectRecord BaseObject(string name, string displayName, string assetKey, string category, PlacementVariation variation = null) =>
-            new BaseObjectRecord(new RecordId(PluginId, name), displayName, assetKey, category, variation);
+        static BaseObjectRecord BaseObject(string name, string displayName, string assetKey, string category, PlacementRules placement = null) =>
+            new BaseObjectRecord(new RecordId(PluginId, name), displayName, assetKey, category, placement);
 
     }
 }

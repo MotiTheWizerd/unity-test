@@ -19,6 +19,7 @@ namespace Forge.EditorApp.Gizmos
         readonly IAssetCatalog _catalog;
         readonly Material _material;
         readonly List<GameObject> _instances = new List<GameObject>();
+        Transform _root;
         string _assetKey;
 
         /// <param name="material">Material for every part (Forge/PlacementGhost).</param>
@@ -65,13 +66,22 @@ namespace Forge.EditorApp.Gizmos
 
         public void Hide() => HideFrom(0);
 
-        public void Dispose() => DestroyInstances();
+        public void Dispose()
+        {
+            DestroyInstances();
+            if (_root != null)
+                Object.Destroy(_root.gameObject);
+        }
 
         GameObject Instance(int index)
         {
+            // One parent keeps a painted row's copies together instead of cluttering the scene root.
+            if (_root == null)
+                _root = new GameObject("PlacementGhosts").transform;
+
             while (_instances.Count <= index)
             {
-                var instance = _catalog.Instantiate(_assetKey, null);
+                var instance = _catalog.Instantiate(_assetKey, _root);
                 instance.name = $"PlacementGhost ({_assetKey})";
                 instance.SetActive(false);
                 MakeGhostly(instance);

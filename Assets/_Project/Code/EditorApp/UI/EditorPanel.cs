@@ -102,14 +102,17 @@ namespace Forge.EditorApp.UI
 
         // UI Toolkit keeps focus until something else in the panel takes it. Clicking the
         // world should end typing, so the keyboard goes back to shortcuts and the camera.
+        // Right mouse always does: holding it flies the camera with WASD, even when the drag
+        // starts over the panel, and those keys must not land in a text field.
         void ReleaseFocusOnWorldClick()
         {
             var mouse = Mouse.current;
             if (mouse == null)
                 return;
 
-            var pressed = mouse.leftButton.wasPressedThisFrame || mouse.rightButton.wasPressedThisFrame || mouse.middleButton.wasPressedThisFrame;
-            if (pressed && !IsPointerOverUI(mouse.position.ReadValue()))
+            var worldClick = (mouse.leftButton.wasPressedThisFrame || mouse.middleButton.wasPressedThisFrame)
+                             && !IsPointerOverUI(mouse.position.ReadValue());
+            if (worldClick || mouse.rightButton.wasPressedThisFrame)
                 FocusedElement?.Blur();
         }
 
