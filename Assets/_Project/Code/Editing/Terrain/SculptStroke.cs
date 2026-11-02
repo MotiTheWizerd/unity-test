@@ -16,11 +16,9 @@ namespace Forge.Editing.Terrain
     /// </summary>
     public sealed class SculptStroke
     {
-        readonly Dictionary<ChunkCoord, TerrainChunkRecord> _originals;
+        readonly TerrainGrid _terrain;
         readonly Dictionary<ChunkCoord, float[]> _working = new Dictionary<ChunkCoord, float[]>();
         readonly HashSet<ChunkCoord> _touched = new HashSet<ChunkCoord>();
-        readonly int _resolution;
-        readonly float _spacing;
 
         /// <param name="store">World to sculpt; its terrain is snapshotted now.</param>
         /// <param name="brush">Brush used for every dab of this stroke.</param>
@@ -31,20 +29,7 @@ namespace Forge.Editing.Terrain
                 throw new ArgumentNullException(nameof(store));
             Brush = brush ?? throw new ArgumentNullException(nameof(brush));
 
-            // Last writer wins if two plugins define the same coordinate, matching the world view.
-            _originals = new Dictionary<ChunkCoord, TerrainChunkRecord>();
-            foreach (var chunk in store.OfType<TerrainChunkRecord>().OrderBy(c => c.Id))
-            {
-                if (!_originals.ContainsKey(chunk.Coord))
-                    _originals.Add(chunk.Coord, chunk);
-            }
-
-            var resolutions = _originals.Values.Select(c => c.Heights.Resolution).Distinct().ToList();
-            if (resolutions.Count > 1)
-                throw new InvalidOperationException("Sculpting requires every terrain chunk to share one heightmap resolution.");
-
-            _resolution = resolutions.Count == 1 ? resolutions[0] : WorldGrid.DefaultHeightmapResolution;
-            _spacing = WorldGrid.ChunkSize / (_resolution - 1);
+            _terrain = new TerrainGrid(store);
             FlattenHeight = SampleHeight(start) ?? 0f;
         }
 
@@ -67,35 +52,18 @@ namespace Forge.Editing.Terrain
         /// </summary>
         public float? HeightChangeAt(Vector2 world) => Sample(world, original: false) - Sample(world, original: true);
 
-        float? Sample(Vector2 world, bool original)
-        {
-            var gx = world.X / _spacing;
-            var gz = world.Y / _spacing;
-            var x0 = (int)Math.Floor(gx);
-            var z0 = (int)Math.Floor(gz);
-            var fx = gx - x0;
-            var fz = gz - z0;
-
-            var h00 = GlobalHeight(x0, z0, original);
-            var h10 = GlobalHeight(x0 + 1, z0, original);
-            var h01 = GlobalHeight(x0, z0 + 1, original);
-            var h11 = GlobalHeight(x0 + 1, z0 + 1, original);
-            if (h00 == null || h10 == null || h01 == null || h11 == null)
-                return null;
-
-            var top = h00.Value + (h10.Value - h00.Value) * fx;
-            var bottom = h01.Value + (h11.Value - h01.Value) * fx;
-            return top + (bottom - top) * fz;
-        }
+        float? Sample(Vector2 world, bool original) =>
+            TerrainGrid.Bilinear(world, _terrain.Spacing, (gx, gz) => GlobalHeight(gx, gz, original));
 
         /// <summary>Applies one dab centered at world XZ. Returns the chunks it changed.</summary>
         public IReadOnlyCollection<ChunkCoord> ApplyDab(Vector2 center)
         {
             var radius = Brush.Radius;
-            var minX = (int)Math.Floor((center.X - radius) / _spacing);
-            var maxX = (int)Math.Ceiling((center.X + radius) / _spacing);
-            var minZ = (int)Math.Floor((center.Y - radius) / _spacing);
-            var maxZ = (int)Math.Ceiling((center.Y + radius) / _spacing);
+            var spacing = _terrain.Spacing;
+            var minX = (int)Math.Floor((center.X - radius) / spacing);
+            var maxX = (int)Math.Ceiling((center.X + radius) / spacing);
+            var minZ = (int)Math.Floor((center.Y - radius) / spacing);
+            var maxZ = (int)Math.Ceiling((center.Y + radius) / spacing);
 
             // Pass 1: compute every new value from the pre-dab state.
             var updates = new List<(int gx, int gz, float height)>();
@@ -106,7 +74,7 @@ namespace Forge.Editing.Terrain
                 if (current == null)
                     continue;
 
-                var distance = Vector2.Distance(center, new Vector2(gx * _spacing, gz * _spacing));
+                var distance = Vector2.Distance(center, new Vector2(gx * spacing, gz * spacing));
                 var weight = Brush.Weight(distance) * Brush.Strength;
                 if (weight <= 0f)
                     continue;
@@ -132,16 +100,15 @@ namespace Forge.Editing.Terrain
         }
 
         /// <summary>Current working heights of a chunk (original heights if untouched).</summary>
-        public HeightField HeightsOf(ChunkCoord coord)
-        {
-            if (!_originals.TryGetValue(coord, out var original))
-                throw new KeyNotFoundException($"No terrain chunk at {coord}.");
-            return _working.TryGetValue(coord, out var heights) ? new HeightField(_resolution, heights) : original.Heights;
-        }
+        public HeightField HeightsOf(ChunkCoord coord) =>
+            _working.TryGetValue(coord, out var heights) ? new HeightField(_terrain.Resolution, heights) : Original(coord).Heights;
 
         /// <summary>Records for every chunk this stroke changed, ready to commit.</summary>
         public IReadOnlyList<TerrainChunkRecord> ChangedRecords() =>
-            _touched.Select(c => _originals[c].WithHeights(HeightsOf(c))).OrderBy(r => r.Id).ToList();
+            _touched.Select(c => Original(c).WithHeights(HeightsOf(c))).OrderBy(r => r.Id).ToList();
+
+        TerrainChunkRecord Original(ChunkCoord coord) =>
+            _terrain.TryGetChunk(coord, out var chunk) ? chunk : throw new KeyNotFoundException($"No terrain chunk at {coord}.");
 
         float Apply(float current, float weight, int gx, int gz)
         {
@@ -182,44 +149,37 @@ namespace Forge.Editing.Terrain
 
         float? GlobalHeight(int gx, int gz, bool original = false)
         {
-            var cells = _resolution - 1;
-            var coord = new ChunkCoord(FloorDiv(gx, cells), FloorDiv(gz, cells));
-            if (!_originals.TryGetValue(coord, out var chunk))
+            var (coord, x, z) = _terrain.Locate(gx, gz);
+            if (!_terrain.TryGetChunk(coord, out var chunk))
                 return null;
-
-            var x = gx - coord.X * cells;
-            var z = gz - coord.Z * cells;
-            return !original && _working.TryGetValue(coord, out var heights) ? heights[z * _resolution + x] : chunk.Heights[x, z];
+            return !original && _working.TryGetValue(coord, out var heights) ? heights[z * _terrain.Resolution + x] : chunk.Heights[x, z];
         }
 
         // A global sample on a chunk edge or corner belongs to up to four chunks.
         IEnumerable<(ChunkCoord coord, int index)> Owners(int gx, int gz)
         {
-            var cells = _resolution - 1;
-            var cx = FloorDiv(gx, cells);
-            var cz = FloorDiv(gz, cells);
-            var onXEdge = gx - cx * cells == 0;
-            var onZEdge = gz - cz * cells == 0;
+            var cells = _terrain.CellsPerChunk;
+            var (home, homeX, homeZ) = _terrain.Locate(gx, gz);
+            var onXEdge = homeX == 0;
+            var onZEdge = homeZ == 0;
 
             for (var ox = onXEdge ? -1 : 0; ox <= 0; ox++)
             for (var oz = onZEdge ? -1 : 0; oz <= 0; oz++)
             {
-                var coord = new ChunkCoord(cx + ox, cz + oz);
-                if (!_originals.ContainsKey(coord))
+                var coord = new ChunkCoord(home.X + ox, home.Z + oz);
+                if (!_terrain.Contains(coord))
                     continue;
                 var x = gx - coord.X * cells;
                 var z = gz - coord.Z * cells;
-                yield return (coord, z * _resolution + x);
+                yield return (coord, z * _terrain.Resolution + x);
             }
         }
 
         float[] WorkingFor(ChunkCoord coord)
         {
             if (!_working.TryGetValue(coord, out var heights))
-                _working[coord] = heights = _originals[coord].Heights.ToArray();
+                _working[coord] = heights = Original(coord).Heights.ToArray();
             return heights;
         }
-
-        static int FloorDiv(int value, int divisor) => (int)Math.Floor((double)value / divisor);
     }
 }

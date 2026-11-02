@@ -72,6 +72,19 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void InspectArea_ACoarseGrid_StillReadsEveryTerrainSample()
+        {
+            // The whole land at 2 × 2 probes only the far corners, which are all off the terrain.
+            var result = new InspectAreaCommand(BuildingFixture.Create().Context)
+                .Execute(new InspectAreaCommand.Arguments { X = 64f, Z = 64f, Size = 256f, Samples = 2 });
+
+            Assert.That(result.Terrain, Is.Not.Null);
+            Assert.That(result.Terrain.Heights.SelectMany(row => row).All(height => height == null), Is.True);
+            Assert.That((result.Terrain.MinHeight, result.Terrain.MaxHeight), Is.EqualTo((10f, 22.7f)));
+            Assert.That(result.Summary, Does.Contain("ground 10–22.7 m"));
+        }
+
+        [Test]
         public void InspectArea_ListsTheObjectsInside_NearestFirst()
         {
             var world = BuildingFixture.Create();
@@ -147,6 +160,21 @@ namespace Forge.Tests.Editing
 
             Assert.That(error.Message, Does.Contain("core:dragon").And.Contain("list_objects"));
             Assert.That(Placed(world), Is.Empty);
+        }
+
+        [Test]
+        public void PlaceObjects_WhereTheSceneHasNotLoadedTheTerrain_SaysSo()
+        {
+            var world = BuildingFixture.Create();
+            var nothingLoaded = new ObjectSeating(p => null, id => null, key => BuildingFixture.HouseShape);
+            var command = new PlaceObjectsCommand(new BuildContext(world.Session, nothingLoaded, world.Options));
+
+            var error = Assert.Throws<CommandException>(() => command.Execute(new PlaceObjectsCommand.Arguments
+            {
+                Objects = new List<PlaceObjectsCommand.Item> { Item(BuildingFixture.House, 20f, 20f) },
+            }));
+
+            Assert.That(error.Message, Does.Contain("isn't loaded"));
         }
 
         [Test]

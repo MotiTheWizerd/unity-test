@@ -84,15 +84,18 @@ namespace Forge.Editing.Building
                 items.RemoveAt(items.Count - 1);
 
             var placements = new List<ObjectPlacement>(items.Count);
+            string skipReason = null;
             foreach (var item in items)
             {
                 var pose = _context.Seating.SeatOnTerrain(baseObject, item.Position, item.YawDegrees, item.Scale);
                 if (pose.HasValue)
                     placements.Add(new ObjectPlacement(baseObject.Id, pose.Value, item.Scale));
+                else
+                    skipReason = skipReason ?? _context.WhyNoGround(item.Position);
             }
 
             if (placements.Count == 0)
-                throw new CommandException("Nothing was placed: the path has no terrain under it. inspect_area shows where the ground is.");
+                throw new CommandException($"Nothing was placed: {skipReason}. inspect_area shows where the ground is.");
 
             var name = baseObject.DisplayName;
             var records = ObjectEdits.Place(_context.Session, placements, $"Place {placements.Count} {name}");
@@ -100,7 +103,7 @@ namespace Forge.Editing.Building
             var summary = FormattableString.Invariant($"Placed {records.Count} {name} along {length:0.#} m ({path.Count - 1} stretch(es)).");
             var skipped = items.Count - placements.Count;
             if (skipped > 0)
-                summary += $" Skipped {skipped} without terrain.";
+                summary += $" Skipped {skipped}, e.g. {skipReason}.";
             return new Result(summary, Rounding.Meters(length), records.Select(r => r.Id.ToString()).ToList());
         }
 

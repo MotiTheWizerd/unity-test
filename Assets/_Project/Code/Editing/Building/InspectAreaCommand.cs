@@ -20,9 +20,9 @@ namespace Forge.Editing.Building
 
         public InspectAreaCommand(BuildContext context)
             : base("inspect_area",
-                "Describes a square area of the world: terrain heights on a grid (meters; rows run south to north, " +
-                "columns west to east, null where there is no terrain), the lowest and highest ground, the steepest " +
-                "slope, and the objects standing inside, nearest the center first.")
+                "Describes a square area of the world: the lowest and highest ground and the steepest slope (read from " +
+                "every terrain sample in the area), an overview grid of heights (meters; rows run south to north, " +
+                "columns west to east, null where there is no terrain), and the objects standing inside, nearest the center first.")
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
@@ -38,7 +38,7 @@ namespace Forge.Editing.Building
             [Param("Edge length of the square, in meters.", Minimum = 1, Maximum = 256)]
             public float Size { get; set; }
 
-            [Param("Height samples along each edge of the grid; more shows finer detail. Default 9.", Optional = true, Minimum = 2, Maximum = 17)]
+            [Param("Points along each edge of the overview grid; more shows finer detail. Default 9.", Optional = true, Minimum = 2, Maximum = 17)]
             public int? Samples { get; set; }
         }
 
@@ -74,17 +74,17 @@ namespace Forge.Editing.Building
                 Heights = heights;
             }
 
-            /// <summary>Meters between neighbouring samples.</summary>
+            /// <summary>Meters between neighbouring points of the overview grid.</summary>
             public float Spacing { get; }
 
             public float MinHeight { get; }
 
             public float MaxHeight { get; }
 
-            /// <summary>Steepest slope between neighbouring samples, in degrees.</summary>
+            /// <summary>Steepest slope between neighbouring terrain samples, in degrees.</summary>
             public float SteepestSlope { get; }
 
-            /// <summary>Rows south to north, columns west to east.</summary>
+            /// <summary>The overview grid: rows south to north, columns west to east.</summary>
             public IReadOnlyList<IReadOnlyList<float?>> Heights { get; }
         }
 
@@ -92,7 +92,7 @@ namespace Forge.Editing.Building
         {
             var center = new Vector2(arguments.X, arguments.Z);
             var half = arguments.Size / 2f;
-            var terrain = SampleTerrain(center, arguments.Size, arguments.Samples ?? DefaultSamples);
+            var terrain = DescribeTerrain(center, arguments.Size, arguments.Samples ?? DefaultSamples);
 
             var inside = _context.Session.World.Records.OfType<PlacedObjectRecord>()
                 .Where(p => Math.Abs(p.Position.X - center.X) <= half && Math.Abs(p.Position.Z - center.Y) <= half)
@@ -106,54 +106,56 @@ namespace Forge.Editing.Building
             return new Result(Summarize(arguments, terrain, inside.Count), terrain, inside.Count, listed);
         }
 
-        TerrainInfo SampleTerrain(Vector2 center, float size, int samples)
+        // Lowest, highest and steepest ground come from every terrain sample in the square, so they are exact
+        // however coarse the overview grid is; the overview grid only shows the lay of the land.
+        TerrainInfo DescribeTerrain(Vector2 center, float size, int points)
         {
-            var spacing = size / (samples - 1);
-            var origin = center - new Vector2(size / 2f, size / 2f);
-            var grid = new float?[samples, samples];
-            for (var row = 0; row < samples; row++)
-            for (var column = 0; column < samples; column++)
-                grid[row, column] = _context.Seating.TerrainHeightAt(origin + new Vector2(column * spacing, row * spacing));
+            var terrain = _context.Terrain;
+            var half = size / 2f;
+            var spacing = terrain.Spacing;
+            var firstX = (int)Math.Ceiling((center.X - half) / spacing);
+            var lastX = (int)Math.Floor((center.X + half) / spacing);
+            var firstZ = (int)Math.Ceiling((center.Y - half) / spacing);
+            var lastZ = (int)Math.Floor((center.Y + half) / spacing);
 
-            var heights = new List<IReadOnlyList<float?>>(samples);
-            var known = new List<float>();
-            for (var row = 0; row < samples; row++)
+            var lowest = float.MaxValue;
+            var highest = float.MinValue;
+            var steepest = 0f;
+            for (var gz = firstZ; gz <= lastZ; gz++)
+            for (var gx = firstX; gx <= lastX; gx++)
             {
-                var line = new float?[samples];
-                for (var column = 0; column < samples; column++)
-                {
-                    var height = grid[row, column];
-                    line[column] = height.HasValue ? Rounding.Coarse(height.Value) : (float?)null;
-                    if (height.HasValue)
-                        known.Add(height.Value);
-                }
-
-                heights.Add(line);
+                if (!(terrain.SampleHeight(gx, gz) is float height))
+                    continue;
+                lowest = Math.Min(lowest, height);
+                highest = Math.Max(highest, height);
+                if (gx < lastX && terrain.SampleHeight(gx + 1, gz) is float east)
+                    steepest = Math.Max(steepest, Slope(height, east, spacing));
+                if (gz < lastZ && terrain.SampleHeight(gx, gz + 1) is float north)
+                    steepest = Math.Max(steepest, Slope(height, north, spacing));
             }
 
-            if (known.Count == 0)
+            // An area narrower than the sample spacing may hold no sample at all; its center still has a height.
+            if (lowest > highest && terrain.HeightAt(center) is float middle)
+                lowest = highest = middle;
+            if (lowest > highest)
                 return null;
 
-            return new TerrainInfo(Rounding.Meters(spacing), Rounding.Coarse(known.Min()), Rounding.Coarse(known.Max()),
-                (float)Math.Round(SteepestSlope(grid, samples, spacing)), heights);
-        }
-
-        // The steepest rise between neighbouring samples, east-west or north-south.
-        static float SteepestSlope(float?[,] grid, int samples, float spacing)
-        {
-            var steepest = 0f;
-            for (var row = 0; row < samples; row++)
-            for (var column = 0; column < samples; column++)
+            var step = size / (points - 1);
+            var origin = center - new Vector2(half, half);
+            var overview = new List<IReadOnlyList<float?>>(points);
+            for (var row = 0; row < points; row++)
             {
-                if (!grid[row, column].HasValue)
-                    continue;
-                if (column + 1 < samples && grid[row, column + 1].HasValue)
-                    steepest = Math.Max(steepest, Slope(grid[row, column].Value, grid[row, column + 1].Value, spacing));
-                if (row + 1 < samples && grid[row + 1, column].HasValue)
-                    steepest = Math.Max(steepest, Slope(grid[row, column].Value, grid[row + 1, column].Value, spacing));
+                var line = new float?[points];
+                for (var column = 0; column < points; column++)
+                {
+                    var height = terrain.HeightAt(origin + new Vector2(column * step, row * step));
+                    line[column] = height.HasValue ? Rounding.Coarse(height.Value) : (float?)null;
+                }
+
+                overview.Add(line);
             }
 
-            return steepest;
+            return new TerrainInfo(Rounding.Meters(step), Rounding.Coarse(lowest), Rounding.Coarse(highest), (float)Math.Round(steepest), overview);
         }
 
         static float Slope(float a, float b, float run) => (float)Math.Atan(Math.Abs(b - a) / run) * RadiansToDegrees;
@@ -162,7 +164,7 @@ namespace Forge.Editing.Building
         {
             var area = FormattableString.Invariant($"{arguments.Size:0.#} m square around ({arguments.X:0.#}, {arguments.Z:0.#})");
             var ground = terrain == null
-                ? "no terrain (outside the world or not loaded)"
+                ? "no terrain (outside the world)"
                 : FormattableString.Invariant($"ground {terrain.MinHeight:0.#}–{terrain.MaxHeight:0.#} m, steepest slope {terrain.SteepestSlope:0}°");
             return $"{area}: {ground}, {objectCount} object(s).";
         }

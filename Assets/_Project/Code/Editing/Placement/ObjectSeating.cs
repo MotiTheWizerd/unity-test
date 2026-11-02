@@ -27,9 +27,6 @@ namespace Forge.Editing.Placement
             _shapeOf = shapeOf ?? throw new ArgumentNullException(nameof(shapeOf));
         }
 
-        /// <summary>Terrain height at a ground position (x, z), or null where there is no terrain.</summary>
-        public float? TerrainHeightAt(Vector2 ground) => _terrainHeightAt(ground);
-
         /// <summary>The footprint and pivot height of <paramref name="baseObject"/>'s look, at scale 1 and no rotation.</summary>
         public PlacementShape ShapeOf(BaseObjectRecord baseObject)
         {

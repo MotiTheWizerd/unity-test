@@ -93,22 +93,23 @@ namespace Forge.Editing.Building
                 var roll = _context.Options.DrawRoll(baseObject);
                 var heading = PlacementMath.NormalizeDegrees(item.Heading ?? roll.YawDegrees);
                 var scale = item.Scale ?? roll.Scale;
-                var pose = _context.Seating.SeatOnTerrain(baseObject, new Vector2(item.X, item.Z), heading, scale);
+                var at = new Vector2(item.X, item.Z);
+                var pose = _context.Seating.SeatOnTerrain(baseObject, at, heading, scale);
                 if (pose.HasValue)
                     placements.Add(new ObjectPlacement(baseObject.Id, pose.Value, scale));
                 else
-                    skipped.Add(new Skip(i, FormattableString.Invariant($"no terrain at ({item.X:0.#}, {item.Z:0.#})")));
+                    skipped.Add(new Skip(i, _context.WhyNoGround(at)));
             }
 
             if (placements.Count == 0)
-                throw new CommandException("Nothing was placed: none of the positions has terrain. inspect_area shows where the ground is.");
+                throw new CommandException($"Nothing was placed: {skipped[0].Reason}. inspect_area shows where the ground is.");
 
             var description = placements.Count == 1 ? $"Place {baseObjects[0].DisplayName}" : $"Place {placements.Count} objects";
             var records = ObjectEdits.Place(_context.Session, placements, description);
 
             var summary = $"Placed {records.Count} object(s): {_context.CountByName(records)}.";
             if (skipped.Count > 0)
-                summary += $" Skipped {skipped.Count} without terrain.";
+                summary += $" Skipped {skipped.Count}, e.g. {skipped[0].Reason}.";
             var placed = records.Select(r => new PlacedObjectInfo(r, _context.NameOf(r.BaseId))).ToList();
             return new Result(summary, placed, skipped);
         }

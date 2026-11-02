@@ -175,6 +175,9 @@ one in the active plugin.
   Scale is uniform, because `PlacedObjectRecord` has a single scale (as in the Creation Kit).
 - `Geometry.DragMath` / `DragConstraint` hold the engine-free ray math: projecting onto an axis,
   intersecting a plane, and the signed angle around an axis.
+- `TerrainGrid` (`Editing/Terrain`) reads the world's terrain records as one grid of global samples (chunks
+  share their edge samples; lowest id wins on duplicate coordinates; one heightmap resolution): sample heights,
+  bilinear heights anywhere, and which chunk holds a sample. Sculpting and the building commands both read it.
 - **Terrain sculpting** (`Editing/Terrain`): a `SculptStroke` snapshots the terrain and
   keeps a working copy. Dabs (`BrushSettings`: Raise / Lower / Flatten / Smooth, radius,
   strength, smoothstep falloff) run on the **global sample grid**: pass 1 computes every
@@ -214,8 +217,11 @@ one in the active plugin.
 - `CommandRegistry` holds commands by name. The world-building commands (`BuildingCommands.AddTo`) work on a
   `BuildContext` (session, seating, placement options):
   - `list_objects`: ids, names, categories, footprint (width across the front, depth front to back) and placement rules.
-  - `inspect_area`: a height grid (rows south to north, columns west to east), lowest/highest ground, steepest
-    slope, and the objects inside, nearest first.
+  - `inspect_area`: lowest/highest ground and steepest slope from every terrain sample in the square (exact,
+    however coarse a grid the agent asks for), an overview height grid (rows south to north, columns west to
+    east), and the objects inside, nearest first. It reads the terrain *data* (`BuildContext.Terrain`, a
+    `TerrainGrid` cached per world version), so it answers for unloaded chunks too; placing still seats on the
+    loaded scene, and a skipped spot says whether its terrain is missing or just not loaded.
   - `place_objects`: objects at ground positions, seated on the terrain; heading and scale default to the
     object's natural variation. Unknown ids refuse the whole call; positions without terrain are skipped.
   - `place_line`: one object end to end along a path, stretch by stretch, exactly like the place tool's

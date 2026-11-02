@@ -1,0 +1,99 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using Forge.Data.Plugins;
+using Forge.Data.Records;
+using Forge.Data.Terrain;
+
+namespace Forge.Editing.Terrain
+{
+    /// <summary>
+    /// The world's terrain as one grid of height samples across all its chunks, read from the terrain records.
+    /// Neighbouring chunks share their edge samples, so each global sample (gx, gz) has one height. Engine-free:
+    /// it answers for any position, whether or not the scene has that chunk loaded.
+    /// </summary>
+    public sealed class TerrainGrid
+    {
+        readonly Dictionary<ChunkCoord, TerrainChunkRecord> _chunks = new Dictionary<ChunkCoord, TerrainChunkRecord>();
+
+        public TerrainGrid(IRecordStore store)
+        {
+            if (store == null)
+                throw new ArgumentNullException(nameof(store));
+
+            // The lowest id wins if two plugins define the same coordinate, as in the world view.
+            foreach (var chunk in store.OfType<TerrainChunkRecord>().OrderBy(c => c.Id))
+            {
+                if (!_chunks.ContainsKey(chunk.Coord))
+                    _chunks.Add(chunk.Coord, chunk);
+            }
+
+            var resolutions = _chunks.Values.Select(c => c.Heights.Resolution).Distinct().ToList();
+            if (resolutions.Count > 1)
+                throw new InvalidOperationException("Every terrain chunk must share one heightmap resolution.");
+
+            Resolution = resolutions.Count == 1 ? resolutions[0] : WorldGrid.DefaultHeightmapResolution;
+            Spacing = WorldGrid.ChunkSize / (Resolution - 1);
+        }
+
+        /// <summary>Samples along each chunk edge.</summary>
+        public int Resolution { get; }
+
+        /// <summary>Meters between neighbouring samples.</summary>
+        public float Spacing { get; }
+
+        public int CellsPerChunk => Resolution - 1;
+
+        public bool Contains(ChunkCoord coord) => _chunks.ContainsKey(coord);
+
+        public bool TryGetChunk(ChunkCoord coord, out TerrainChunkRecord chunk) => _chunks.TryGetValue(coord, out chunk);
+
+        /// <summary>The chunk that holds global sample (gx, gz), and the sample's index inside it.</summary>
+        public (ChunkCoord Coord, int X, int Z) Locate(int gx, int gz)
+        {
+            var coord = new ChunkCoord(FloorDiv(gx, CellsPerChunk), FloorDiv(gz, CellsPerChunk));
+            return (coord, gx - coord.X * CellsPerChunk, gz - coord.Z * CellsPerChunk);
+        }
+
+        /// <summary>Height of global sample (gx, gz), or null where no chunk holds it.</summary>
+        public float? SampleHeight(int gx, int gz)
+        {
+            var (coord, x, z) = Locate(gx, gz);
+            return _chunks.TryGetValue(coord, out var chunk) ? chunk.Heights[x, z] : (float?)null;
+        }
+
+        /// <summary>Height at a ground position (x, z), bilinear between samples; null outside the terrain.</summary>
+        public float? HeightAt(Vector2 ground) => Bilinear(ground, Spacing, SampleHeight);
+
+        /// <summary>
+        /// The height at <paramref name="ground"/>, bilinear between the four global samples around it as
+        /// <paramref name="sample"/> reads them; null if any of them is missing.
+        /// </summary>
+        public static float? Bilinear(Vector2 ground, float spacing, Func<int, int, float?> sample)
+        {
+            if (sample == null)
+                throw new ArgumentNullException(nameof(sample));
+
+            var gx = ground.X / spacing;
+            var gz = ground.Y / spacing;
+            var x0 = (int)Math.Floor(gx);
+            var z0 = (int)Math.Floor(gz);
+            var fx = gx - x0;
+            var fz = gz - z0;
+
+            var h00 = sample(x0, z0);
+            var h10 = sample(x0 + 1, z0);
+            var h01 = sample(x0, z0 + 1);
+            var h11 = sample(x0 + 1, z0 + 1);
+            if (h00 == null || h10 == null || h01 == null || h11 == null)
+                return null;
+
+            var top = h00.Value + (h10.Value - h00.Value) * fx;
+            var bottom = h01.Value + (h11.Value - h01.Value) * fx;
+            return top + (bottom - top) * fz;
+        }
+
+        static int FloorDiv(int value, int divisor) => (int)Math.Floor((double)value / divisor);
+    }
+}

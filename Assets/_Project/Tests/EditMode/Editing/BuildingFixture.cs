@@ -3,20 +3,26 @@ using System.Collections.Generic;
 using System.Numerics;
 using Forge.Data;
 using Forge.Data.Records;
+using Forge.Data.Terrain;
 using Forge.Editing;
 using Forge.Editing.Building;
 using Forge.Editing.Commands;
 using Forge.Editing.Placement;
+using Forge.Editing.Terrain;
 using static Forge.Tests.Data.TestRecords;
 
 namespace Forge.Tests.Editing
 {
     /// <summary>
     /// A small world for the building commands: a pine (random turn and size, upright), a fence (follows the
-    /// slope) and a house (exact), on terrain covering [0, 100] on both axes that rises 1 m per 10 m eastwards.
+    /// slope) and a house (exact), on four terrain chunks covering [0, 127] on both axes (1 m samples) that
+    /// rise 1 m per 10 m eastwards. Objects are seated on that terrain's data, standing in for the scene's probe.
     /// </summary>
     sealed class BuildingFixture
     {
+        /// <summary>Where the terrain data reaches; the last sample row (x or z = 128) belongs to no chunk.</summary>
+        public const float TerrainEdge = 127f;
+
         public static readonly RecordId Tree = RecordId.Parse("core:tree");
         public static readonly RecordId Fence = RecordId.Parse("core:fence");
         public static readonly RecordId House = RecordId.Parse("core:house");
@@ -34,17 +40,20 @@ namespace Forge.Tests.Editing
 
         BuildingFixture()
         {
-            Session = new EditSession(
-                new[]
-                {
-                    Plugin("core",
-                        new BaseObjectRecord(Tree, "Pine Tree", "tree", "Nature/Trees", new PlacementRules(true, 0.8f, 1.2f, false)),
-                        new BaseObjectRecord(Fence, "Wooden Fence", "fence", "Architecture/Walls", new PlacementRules(false, 1f, 1f, true)),
-                        new BaseObjectRecord(House, "Small House", "house", "Architecture/Buildings")),
-                },
-                Plugin("user", new[] { "core" }));
+            var records = new List<Record>
+            {
+                new BaseObjectRecord(Tree, "Pine Tree", "tree", "Nature/Trees", new PlacementRules(true, 0.8f, 1.2f, false)),
+                new BaseObjectRecord(Fence, "Wooden Fence", "fence", "Architecture/Walls", new PlacementRules(false, 1f, 1f, true)),
+                new BaseObjectRecord(House, "Small House", "house", "Architecture/Buildings"),
+            };
+            for (var x = 0; x <= 1; x++)
+            for (var z = 0; z <= 1; z++)
+                records.Add(SlopeChunk(x, z));
+
+            Session = new EditSession(new[] { Plugin("core", records.ToArray()) }, Plugin("user", new[] { "core" }));
             Options = new PlacementOptions(new Random(1));
-            var seating = new ObjectSeating(Ground, SlopeShapeOf, key => ShapesByKey[key]);
+            var terrain = new TerrainGrid(Session.World.Records);
+            var seating = new ObjectSeating(terrain.HeightAt, SlopeShapeOf, key => ShapesByKey[key]);
             Context = new BuildContext(Session, seating, Options);
             BuildingCommands.AddTo(Registry, Context);
         }
@@ -59,8 +68,18 @@ namespace Forge.Tests.Editing
 
         public CommandRegistry Registry { get; } = new CommandRegistry();
 
+        /// <summary>The terrain's height, as a formula: 10 m at x = 0, rising 1 m per 10 m eastwards.</summary>
         public static float? Ground(Vector2 p) =>
-            p.X >= 0f && p.X <= 100f && p.Y >= 0f && p.Y <= 100f ? 10f + 0.1f * p.X : (float?)null;
+            p.X >= 0f && p.X < TerrainEdge && p.Y >= 0f && p.Y < TerrainEdge ? 10f + 0.1f * p.X : (float?)null;
+
+        static TerrainChunkRecord SlopeChunk(int x, int z)
+        {
+            var coord = new ChunkCoord(x, z);
+            var samples = WorldGrid.DefaultHeightmapResolution;
+            var spacing = WorldGrid.ChunkSize / (samples - 1);
+            return new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", coord), coord,
+                HeightField.FromFunction((sx, sz) => 10f + 0.1f * (x * WorldGrid.ChunkSize + sx * spacing), samples));
+        }
 
         // What tilts, decided the way the editor's SlopeAlignment does: the rules and the toggle.
         PlacementShape? SlopeShapeOf(RecordId baseId) =>

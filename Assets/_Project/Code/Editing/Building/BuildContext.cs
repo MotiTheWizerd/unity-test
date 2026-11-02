@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Forge.Data;
+using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Editing.Commands;
 using Forge.Editing.Placement;
+using Forge.Editing.Terrain;
 
 namespace Forge.Editing.Building
 {
@@ -14,6 +17,9 @@ namespace Forge.Editing.Building
     /// </summary>
     public sealed class BuildContext
     {
+        ResolvedWorld _terrainWorld;
+        TerrainGrid _terrain;
+
         public BuildContext(EditSession session, ObjectSeating seating, PlacementOptions options)
         {
             Session = session ?? throw new ArgumentNullException(nameof(session));
@@ -26,6 +32,27 @@ namespace Forge.Editing.Building
         public ObjectSeating Seating { get; }
 
         public PlacementOptions Options { get; }
+
+        /// <summary>The terrain as data (loaded in the scene or not); rebuilt only when the world changes.</summary>
+        public TerrainGrid Terrain
+        {
+            get
+            {
+                if (!ReferenceEquals(_terrainWorld, Session.World))
+                {
+                    _terrainWorld = Session.World;
+                    _terrain = new TerrainGrid(_terrainWorld.Records);
+                }
+
+                return _terrain;
+            }
+        }
+
+        /// <summary>Why nothing can be set down at <paramref name="at"/>: no terrain there, or terrain the scene hasn't loaded.</summary>
+        public string WhyNoGround(Vector2 at) =>
+            Terrain.HeightAt(at).HasValue
+                ? FormattableString.Invariant($"the terrain at ({at.X:0.#}, {at.Y:0.#}) isn't loaded; build nearer the camera")
+                : FormattableString.Invariant($"no terrain at ({at.X:0.#}, {at.Y:0.#})");
 
         /// <summary>The base object with id <paramref name="id"/>; refused, with a hint, when there is none.</summary>
         public BaseObjectRecord BaseObject(string id)
