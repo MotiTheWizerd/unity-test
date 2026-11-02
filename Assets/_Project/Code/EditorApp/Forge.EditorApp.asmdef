@@ -2,6 +2,7 @@
     "name": "Forge.EditorApp",
     "rootNamespace": "Forge.EditorApp",
     "references": [
+        "Forge.Agent",
         "Forge.Data",
         "Forge.Data.Json",
         "Forge.Editing",

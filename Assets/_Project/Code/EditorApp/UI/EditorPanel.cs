@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Forge.Agent;
 using Forge.EditorApp.Diagnostics;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -8,10 +9,10 @@ using UnityEngine.UIElements;
 namespace Forge.EditorApp.UI
 {
     /// <summary>
-    /// The editor's UI Toolkit panel: a side dock and a status bar laid out in
-    /// EditorPanel.uxml and styled by EditorPanel.uss. A thin adapter: each section
-    /// is its own presenter (<see cref="IPanelSection"/>), and this component only
-    /// composes them, refreshes them every frame and answers whether the UI owns the input.
+    /// The editor's UI Toolkit panel: the editing dock on the left, the agent dock on the right and a status bar,
+    /// laid out in EditorPanel.uxml and styled by EditorPanel.uss. A thin adapter: each section is its own
+    /// presenter (<see cref="IPanelSection"/>), and this component only composes them, refreshes them every frame
+    /// and answers whether the UI owns the input.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class EditorPanel : MonoBehaviour, IInputBlocker
@@ -19,16 +20,21 @@ namespace Forge.EditorApp.UI
         // Runtime-only state; see CLAUDE.md (play-mode reload) for why these are [NonSerialized].
         [NonSerialized] UIDocument _document;
         [NonSerialized] List<IPanelSection> _sections;
+        [NonSerialized] EditorContext _context;
+        [NonSerialized] VisualElement _editing;
 
         VisualElement Root => _document.rootVisualElement;
 
         void Awake() => _document = GetComponent<UIDocument>();
 
-        public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics)
+        /// <param name="agent">The world-building agent's conversation; null hides the agent dock.</param>
+        public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics, AgentConversation agent)
         {
+            _context = context ?? throw new ArgumentNullException(nameof(context));
             // The document root covers the whole screen; only real panel elements may catch the pointer.
             Root.pickingMode = PickingMode.Ignore;
             DisableKeyboardNavigation();
+            _editing = PanelElements.Required<VisualElement>(Root, "editing");
             _sections = new List<IPanelSection>
             {
                 new WorldSection(Root, context),
@@ -39,6 +45,11 @@ namespace Forge.EditorApp.UI
                 new PerformanceSection(Root, context, diagnostics),
                 new StatusBar(Root, context),
             };
+
+            if (agent != null)
+                _sections.Add(new AgentSection(Root, agent));
+            else
+                PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "agent-dock"), false);
             Refresh();
         }
 
@@ -59,10 +70,11 @@ namespace Forge.EditorApp.UI
             Root.focusController?.IgnoreEvent(evt);
         }
 
-        /// <summary>Replaces the dock with an error box; the editor could not start.</summary>
+        /// <summary>Replaces the docks with an error box; the editor could not start.</summary>
         public void ShowFatal(string message)
         {
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "dock"), false);
+            PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "agent-dock"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "status"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "fatal"), true);
             PanelElements.SetText(PanelElements.Required<Label>(Root, "fatal-message"), message);
@@ -138,6 +150,12 @@ namespace Forge.EditorApp.UI
         {
             if (_sections == null)
                 return;
+
+            // While the agent's build is open, the editing controls rest, as the tools do.
+            var editable = !_context.IsDraftOpen;
+            if (_editing.enabledSelf != editable)
+                _editing.SetEnabled(editable);
+
             foreach (var section in _sections)
                 section.Refresh();
         }

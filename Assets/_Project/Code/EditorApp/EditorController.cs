@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Forge.EditorApp.Agent;
 using Forge.EditorApp.Gizmos;
 using Forge.EditorApp.Tools;
 using Forge.Editing.Placement;
@@ -12,11 +13,11 @@ using UnityEngine.InputSystem;
 namespace Forge.EditorApp
 {
     /// <summary>
-    /// Routes input: global shortcuts (Ctrl+S save, Ctrl+Z / Ctrl+Y or
-    /// Ctrl+Shift+Z undo/redo, 1-9 palette, B sculpt, W/E/R move/rotate/scale,
-    /// [ ] brush size, End drop to ground, F frame selection) are handled here; everything else is
-    /// passed to the active tool. Pointer clicks over the UI panel are filtered out, and so are
-    /// shortcuts while a UI text field has the keyboard.
+    /// Builds the editing services the tools share (picking, shapes, seating, commands, the agent) and routes
+    /// input: global shortcuts (Ctrl+S save, Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z undo/redo, 1-9 palette, B sculpt,
+    /// W/E/R move/rotate/scale, [ ] brush size, End drop to ground, F frame selection) are handled here;
+    /// everything else is passed to the active tool. Pointer clicks over the UI panel are filtered out, and so
+    /// are shortcuts while a UI text field has the keyboard. While the agent's draft is open, the tools rest.
     /// </summary>
     public sealed class EditorController : MonoBehaviour
     {
@@ -38,9 +39,13 @@ namespace Forge.EditorApp
         /// <summary>One-shot actions, shared with the UI. Available after <see cref="Initialize"/>.</summary>
         public EditorCommands Commands { get; private set; }
 
+        /// <summary>The world-building agent, or null when the editor has no agent settings.</summary>
+        public AgentHost Agent { get; private set; }
+
         /// <param name="ui">Clicks over this UI are kept from the tools; typing into it is kept from the shortcuts.</param>
         /// <param name="assets">The world's asset catalog, so tool previews look like the real objects.</param>
-        public void Initialize(EditorContext context, WorldView view, IInputBlocker ui, IAssetCatalog assets)
+        /// <param name="agent">How the world-building agent runs; null leaves the editor without one.</param>
+        public void Initialize(EditorContext context, WorldView view, IInputBlocker ui, IAssetCatalog assets, AgentSettings agent)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
@@ -56,10 +61,14 @@ namespace Forge.EditorApp
                 { ToolKind.Place, new PlaceTool(context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
                 { ToolKind.Sculpt, new SculptTool(context, view, picker, slopes) },
             };
+
+            if (agent != null)
+                Agent = new AgentHost(context, seating, new EditorBriefing(context, () => GroundInView(picker)), agent);
         }
 
         void OnDestroy()
         {
+            Agent?.Dispose();
             if (_tools == null)
                 return;
             foreach (var tool in _tools.Values.OfType<IDisposable>())
@@ -68,6 +77,9 @@ namespace Forge.EditorApp
 
         void Update()
         {
+            // The agent's tool calls and replies land here, on the main thread, whatever the input.
+            Agent?.Tick();
+
             var keyboard = Keyboard.current;
             var mouse = Mouse.current;
             if (_context == null || keyboard == null || mouse == null)
@@ -75,6 +87,12 @@ namespace Forge.EditorApp
 
             // Keys typed into a UI text field (palette search, slider inputs) are text, not commands.
             var typing = _ui.IsKeyboardCaptured;
+            if (_context.IsDraftOpen)
+            {
+                RestWhileDraftIsOpen(keyboard, typing);
+                return;
+            }
+
             if (!typing)
                 HandleShortcuts(keyboard);
             SwitchToolIfNeeded();
@@ -156,5 +174,24 @@ namespace Forge.EditorApp
             _activeKind = _context.ActiveTool;
             _tools[_activeKind.Value].Activate();
         }
+
+        // While the agent builds, or its build waits for review, nothing else edits the world: the active tool
+        // rests (its ghosts and gizmos go away) until the draft is accepted or discarded; the camera still flies
+        // and F still frames the build.
+        void RestWhileDraftIsOpen(Keyboard keyboard, bool typing)
+        {
+            if (_activeKind.HasValue)
+            {
+                _tools[_activeKind.Value].Deactivate();
+                _activeKind = null;
+            }
+
+            if (!typing && !Mouse.current.rightButton.isPressed && keyboard.fKey.wasPressedThisFrame)
+                Commands.FrameSelection();
+        }
+
+        // The terrain at the middle of the view: where "here" is when the user asks the agent to build.
+        Vector3? GroundInView(ScenePicker picker) =>
+            picker.TryPickTerrain(_camera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)), out var hit) ? hit.point : (Vector3?)null;
     }
 }

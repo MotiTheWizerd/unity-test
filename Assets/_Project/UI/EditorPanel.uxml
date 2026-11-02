@@ -6,7 +6,7 @@
                 <ui:Label name="title" class="forge-title" text="Forge Editor" />
                 <ui:Label name="plugin" class="forge-plugin" />
             </ui:VisualElement>
-            <ui:ScrollView class="forge-scroll">
+            <ui:ScrollView name="editing" class="forge-scroll">
                 <ui:VisualElement class="forge-section">
                     <ui:Label class="forge-section__header" text="TRANSFORM" />
                     <ui:VisualElement name="transform-modes" class="forge-row forge-choices" />
@@ -71,6 +71,28 @@
                     <ui:Label class="forge-muted" text="Click / Shift+click: select&#10;W move · E rotate · R scale · Ctrl snaps&#10;Del: delete · End: drop to ground · F: frame&#10;Esc: cancel / deselect&#10;B: sculpt (hold left mouse) · [ ]: brush size&#10;1-9: place object · [ ]: rotate it (Shift: 90°)&#10;Hold + drag: paint a row · + Shift: straight line&#10;Type in Search to filter, Esc clears&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
                 </ui:Foldout>
             </ui:ScrollView>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="agent-dock" class="forge-dock forge-dock--right">
+            <ui:VisualElement class="forge-title-bar">
+                <ui:Label class="forge-title" text="Agent" />
+                <ui:Button name="agent-new" text="New chat" />
+            </ui:VisualElement>
+            <ui:ScrollView name="agent-transcript" class="forge-agent-transcript" />
+            <ui:VisualElement name="agent-review" class="forge-agent-review">
+                <ui:Label name="agent-review-summary" class="forge-muted forge-wrap" />
+                <ui:VisualElement class="forge-row forge-choices">
+                    <ui:Button name="agent-accept" text="Accept" />
+                    <ui:Button name="agent-retry" text="Retry" />
+                    <ui:Button name="agent-discard" text="Discard" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label name="agent-status" class="forge-muted" />
+            <ui:TextField name="agent-input" multiline="true" placeholder-text="Describe what to build…  (Enter sends, Shift+Enter: new line)" class="forge-agent-input" />
+            <ui:VisualElement class="forge-row forge-choices">
+                <ui:Button name="agent-send" text="Send" />
+                <ui:Button name="agent-stop" text="Stop" />
+            </ui:VisualElement>
         </ui:VisualElement>
 
         <ui:Label name="status" class="forge-status" />

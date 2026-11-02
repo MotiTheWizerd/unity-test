@@ -212,11 +212,20 @@ namespace Forge.EditorApp
         public void Report(string message) => Status = message;
 
         /// <summary>
+        /// Whether the agent's draft is open (being built, or waiting for review). Until it is accepted or
+        /// discarded, edits, undo, redo and saving wait, so nothing else gets mixed into it.
+        /// </summary>
+        public bool IsDraftOpen => Session.Draft != null;
+
+        /// <summary>
         /// Runs an edit; rejected edits (invalid data) are reported instead of
         /// thrown, so tools and UI never crash on a bad action.
         /// </summary>
         public bool TryEdit(string action, Action edit)
         {
+            if (RefusedForDraft(action))
+                return false;
+
             try
             {
                 Timed(edit);
@@ -232,6 +241,9 @@ namespace Forge.EditorApp
 
         public void Undo()
         {
+            if (RefusedForDraft("Undo"))
+                return;
+
             var description = Session.UndoDescription;
             var undone = false;
             Timed(() => undone = Session.Undo());
@@ -240,10 +252,21 @@ namespace Forge.EditorApp
 
         public void Redo()
         {
+            if (RefusedForDraft("Redo"))
+                return;
+
             var description = Session.RedoDescription;
             var redone = false;
             Timed(() => redone = Session.Redo());
             Report(redone ? $"Redid: {description}" : "Nothing to redo");
+        }
+
+        bool RefusedForDraft(string action)
+        {
+            if (!IsDraftOpen)
+                return false;
+            Report($"{action} waits: the agent's build is open. Accept or discard it first.");
+            return true;
         }
 
         // Records the duration only when the world actually changed, so rejected
@@ -260,6 +283,9 @@ namespace Forge.EditorApp
         /// <summary>Saves the active plugin; failures are reported, not thrown, so any UI can call it.</summary>
         public bool Save()
         {
+            if (RefusedForDraft("Save"))
+                return false;
+
             try
             {
                 _activeStore.Save(Session.BuildActivePlugin());

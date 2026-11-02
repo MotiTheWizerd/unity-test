@@ -35,10 +35,21 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
 - While the Editor window is unfocused, play mode doesn't advance frames (`Time.frameCount`
   stays put), so `Object.Destroy` stays pending and child counts look too high. Check
   `WorldView.PresentedCount` instead of counting scene children.
-- If Moti is in play mode (`EditorApplication.isPlaying`), don't stop it. Compile and test
-  after he exits.
+- Play mode is fair game: stop it yourself (`manage_editor stop`) whenever you need to compile,
+  test or verify. Moti doesn't save `forge.user` from it; he only forgets to stop it.
 - Verify the running editor: `manage_editor play`, then `execute_code` (reflection on
-  `EditorController._context`) and `manage_camera screenshot` with `view_position`/`view_target`.
+  `EditorController._context`) and `manage_camera screenshot`. To look at something, set
+  `Camera.main.transform` directly (frames are paused while Unity is unfocused, so a camera glide
+  never finishes).
+- Test the agent live: needs `claude` on PATH and logged in, and uses Moti's subscription. In one
+  `execute_code` call, set `Application.runInBackground = true` (the editor is unfocused) and call
+  `EditorController.Agent.Conversation.Send(...)`; then poll `Conversation.State` and `Entries`.
+  The agent host turns background running back off when the request ends. Its Claude Code
+  conversations live in `<persistentDataPath>/Agent`.
+- RAM: Moti's machine has 16 GB. Unity's import workers take ~1 GB each, so the desired import
+  worker count is 2 on this machine (`AssetDatabase.DesiredWorkerCount`, stored in the git-ignored
+  `UserSettings/EditorUserSettings.asset`; it was 7 and the PC ran out of memory). Raise it once
+  the RAM upgrade is in.
 
 ## Definition of done for a change
 

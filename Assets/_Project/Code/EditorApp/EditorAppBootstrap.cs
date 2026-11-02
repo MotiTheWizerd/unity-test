@@ -8,6 +8,7 @@ using Forge.Data.Json;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Data.Serialization;
+using Forge.EditorApp.Agent;
 using Forge.EditorApp.Diagnostics;
 using Forge.EditorApp.UI;
 using Forge.Editing;
@@ -45,6 +46,9 @@ namespace Forge.EditorApp
 
         [SerializeField, Tooltip("Prefabs for the asset keys of base objects; unlisted keys fall back to primitives.")]
         PrefabCatalog _prefabs;
+
+        [SerializeField, Tooltip("How the world-building agent runs; leave empty for an editor without one.")]
+        AgentSettings _agent;
 
         [SerializeField] EditorController _controller;
         [SerializeField] EditorPanel _panel;
@@ -95,8 +99,8 @@ namespace Forge.EditorApp
                 _context.Session.WorldChanged += OnWorldChanged;
                 _context.Selection.Changed += _highlighter.Refresh;
 
-                _controller.Initialize(_context, _view, _panel, assets);
-                _panel.Initialize(_context, _controller.Commands, diagnostics);
+                _controller.Initialize(_context, _view, _panel, assets, _agent);
+                _panel.Initialize(_context, _controller.Commands, diagnostics, _controller.Agent?.Conversation);
             }
             catch (Exception ex) when (ex is DataValidationException || ex is IOException)
             {

@@ -145,6 +145,70 @@
     width: 48px;
 }
 
+/* The agent's dock, on the right: transcript, review bar, message box. */
+.forge-dock--right {
+    left: auto;
+    right: 10px;
+    width: 340px;
+}
+
+.forge-agent-transcript {
+    flex-grow: 1;
+    margin-bottom: 6px;
+}
+
+.forge-chat {
+    white-space: normal;
+    margin-bottom: 6px;
+    padding: 4px 6px;
+    border-radius: 4px;
+}
+
+.forge-root .forge-chat--user {
+    background-color: rgba(205, 145, 40, 0.18);
+    color: rgb(240, 226, 200);
+}
+
+.forge-root .forge-chat--activity {
+    margin-bottom: 2px;
+    padding-top: 0;
+    padding-bottom: 0;
+    font-size: 11px;
+    color: rgb(140, 176, 150);
+}
+
+.forge-root .forge-chat--notice {
+    font-size: 11px;
+    -unity-font-style: italic;
+    color: rgb(156, 162, 174);
+}
+
+.forge-root .forge-chat--error {
+    color: rgb(240, 122, 110);
+}
+
+.forge-agent-review {
+    margin-bottom: 6px;
+    padding: 6px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgba(205, 145, 40, 0.55);
+    background-color: rgba(205, 145, 40, 0.12);
+}
+
+.forge-agent-input {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 4px;
+    min-height: 64px;
+    max-height: 160px;
+}
+
+.forge-agent-input > .unity-text-field__input {
+    -unity-text-align: upper-left;
+    white-space: normal;
+}
+
 .forge-status {
     position: absolute;
     left: 10px;

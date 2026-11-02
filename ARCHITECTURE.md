@@ -21,7 +21,8 @@ Assets/_Project/
     Core/        Forge.Core    — engine-free primitives (IDs, results, math, utils)
     Data/        Forge.Data    — engine-free world data model: records, plugins, serialization contracts
     Data.Json/   Forge.Data.Json — JSON plugin format (Newtonsoft), engine-free
-    Editing/     Forge.Editing — engine-free edit session (masters + active plugin)
+    Editing/     Forge.Editing — engine-free edit session (masters + active plugin), commands, world-building commands
+    Agent/       Forge.Agent   — engine-free world-building agent: tools over the commands, MCP endpoint, Claude Code backend
     Streaming/   Forge.Streaming — engine-free chunk index and streaming window
     World/       Forge.World   — Unity presentation: terrain chunks, placed objects, streamer
     EditorApp/   Forge.EditorApp — the runtime editor: bootstrap, tools, camera, UI
@@ -33,7 +34,7 @@ Assets/_Project/
   Content/       PrefabCatalog.asset (asset key → prefab); Placeholder/ holds generated placeholder prefabs + materials
   Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview)
   Materials/     GizmoOverlay.mat, PlacementGhost.mat
-  Settings/      URP, input and volume assets; Worlds/ holds the WorldProfile assets
+  Settings/      URP, input and volume assets; Worlds/ holds the WorldProfile assets; Agent/ the agent's settings and instructions
 Assets/StreamingAssets/Plugins/   shipped base plugins (forge.core.json = our "Skyrim.esm")
 Assets/StreamingAssets/StressWorld/  generated stress-test world (git-ignored, Forge/Generate Stress World)
 <persistentDataPath>/Plugins/     user plugins; the active plugin (forge.user) is saved here
@@ -50,21 +51,25 @@ Planned modules (each is created when its first code arrives, not before):
 Dependencies point **down** only. Cycles are impossible, because asmdefs reject them.
 
 ```
-        EditorApp            (Game)
-       /    |    \             |
- Editing  World  Data.Json   World
-    |       |                  |
-    |   Streaming          Streaming
-     \      |      /
+          EditorApp                (Game)
+       /    |    |    \              |
+   Agent  World  |  Data.Json      World
+     |      |    |                   |
+  Editing   | Streaming          Streaming
+      \     |     /
           Data
             |
           Core
 ```
 
+(EditorApp also references Editing directly; Agent references Data for record ids.)
+
 `Forge.UnityEditor` is editor-only tooling and may reference anything below EditorApp.
 
 - Serialization libraries never enter `Forge.Data`. Each file format is its own
   module (`Forge.Data.Json` today, binary later) implementing `IPluginSerializer`.
+- Commands (`Forge.Editing.Commands`) are plain C#: no JSON, no agent protocol. Turning them into tools is
+  `Forge.Agent`'s job; `ArchitectureTests` checks Editing references neither Newtonsoft nor Forge.Agent.
 
 - `Forge.Core` and `Forge.Data` set `noEngineReferences: true`. They cannot touch
   `UnityEngine`. This keeps the domain portable, fast to test and independent
@@ -184,6 +189,42 @@ one in the active plugin.
   terrain and moved objects as the same single undo step.
 - Tool pattern for long gestures (move drag, sculpt stroke): **preview on the scene, commit
   one edit on release, reset the preview on cancel or failure**. The session is never touched mid-gesture.
+- **Drafts** (`EditSession.BeginDraft` → `EditDraft`): edits made while a draft is open apply and publish the
+  world at once, but are collected by the draft (in a `ChangeSet`, first before / latest after per record)
+  instead of entering the history. `Accept(description)` records the whole draft as one undo step, `Discard()`
+  rolls it back with no history. Undo, redo and `MarkSaved` throw while a draft is open; a failed edit inside
+  a draft rolls back only itself. The agent builds into a draft.
+- **Placement rules shared by every placer** (`Forge.Editing.Placement`): `PlacementOptions` holds the user's
+  settings (random turn and size, align to slope, per-object `RowGap`s) and what they mean per base object;
+  `ObjectSeating` is the one seating rule (slope objects on terrain via `GroundFit.TryPose`, everything else
+  upright with its lowest point on the ground); `ObjectEdits.Place` creates placed objects as one step with
+  ids from `NewIds`. The place tool and the world-building commands all use them, so the agent places exactly
+  like the mouse.
+
+## Commands (Forge.Editing.Commands, Forge.Editing.Building)
+
+- An `IEditorCommand` is an editor action defined once: a snake_case `Name`, a `Description` written for
+  people and for the agent, and a typed arguments class. `EditorCommand<TArguments, TResult>` checks the
+  arguments, then runs; every result is an `ICommandResult` with a one-sentence `Summary`. A refusal is a
+  `CommandException` whose message tells the caller (person or agent) what to do instead.
+- Each argument property carries a `[Param]` (description, `Optional`, `Minimum`/`Maximum`, `MinItems`/`MaxItems`).
+  `CommandParameters` reads them (malformed classes throw at once), `CommandArguments.Validate` enforces them
+  before every run, with errors naming the argument as callers write it (`objects[2].scale`), and the agent's
+  tool schemas are generated from the same attributes, so what the model is told and what is enforced can't drift.
+- `CommandRegistry` holds commands by name. The world-building commands (`BuildingCommands.AddTo`) work on a
+  `BuildContext` (session, seating, placement options):
+  - `list_objects`: ids, names, categories, footprint (width across the front, depth front to back) and placement rules.
+  - `inspect_area`: a height grid (rows south to north, columns west to east), lowest/highest ground, steepest
+    slope, and the objects inside, nearest first.
+  - `place_objects`: objects at ground positions, seated on the terrain; heading and scale default to the
+    object's natural variation. Unknown ids refuse the whole call; positions without terrain are skipped.
+  - `place_line`: one object end to end along a path, stretch by stretch, exactly like the place tool's
+    Shift line (`PlacementStroke`); corners shared by two stretches get one object; `closed` encloses an area.
+  - `delete_objects`: placed objects by id.
+- The editor actions that predate the registry (drop to ground, frame, undo/redo, save, the tools' gestures)
+  are not commands yet; each moves into the registry when the agent needs it.
+- **Headings are compass bearings of the object's front**: 0 north (+z), 90 east (+x). That is the engine's
+  yaw, because every asset's front faces local +Z (Unity's forward).
 
 ## Streaming (Forge.Streaming + Forge.World)
 
@@ -211,6 +252,35 @@ one in the active plugin.
     index updates. Before that it took 22–55 ms (a full resolve plus a full index rebuild per edit).
 - The panel's **Performance** foldout shows these numbers live: chunks, build times,
   worst frame and hitches (>50 ms), last edit and startup phases.
+
+## World-building agent (Forge.Agent)
+
+The user describes what to build ("a fenced house surrounded by trees") and the agent builds it with the
+world-building commands. **The model plans; deterministic commands do the geometry** (seating, spacing,
+slopes), so results are exact and every edit goes through the edit session.
+
+- **Tools**: `ToolInvoker` turns the command registry into tools: `ToolSchema` builds each JSON schema from
+  the `[Param]`s, arguments bind from snake_case JSON (missing or unknown arguments are errors), results go back
+  as snake_case JSON. Bad arguments and refusals come back as error results the model reads and corrects.
+- **Threading**: the edit session belongs to the main thread. `AgentToolHost` carries every call there through
+  a `MainThreadQueue`, which the editor pumps each frame, and takes calls only while a request is open.
+- **MCP**: `McpServer` answers MCP's `initialize`, `ping`, `tools/list` and `tools/call` (JSON-RPC 2.0; unknown
+  methods such as `server/discover` get "method not found", so clients fall back to `initialize`).
+  `McpHttpEndpoint` serves it over Streamable HTTP on 127.0.0.1 at a free port, POST only, behind a fresh
+  bearer token compared in constant time; requests with an `Origin` (browsers) are refused. Answers are plain
+  JSON; nothing is pushed. Any MCP client could use these tools.
+- **Backends** (`IAgentBackend`): `ClaudeCodeBackend` runs each request as `claude -p` under the user's own
+  Claude login: `--setting-sources ""` (none of the user's settings files, so their hooks and plugins stay out),
+  `--tools ""` (no built-in tools), `--strict-mcp-config` with only the forge endpoint, `--allowedTools mcp__forge`,
+  `--permission-mode dontAsk`, `--system-prompt` = the instructions, stream-json output (`ClaudeStream` reads it);
+  the message goes in on stdin as UTF-8 (`CommandLine` quotes the rest); follow-ups `--resume` the conversation.
+  It runs in `<persistentDataPath>/Agent`. Other providers (an API with its own tool loop) would implement
+  `IAgentBackend` over the same `IToolHost`.
+- **Conversation** (`AgentConversation`, states Idle / Working / Reviewing): a request opens an `EditDraft`
+  and puts the editor briefing in front of the message; the build appears live; then the user **accepts** it
+  (one undo step named after the request), **retries** (discard and ask again; the agent is told the first try
+  was turned down) or **discards** it, or sends a follow-up that refines the same draft. Stop keeps what was
+  built for review. A request that changed nothing needs no review.
 
 ## Runtime editor (Forge.EditorApp)
 
@@ -292,6 +362,16 @@ one in the active plugin.
   - `SculptTool` (B): hold left mouse on the terrain. Dabs fire at a fixed 30/s (independent of
     frame rate, capped per frame) and preview live, and the stroke commits on release. `[` / `]`
     change the radius. `BrushCursor` draws a ring that follows the ground, colored by mode.
+- **The agent in the editor**: `EditorController` builds an `AgentHost` when the bootstrap has `AgentSettings`
+  (`Settings/Agent/AgentSettings.asset`: Claude Code command, model `sonnet`, effort, and the instructions as a
+  text asset, `WorldBuilderInstructions.md`). The host registers the building commands over the controller's
+  `ObjectSeating` and the context's `PlacementOptions`, pumps the agent's main-thread queue every frame, selects
+  the draft's objects (so they stand out and F frames them), and keeps the app running in the background while
+  the agent works. `EditorBriefing` tells the agent where the camera looks (the default site), the terrain's
+  extent and the selection. **While a draft is open, editing rests**: the controller deactivates the active tool
+  (only the camera and F work), the editing dock is disabled, and `EditorContext` refuses edits, undo, redo and
+  saving (`IsDraftOpen`). The agent dock on the right (`AgentSection`) shows the transcript, Accept / Retry /
+  Discard while reviewing, and a message box (Enter sends, Shift+Enter: new line).
 - `EditorCommands` holds one-shot actions shared by shortcuts and UI buttons.
   `DropSelectionToGround` (End) finds the terrain under each selected object, looking through
   other objects, and moves the object so the lowest point of its renderer bounds rests on
@@ -345,6 +425,9 @@ one in the active plugin.
   composition root). No singletons, no `FindObjectOfType`, no static mutable state.
 - Systems decouple through events or messages, not direct cross-module calls.
 - Composition over inheritance. Content reuse goes through prefabs and prefab variants.
+- Assets face local +Z (Unity's forward): a house's door, a bench's seat. Pivots sit at the ground contact point.
+- A new editor action is a command (`Forge.Editing.Commands`): defined once, with its description and `[Param]`s,
+  so the UI, shortcuts and the agent all reach it. A feature is done when the agent can use it too.
 - `internal` by default. Tests access internals via `InternalsVisibleTo`.
 - Style is enforced by `.editorconfig`.
 

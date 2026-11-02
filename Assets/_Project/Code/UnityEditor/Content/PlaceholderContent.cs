@@ -8,7 +8,8 @@ namespace Forge.UnityEditor.Content
     /// <summary>
     /// The base game's placeable objects with placeholder art built from primitives. Real art
     /// replaces a placeholder by pointing its asset key at another prefab in the catalog;
-    /// the records, and every object placed from them, stay as they are.
+    /// the records, and every object placed from them, stay as they are. Like any asset, an
+    /// object's front faces local +Z (Unity's forward): a house's door, a bench's seat.
     /// </summary>
     static class PlaceholderContent
     {
@@ -62,14 +63,14 @@ namespace Forge.UnityEditor.Content
             .Sphere(Stone, V(1.1f, 0.3f, 0.4f), V(0.9f, 0.7f, 0.8f), V(0, 45, 10))
             .Sphere(Stone, V(-0.7f, 0.22f, 0.7f), V(0.7f, 0.5f, 0.6f));
 
-        // Walls 4 × 3 × 5 m; the roof is a cube turned 45° so its upper half forms a gable.
+        // Walls 4 × 3 × 5 m; the roof is a cube turned 45° so its upper half forms a gable. Door and windows in front (+Z).
         static void SmallHouse(PrefabBuilder b) => b
             .Cube(Plaster, V(0, 1.5f, 0), V(4f, 3f, 5f))
             .Cube(Roof, V(0, 3f, 0), V(3.11f, 3.11f, 5.4f), V(0, 0, 45))
-            .Cube(WoodDark, V(0, 0.9f, -2.51f), V(0.9f, 1.8f, 0.05f))
-            .Cube(Window, V(1.25f, 1.8f, -2.51f), V(0.7f, 0.6f, 0.05f))
-            .Cube(Window, V(-1.25f, 1.8f, -2.51f), V(0.7f, 0.6f, 0.05f))
-            .Cube(Stone, V(1.2f, 4.4f, 1.3f), V(0.5f, 1.6f, 0.5f));
+            .Cube(WoodDark, V(0, 0.9f, 2.51f), V(0.9f, 1.8f, 0.05f))
+            .Cube(Window, V(1.25f, 1.8f, 2.51f), V(0.7f, 0.6f, 0.05f))
+            .Cube(Window, V(-1.25f, 1.8f, 2.51f), V(0.7f, 0.6f, 0.05f))
+            .Cube(Stone, V(1.2f, 4.4f, -1.3f), V(0.5f, 1.6f, 0.5f));
 
         static void StoneWall(PrefabBuilder b) => b
             .Cube(Stone, V(0, 1f, 0), V(4f, 2f, 0.6f))
@@ -105,9 +106,10 @@ namespace Forge.UnityEditor.Content
             .Post(Metal, V(0, 0.22f, 0), 0.82f, 0.06f)
             .Post(Metal, V(0, 0.92f, 0), 0.82f, 0.06f);
 
+        // The backrest is behind the seat, so whoever sits faces the front (+Z).
         static void Bench(PrefabBuilder b) => b
             .Cube(Wood, V(0, 0.45f, 0), V(1.6f, 0.08f, 0.45f))
-            .Cube(Wood, V(0, 0.8f, 0.2f), V(1.6f, 0.4f, 0.06f))
+            .Cube(Wood, V(0, 0.8f, -0.2f), V(1.6f, 0.4f, 0.06f))
             .Cube(WoodDark, V(0.7f, 0.21f, 0), V(0.08f, 0.42f, 0.4f))
             .Cube(WoodDark, V(-0.7f, 0.21f, 0), V(0.08f, 0.42f, 0.4f));
 
