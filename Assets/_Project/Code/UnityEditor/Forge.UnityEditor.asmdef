@@ -3,7 +3,8 @@
     "rootNamespace": "Forge.UnityEditor",
     "references": [
         "Forge.Data",
-        "Forge.Data.Json"
+        "Forge.Data.Json",
+        "Forge.World"
     ],
     "includePlatforms": [
         "Editor"

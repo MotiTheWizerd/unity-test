@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Forge.Data;
 using Forge.Data.Json;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Data.Serialization;
 using Forge.Data.Terrain;
+using Forge.UnityEditor.Content;
 using UnityEditor;
 using UnityEngine;
 using Vector3 = System.Numerics.Vector3;
@@ -43,6 +45,7 @@ namespace Forge.UnityEditor
                 BaseObject("pillar", "Pillar", "primitive/cylinder", "Architecture"),
                 BaseObject("totem", "Totem", "primitive/capsule", "Props/Decor"),
             };
+            records.AddRange(PlaceholderContent.All.Select(c => BaseObject(c.Name, c.DisplayName, c.AssetKey, c.Category)));
 
             for (var cz = -ChunkRadius; cz <= ChunkRadius; cz++)
             for (var cx = -ChunkRadius; cx <= ChunkRadius; cx++)

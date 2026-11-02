@@ -8,6 +8,20 @@
   "records": [
     {
       "type": "base_object",
+      "id": "forge.core:barrel",
+      "displayName": "Barrel",
+      "assetKey": "props/barrel",
+      "category": "Props/Containers"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:bench",
+      "displayName": "Bench",
+      "assetKey": "props/bench",
+      "category": "Props/Furniture"
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:boulder",
       "displayName": "Boulder",
       "assetKey": "primitive/sphere",
@@ -15,10 +29,45 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:bush",
+      "displayName": "Bush",
+      "assetKey": "nature/bush",
+      "category": "Nature/Plants"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:campfire",
+      "displayName": "Campfire",
+      "assetKey": "props/campfire",
+      "category": "Props/Lighting"
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:crate",
       "displayName": "Crate",
       "assetKey": "primitive/cube",
       "category": "Props/Containers"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:fence_wood",
+      "displayName": "Wooden Fence",
+      "assetKey": "architecture/fence_wood",
+      "category": "Architecture/Walls"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:house_small",
+      "displayName": "Small House",
+      "assetKey": "architecture/house_small",
+      "category": "Architecture/Buildings"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:lamp_post",
+      "displayName": "Lamp Post",
+      "assetKey": "props/lamp_post",
+      "category": "Props/Lighting"
     },
     {
       "type": "base_object",
@@ -128,6 +177,20 @@
         1.0
       ],
       "scale": 1.0
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:rock_cluster",
+      "displayName": "Rock Cluster",
+      "assetKey": "nature/rock_cluster",
+      "category": "Nature/Rocks"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:signpost",
+      "displayName": "Signpost",
+      "assetKey": "props/signpost",
+      "category": "Props/Decor"
     },
     {
       "type": "terrain_chunk",
@@ -243,6 +306,27 @@
       "displayName": "Totem",
       "assetKey": "primitive/capsule",
       "category": "Props/Decor"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:tree_oak",
+      "displayName": "Oak Tree",
+      "assetKey": "nature/tree_oak",
+      "category": "Nature/Trees"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:tree_pine",
+      "displayName": "Pine Tree",
+      "assetKey": "nature/tree_pine",
+      "category": "Nature/Trees"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:wall_stone",
+      "displayName": "Stone Wall",
+      "assetKey": "architecture/wall_stone",
+      "category": "Architecture/Walls"
     }
   ],
   "deletions": []

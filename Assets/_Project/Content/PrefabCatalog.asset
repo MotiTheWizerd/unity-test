@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38087a71da5bd6142944768056edc9e2, type: 3}
+  m_Name: PrefabCatalog
+  m_EditorClassIdentifier: Forge.World::Forge.World.Assets.PrefabCatalog
+  _entries:
+  - _key: architecture/fence_wood
+    _prefab: {fileID: 8415750999752222180, guid: ee4ca5444ddb8e848b0c27a3659a976e, type: 3}
+  - _key: architecture/house_small
+    _prefab: {fileID: 4499335139325170416, guid: 8f0ab3b7f306d6640acc807b6eabd618, type: 3}
+  - _key: architecture/wall_stone
+    _prefab: {fileID: 7735012620297173690, guid: 9939fe2a82198c843abf40e1d010f718, type: 3}
+  - _key: nature/bush
+    _prefab: {fileID: 6383628795285860037, guid: 5db7512fba635b240b40c81b24ec6ecb, type: 3}
+  - _key: nature/rock_cluster
+    _prefab: {fileID: 8205594066044759954, guid: ab7f9e4ce01ca0742a20d8f1f0716be9, type: 3}
+  - _key: nature/tree_oak
+    _prefab: {fileID: 235168137641821055, guid: 3103e673963c7984695de6579bd838ff, type: 3}
+  - _key: nature/tree_pine
+    _prefab: {fileID: 111035636930951325, guid: 3ecbfcdf61ab4cd42a54c397bec1e5db, type: 3}
+  - _key: props/barrel
+    _prefab: {fileID: 3486088187972214056, guid: 4de0895c2a1890244ad03e9c419c84d8, type: 3}
+  - _key: props/bench
+    _prefab: {fileID: 8645094789290307528, guid: ca3c6343e5bf2c74b84cfeb153518af8, type: 3}
+  - _key: props/campfire
+    _prefab: {fileID: 3912935275195403285, guid: 93ea30bfbfc3f0a4fb4a9820c6cbd45b, type: 3}
+  - _key: props/lamp_post
+    _prefab: {fileID: 6767466117711091179, guid: 96a265ebacc821f4d9ead463cdc69e2b, type: 3}
+  - _key: props/signpost
+    _prefab: {fileID: 5700418885086303127, guid: befe31470f51a9c4fbe6a739c7ccc847, type: 3}

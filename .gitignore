@@ -50,3 +50,7 @@ sysinfo.txt
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# MCP screenshots taken during live checks
+/Assets/Screenshots/
+/Assets/Screenshots.meta

@@ -30,6 +30,7 @@ Assets/_Project/
     EditMode/    Forge.Tests.EditMode — unit and architecture tests
   Scenes/        Main.unity (editor scene: EditorApp + Main Camera)
   UI/            EditorPanel.uxml/.uss (runtime editor UI), ForgeRuntimeTheme.tss, ForgePanelSettings
+  Content/       PrefabCatalog.asset (asset key → prefab); Placeholder/ holds generated placeholder prefabs + materials
   Shaders/       GizmoOverlay.shader (always-on-top gizmos)
   Materials/     GizmoOverlay.mat
   Settings/      URP, input and volume assets; Worlds/ holds the WorldProfile assets
@@ -213,6 +214,18 @@ one in the active plugin.
   `forge.stress_edits`. Each world has its own edit plugin, because a plugin may only override its
   masters' records. A missing base folder fails loudly instead of opening a smaller world.
   It then wires `EditSession` → `WorldView` + `WorldStreamer` → tools and UI through a shared `EditorContext`.
+- **Assets**: records store engine-agnostic asset keys; `IAssetCatalog` turns a key into a scene object.
+  `PrefabAssetCatalog` looks the key up in the `PrefabCatalog` ScriptableObject (`Content/PrefabCatalog.asset`,
+  assigned on `EditorAppBootstrap._prefabs`) and falls back to `PrimitiveAssetCatalog` (`primitive/*`, and a
+  magenta cube for unknown keys). Swapping a prefab in the catalog re-skins every object using that key
+  without touching a plugin. Prefab pivots sit at the ground contact point.
+- **Placeholder content** (`UnityEditor/Content`): `PlaceholderContent.All` is the one table of the base
+  game's placeable objects (record name, display name, category, asset key, how to build the prefab).
+  *Forge → Generate Placeholder Content* builds the materials and prefabs from primitives in a preview scene
+  and registers them in the catalog; *Forge → Generate Core Plugin* turns the same table into base-object
+  records. Regenerating keeps asset GUIDs and each prefab's root id (so references survive) but rewrites the
+  ids of the parts inside a prefab, so it shows a diff. `PrefabCatalogTests` fails if a shipped base object
+  has no prefab or the catalog lists unused keys.
 - `EditorContext.Palette` is an engine-free `ObjectPalette` (`Forge.Editing.Palette`), cached per
   world version. UI and shortcuts read it every frame, and scanning 25k records per frame would cost
   real time. Order: category (uncategorized last), then display name, then id; `Groups` holds the
@@ -316,4 +329,5 @@ and the condition for removing it, and is listed here.
 |-------|------|-----|-------------|
 | `Packages/manifest.json` | MCP for Unity tracks the git default branch, not a release tag | Fast setup. The exact commit is locked in `packages-lock.json` | Pin to a release tag on the next package update |
 | `Data.Json/Converters.cs` `HeightFieldConverter` | Terrain heights embedded in plugin JSON as base64 | Keeps a plugin a single file for the walking skeleton | Plugins become packages (folder/zip) with binary side files for heightmaps and assets |
+| `World/Assets/PrefabCatalog.cs` | Catalog entries reference prefabs directly, so all content loads with the catalog at startup | A dozen placeholder prefabs fit in memory easily | Content outgrows memory → load prefabs by asset key through Addressables, streamed with the chunks |
 | `EditorApp/EditorController.cs`, `UI/TransformSection.cs` | Input read by polling devices, not an Input Actions asset; the panel repeats the W/E/R labels | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset, labels read from it |

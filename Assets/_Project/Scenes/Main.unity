@@ -505,6 +505,7 @@ MonoBehaviour:
   _loadRadius: 6
   _unloadRadius: 8
   _frameBudgetMs: 4
+  _prefabs: {fileID: 11400000, guid: ef98c5dbdddd92a499bac64fa87db9b0, type: 2}
   _controller: {fileID: 1624300795}
   _panel: {fileID: 1624300798}
 --- !u!4 &1624300797

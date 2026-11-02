@@ -43,6 +43,9 @@ namespace Forge.EditorApp
         [SerializeField, Min(0.1f), Tooltip("Milliseconds per frame spent building chunks (at least one per frame).")]
         float _frameBudgetMs = 4f;
 
+        [SerializeField, Tooltip("Prefabs for the asset keys of base objects; unlisted keys fall back to primitives.")]
+        PrefabCatalog _prefabs;
+
         [SerializeField] EditorController _controller;
         [SerializeField] EditorPanel _panel;
 
@@ -55,6 +58,14 @@ namespace Forge.EditorApp
 
         void Start()
         {
+            if (_prefabs == null)
+            {
+                const string message = "EditorApp has no Prefab Catalog assigned (EditorAppBootstrap._prefabs).";
+                Debug.LogError($"[Forge] {message}");
+                _panel.ShowFatal(message);
+                return;
+            }
+
             try
             {
                 var clock = Stopwatch.StartNew();
@@ -67,7 +78,7 @@ namespace Forge.EditorApp
                 _context = new EditorContext(new EditSession(masters, active), userStore);
                 var resolveMs = Lap(clock);
 
-                _view = new WorldView(transform, new PrimitiveAssetCatalog());
+                _view = new WorldView(transform, new PrefabAssetCatalog(_prefabs, new PrimitiveAssetCatalog()));
                 _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs);
                 _view.Sync(_context.Session.World);
                 _streamer.LoadAll(_focus.position);
