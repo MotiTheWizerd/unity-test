@@ -488,6 +488,7 @@ MonoBehaviour:
   _flyCamera: {fileID: 330585548}
   _maxRayDistance: 2000
   _gizmoMaterial: {fileID: 2100000, guid: 057b815d29230b3459e44fe01d2742b8, type: 2}
+  _ghostMaterial: {fileID: 2100000, guid: 3b29685550a73eb4d8ef3c060aa2ed93, type: 2}
 --- !u!114 &1624300796
 MonoBehaviour:
   m_ObjectHideFlags: 0

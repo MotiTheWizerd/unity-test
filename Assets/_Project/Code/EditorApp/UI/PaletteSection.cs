@@ -23,6 +23,8 @@ namespace Forge.EditorApp.UI
         readonly EditorContext _context;
         readonly TextField _search;
         readonly Label _count;
+        readonly VisualElement _placementOptions;
+        readonly Label _rotation;
         readonly VisualElement _container;
         readonly Dictionary<RecordId, Button> _buttons = new Dictionary<RecordId, Button>();
 
@@ -39,6 +41,10 @@ namespace Forge.EditorApp.UI
             _search = PanelElements.Required<TextField>(root, "palette-search");
             _count = PanelElements.Required<Label>(root, "palette-count");
             _container = PanelElements.Required<VisualElement>(root, "palette");
+            _placementOptions = PanelElements.Required<VisualElement>(root, "placement-options");
+            _rotation = PanelElements.Required<Label>(root, "placement-rotation");
+            PanelElements.Required<Button>(root, "rotate-left").clicked += () => _context.RotatePlacement(-EditorContext.PlacementStep);
+            PanelElements.Required<Button>(root, "rotate-right").clicked += () => _context.RotatePlacement(EditorContext.PlacementStep);
             _search.RegisterValueChangedCallback(e => _query = e.newValue ?? string.Empty);
 
             // Esc clears the search (EditorPanel also releases the focus on Esc).
@@ -66,6 +72,9 @@ namespace Forge.EditorApp.UI
             }
 
             var placing = _context.ActiveTool == ToolKind.Place;
+            PanelElements.SetVisible(_placementOptions, placing);
+            if (placing)
+                PanelElements.SetText(_rotation, $"Rotation {_context.PlacementYaw:0}°");
             foreach (var pair in _buttons)
                 PanelElements.SetActive(pair.Value, placing && pair.Key == _context.SelectedBaseId);
         }

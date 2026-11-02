@@ -31,8 +31,8 @@ Assets/_Project/
   Scenes/        Main.unity (editor scene: EditorApp + Main Camera)
   UI/            EditorPanel.uxml/.uss (runtime editor UI), ForgeRuntimeTheme.tss, ForgePanelSettings
   Content/       PrefabCatalog.asset (asset key → prefab); Placeholder/ holds generated placeholder prefabs + materials
-  Shaders/       GizmoOverlay.shader (always-on-top gizmos)
-  Materials/     GizmoOverlay.mat
+  Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview)
+  Materials/     GizmoOverlay.mat, PlacementGhost.mat
   Settings/      URP, input and volume assets; Worlds/ holds the WorldProfile assets
 Assets/StreamingAssets/Plugins/   shipped base plugins (forge.core.json = our "Skyrim.esm")
 Assets/StreamingAssets/StressWorld/  generated stress-test world (git-ignored, Forge/Generate Stress World)
@@ -243,7 +243,12 @@ one in the active plugin.
     (ground plane). Rotate: X/Y/Z rings. Scale: axis cubes or center cube (camera-facing plane).
     The drag previews through `WorldView.PreviewObject` and commits one `ObjectEdits.Transform`
     on release. Esc cancels and resets the preview. Del deletes the selection.
-  - `PlaceTool`: click a surface to place the palette object, which becomes the selection. Esc returns to Select.
+  - `PlaceTool`: a `PlacementGhost` (a see-through copy built from the same asset catalog, no colliders, no
+    shadows, `Shaders/PlacementGhost.shader` via `EditorController._ghostMaterial`) rests on the surface under the
+    pointer: its lowest point on the hit (`RendererBounds.PivotAboveBottom`, so center-pivot primitives no
+    longer sink halfway), turned by `EditorContext.PlacementYaw` (`[` / `]` = 15°, Shift = 90°, or the panel
+    buttons). Surfaces include other objects, so things stack. A click places exactly that pose, which becomes
+    the selection. Hidden over the panel. Esc returns to Select.
   - `SculptTool` (B): hold left mouse on the terrain. Dabs fire at a fixed 30/s (independent of
     frame rate, capped per frame) and preview live, and the stroke commits on release. `[` / `]`
     change the radius. `BrushCursor` draws a ring that follows the ground, colored by mode.
@@ -275,7 +280,7 @@ one in the active plugin.
   `PaletteSection`: a search field (Esc clears) over one foldout per category; folded categories
   stay folded across rebuilds, and a search opens every group with a match. Buttons are plain
   elements, fine for hundreds of objects; a virtualized `ListView` is the next step for thousands.
-- Controls: W / E / R → move / rotate / scale (Select tool); 1–9 or the palette → Place tool; Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
+- Controls: W / E / R → move / rotate / scale (Select tool); 1–9 or the palette → Place tool (`[` / `]` rotate); Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
   (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly; wheel
   dollies towards the point under the cursor; hold middle mouse to pan (the grabbed point stays under
   the cursor); F frames the selection.

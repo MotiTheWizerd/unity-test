@@ -78,7 +78,8 @@ namespace Forge.EditorApp
                 _context = new EditorContext(new EditSession(masters, active), userStore);
                 var resolveMs = Lap(clock);
 
-                _view = new WorldView(transform, new PrefabAssetCatalog(_prefabs, new PrimitiveAssetCatalog()));
+                var assets = new PrefabAssetCatalog(_prefabs, new PrimitiveAssetCatalog());
+                _view = new WorldView(transform, assets);
                 _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs);
                 _view.Sync(_context.Session.World);
                 _streamer.LoadAll(_focus.position);
@@ -94,7 +95,7 @@ namespace Forge.EditorApp
                 _context.Session.WorldChanged += OnWorldChanged;
                 _context.Selection.Changed += _highlighter.Refresh;
 
-                _controller.Initialize(_context, _view, _panel);
+                _controller.Initialize(_context, _view, _panel, assets);
                 _panel.Initialize(_context, _controller.Commands, diagnostics);
             }
             catch (Exception ex) when (ex is DataValidationException || ex is IOException)

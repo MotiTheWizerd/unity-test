@@ -37,7 +37,7 @@ namespace Forge.EditorApp
             var combined = default(Bounds);
             foreach (var id in _context.Selection.Ids)
             {
-                if (!_view.TryGetObject(id, out var go) || !TryGetBounds(go, out var bounds))
+                if (!_view.TryGetObject(id, out var go) || !RendererBounds.TryGet(go, out var bounds))
                     continue;
                 if (found)
                     combined.Encapsulate(bounds);
@@ -71,7 +71,7 @@ namespace Forge.EditorApp
             var missed = 0;
             foreach (var id in _context.Selection.Ids)
             {
-                if (!_view.TryGetObject(id, out var go) || !TryGetBounds(go, out var bounds))
+                if (!_view.TryGetObject(id, out var go) || !RendererBounds.TryGet(go, out var bounds))
                     continue;
 
                 var probe = new Ray(new Vector3(go.transform.position.x, bounds.max.y + ProbeHeight, go.transform.position.z), Vector3.down);
@@ -95,26 +95,6 @@ namespace Forge.EditorApp
                     ? $"Dropped {moved} object(s) to ground"
                     : $"Dropped {moved} object(s); {missed} had no terrain below");
             }
-        }
-
-        static bool TryGetBounds(GameObject go, out Bounds bounds)
-        {
-            bounds = default;
-            var found = false;
-            foreach (var renderer in go.GetComponentsInChildren<Renderer>())
-            {
-                if (found)
-                {
-                    bounds.Encapsulate(renderer.bounds);
-                }
-                else
-                {
-                    bounds = renderer.bounds;
-                    found = true;
-                }
-            }
-
-            return found;
         }
     }
 }

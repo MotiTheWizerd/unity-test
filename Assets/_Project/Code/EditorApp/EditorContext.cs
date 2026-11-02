@@ -83,6 +83,21 @@ namespace Forge.EditorApp
             ActiveTool = ToolKind.Place;
         }
 
+        /// <summary>Turn per [ / ] press while placing; with Shift, <see cref="PlacementCoarseStep"/>.</summary>
+        public const float PlacementStep = 15f;
+
+        public const float PlacementCoarseStep = 90f;
+
+        /// <summary>Yaw in degrees [0, 360) the place tool gives new objects.</summary>
+        public float PlacementYaw { get; private set; }
+
+        /// <summary>Turns the next placement by <paramref name="degrees"/> ([ / ] and the panel buttons).</summary>
+        public void RotatePlacement(float degrees)
+        {
+            var yaw = (PlacementYaw + degrees) % 360f;
+            PlacementYaw = yaw < 0f ? yaw + 360f : yaw;
+        }
+
         public BrushMode BrushMode { get; set; } = BrushMode.Raise;
 
         /// <summary>Whether sculpting carries placed objects up and down with the ground.</summary>
