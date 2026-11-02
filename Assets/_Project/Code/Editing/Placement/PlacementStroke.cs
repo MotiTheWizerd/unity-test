@@ -24,13 +24,22 @@ namespace Forge.Editing.Placement
         /// <summary>A row never grows past this many objects in one stroke.</summary>
         public const int MaxItems = 500;
 
-        // Cursor moves shorter than this don't define a direction yet.
+        /// <summary>
+        /// A stroke only becomes a drag once the cursor is this far from the start (or half the first
+        /// object's footprint, if longer). Hand jitter during a click stays below it, so a click places
+        /// exactly what the preview showed instead of turning to face a few millimetres of movement.
+        /// </summary>
+        public const float MinDragDistance = 0.5f;
+
+        // Cursor moves shorter than this don't define a direction.
         const float MinDirectionDistance = 0.01f;
 
         readonly Vector2 _start;
         readonly Footprint _footprint;
         readonly bool _alignToPath;
         readonly float _yawOffset;
+        readonly float _dragDistance;
+        bool _dragging;
         readonly Func<PlacementRoll> _drawRoll;
         readonly Func<float> _drawGap;
         readonly List<PlacementRoll> _rolls = new List<PlacementRoll>();
@@ -40,8 +49,9 @@ namespace Forge.Editing.Placement
         bool _lineMode;
 
         /// <param name="start">Ground position of the first object.</param>
-        /// <param name="alignToPath">Point each object's length along the drag instead of using its drawn heading.</param>
-        /// <param name="yawOffset">Extra turn for every object (the user's [ / ] rotation).</param>
+        /// <param name="alignToPath">Once dragging, point each object's length along the drag instead of using its drawn heading.</param>
+        /// <param name="yawOffset">The user's [ / ] rotation. Objects that keep their own heading add it to their drawn turn;
+        /// path-following objects use it only until the drag starts (a click), after which the drag sets their heading.</param>
         /// <param name="firstRoll">The first object's variation (the one the preview already showed).</param>
         /// <param name="drawRoll">Draws the variation of each further object.</param>
         /// <param name="drawGap">Draws the gap, in meters, before each further object.</param>
@@ -56,15 +66,24 @@ namespace Forge.Editing.Placement
             _drawGap = drawGap ?? throw new ArgumentNullException(nameof(drawGap));
             _rolls.Add(firstRoll);
             _free.Add(new StrokeItem(start, YawFor(null, firstRoll), firstRoll.Scale));
+            _dragDistance = Math.Max(MinDragDistance, Math.Max(footprint.SizeX, footprint.SizeZ) * firstRoll.Scale * 0.5f);
         }
 
+        /// <summary>Whether the cursor has gone far enough from the start for this to be a drag rather than a click.</summary>
+        public bool IsDragging => _dragging;
+
         /// <summary>The row as it stands: the free path, or the straight line while in line mode.</summary>
-        public IReadOnlyList<StrokeItem> Items => _lineMode ? _line : _free;
+        public IReadOnlyList<StrokeItem> Items => _lineMode && _dragging ? _line : _free;
 
         /// <summary>Follows the cursor. <paramref name="line"/> shows a straight row from the start instead of the free path.</summary>
         public void MoveTo(Vector2 cursor, bool line)
         {
             _lineMode = line;
+            // Once a drag, always a drag: coming back near the start doesn't turn it into a click again.
+            _dragging |= Vector2.Distance(cursor, _start) >= _dragDistance;
+            if (!_dragging)
+                return;
+
             if (line)
                 LayLine(cursor);
             else
@@ -131,9 +150,11 @@ namespace Forge.Editing.Placement
             return new StrokeItem(last.Position + direction * spacing, yaw, roll.Scale);
         }
 
+        // A path-following object takes its heading from the drag alone: adding the user's turn on top
+        // would set fences across the row, packed side by side. Everything else keeps its own heading.
         float YawFor(Vector2? direction, PlacementRoll roll) =>
             PlacementMath.NormalizeDegrees(_alignToPath && direction.HasValue
-                ? PlacementMath.YawAlong(direction.Value) + _yawOffset
+                ? PlacementMath.YawAlong(direction.Value)
                 : _yawOffset + roll.YawDegrees);
 
         PlacementRoll RollAt(int index)

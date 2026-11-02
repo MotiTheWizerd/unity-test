@@ -261,8 +261,11 @@ one in the active plugin.
     **Painting rows**: holding and dragging runs an engine-free `PlacementStroke` (`Forge.Editing.Placement`). The
     next object is set down once the pointer is clear of the last one: half of each `Footprint` (horizontal bounds
     at scale 1, measured by the ghost) along the drag, plus the gap, at exactly that distance, so gap 0 makes
-    fences meet end to end. Objects without a random heading turn their length (local +X) along the drag; the
-    rest keep their drawn heading. Shift lays a straight row from the press point to the pointer, re-laid live.
+    fences meet end to end. A stroke only becomes a drag once the pointer is `MinDragDistance` (0.5 m) or half the
+    footprint from the start, so hand jitter during a click never turns the object: a click places exactly the
+    previewed angle (`[` / `]` included). Once dragging, objects without a random heading take their heading from
+    the drag alone (length, local +X, along it; the user's angle is not added, which would set fences across the
+    row); the rest keep their drawn heading plus the user's angle. Shift lays a straight row from the press point to the pointer, re-laid live.
     Each position's variation and gap are drawn once, so re-laying doesn't flicker. The first object keeps the
     clicked spot (stacking still works); the others rest on the terrain under them. The row previews as ghosts
     and is placed on release as one undo step ("Place 5 Wooden Fence"), using `EditSession.NewIds` so

@@ -134,6 +134,60 @@ namespace Forge.Tests.Editing
             Assert.That(stroke.Items.Count, Is.EqualTo(2), "Releasing Shift shows the free path again.");
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void JitteryClick_KeepsTheAngleThePreviewShowed(bool line)
+        {
+            // A fence the user turned to 90°; the hand moves 3 cm while clicking.
+            var stroke = new PlacementStroke(Vector2.Zero, Fence, alignToPath: true, yawOffset: 90f,
+                PlacementRoll.Identity, () => PlacementRoll.Identity, () => 0f);
+
+            stroke.MoveTo(new Vector2(0.02f, -0.02f), line);
+            stroke.MoveTo(new Vector2(-0.03f, 0.005f), line);
+
+            Assert.That(stroke.IsDragging, Is.False);
+            Assert.That(stroke.Items.Count, Is.EqualTo(1));
+            Assert.That(stroke.Items[0].YawDegrees, Is.EqualTo(90f));
+        }
+
+        [Test]
+        public void DragStarts_OnlyBeyondHalfTheFootprint_AndStays()
+        {
+            var stroke = FenceStroke(); // half a fence: 1.5 m
+
+            stroke.MoveTo(new Vector2(1.4f, 0f), line: false);
+            Assert.That(stroke.IsDragging, Is.False);
+
+            stroke.MoveTo(new Vector2(1.6f, 0f), line: false);
+            stroke.MoveTo(new Vector2(0.1f, 0f), line: false);
+            Assert.That(stroke.IsDragging, Is.True, "Coming back near the start is still a drag.");
+        }
+
+        [Test]
+        public void PathFollowingRow_TakesItsHeadingFromTheDrag_NotTheUserAngle()
+        {
+            var stroke = new PlacementStroke(Vector2.Zero, Fence, alignToPath: true, yawOffset: 90f,
+                PlacementRoll.Identity, () => PlacementRoll.Identity, () => 0f);
+
+            stroke.MoveTo(new Vector2(10f, 0f), line: false);
+
+            Assert.That(stroke.Items.Count, Is.EqualTo(4), "End to end along the drag, not packed side by side.");
+            foreach (var item in stroke.Items)
+                Assert.That(item.YawDegrees, Is.EqualTo(0f).Within(1e-3));
+        }
+
+        [Test]
+        public void OwnHeadingObjects_KeepTheUserAngleWhileDragging()
+        {
+            var stroke = new PlacementStroke(Vector2.Zero, Tree, alignToPath: false, yawOffset: 30f,
+                new PlacementRoll(10f, 1f), () => new PlacementRoll(200f, 1f), () => 0f);
+
+            stroke.MoveTo(new Vector2(5f, 0f), line: false);
+
+            Assert.That(stroke.Items[0].YawDegrees, Is.EqualTo(40f));
+            Assert.That(stroke.Items[1].YawDegrees, Is.EqualTo(230f));
+        }
+
         [Test]
         public void ZeroFootprint_WithZeroGap_StillStops()
         {
