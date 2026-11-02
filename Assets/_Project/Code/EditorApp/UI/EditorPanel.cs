@@ -28,6 +28,7 @@ namespace Forge.EditorApp.UI
         {
             // The document root covers the whole screen; only real panel elements may catch the pointer.
             Root.pickingMode = PickingMode.Ignore;
+            DisableKeyboardNavigation();
             _sections = new List<IPanelSection>
             {
                 new WorldSection(Root, context),
@@ -39,6 +40,23 @@ namespace Forge.EditorApp.UI
                 new StatusBar(Root, context),
             };
             Refresh();
+        }
+
+        // UI Toolkit turns arrow keys / WASD into navigation that walks focus between buttons, and
+        // Space / Enter into "submit" on the focused one. Here those keys fly the camera and drive
+        // shortcuts: holding D walked focus from a clicked button into the search field and then
+        // typed into it. The panel is mouse-driven, so navigation is switched off at the root.
+        void DisableKeyboardNavigation()
+        {
+            Root.RegisterCallback<NavigationMoveEvent>(Swallow, TrickleDown.TrickleDown);
+            Root.RegisterCallback<NavigationSubmitEvent>(Swallow, TrickleDown.TrickleDown);
+            Root.RegisterCallback<NavigationCancelEvent>(Swallow, TrickleDown.TrickleDown);
+        }
+
+        void Swallow(EventBase evt)
+        {
+            evt.StopImmediatePropagation();
+            Root.focusController?.IgnoreEvent(evt);
         }
 
         /// <summary>Replaces the dock with an error box; the editor could not start.</summary>
@@ -112,7 +130,7 @@ namespace Forge.EditorApp.UI
 
             var worldClick = (mouse.leftButton.wasPressedThisFrame || mouse.middleButton.wasPressedThisFrame)
                              && !IsPointerOverUI(mouse.position.ReadValue());
-            if (worldClick || mouse.rightButton.wasPressedThisFrame)
+            if (worldClick || mouse.rightButton.isPressed)
                 FocusedElement?.Blur();
         }
 

@@ -14,7 +14,7 @@ namespace Forge.Editing.Placement
         /// <summary>Unit up direction of the fitted (and tilt-capped) ground plane.</summary>
         public Vector3 Up { get; }
 
-        /// <summary>Ground height under the object's center, averaged from the samples.</summary>
+        /// <summary>Ground height under the object's center, from the samples (the footprint's longer axis weighs more).</summary>
         public float Height { get; }
     }
 }

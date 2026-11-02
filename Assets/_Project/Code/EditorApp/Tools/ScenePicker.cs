@@ -66,6 +66,16 @@ namespace Forge.EditorApp.Tools
             return found;
         }
 
+        /// <summary>Terrain height straight below (x, z), looking through objects; null where there is no terrain.</summary>
+        public float? TerrainHeightAt(float x, float z) =>
+            TryPickTerrain(new Ray(new Vector3(x, ProbeTop, z), Vector3.down), out var hit) ? hit.point.y : (float?)null;
+
+        /// <summary>Same as <see cref="TerrainHeightAt(float, float)"/> for a ground position (x, z), the form placement math uses.</summary>
+        public float? TerrainHeightAt(System.Numerics.Vector2 ground) => TerrainHeightAt(ground.X, ground.Y);
+
+        // Height vertical terrain probes start from; well above any terrain (heights are capped far lower).
+        const float ProbeTop = 1000f;
+
         /// <summary>The placed object under the ray, if the first world hit is one.</summary>
         public bool TryPickPlacedObject(Ray ray, IRecordStore records, out RecordId id)
         {

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Forge.Editing.Placement;
-using Forge.World;
 using Forge.World.Assets;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -17,23 +16,22 @@ namespace Forge.EditorApp.Gizmos
     public sealed class PlacementGhost : IDisposable
     {
         readonly IAssetCatalog _catalog;
+        readonly AssetShapes _shapes;
         readonly Material _material;
         readonly List<GameObject> _instances = new List<GameObject>();
         Transform _root;
         string _assetKey;
 
         /// <param name="material">Material for every part (Forge/PlacementGhost).</param>
-        public PlacementGhost(IAssetCatalog catalog, Material material)
+        public PlacementGhost(IAssetCatalog catalog, AssetShapes shapes, Material material)
         {
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+            _shapes = shapes ?? throw new ArgumentNullException(nameof(shapes));
             _material = material != null ? material : throw new ArgumentNullException(nameof(material));
         }
 
-        /// <summary>How far the pivot sits above the shown object's lowest point, at scale 1 and no tilt.</summary>
-        public float PivotAboveBottom { get; private set; }
-
-        /// <summary>The shown object's ground footprint at scale 1 and no rotation.</summary>
-        public Footprint Footprint { get; private set; }
+        /// <summary>The shown object's footprint and pivot height, at scale 1 and no rotation.</summary>
+        public PlacementShape Shape { get; private set; }
 
         /// <summary>Makes the ghosts show <paramref name="assetKey"/>; rebuilds only when the key changes. All stay hidden until <see cref="Show"/>.</summary>
         public void Use(string assetKey)
@@ -43,7 +41,8 @@ namespace Forge.EditorApp.Gizmos
 
             DestroyInstances();
             _assetKey = assetKey;
-            Measure(Instance(0));
+            Shape = _shapes.ShapeOf(assetKey);
+            Instance(0);
         }
 
         /// <summary>Shows copy <paramref name="index"/> (created on demand) at the given pose.</summary>
@@ -111,17 +110,6 @@ namespace Forge.EditorApp.Gizmos
             }
         }
 
-        // Bounds are only valid while active; measure at the origin with no rotation, at scale 1.
-        void Measure(GameObject go)
-        {
-            go.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-            go.transform.localScale = Vector3.one;
-            go.SetActive(true);
-            PivotAboveBottom = RendererBounds.PivotAboveBottom(go);
-            Footprint = RendererBounds.TryGet(go, out var bounds) ? new Footprint(bounds.size.x, bounds.size.z) : default;
-            go.SetActive(false);
-        }
-
         void DestroyInstances()
         {
             foreach (var instance in _instances)
@@ -133,8 +121,7 @@ namespace Forge.EditorApp.Gizmos
 
             _instances.Clear();
             _assetKey = null;
-            PivotAboveBottom = 0f;
-            Footprint = default;
+            Shape = default;
         }
     }
 }

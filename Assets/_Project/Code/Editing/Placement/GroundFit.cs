@@ -44,9 +44,45 @@ namespace Forge.Editing.Placement
             var alongZ = new Vector3(axisZ.X * 2f * reachZ, right.Value - left.Value, axisZ.Y * 2f * reachZ);
             var up = ClampTilt(Vector3.Normalize(Vector3.Cross(alongZ, alongX)), maxTiltDegrees);
 
-            var height = (front.Value + back.Value + right.Value + left.Value) / 4f;
+            // On curved ground the two axes disagree about the center height; the longer axis wins in proportion,
+            // so a fence's ends (not its middle) meet a bump, while a round rock averages both.
+            var height = (reachX * (front.Value + back.Value) + reachZ * (right.Value + left.Value)) / (2f * (reachX + reachZ));
             plane = new GroundPlane(up, height);
             return true;
+        }
+
+        /// <summary>
+        /// Where an object's pivot goes and how it is turned so it rests on the ground under its footprint,
+        /// tilted to the slope and heading <paramref name="yawDegrees"/>. Shared by placing, dropping and
+        /// sculpting, so all three seat objects the same way.
+        /// </summary>
+        /// <returns>False if the ground is missing under any sample.</returns>
+        public static bool TryPose(Vector2 center, PlacementShape shape, float yawDegrees, float scale,
+            Func<Vector2, float?> heightAt, float maxTiltDegrees, out Vector3 pivot, out Quaternion rotation)
+        {
+            pivot = default;
+            rotation = Quaternion.Identity;
+            if (!TryFit(center, shape.Footprint, yawDegrees, scale, heightAt, maxTiltDegrees, out var plane))
+                return false;
+
+            rotation = Orient(plane.Up, yawDegrees);
+            pivot = new Vector3(center.X, plane.Height, center.Y) + plane.Up * (shape.PivotAboveBottom * scale);
+            return true;
+        }
+
+        /// <summary>Heading <paramref name="yawDegrees"/> around +Y, then tilted so the object's up becomes <paramref name="up"/>.</summary>
+        public static Quaternion Orient(Vector3 up, float yawDegrees) =>
+            FromTo(Vector3.UnitY, up) * Quaternion.CreateFromAxisAngle(Vector3.UnitY, yawDegrees * (float)(Math.PI / 180.0));
+
+        /// <summary>The shortest rotation taking unit vector <paramref name="from"/> to unit vector <paramref name="to"/>.</summary>
+        public static Quaternion FromTo(Vector3 from, Vector3 to)
+        {
+            var axis = Vector3.Cross(from, to);
+            var length = axis.Length();
+            if (length < 1e-6f)
+                return Quaternion.Identity; // parallel; objects never tilt past the cap, so never opposite
+            var angle = (float)Math.Atan2(length, Vector3.Dot(from, to));
+            return Quaternion.CreateFromAxisAngle(axis / length, angle);
         }
 
         static Vector3 ClampTilt(Vector3 up, float maxTiltDegrees)

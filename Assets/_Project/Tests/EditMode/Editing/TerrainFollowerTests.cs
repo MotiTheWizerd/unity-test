@@ -4,6 +4,7 @@ using Forge.Data;
 using Forge.Data.Records;
 using Forge.Data.Terrain;
 using Forge.Editing;
+using Forge.Editing.Placement;
 using Forge.Editing.Terrain;
 using NUnit.Framework;
 using static Forge.Tests.Data.TestRecords;
@@ -90,6 +91,47 @@ namespace Forge.Tests.Editing
             TerrainEdits.Commit(session, RaiseStroke(session, dabs: 2));
 
             Assert.That(HeightOf(session, Resting), Is.EqualTo(10f));
+        }
+
+        [Test]
+        public void SlopeObjects_AreRetiltedToTheNewGround_KeepingTheirClearance()
+        {
+            var session = NewSession();
+            // A hill rising east of the resting "fence" (3 m long along X): its east end ends up higher.
+            var stroke = new SculptStroke(session.World.Records, new BrushSettings(BrushMode.Raise, 8f, 1f), new Vector2(26f, 20f));
+            for (var i = 0; i < 4; i++)
+                stroke.ApplyDab(new Vector2(26f, 20f));
+            var fence = new PlacementShape(new Footprint(3f, 0.2f), 0f);
+            var follower = new TerrainFollower(session.World.Records, placed => placed.Id == Resting || placed.Id == Floating ? fence : (PlacementShape?)null);
+
+            var followed = follower.Follow(stroke).ToDictionary(p => p.Id);
+
+            var resting = followed[Resting];
+            var up = Vector3.Transform(Vector3.UnitY, resting.Rotation);
+            Assert.That(up.X, Is.LessThan(-0.05f), "Tilted away from the raised east end.");
+            var eastEnd = resting.Position + Vector3.Transform(new Vector3(1.5f, 0f, 0f), resting.Rotation);
+            var westEnd = resting.Position + Vector3.Transform(new Vector3(-1.5f, 0f, 0f), resting.Rotation);
+            // The ground is curved (brush falloff), so a straight fence meets it only approximately.
+            Assert.That(eastEnd.Y, Is.EqualTo(stroke.SampleHeight(new Vector2(eastEnd.X, eastEnd.Z)).Value).Within(0.06f));
+            Assert.That(westEnd.Y, Is.EqualTo(stroke.SampleHeight(new Vector2(westEnd.X, westEnd.Z)).Value).Within(0.06f));
+
+            var floating = followed[Floating];
+            var groundUnder = stroke.SampleHeight(new Vector2(24f, 20f)).Value;
+            Assert.That(floating.Position.Y - groundUnder, Is.EqualTo(5f).Within(0.5f), "Keeps (about) its 5 m clearance.");
+        }
+
+        [Test]
+        public void SlopeObjects_OnUnchangedGround_AreLeftExactlyAsTheyWere()
+        {
+            var session = NewSession();
+            var stroke = new SculptStroke(session.World.Records, new BrushSettings(BrushMode.Raise, 3f, 1f), new Vector2(5f, 5f));
+            stroke.ApplyDab(new Vector2(5f, 5f));
+            var shape = new PlacementShape(new Footprint(1f, 1f), 0f);
+            var original = session.World.Records.Get<PlacedObjectRecord>(Resting);
+
+            var followed = new TerrainFollower(session.World.Records, _ => shape).Follow(stroke).ToDictionary(p => p.Id);
+
+            Assert.That(followed[Resting], Is.SameAs(original));
         }
 
         [Test]

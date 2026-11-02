@@ -130,13 +130,14 @@ one in the active plugin.
 - Conflict awareness only checks *direct* masters, not transitive ones.
 - Two namespaces defining the same chunk coordinate: the world view shows the
   lowest id and logs a warning.
-- Sculpting only edits existing chunks and never creates new ones. Objects follow the ground
-  by its height change under their pivot only (no tilting to the new slope).
+- Sculpting only edits existing chunks and never creates new ones. Upright objects follow the ground
+  by its height change under their pivot; slope objects (fences, rocks) are also re-tilted.
 - The edge of the streamed area is a hard cut (no fog, distant LOD or impostors yet).
   Plugins load whole into memory at startup, so only the *scene* streams, not the *data*. A
   30 MB JSON plugin takes ~1.3 s to load.
-- Drop to ground samples the terrain under the object's pivot only. On steep slopes, part of
-  the base can float or clip, and objects aren't tilted to match the slope.
+- Drop to ground samples the terrain under an upright object's pivot only, so on steep slopes part of its base
+  can float or clip. Slope objects are seated on their whole footprint, up to a 35° tilt; steeper ground leaves
+  their ends off the surface.
 
 ---
 
@@ -274,11 +275,20 @@ one in the active plugin.
     **Align to slope**: on terrain, objects whose rules ask for it (fences, walls, campfire, bushes, rocks) are tilted by
     the engine-free `GroundFit`: the terrain is sampled at both ends of the footprint along local X and Z (at least
     0.25 m out), the plane through those slopes gives the up direction (capped at 35°), and the pivot sits at their
-    average height, so a fence's ends both touch a hillside. Trees, houses and props stay upright. The panel toggle
-    "Align to slope" (default on) turns it off; clicks on top of other objects never tilt. Not re-applied when
-    sculpting moves objects or by Drop (End), which stay vertical-only.
-    The ghosts live under one `PlacementGhosts` scene object. Right mouse always releases UI focus, so flying with
-    WASD never types into the search field, even when the drag starts over the panel.
+    average height (the longer axis weighs more, so a fence's ends meet a bump), so a fence's ends both touch a
+    hillside. Trees, houses and props stay upright. The panel toggle "Align to slope" (default on) turns it off;
+    clicks on top of other objects never tilt.
+    **One seating path**: `GroundFit.TryPose` (engine-free: pivot + rotation from a `PlacementShape` = footprint +
+    pivot height) is used by placing, by Drop (End) and by sculpting, so all three seat objects identically.
+    `SlopeAlignment` (EditorApp) decides what tilts (rules + toggle) and `AssetShapes` measures each asset key once
+    (`RendererBounds.TryGetLocal`, mesh bounds in the root's space, works on inactive objects), shared with the ghost.
+    Drop keeps an object's heading and re-seats it; `TerrainFollower` re-fits slope objects on old and new ground and
+    keeps their clearance (objects on unchanged ground are returned untouched). Upright objects drop and follow
+    vertically as before. `ScenePicker.TerrainHeightAt` is the shared terrain probe.
+    The ghosts live under one `PlacementGhosts` scene object.
+  - **Panel keyboard navigation is off** (`EditorPanel.DisableKeyboardNavigation`): UI Toolkit maps arrows/WASD to
+    navigation and Space/Enter to submit, so holding D walked focus from a clicked button into the search field and
+    typed into it. Navigation events are swallowed at the root, and holding right mouse keeps UI focus released.
   - `SculptTool` (B): hold left mouse on the terrain. Dabs fire at a fixed 30/s (independent of
     frame rate, capped per frame) and preview live, and the stroke commits on release. `[` / `]`
     change the radius. `BrushCursor` draws a ring that follows the ground, colored by mode.

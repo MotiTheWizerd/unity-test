@@ -131,11 +131,12 @@ namespace Forge.EditorApp
         /// <summary>Whether the selected object can vary at all (the "Random turn &amp; size" toggle matters).</summary>
         public bool PlacementCanVary => PlacementRoll.CanVary(SelectedPlacementRules);
 
-        /// <summary>Whether placed objects tilt to the slope when their base object asks for it (fences, rocks).</summary>
+        /// <summary>Whether placing, dropping and sculpting tilt objects to the slope when their base object asks for it (fences, rocks).</summary>
         public bool AlignPlacementToSlope { get; set; } = true;
 
-        /// <summary>Whether the selected object will be tilted to the slope: its rules ask for it and the toggle is on.</summary>
-        public bool PlacementAlignsToSlope => AlignPlacementToSlope && (SelectedPlacementRules?.AlignToSlope ?? false);
+        /// <summary>Whether objects of <paramref name="baseId"/> are tilted to the slope: their rules ask for it and the toggle is on.</summary>
+        public bool AlignsToSlope(RecordId baseId) =>
+            AlignPlacementToSlope && Session.World.Records.TryGet(baseId, out var record) && ((record as BaseObjectRecord)?.Placement?.AlignToSlope ?? false);
 
         /// <summary>Whether the selected object's rules tilt it to the slope at all (the toggle matters).</summary>
         public bool PlacementCanAlignToSlope => SelectedPlacementRules?.AlignToSlope ?? false;

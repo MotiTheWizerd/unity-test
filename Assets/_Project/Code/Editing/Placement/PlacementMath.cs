@@ -22,6 +22,14 @@ namespace Forge.Editing.Placement
         public static float YawAlong(Vector2 direction) =>
             NormalizeDegrees((float)(Math.Atan2(-direction.Y, direction.X) / DegreesToRadians));
 
+        /// <summary>The heading of a (possibly tilted) rotation: where its local +X points, seen from above.</summary>
+        public static float HeadingOf(Quaternion rotation)
+        {
+            var axisX = Vector3.Transform(Vector3.UnitX, rotation);
+            var flat = new Vector2(axisX.X, axisX.Z);
+            return flat.LengthSquared() < 1e-12f ? 0f : YawAlong(Vector2.Normalize(flat));
+        }
+
         public static float NormalizeDegrees(float degrees)
         {
             var wrapped = degrees % 360f;

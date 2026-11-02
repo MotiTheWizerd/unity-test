@@ -44,13 +44,15 @@ namespace Forge.EditorApp
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
             var picker = new ScenePicker(_maxRayDistance);
+            var shapes = new AssetShapes(assets);
+            var slopes = new SlopeAlignment(context, shapes);
             _flyCamera.Initialize(ui, ray => picker.TryPickWorld(ray, out var hit) ? hit.distance : (float?)null);
-            Commands = new EditorCommands(context, view, picker, _flyCamera);
+            Commands = new EditorCommands(context, view, picker, _flyCamera, slopes);
             _tools = new Dictionary<ToolKind, IEditorTool>
             {
                 { ToolKind.Select, new SelectTransformTool(context, view, picker, _camera, _gizmoMaterial) },
-                { ToolKind.Place, new PlaceTool(context, picker, new PlacementGhost(assets, _ghostMaterial)) },
-                { ToolKind.Sculpt, new SculptTool(context, view, picker) },
+                { ToolKind.Place, new PlaceTool(context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), slopes) },
+                { ToolKind.Sculpt, new SculptTool(context, view, picker, slopes) },
             };
         }
 

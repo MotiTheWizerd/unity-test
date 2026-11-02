@@ -58,6 +58,9 @@ namespace Forge.Editing.Terrain
         /// <summary>Current (working) height at a world XZ position, bilinearly interpolated; null outside the terrain.</summary>
         public float? SampleHeight(Vector2 world) => Sample(world, original: false);
 
+        /// <summary>Height at a world XZ position as it was before the stroke; null outside the terrain.</summary>
+        public float? OriginalHeight(Vector2 world) => Sample(world, original: true);
+
         /// <summary>
         /// How far the stroke has raised (positive) or lowered (negative) the ground at a
         /// world XZ position so far; null outside the terrain.

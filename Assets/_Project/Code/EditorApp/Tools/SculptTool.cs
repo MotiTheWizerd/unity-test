@@ -23,16 +23,19 @@ namespace Forge.EditorApp.Tools
         readonly WorldView _view;
         readonly ScenePicker _picker;
         readonly BrushCursor _cursor;
+        readonly SlopeAlignment _slopes;
         readonly HashSet<RecordId> _previewedObjects = new HashSet<RecordId>();
         SculptStroke _stroke;
         TerrainFollower _follower;
         float _dabTimer;
 
-        public SculptTool(EditorContext context, WorldView view, ScenePicker picker)
+        /// <param name="slopes">Which followed objects are also re-tilted to the new ground (fences, rocks).</param>
+        public SculptTool(EditorContext context, WorldView view, ScenePicker picker, SlopeAlignment slopes)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _picker = picker ?? throw new ArgumentNullException(nameof(picker));
+            _slopes = slopes ?? throw new ArgumentNullException(nameof(slopes));
             _cursor = new BrushCursor(ray => _picker.TryPickTerrain(ray, out var hit) ? (true, hit.point) : (false, default(Vector3)));
         }
 
@@ -102,7 +105,7 @@ namespace Forge.EditorApp.Tools
             if (_stroke == null)
                 return;
 
-            _follower = _context.ObjectsFollowTerrain ? new TerrainFollower(world) : null;
+            _follower = _context.ObjectsFollowTerrain ? new TerrainFollower(world, _slopes.ShapeToAlign) : null;
             _dabTimer = 0f;
             Dab(point);
         }
