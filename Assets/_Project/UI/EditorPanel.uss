@@ -1,0 +1,159 @@
+/* Forge runtime editor: a dark side dock plus a status bar. */
+
+.forge-root {
+    flex-grow: 1;
+    font-size: 13px;
+}
+
+.forge-root Label {
+    color: rgb(222, 224, 228);
+}
+
+.forge-dock {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    bottom: 46px;
+    width: 300px;
+    padding: 10px;
+    background-color: rgba(24, 26, 31, 0.93);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.forge-title-bar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.forge-title {
+    font-size: 15px;
+    -unity-font-style: bold;
+}
+
+.forge-plugin {
+    color: rgb(150, 156, 168);
+}
+
+.forge-plugin.is-dirty {
+    color: rgb(232, 176, 70);
+}
+
+.forge-scroll {
+    flex-grow: 1;
+}
+
+.forge-section {
+    margin-bottom: 12px;
+}
+
+.forge-section__header {
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.forge-root .forge-section__header {
+    color: rgb(128, 138, 156);
+}
+
+.forge-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.forge-spaced {
+    margin-top: 4px;
+}
+
+.forge-grow {
+    flex-grow: 1;
+}
+
+.forge-indented {
+    margin-top: 4px;
+    padding-left: 6px;
+    border-left-width: 2px;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.forge-choices > Button {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-left: 1px;
+    margin-right: 1px;
+}
+
+.forge-palette {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.forge-palette > Button {
+    width: 48%;
+    margin: 1px;
+}
+
+/* Active choice: the selected tool, mode or palette entry. */
+.forge-root Button.is-active {
+    background-color: rgb(205, 145, 40);
+    color: rgb(20, 20, 20);
+    -unity-font-style: bold;
+}
+
+.forge-muted {
+    font-size: 11px;
+    white-space: normal;
+}
+
+.forge-root .forge-muted {
+    color: rgb(156, 162, 174);
+}
+
+.forge-wrap {
+    white-space: normal;
+}
+
+.forge-foldout {
+    margin-top: 2px;
+}
+
+.forge-root .unity-base-field__label {
+    min-width: 72px;
+    width: 72px;
+}
+
+.forge-root .unity-base-slider__input-field {
+    width: 48px;
+}
+
+.forge-status {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    height: 28px;
+    padding-left: 10px;
+    padding-right: 10px;
+    -unity-text-align: middle-left;
+    background-color: rgba(24, 26, 31, 0.93);
+    border-radius: 4px;
+}
+
+.forge-fatal {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    width: 520px;
+    padding: 12px;
+    background-color: rgba(110, 28, 28, 0.95);
+    border-radius: 6px;
+}
+
+.forge-hidden {
+    display: none;
+}

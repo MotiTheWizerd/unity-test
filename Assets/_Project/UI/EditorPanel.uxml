@@ -1,0 +1,68 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="EditorPanel.uss" />
+    <ui:VisualElement name="root" class="forge-root" picking-mode="Ignore">
+        <ui:VisualElement name="dock" class="forge-dock">
+            <ui:VisualElement class="forge-title-bar">
+                <ui:Label name="title" class="forge-title" text="Forge Editor" />
+                <ui:Label name="plugin" class="forge-plugin" />
+            </ui:VisualElement>
+            <ui:ScrollView class="forge-scroll">
+                <ui:VisualElement class="forge-section">
+                    <ui:Label class="forge-section__header" text="TRANSFORM" />
+                    <ui:VisualElement name="transform-modes" class="forge-row forge-choices" />
+                    <ui:VisualElement class="forge-row forge-spaced">
+                        <ui:Label name="selection-count" class="forge-grow" />
+                        <ui:Button name="drop-to-ground" text="Drop to ground (End)" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement class="forge-section">
+                    <ui:Label class="forge-section__header" text="TERRAIN" />
+                    <ui:Button name="sculpt-tool" text="Sculpt terrain (B)" class="forge-toggle-button" />
+                    <ui:VisualElement name="sculpt-options" class="forge-indented">
+                        <ui:VisualElement name="brush-modes" class="forge-row forge-choices" />
+                        <ui:Slider name="brush-radius" label="Radius" show-input-field="true" />
+                        <ui:Slider name="brush-strength" label="Strength" show-input-field="true" />
+                        <ui:Toggle name="objects-follow" label="Objects follow terrain" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement class="forge-section">
+                    <ui:Label class="forge-section__header" text="PLACE  (1-9)" />
+                    <ui:VisualElement name="palette" class="forge-palette" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="forge-section">
+                    <ui:Label class="forge-section__header" text="HISTORY" />
+                    <ui:VisualElement class="forge-row forge-choices">
+                        <ui:Button name="undo" text="Undo (Ctrl+Z)" />
+                        <ui:Button name="redo" text="Redo (Ctrl+Y)" />
+                    </ui:VisualElement>
+                    <ui:Label name="undo-description" class="forge-muted" />
+                    <ui:Button name="save" text="Save (Ctrl+S)" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="forge-section">
+                    <ui:Label class="forge-section__header" text="WORLD" />
+                    <ui:Label name="load-order" class="forge-muted forge-wrap" />
+                    <ui:Label name="record-counts" class="forge-muted" />
+                </ui:VisualElement>
+
+                <ui:Foldout name="performance" text="Performance" value="false" class="forge-foldout">
+                    <ui:Label name="performance-text" class="forge-muted" />
+                </ui:Foldout>
+
+                <ui:Foldout text="Controls" value="false" class="forge-foldout">
+                    <ui:Label class="forge-muted" text="Click / Shift+click: select&#10;W move · E rotate · R scale · Ctrl snaps&#10;Del: delete · End: drop to ground&#10;Esc: cancel / deselect&#10;B: sculpt (hold left mouse) · [ ]: brush size&#10;1-9: place object&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · WASD/QE fly · Shift fast" />
+                </ui:Foldout>
+            </ui:ScrollView>
+        </ui:VisualElement>
+
+        <ui:Label name="status" class="forge-status" />
+
+        <ui:VisualElement name="fatal" class="forge-fatal forge-hidden">
+            <ui:Label class="forge-title" text="Forge failed to start" />
+            <ui:Label name="fatal-message" class="forge-wrap" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

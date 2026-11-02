@@ -17,22 +17,24 @@ namespace Forge.EditorApp
     public sealed class EditorController : MonoBehaviour
     {
         [SerializeField] Camera _camera;
-        [SerializeField] EditorOverlay _overlay;
         [SerializeField] float _maxRayDistance = 2000f;
 
         [SerializeField, Tooltip("Always-on-top material for gizmos (Forge/GizmoOverlay).")]
         Material _gizmoMaterial;
 
         [NonSerialized] EditorContext _context;
+        [NonSerialized] IPointerBlocker _ui;
         [NonSerialized] Dictionary<ToolKind, IEditorTool> _tools;
         [NonSerialized] ToolKind? _activeKind;
 
         /// <summary>One-shot actions, shared with the UI. Available after <see cref="Initialize"/>.</summary>
         public EditorCommands Commands { get; private set; }
 
-        public void Initialize(EditorContext context, WorldView view)
+        /// <param name="ui">Clicks over this UI are kept from the tools.</param>
+        public void Initialize(EditorContext context, WorldView view, IPointerBlocker ui)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _ui = ui ?? throw new ArgumentNullException(nameof(ui));
             var picker = new ScenePicker(_maxRayDistance);
             Commands = new EditorCommands(context, view, picker);
             _tools = new Dictionary<ToolKind, IEditorTool>
@@ -63,7 +65,7 @@ namespace Forge.EditorApp
 
             // Right mouse belongs to the fly camera; tools see the left button only.
             var pointer = mouse.position.ReadValue();
-            var overPanel = _overlay.IsPointerOverPanel(pointer);
+            var overPanel = _ui.IsPointerOverUI(pointer);
             var looking = mouse.rightButton.isPressed;
             var input = new ToolInput(
                 _camera.ScreenPointToRay(pointer),
@@ -121,10 +123,7 @@ namespace Forge.EditorApp
             for (var i = 0; i < Math.Min(9, palette.Count); i++)
             {
                 if (keyboard[Key.Digit1 + i].wasPressedThisFrame)
-                {
-                    _context.SelectedBaseId = palette[i].Id;
-                    _context.ActiveTool = ToolKind.Place;
-                }
+                    _context.SelectPlacement(palette[i].Id);
             }
         }
 

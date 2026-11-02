@@ -459,7 +459,8 @@ GameObject:
   - component: {fileID: 1624300797}
   - component: {fileID: 1624300796}
   - component: {fileID: 1624300795}
-  - component: {fileID: 1624300794}
+  - component: {fileID: 1624300799}
+  - component: {fileID: 1624300798}
   m_Layer: 0
   m_Name: EditorApp
   m_TagString: Untagged
@@ -467,18 +468,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1624300794
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1624300793}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4dc809ae2a06d964bb7e7f2ac7519b27, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Forge.EditorApp::Forge.EditorApp.EditorOverlay
 --- !u!114 &1624300795
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -492,7 +481,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Forge.EditorApp::Forge.EditorApp.EditorController
   _camera: {fileID: 330585545}
-  _overlay: {fileID: 1624300794}
   _maxRayDistance: 2000
   _gizmoMaterial: {fileID: 2100000, guid: 057b815d29230b3459e44fe01d2742b8, type: 2}
 --- !u!114 &1624300796
@@ -513,7 +501,7 @@ MonoBehaviour:
   _unloadRadius: 8
   _frameBudgetMs: 4
   _controller: {fileID: 1624300795}
-  _overlay: {fileID: 1624300794}
+  _panel: {fileID: 1624300798}
 --- !u!4 &1624300797
 Transform:
   m_ObjectHideFlags: 0
@@ -529,6 +517,41 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1624300798
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1624300793}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43ba2859ebddfdc488d613f05c3b5bf8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Forge.EditorApp::Forge.EditorApp.UI.EditorPanel
+--- !u!114 &1624300799
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1624300793}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 25ede9fbfe0518c4cb729be320d1389d, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: ce5bb58b91aaf634fa75d2b1a7cfd9df, type: 3}
+  m_SortingOrder: 0
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

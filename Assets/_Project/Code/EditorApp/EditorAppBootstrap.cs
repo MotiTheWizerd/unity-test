@@ -9,6 +9,7 @@ using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Data.Serialization;
 using Forge.EditorApp.Diagnostics;
+using Forge.EditorApp.UI;
 using Forge.Editing;
 using Forge.Streaming;
 using Forge.World;
@@ -43,9 +44,9 @@ namespace Forge.EditorApp
         float _frameBudgetMs = 4f;
 
         [SerializeField] EditorController _controller;
-        [SerializeField] EditorOverlay _overlay;
+        [SerializeField] EditorPanel _panel;
 
-        // Runtime-only state; see EditorOverlay for why these are [NonSerialized].
+        // Runtime-only state; see CLAUDE.md (play-mode reload) for why these are [NonSerialized].
         [NonSerialized] WorldView _view;
         [NonSerialized] WorldStreamer _streamer;
         [NonSerialized] EditorContext _context;
@@ -82,13 +83,13 @@ namespace Forge.EditorApp
                 _context.Session.WorldChanged += OnWorldChanged;
                 _context.Selection.Changed += _highlighter.Refresh;
 
-                _controller.Initialize(_context, _view);
-                _overlay.Initialize(_context, _controller.Commands, diagnostics);
+                _controller.Initialize(_context, _view, _panel);
+                _panel.Initialize(_context, _controller.Commands, diagnostics);
             }
             catch (Exception ex) when (ex is DataValidationException || ex is IOException)
             {
                 Debug.LogError($"[Forge] Failed to start editor: {ex.Message}");
-                _overlay.ShowFatal(ex.Message);
+                _panel.ShowFatal(ex.Message);
             }
         }
 

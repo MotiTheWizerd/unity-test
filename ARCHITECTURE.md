@@ -29,6 +29,7 @@ Assets/_Project/
   Tests/
     EditMode/    Forge.Tests.EditMode — unit and architecture tests
   Scenes/        Main.unity (editor scene: EditorApp + Main Camera)
+  UI/            EditorPanel.uxml/.uss (runtime editor UI), ForgeRuntimeTheme.tss, ForgePanelSettings
   Shaders/       GizmoOverlay.shader (always-on-top gizmos)
   Materials/     GizmoOverlay.mat
   Settings/      URP, input and volume assets; Worlds/ holds the WorldProfile assets
@@ -200,7 +201,7 @@ one in the active plugin.
   - chunk build: ~2.7 ms on average, never more than 12 chunks of backlog
   - one edit (move + undo): **p50 0.04 ms, p95 0.11 ms** with layered resolution and incremental
     index updates. Before that it took 22–55 ms (a full resolve plus a full index rebuild per edit).
-- The overlay's **Performance** section shows these numbers live: chunks, build times,
+- The panel's **Performance** foldout shows these numbers live: chunks, build times,
   worst frame and hitches (>50 ms), last edit and startup phases.
 
 ## Runtime editor (Forge.EditorApp)
@@ -241,6 +242,16 @@ one in the active plugin.
   `GizmoOverlay` material (`Shaders/GizmoOverlay.shader`, ZTest Always, unlit), so terrain never hides
   a handle. The material is assigned on `EditorController`. `SelectionHighlighter` tints selected objects (property blocks, so shared
   materials are never touched).
+- **UI** (`EditorApp/UI`, UI Toolkit): the layout lives in `UI/EditorPanel.uxml` and the style in
+  `UI/EditorPanel.uss`, rendered by a `UIDocument` with `ForgePanelSettings`.
+  `EditorPanel` (MonoBehaviour) only composes **one presenter per section**
+  (`IPanelSection`: World, Transform, Sculpt, Palette, History, Performance, StatusBar). Each presenter
+  binds its UXML elements by name (`PanelElements.Required` fails loudly on a mismatch), sends
+  actions to `EditorContext` / `EditorCommands`, and mirrors state in `Refresh()` every frame,
+  because shortcuts change the same state. `ChoiceRow<TEnum>` is the reusable segmented control.
+  Actions shared by keys and buttons live once on `EditorContext` (`SelectTransformMode`,
+  `SelectPlacement`) or `EditorCommands`. The controller only sees `IPointerBlocker`
+  (`EditorPanel.IsPointerOverUI` uses `panel.Pick`; the full-screen root ignores picking).
 - Controls: W / E / R → move / rotate / scale (Select tool); 1–9 or the palette → Place tool; Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
   (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly.
 - Runtime-only fields on MonoBehaviours are `[NonSerialized]` (see CLAUDE.md, play-mode reload).
@@ -288,5 +299,4 @@ and the condition for removing it, and is listed here.
 |-------|------|-----|-------------|
 | `Packages/manifest.json` | MCP for Unity tracks the git default branch, not a release tag | Fast setup. The exact commit is locked in `packages-lock.json` | Pin to a release tag on the next package update |
 | `Data.Json/Converters.cs` `HeightFieldConverter` | Terrain heights embedded in plugin JSON as base64 | Keeps a plugin a single file for the walking skeleton | Plugins become packages (folder/zip) with binary side files for heightmaps and assets |
-| `EditorApp/EditorOverlay.cs` | Immediate-mode GUI (OnGUI) panel | Fastest way to a usable skeleton | Editor UI design (Phase 4) → UI Toolkit |
-| `EditorApp/EditorController.cs` | Input read by polling devices, not an Input Actions asset | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset |
+| `EditorApp/EditorController.cs`, `UI/TransformSection.cs` | Input read by polling devices, not an Input Actions asset; the panel repeats the W/E/R labels | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset, labels read from it |

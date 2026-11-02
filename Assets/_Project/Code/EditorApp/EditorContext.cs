@@ -76,6 +76,13 @@ namespace Forge.EditorApp
         /// <summary>Base object the place tool creates.</summary>
         public RecordId SelectedBaseId { get; set; }
 
+        /// <summary>Switches to the place tool with <paramref name="baseId"/> (1-9 and the palette buttons).</summary>
+        public void SelectPlacement(RecordId baseId)
+        {
+            SelectedBaseId = baseId;
+            ActiveTool = ToolKind.Place;
+        }
+
         public BrushMode BrushMode { get; set; } = BrushMode.Raise;
 
         /// <summary>Whether sculpting carries placed objects up and down with the ground.</summary>
@@ -88,11 +95,14 @@ namespace Forge.EditorApp
             set => _brushRadius = Math.Max(BrushSettings.MinRadius, Math.Min(BrushSettings.MaxRadius, value));
         }
 
-        /// <summary>Brush strength in (0, 1]; clamped.</summary>
+        /// <summary>Lowest brush strength the editor offers (a weaker brush does nothing visible).</summary>
+        public const float MinBrushStrength = 0.05f;
+
+        /// <summary>Brush strength in [<see cref="MinBrushStrength"/>, 1]; clamped.</summary>
         public float BrushStrength
         {
             get => _brushStrength;
-            set => _brushStrength = Math.Max(0.05f, Math.Min(1f, value));
+            set => _brushStrength = Math.Max(MinBrushStrength, Math.Min(1f, value));
         }
 
         public BrushSettings CurrentBrush() => new BrushSettings(BrushMode, BrushRadius, BrushStrength);
