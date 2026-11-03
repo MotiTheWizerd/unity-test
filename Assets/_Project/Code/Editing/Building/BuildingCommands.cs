@@ -13,6 +13,7 @@ namespace Forge.Editing.Building
 
             registry.Add(new ListObjectsCommand(context));
             registry.Add(new InspectAreaCommand(context));
+            registry.Add(new FlattenAreaCommand(context));
             registry.Add(new PlaceObjectsCommand(context));
             registry.Add(new PlaceLineCommand(context));
             registry.Add(new DeleteObjectsCommand(context));

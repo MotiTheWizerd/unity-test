@@ -31,12 +31,6 @@ namespace Forge.Editing.Terrain
         public float Strength { get; }
 
         /// <summary>Smooth falloff: 1 at the center, 0 at the rim and beyond.</summary>
-        public float Weight(float distance)
-        {
-            if (distance >= Radius)
-                return 0f;
-            var t = distance / Radius;
-            return 1f - t * t * (3f - 2f * t);
-        }
+        public float Weight(float distance) => Falloff.Smooth(distance / Radius);
     }
 }

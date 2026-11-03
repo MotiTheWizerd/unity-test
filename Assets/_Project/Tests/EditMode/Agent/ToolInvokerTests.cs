@@ -20,7 +20,7 @@ namespace Forge.Tests.Agent
             var invoker = NewInvoker();
 
             Assert.That(invoker.Tools.Select(t => t.Name),
-                Is.EqualTo(new[] { "list_objects", "inspect_area", "place_objects", "place_line", "delete_objects" }));
+                Is.EqualTo(new[] { "list_objects", "inspect_area", "flatten_area", "place_objects", "place_line", "delete_objects" }));
 
             var schema = invoker.Tools.Single(t => t.Name == "place_objects").InputSchema;
             Assert.That((string)schema["type"], Is.EqualTo("object"));

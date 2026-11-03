@@ -48,6 +48,13 @@ namespace Forge.Editing.Building
             }
         }
 
+        /// <summary>
+        /// Keeps the objects standing on terrain that a command reshapes on the ground, re-tilting those that follow
+        /// the slope, as the sculpt brush does.
+        /// </summary>
+        public TerrainFollower FollowTerrain() =>
+            new TerrainFollower(Session.World.Records, placed => Seating.SlopeShapeOf(placed.BaseId));
+
         /// <summary>Why nothing can be set down at <paramref name="at"/>: no terrain there, or terrain the scene hasn't loaded.</summary>
         public string WhyNoGround(Vector2 at) =>
             Terrain.HeightAt(at).HasValue

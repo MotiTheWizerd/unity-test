@@ -178,15 +178,18 @@ one in the active plugin.
 - `TerrainGrid` (`Editing/Terrain`) reads the world's terrain records as one grid of global samples (chunks
   share their edge samples; lowest id wins on duplicate coordinates; one heightmap resolution): sample heights,
   bilinear heights anywhere, and which chunk holds a sample. Sculpting and the building commands both read it.
-- **Terrain sculpting** (`Editing/Terrain`): a `SculptStroke` snapshots the terrain and
-  keeps a working copy. Dabs (`BrushSettings`: Raise / Lower / Flatten / Smooth, radius,
-  strength, smoothstep falloff) run on the **global sample grid**: pass 1 computes every
-  new height from the pre-dab state, pass 2 writes each sample into *every* chunk that
-  shares it. That's why chunk seams can't open. `TerrainEdits.Commit` writes the changed
-  chunks as one undo step, as overrides of the master's chunk records.
-- **Objects follow sculpted terrain** (`TerrainFollower`, toggle "Objects follow terrain", on by
-  default). Each placed object on a touched chunk moves vertically by
-  `SculptStroke.HeightChangeAt` its position, so its clearance above the ground is kept (resting,
+- **Terrain edits** (`Editing/Terrain`): a `TerrainEdit` snapshots the terrain and keeps a working copy on
+  the **global sample grid**. Subclasses compute every new height from the state before the write, then
+  `Write` puts each sample into *every* chunk that shares it. That's why chunk seams can't open.
+  `TerrainEdits.Commit` writes the changed chunks as one undo step named by the edit, as overrides of the
+  master's chunk records. Two edits exist:
+  - `SculptStroke`: brush dabs (`BrushSettings`: Raise / Lower / Flatten / Smooth, radius, strength).
+  - `AreaFlattening`: levels a `GroundRect` (center, width across its front, depth, heading, like a placed
+    object) to one height and eases back to the natural ground over a blend.
+  Both use the same smoothstep edge (`Falloff.Smooth`).
+- **Objects follow edited terrain** (`TerrainFollower`; for the sculpt tool the toggle "Objects follow
+  terrain", on by default; `flatten_area` always). Each placed object on a touched chunk moves vertically by
+  `TerrainEdit.HeightChangeAt` its position, so its clearance above the ground is kept (resting,
   floating or buried). It is data-only, so unloaded objects follow too. Objects are grouped by
   chunk once per stroke. The tool previews them on every dab, and `TerrainEdits.Commit` writes
   terrain and moved objects as the same single undo step.
@@ -222,6 +225,9 @@ one in the active plugin.
     east), and the objects inside, nearest first. It reads the terrain *data* (`BuildContext.Terrain`, a
     `TerrainGrid` cached per world version), so it answers for unloaded chunks too; placing still seats on the
     loaded scene, and a skipped spot says whether its terrain is missing or just not loaded.
+  - `flatten_area`: levels a rectangle (`AreaFlattening`) to a height, by default the average ground height
+    inside it (as much dug away as filled in), with a soft edge (default 4 m); objects on the reshaped ground
+    follow it (`BuildContext.FollowTerrain`). The agent levels sloped building sites before placing on them.
   - `place_objects`: objects at ground positions, seated on the terrain; heading and scale default to the
     object's natural variation. Unknown ids refuse the whole call; positions without terrain are skipped.
   - `place_line`: one object end to end along a path, stretch by stretch, exactly like the place tool's

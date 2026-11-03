@@ -24,7 +24,7 @@ namespace Forge.Editing.Terrain
         readonly Dictionary<ChunkCoord, List<PlacedObjectRecord>> _byChunk = new Dictionary<ChunkCoord, List<PlacedObjectRecord>>();
         readonly Func<PlacedObjectRecord, PlacementShape?> _slopeShapeOf;
 
-        /// <param name="world">The world as it was when the stroke began.</param>
+        /// <param name="world">The world as it was when the edit began.</param>
         /// <param name="slopeShapeOf">
         /// The shape of an object that should be tilted to the slope, or null to only move it vertically
         /// (decided by the editor from the object's placement rules). Omit to never tilt.
@@ -45,19 +45,19 @@ namespace Forge.Editing.Terrain
         }
 
         /// <summary>
-        /// Every object standing on a chunk the stroke touched, at the height (and tilt) it should
+        /// Every object standing on a chunk the edit touched, at the height (and tilt) it should
         /// have now. Objects whose ground didn't change come back unchanged, so a live preview can
         /// simply apply the whole list.
         /// </summary>
-        public IReadOnlyList<PlacedObjectRecord> Follow(SculptStroke stroke)
+        public IReadOnlyList<PlacedObjectRecord> Follow(TerrainEdit edit)
         {
-            if (stroke == null)
-                throw new ArgumentNullException(nameof(stroke));
-            if (stroke.TouchedChunks.Count == 0)
+            if (edit == null)
+                throw new ArgumentNullException(nameof(edit));
+            if (edit.TouchedChunks.Count == 0)
                 return None;
 
             var result = new List<PlacedObjectRecord>();
-            foreach (var coord in stroke.TouchedChunks)
+            foreach (var coord in edit.TouchedChunks)
             {
                 if (!_byChunk.TryGetValue(coord, out var objects))
                     continue;
@@ -65,31 +65,31 @@ namespace Forge.Editing.Terrain
                 foreach (var placed in objects)
                 {
                     var shape = _slopeShapeOf(placed);
-                    result.Add(shape.HasValue && TryRefit(placed, shape.Value, stroke, out var refitted)
+                    result.Add(shape.HasValue && TryRefit(placed, shape.Value, edit, out var refitted)
                         ? refitted
-                        : FollowVertically(placed, stroke));
+                        : FollowVertically(placed, edit));
                 }
             }
 
             return result;
         }
 
-        static PlacedObjectRecord FollowVertically(PlacedObjectRecord placed, SculptStroke stroke)
+        static PlacedObjectRecord FollowVertically(PlacedObjectRecord placed, TerrainEdit edit)
         {
-            var change = stroke.HeightChangeAt(Flat(placed.Position)) ?? 0f;
+            var change = edit.HeightChangeAt(Flat(placed.Position)) ?? 0f;
             return change == 0f ? placed : placed.WithPosition(placed.Position + Vector3.UnitY * change);
         }
 
-        // Seats the object on the ground before and after the stroke the same way placing does; the
+        // Seats the object on the ground before and after the edit the same way placing does; the
         // difference between where it was and where the old ground would seat it is its clearance,
         // which it keeps. Ground that didn't change under the footprint leaves the object untouched.
-        static bool TryRefit(PlacedObjectRecord placed, PlacementShape shape, SculptStroke stroke, out PlacedObjectRecord refitted)
+        static bool TryRefit(PlacedObjectRecord placed, PlacementShape shape, TerrainEdit edit, out PlacedObjectRecord refitted)
         {
             refitted = placed;
             var center = Flat(placed.Position);
             var heading = PlacementMath.HeadingOf(placed.Rotation);
-            if (!GroundFit.TryPose(center, shape, heading, placed.Scale, stroke.OriginalHeight, GroundFit.DefaultMaxTiltDegrees, out var before, out var oldRotation)
-                || !GroundFit.TryPose(center, shape, heading, placed.Scale, stroke.SampleHeight, GroundFit.DefaultMaxTiltDegrees, out var after, out var rotation))
+            if (!GroundFit.TryPose(center, shape, heading, placed.Scale, edit.OriginalHeight, GroundFit.DefaultMaxTiltDegrees, out var before, out var oldRotation)
+                || !GroundFit.TryPose(center, shape, heading, placed.Scale, edit.SampleHeight, GroundFit.DefaultMaxTiltDegrees, out var after, out var rotation))
                 return false;
 
             if (Vector3.DistanceSquared(before, after) < 1e-10f && Math.Abs(Quaternion.Dot(oldRotation, rotation)) > 1f - 1e-7f)

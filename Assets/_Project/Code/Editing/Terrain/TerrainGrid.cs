@@ -5,6 +5,7 @@ using System.Numerics;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Data.Terrain;
+using Forge.Editing.Geometry;
 
 namespace Forge.Editing.Terrain
 {
@@ -65,6 +66,40 @@ namespace Forge.Editing.Terrain
 
         /// <summary>Height at a ground position (x, z), bilinear between samples; null outside the terrain.</summary>
         public float? HeightAt(Vector2 ground) => Bilinear(ground, Spacing, SampleHeight);
+
+        /// <summary>Every terrain sample in the square of half-edge <paramref name="reach"/> around <paramref name="center"/>.</summary>
+        public IEnumerable<(int Gx, int Gz, Vector2 Ground, float Height)> SamplesAround(Vector2 center, float reach)
+        {
+            var firstX = (int)Math.Ceiling((center.X - reach) / Spacing);
+            var lastX = (int)Math.Floor((center.X + reach) / Spacing);
+            var firstZ = (int)Math.Ceiling((center.Y - reach) / Spacing);
+            var lastZ = (int)Math.Floor((center.Y + reach) / Spacing);
+            for (var gz = firstZ; gz <= lastZ; gz++)
+            for (var gx = firstX; gx <= lastX; gx++)
+            {
+                if (SampleHeight(gx, gz) is float height)
+                    yield return (gx, gz, new Vector2(gx * Spacing, gz * Spacing), height);
+            }
+        }
+
+        /// <summary>
+        /// The mean height of the terrain samples inside <paramref name="area"/>, or the height at its center when it
+        /// is too small to hold a sample; null where there is no terrain.
+        /// </summary>
+        public float? AverageHeight(GroundRect area)
+        {
+            var sum = 0.0;
+            var count = 0;
+            foreach (var sample in SamplesAround(area.Center, area.Reach))
+            {
+                if (area.DistanceOutside(sample.Ground) > 0f)
+                    continue;
+                sum += sample.Height;
+                count++;
+            }
+
+            return count > 0 ? (float)(sum / count) : HeightAt(area.Center);
+        }
 
         /// <summary>
         /// The height at <paramref name="ground"/>, bilinear between the four global samples around it as

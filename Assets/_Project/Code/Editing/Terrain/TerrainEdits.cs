@@ -9,25 +9,32 @@ namespace Forge.Editing.Terrain
     public static class TerrainEdits
     {
         /// <summary>
-        /// Writes every chunk the stroke changed, and the objects <paramref name="follower"/>
+        /// Writes every chunk the edit changed, and the objects <paramref name="follower"/>
         /// moved with the ground (if given), as one undo step. Returns the number of chunks written.
         /// </summary>
-        public static int Commit(EditSession session, SculptStroke stroke, TerrainFollower follower = null)
+        public static int Commit(EditSession session, TerrainEdit edit, TerrainFollower follower = null) =>
+            Commit(session, edit, follower, out _);
+
+        /// <inheritdoc cref="Commit(EditSession, TerrainEdit, TerrainFollower)"/>
+        /// <param name="movedObjects">How many objects moved with the ground.</param>
+        public static int Commit(EditSession session, TerrainEdit edit, TerrainFollower follower, out int movedObjects)
         {
             if (session == null)
                 throw new ArgumentNullException(nameof(session));
-            if (stroke == null)
-                throw new ArgumentNullException(nameof(stroke));
+            if (edit == null)
+                throw new ArgumentNullException(nameof(edit));
 
-            var chunks = stroke.ChangedRecords();
+            movedObjects = 0;
+            var chunks = edit.ChangedRecords();
             if (chunks.Count == 0)
                 return 0;
 
             var moved = follower == null
                 ? new List<PlacedObjectRecord>()
-                : follower.Follow(stroke).Where(placed => IsMove(session, placed)).ToList();
+                : follower.Follow(edit).Where(placed => IsMove(session, placed)).ToList();
+            movedObjects = moved.Count;
 
-            session.Batch($"Sculpt ({stroke.Brush.Mode})", () =>
+            session.Batch(edit.Description, () =>
             {
                 foreach (var chunk in chunks)
                     session.Put(chunk);

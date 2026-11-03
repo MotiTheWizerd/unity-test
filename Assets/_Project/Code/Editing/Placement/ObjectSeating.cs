@@ -35,6 +35,9 @@ namespace Forge.Editing.Placement
             return _shapeOf(baseObject.AssetKey);
         }
 
+        /// <summary>The shape instances of base object <paramref name="baseId"/> are tilted to the slope with, or null if they stay upright.</summary>
+        public PlacementShape? SlopeShapeOf(RecordId baseId) => _slopeShapeOf(baseId);
+
         /// <summary>
         /// The pose of <paramref name="baseObject"/> resting on <paramref name="ground"/>, heading
         /// <paramref name="yawDegrees"/>, at <paramref name="scale"/>. Only terrain tilts objects: one resting
@@ -45,7 +48,7 @@ namespace Forge.Editing.Placement
             if (baseObject == null)
                 throw new ArgumentNullException(nameof(baseObject));
 
-            var slopeShape = onTerrain ? _slopeShapeOf(baseObject.Id) : null;
+            var slopeShape = onTerrain ? SlopeShapeOf(baseObject.Id) : null;
             if (slopeShape.HasValue && GroundFit.TryPose(new Vector2(ground.X, ground.Z), slopeShape.Value, yawDegrees, scale,
                     _terrainHeightAt, GroundFit.DefaultMaxTiltDegrees, out var pivot, out var rotation))
                 return new ObjectPose(pivot, rotation);

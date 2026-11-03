@@ -164,7 +164,7 @@ namespace Forge.Tests.Editing
             var registry = BuildingFixture.Create().Registry;
 
             Assert.That(registry.Commands.Select(c => c.Name),
-                Is.EqualTo(new[] { "list_objects", "inspect_area", "place_objects", "place_line", "delete_objects" }));
+                Is.EqualTo(new[] { "list_objects", "inspect_area", "flatten_area", "place_objects", "place_line", "delete_objects" }));
             foreach (var command in registry.Commands)
                 Assert.DoesNotThrow(() => Walk(command.ArgumentsType), command.Name);
         }
