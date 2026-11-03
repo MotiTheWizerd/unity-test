@@ -232,6 +232,9 @@ one in the active plugin.
     object's natural variation. Unknown ids refuse the whole call; positions without terrain are skipped.
   - `place_line`: one object end to end along a path, stretch by stretch, exactly like the place tool's
     Shift line (`PlacementStroke`); corners shared by two stretches get one object; `closed` encloses an area.
+  - `adjust_objects`: moves, turns and resizes placed objects by id; what an item leaves out stays as it is,
+    and each object is re-seated on the terrain by `ObjectSeating` at its new spot, then committed through
+    `ObjectEdits.Transform` as one step. Unknown ids and spots without terrain are skipped and reported.
   - `delete_objects`: placed objects by id.
 - The editor actions that predate the registry (drop to ground, frame, undo/redo, save, the tools' gestures)
   are not commands yet; each moves into the registry when the agent needs it.
