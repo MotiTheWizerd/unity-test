@@ -187,6 +187,45 @@
     color: rgb(240, 122, 110);
 }
 
+/* Markdown in agent replies (MarkdownView). */
+.forge-md__block {
+    white-space: normal;
+}
+
+.forge-md__block--spaced {
+    margin-top: 6px;
+}
+
+.forge-md__block--item-spaced {
+    margin-top: 2px;
+}
+
+.forge-md__item {
+    flex-direction: row;
+}
+
+.forge-md__marker {
+    min-width: 14px;
+    margin-right: 2px;
+}
+
+.forge-md__item-text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    white-space: normal;
+}
+
+.forge-md__heading {
+    -unity-font-style: bold;
+}
+
+.forge-md__code {
+    padding: 4px;
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.25);
+    color: rgb(169, 211, 255);
+}
+
 .forge-agent-review {
     margin-bottom: 6px;
     padding: 6px;

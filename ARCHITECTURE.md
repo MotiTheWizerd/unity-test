@@ -386,7 +386,10 @@ slopes), so results are exact and every edit goes through the edit session.
   extent and the selection. **While a draft is open, editing rests**: the controller deactivates the active tool
   (only the camera and F work), the editing dock is disabled, and `EditorContext` refuses edits, undo, redo and
   saving (`IsDraftOpen`). The agent dock on the right (`AgentSection`) shows the transcript, Accept / Retry /
-  Discard while reviewing, and a message box (Enter sends, Shift+Enter: new line).
+  Discard while reviewing, and a message box (Enter sends, Shift+Enter: new line). The agent's replies are
+  Markdown: `Forge.Core.Text.Markdown` (engine-free) parses the subset chat uses into blocks and styled spans, and
+  `MarkdownView` lays them out (a label per block, list items as marker + text, rich text wrapped in `<noparse>`
+  so the words are never read as tags). Everything else in the transcript is shown exactly as written.
 - `EditorCommands` holds one-shot actions shared by shortcuts and UI buttons.
   `DropSelectionToGround` (End) finds the terrain under each selected object, looking through
   other objects, and moves the object so the lowest point of its renderer bounds rests on

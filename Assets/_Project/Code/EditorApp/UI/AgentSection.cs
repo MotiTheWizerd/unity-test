@@ -112,13 +112,12 @@ namespace Forge.EditorApp.UI
                 _shownEntries = 0;
             }
 
-            Label last = null;
+            VisualElement last = null;
             for (var i = _shownEntries; i < entries.Count; i++)
             {
-                last = new Label(entries[i].Text);
+                last = Entry(entries[i]);
                 last.AddToClassList(EntryClass);
                 last.AddToClassList($"{EntryClass}--{entries[i].Role.ToString().ToLowerInvariant()}");
-                last.selection.isSelectable = true;
                 _transcript.Add(last);
             }
 
@@ -129,6 +128,17 @@ namespace Forge.EditorApp.UI
                 var newest = last;
                 _transcript.schedule.Execute(() => _transcript.ScrollTo(newest));
             }
+        }
+
+        // The agent writes Markdown; everything else (the user's words, tool activity, notices) is shown as written.
+        static VisualElement Entry(ChatEntry entry)
+        {
+            if (entry.Role == ChatRole.Agent)
+                return MarkdownView.Build(entry.Text);
+
+            var label = new Label(entry.Text) { enableRichText = false };
+            label.selection.isSelectable = true;
+            return label;
         }
     }
 }
