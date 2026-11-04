@@ -212,6 +212,12 @@
     margin-right: 8px;
 }
 
+/* Segmented choices in the bar size to their labels (the dock stretches them to share its width). */
+.forge-options .forge-choices > Button {
+    flex-grow: 0;
+    flex-basis: auto;
+}
+
 .forge-options__readout {
     min-width: 150px;
 }

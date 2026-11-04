@@ -31,6 +31,12 @@ namespace Forge.Editing.Geometry
 
         public float HeadingDegrees { get; }
 
+        /// <summary>Unit vector across the front (local +X), along <see cref="Width"/>.</summary>
+        public Vector2 Across => Axes().Across;
+
+        /// <summary>Unit vector toward the front (local +Z), along <see cref="Depth"/>.</summary>
+        public Vector2 Front => Axes().Front;
+
         /// <summary>Distance from the center to the farthest corner.</summary>
         public float Reach => (float)Math.Sqrt(Width * Width + Depth * Depth) / 2f;
 

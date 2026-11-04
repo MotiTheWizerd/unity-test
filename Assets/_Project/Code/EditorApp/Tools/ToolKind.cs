@@ -21,6 +21,9 @@ namespace Forge.EditorApp.Tools
         /// <summary>Click on a surface to place the selected palette object.</summary>
         Place,
 
+        /// <summary>Drag a rectangle to lay the palette object around it (walls, fences) or over it (floor tiles).</summary>
+        Outline,
+
         /// <summary>Paint on the terrain to raise, lower, flatten or smooth it.</summary>
         Sculpt,
 

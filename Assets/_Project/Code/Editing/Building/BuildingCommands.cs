@@ -16,6 +16,7 @@ namespace Forge.Editing.Building
             registry.Add(new FlattenAreaCommand(context));
             registry.Add(new PlaceObjectsCommand(context));
             registry.Add(new PlaceLineCommand(context));
+            registry.Add(new PlaceOutlineCommand(context));
             registry.Add(new AdjustObjectsCommand(context));
             registry.Add(new DeleteObjectsCommand(context));
         }

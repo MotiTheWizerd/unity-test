@@ -9,7 +9,7 @@ namespace Forge.EditorApp.Tools
     /// </summary>
     public sealed class ToolDefinition
     {
-        public ToolDefinition(ToolKind kind, string name, Key key, int group, bool editsWorld, string hint)
+        public ToolDefinition(ToolKind kind, string name, Key key, int group, bool editsWorld, string hint, bool laysPaletteObject = false)
         {
             Kind = kind;
             Name = name ?? throw new ArgumentNullException(nameof(name));
@@ -17,6 +17,7 @@ namespace Forge.EditorApp.Tools
             Group = group;
             EditsWorld = editsWorld;
             Hint = hint ?? throw new ArgumentNullException(nameof(hint));
+            LaysPaletteObject = laysPaletteObject;
         }
 
         public ToolKind Kind { get; }
@@ -43,5 +44,11 @@ namespace Forge.EditorApp.Tools
 
         /// <summary>One sentence on how to use it: the strip's tooltip and the options bar's hint.</summary>
         public string Hint { get; }
+
+        /// <summary>
+        /// Whether the tool lays the palette's chosen object (place, outline): it needs one, and picking an object in
+        /// the palette keeps it instead of switching to the place tool.
+        /// </summary>
+        public bool LaysPaletteObject { get; }
     }
 }

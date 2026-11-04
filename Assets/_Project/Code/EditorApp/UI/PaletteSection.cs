@@ -65,8 +65,8 @@ namespace Forge.EditorApp.UI
                     : $"{shown.Count} of {source.Count} objects");
             }
 
-            // The object being placed stays marked while the hand is only held for a moment (Space).
-            var placing = _context.ActiveTool == ToolKind.Place;
+            // The object being laid stays marked while the hand is only held for a moment (Space).
+            var placing = ToolCatalog.Of(_context.ActiveTool).LaysPaletteObject;
             foreach (var pair in _buttons)
                 PanelElements.SetActive(pair.Value, placing && pair.Key == _context.SelectedBaseId);
         }

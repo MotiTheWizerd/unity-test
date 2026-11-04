@@ -85,9 +85,9 @@ namespace Forge.EditorApp
             var tool = ToolCatalog.Of(kind);
             if (tool.EditsWorld && RefusedForDraft(tool.Name))
                 return false;
-            if (kind == ToolKind.Place && SelectedBaseObject == null)
+            if (tool.LaysPaletteObject && SelectedBaseObject == null)
             {
-                Report("Place: pick an object in the palette first");
+                Report($"{tool.Name}: pick an object in the palette first");
                 return false;
             }
 
@@ -141,13 +141,23 @@ namespace Forge.EditorApp
         public BaseObjectRecord SelectedBaseObject =>
             Session.World.Records.TryGet(SelectedBaseId, out var record) ? record as BaseObjectRecord : null;
 
-        /// <summary>Switches to the place tool with <paramref name="baseId"/> (1-9 and the palette buttons).</summary>
+        /// <summary>
+        /// Chooses <paramref name="baseId"/> to lay (1-9 and the palette buttons). A tool that lays the palette's
+        /// object (place, outline) keeps going with it; any other switches to the place tool.
+        /// </summary>
         public void SelectPlacement(RecordId baseId)
         {
             SelectedBaseId = baseId;
             RerollPlacement();
-            SelectTool(ToolKind.Place);
+            if (!ToolCatalog.Of(ActiveTool).LaysPaletteObject)
+                SelectTool(ToolKind.Place);
         }
+
+        /// <summary>Whether the outline tool goes around its rectangle or covers it.</summary>
+        public RectPattern OutlinePattern { get; set; } = RectPattern.Outline;
+
+        /// <summary>Whether the outline tool sizes its rectangle to whole pieces, so every side ends cleanly.</summary>
+        public bool OutlineSnapToPieces { get; set; } = true;
 
         /// <summary>Turn per [ / ] press while placing; with Shift, <see cref="PlacementCoarseStep"/>.</summary>
         public const float PlacementStep = 15f;

@@ -6,7 +6,10 @@ using UnityEngine.UIElements;
 
 namespace Forge.EditorApp.UI
 {
-    /// <summary>The place tool's options: the turn ([ ]), random turn and size, align to slope, and a painted row's gaps.</summary>
+    /// <summary>
+    /// The options of the tools that lay the palette's object (place, outline): the turn ([ ]), random turn and size,
+    /// align to slope, and the gap between pieces (plus a painted row's random extra).
+    /// </summary>
     public sealed class PlacementSection : IPanelSection
     {
         readonly EditorContext _context;
@@ -34,10 +37,14 @@ namespace Forge.EditorApp.UI
 
         public void Refresh()
         {
-            var placing = _context.CurrentTool == ToolKind.Place;
-            PanelElements.SetVisible(_group, placing);
-            if (!placing)
+            var tool = _context.CurrentTool;
+            var laying = ToolCatalog.Of(tool).LaysPaletteObject;
+            PanelElements.SetVisible(_group, laying);
+            if (!laying)
                 return;
+
+            // A rectangle is laid at regular spacing; only a painted row draws a random extra per gap.
+            PanelElements.SetVisible(_gapRandom, tool == ToolKind.Place);
 
             var roll = _context.PlacementRoll;
             var varies = _context.PlacementCanVary;

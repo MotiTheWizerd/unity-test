@@ -43,6 +43,7 @@ namespace Forge.EditorApp.UI
                 new ToolStrip(Root, context),
                 new ToolOptionsBar(Root, context),
                 new SelectionSection(Root, context, commands),
+                new OutlineSection(Root, context),
                 new PlacementSection(Root, context),
                 new SculptSection(Root, context),
                 new PaletteSection(Root, context),

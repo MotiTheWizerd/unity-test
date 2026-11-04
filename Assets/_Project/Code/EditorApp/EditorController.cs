@@ -65,6 +65,7 @@ namespace Forge.EditorApp
                 { ToolKind.Scale, new SelectTransformTool(ToolKind.Scale, context, view, picker, _camera, _gizmoMaterial, seating) },
                 { ToolKind.Hand, new HandTool(context, _flyCamera) },
                 { ToolKind.Place, new PlaceTool(context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
+                { ToolKind.Outline, new OutlineTool(context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
                 { ToolKind.Sculpt, new SculptTool(context, view, picker, slopes) },
                 { ToolKind.Mark, new MarkTool(context, picker) },
             };
@@ -177,11 +178,11 @@ namespace Forge.EditorApp
             if (keyboard.endKey.wasPressedThisFrame)
                 Commands.DropSelectionToGround();
 
-            // [ ] adjust the current tool: brush size while sculpting, rotation while placing.
+            // [ ] adjust the current tool: brush size while sculpting, the turn of what the place and outline tools lay.
             var bracket = (keyboard.rightBracketKey.wasPressedThisFrame ? 1 : 0) - (keyboard.leftBracketKey.wasPressedThisFrame ? 1 : 0);
             if (bracket != 0 && _context.CurrentTool == ToolKind.Sculpt)
                 _context.BrushRadius *= Mathf.Pow(1.25f, bracket);
-            else if (bracket != 0 && _context.CurrentTool == ToolKind.Place)
+            else if (bracket != 0 && ToolCatalog.Of(_context.CurrentTool).LaysPaletteObject)
                 _context.RotatePlacement(bracket * (keyboard.shiftKey.isPressed ? EditorContext.PlacementCoarseStep : EditorContext.PlacementStep));
 
             var palette = _context.Palette.Objects;
