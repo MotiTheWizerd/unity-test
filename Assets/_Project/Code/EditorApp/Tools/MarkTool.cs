@@ -22,7 +22,10 @@ namespace Forge.EditorApp.Tools
             _picker = picker ?? throw new ArgumentNullException(nameof(picker));
         }
 
-        public void Activate() => _context.Report("Mark: click the ground for a spot, or drag for an area. Del clears it, Esc goes back.");
+        // The controller shows the tool's hint (ToolCatalog).
+        public void Activate()
+        {
+        }
 
         public void Deactivate() => CancelDrag();
 
@@ -33,7 +36,7 @@ namespace Forge.EditorApp.Tools
                 if (_dragStart.HasValue)
                     CancelDrag();
                 else
-                    _context.ActiveTool = ToolKind.Select;
+                    _context.SelectTool(ToolKind.Select);
                 return;
             }
 

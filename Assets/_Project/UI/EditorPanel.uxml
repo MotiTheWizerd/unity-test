@@ -25,40 +25,7 @@
                 </ui:VisualElement>
 
                 <ui:VisualElement class="forge-section">
-                    <ui:Label class="forge-section__header" text="TRANSFORM" />
-                    <ui:VisualElement name="transform-modes" class="forge-row forge-choices" />
-                    <ui:VisualElement class="forge-row forge-spaced">
-                        <ui:Label name="selection-count" class="forge-grow" />
-                        <ui:Button name="frame-selection" text="Frame (F)" />
-                        <ui:Button name="drop-to-ground" text="Drop (End)" />
-                    </ui:VisualElement>
-                </ui:VisualElement>
-
-                <ui:VisualElement class="forge-section">
-                    <ui:Label class="forge-section__header" text="TERRAIN" />
-                    <ui:Button name="sculpt-tool" text="Sculpt terrain (B)" class="forge-toggle-button" />
-                    <ui:VisualElement name="sculpt-options" class="forge-indented">
-                        <ui:VisualElement name="brush-modes" class="forge-row forge-choices" />
-                        <ui:Slider name="brush-radius" label="Radius" show-input-field="true" />
-                        <ui:Slider name="brush-strength" label="Strength" show-input-field="true" />
-                        <ui:Toggle name="objects-follow" label="Objects follow terrain" />
-                    </ui:VisualElement>
-                </ui:VisualElement>
-
-                <ui:VisualElement class="forge-section">
-                    <ui:Label class="forge-section__header" text="PLACE  (1-9)" />
-                    <ui:VisualElement name="placement-options" class="forge-row forge-indented">
-                        <ui:Label name="placement-rotation" class="forge-grow" />
-                        <ui:Button name="rotate-left" text="[  -15°" />
-                        <ui:Button name="rotate-right" text="+15°  ]" />
-                    </ui:VisualElement>
-                    <ui:Toggle name="placement-randomize" label="Random turn &amp; size" class="forge-indented" />
-                    <ui:Toggle name="placement-align-slope" label="Align to slope" class="forge-indented" />
-                    <ui:VisualElement name="stroke-options" class="forge-indented">
-                        <ui:Slider name="placement-gap" label="Gap (m)" show-input-field="true" />
-                        <ui:Slider name="placement-gap-random" label="Random +" show-input-field="true" />
-                        <ui:Label class="forge-muted" text="Hold and drag to paint a row · Shift: straight line" />
-                    </ui:VisualElement>
+                    <ui:Label class="forge-section__header" text="PALETTE  (1-9)" />
                     <ui:TextField name="palette-search" placeholder-text="Search objects…" class="forge-search" />
                     <ui:Label name="palette-count" class="forge-muted" />
                     <ui:VisualElement name="palette" />
@@ -85,9 +52,36 @@
                 </ui:Foldout>
 
                 <ui:Foldout text="Controls" value="false" class="forge-foldout">
-                    <ui:Label class="forge-muted" text="Click / Shift+click: select&#10;W move · E rotate · R scale · Ctrl snaps&#10;Del: delete · End: drop to ground · F: frame&#10;Esc: cancel / deselect&#10;B: sculpt (hold left mouse) · [ ]: brush size&#10;1-9: place object · [ ]: rotate it (Shift: 90°)&#10;Hold + drag: paint a row · + Shift: straight line&#10;Type in Search to filter, Esc clears&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
+                    <ui:Label class="forge-muted" text="Tools: Q select · W move · E rotate · R scale · H hand&#10;P place · B sculpt · M mark · Esc: back to select&#10;Click / Shift+click: select · Ctrl snaps&#10;Move: drag objects over the ground, or the arrows&#10;Hold Space: hand in any tool&#10;Del: delete · End: drop to ground · F: frame&#10;Sculpt: hold left mouse · [ ]: brush size&#10;1-9: place object · [ ]: rotate it (Shift: 90°)&#10;Hold + drag: paint a row · + Shift: straight line&#10;Type in Search to filter, Esc clears&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
                 </ui:Foldout>
             </ui:ScrollView>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="tool-strip" class="forge-tool-strip" />
+
+        <ui:VisualElement name="tool-options" class="forge-options">
+            <ui:Label name="tool-options-name" class="forge-options__name" />
+            <ui:VisualElement name="options-selection" class="forge-options__group">
+                <ui:Label name="selection-count" />
+                <ui:Button name="frame-selection" text="Frame (F)" />
+                <ui:Button name="drop-to-ground" text="Drop (End)" />
+            </ui:VisualElement>
+            <ui:VisualElement name="options-place" class="forge-options__group">
+                <ui:Label name="placement-rotation" class="forge-options__readout" />
+                <ui:Button name="rotate-left" text="[  -15°" />
+                <ui:Button name="rotate-right" text="+15°  ]" />
+                <ui:Toggle name="placement-randomize" label="Random turn &amp; size" />
+                <ui:Toggle name="placement-align-slope" label="Align to slope" />
+                <ui:Slider name="placement-gap" label="Gap (m)" show-input-field="true" class="forge-options__slider" />
+                <ui:Slider name="placement-gap-random" label="Random +" show-input-field="true" class="forge-options__slider" />
+            </ui:VisualElement>
+            <ui:VisualElement name="options-sculpt" class="forge-options__group">
+                <ui:VisualElement name="brush-modes" class="forge-row forge-choices" />
+                <ui:Slider name="brush-radius" label="Radius" show-input-field="true" class="forge-options__slider" />
+                <ui:Slider name="brush-strength" label="Strength" show-input-field="true" class="forge-options__slider" />
+                <ui:Toggle name="objects-follow" label="Objects follow terrain" />
+            </ui:VisualElement>
+            <ui:Label name="tool-options-hint" class="forge-muted forge-options__hint" />
         </ui:VisualElement>
 
         <ui:VisualElement name="agent-dock" class="forge-dock forge-dock--right">

@@ -335,14 +335,26 @@ slopes), so results are exact and every edit goes through the edit session.
   skipped, record changed → **updated in place** (transform / terrain heights), dependency
   (e.g. base object) changed → rebuilt. `RecordLink` maps scene objects back to record ids.
   `PreviewTerrain`/`ResetTerrain` and `ResetTransforms` support tool previews.
-- **Tools** (`Tools/IEditorTool`): exactly one is active, chosen through `EditorContext.ActiveTool`.
-  `EditorController` handles global shortcuts and passes a filtered `ToolInput` to the
-  active tool. Clicks over the UI panel and while the right mouse button is held are removed.
-  - `SelectTransformTool`: click / Shift+click to select. Drag the gizmo of the current
-    `TransformMode` (W move, E rotate, R scale; Ctrl snaps). Move: arrows (axis) or center ball
-    (ground plane). Rotate: X/Y/Z rings. Scale: axis cubes or center cube (camera-facing plane).
-    The drag previews through `WorldView.PreviewObject` and commits one `ObjectEdits.Transform`
-    on release. Esc cancels and resets the preview. Del deletes the selection.
+- **Tools** (`Tools/IEditorTool`), Photoshop style: exactly one drives the mouse. **`ToolCatalog`** is the one
+  table of tools (`ToolDefinition`: kind, name, key, strip group, hint, and `EditsWorld`); the tool strip, the
+  keys, the options bar and the status hint all read it. Q Select, W Move, E Rotate, R Scale, H Hand, P Place,
+  B Sculpt, M Mark. `EditorContext.SelectTool` picks one (`ActiveTool`); tools that change the world refuse
+  while the agent's build is open, and Place needs a palette object. **Holding Space lends the hand** to any
+  tool (`EditorContext.HeldTool`; it only starts between drags and ends once Space and the button are let go);
+  `CurrentTool` is the held tool, else the picked one. `EditorController` handles the global shortcuts, reports
+  the tool's hint on every switch, and passes a filtered `ToolInput` (ray, pointer position and delta, buttons,
+  modifiers) to the current tool. Clicks over the UI panel and while the right mouse button is held are removed.
+  - `SelectTransformTool` serves Select, Move, Rotate and Scale (one instance each, built with its `ToolKind`
+    and that tool's gizmo): click / Shift+click to select, Del deletes, Esc cancels a drag or clears the
+    selection. **Move** drags objects themselves: pressing an object selects it (a selection it belongs to is
+    kept, so the group moves together) and dragging slides them over the ground (`GroundSlide`, engine-free:
+    the pointer moves across the level plane through the grabbed point, and each object is re-seated by
+    `ObjectSeating` exactly as `adjust_objects` does, keeping heading and size; without ground it moves
+    level). A 4-pixel dead zone keeps a selecting click from nudging anything. Its gizmo's arrows move along an
+    axis, the center ball across the level plane. Rotate: X/Y/Z rings. Scale: axis cubes or center cube
+    (camera-facing plane). Ctrl snaps. Every drag previews through `WorldView.PreviewObject` and commits one
+    `ObjectEdits.Transform` on release; Esc resets the preview.
+  - `HandTool`: left-drag pans through `ICameraRig.BeginPan` / `Pan`, the same pan as the middle button.
   - `PlaceTool`: a `PlacementGhost` (a see-through copy built from the same asset catalog, no colliders, no
     shadows, `Shaders/PlacementGhost.shader` via `EditorController._ghostMaterial`) rests on the surface under the
     pointer: its lowest point on the hit (`RendererBounds.PivotAboveBottom`, so center-pivot primitives no
@@ -392,9 +404,10 @@ slopes), so results are exact and every edit goes through the edit session.
   `ObjectSeating` and the context's `PlacementOptions`, pumps the agent's main-thread queue every frame, selects
   the draft's objects (so they stand out and F frames them), and keeps the app running in the background while
   the agent works. `EditorBriefing` tells the agent where the camera looks (the default site), the terrain's
-  extent and the selection. **While a draft is open, editing rests**: the controller deactivates the active tool
-  (only the camera and F work), the editing dock is disabled, and `EditorContext` refuses edits, undo, redo and
-  saving (`IsDraftOpen`). The agent dock on the right (`AgentSection`) shows the transcript, Accept / Retry /
+  extent and the selection. **While a draft is open, editing rests**: the controller deactivates the current tool
+  if it changes the world (`ToolDefinition.EditsWorld`; Select, Hand and Mark keep working, and so do the camera
+  and F), the editing dock, the options bar and the strip's editing tools are disabled, and `EditorContext`
+  refuses edits, undo, redo and saving (`IsDraftOpen`). The agent dock on the right (`AgentSection`) shows the transcript, Accept / Retry /
   Discard while reviewing, and a message box (Enter sends, Shift+Enter: new line). The agent's replies are
   Markdown: `Forge.Core.Text.Markdown` (engine-free) parses the subset chat uses into blocks and styled spans, and
   `MarkdownView` lays them out (a label per block, list items as marker + text, rich text wrapped in `<noparse>`
@@ -419,11 +432,16 @@ slopes), so results are exact and every edit goes through the edit session.
 - **UI** (`EditorApp/UI`, UI Toolkit): the layout lives in `UI/EditorPanel.uxml` and the style in
   `UI/EditorPanel.uss`, rendered by a `UIDocument` with `ForgePanelSettings`.
   `EditorPanel` (MonoBehaviour) only composes **one presenter per section**
-  (`IPanelSection`: World, Transform, Sculpt, Palette, History, Performance, StatusBar). Each presenter
+  (`IPanelSection`: World, Space, ToolStrip, ToolOptionsBar, Selection, Placement, Sculpt, Palette, History,
+  Performance, StatusBar, Agent). The **tool strip** (right of the dock) is built from `ToolCatalog`, grouped,
+  with the current tool highlighted. The **tool options bar** (across the top of the view) shows the current
+  tool's name and hint, and each tool's settings are their own section inside it, shown while that tool is
+  current: `SelectionSection` (count, Frame, Drop) for Select/Move/Rotate/Scale, `PlacementSection` (turn,
+  random turn & size, align to slope, row gaps) for Place, `SculptSection` (brush) for Sculpt. Each presenter
   binds its UXML elements by name (`PanelElements.Required` fails loudly on a mismatch), sends
   actions to `EditorContext` / `EditorCommands`, and mirrors state in `Refresh()` every frame,
   because shortcuts change the same state. `ChoiceRow<TEnum>` is the reusable segmented control.
-  Actions shared by keys and buttons live once on `EditorContext` (`SelectTransformMode`,
+  Actions shared by keys and buttons live once on `EditorContext` (`SelectTool`,
   `SelectPlacement`) or `EditorCommands`. The controller and camera only see `IInputBlocker`:
   `IsPointerOverUI` uses `panel.Pick` (the full-screen root ignores picking), and
   `IsKeyboardCaptured` is true while a text input has focus (or the field hosting one: a Slider
@@ -432,12 +450,12 @@ slopes), so results are exact and every edit goes through the edit session.
   `PaletteSection`: a search field (Esc clears) over one foldout per category; folded categories
   stay folded across rebuilds, and a search opens every group with a match. Buttons are plain
   elements, fine for hundreds of objects; a virtualized `ListView` is the next step for thousands.
-- Controls: W / E / R → move / rotate / scale (Select tool); 1–9 or the palette → Place tool (`[` / `]` rotate,
-  hold + drag paints a row, + Shift a straight one); Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
+- Controls: the tool keys above (Q / W / E / R / H / P / B / M) or the tool strip; hold Space → hand; 1–9 or the
+  palette → Place tool (`[` / `]` rotate, hold + drag paints a row, + Shift a straight one); Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
   (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly; wheel
   dollies towards the point under the cursor; hold middle mouse to pan (the grabbed point stays under
   the cursor); F frames the selection.
-- `FlyCamera` (implements `ICameraRig`) gets the UI blocker and a depth probe (`ScenePicker.TryPickWorld`)
+- `FlyCamera` (implements `ICameraRig`; its `BeginPan` / `Pan` serve the middle button and the hand tool alike) gets the UI blocker and a depth probe (`ScenePicker.TryPickWorld`)
   from the controller: wheel and pan never start over the panel, and both scale with the depth under the
   cursor. `EditorCommands.FrameSelection` fits the selection's combined renderer bounds through
   `ICameraRig.Frame`. The fit distance is the engine-free `ViewMath.FitDistance` (narrower of the vertical
@@ -491,4 +509,4 @@ and the condition for removing it, and is listed here.
 | `Packages/manifest.json` | MCP for Unity tracks the git default branch, not a release tag | Fast setup. The exact commit is locked in `packages-lock.json` | Pin to a release tag on the next package update |
 | `Data.Json/Converters.cs` `HeightFieldConverter` | Terrain heights embedded in plugin JSON as base64 | Keeps a plugin a single file for the walking skeleton | Plugins become packages (folder/zip) with binary side files for heightmaps and assets |
 | `World/Assets/PrefabCatalog.cs` | Catalog entries reference prefabs directly, so all content loads with the catalog at startup | A dozen placeholder prefabs fit in memory easily | Content outgrows memory → load prefabs by asset key through Addressables, streamed with the chunks |
-| `EditorApp/EditorController.cs`, `UI/TransformSection.cs` | Input read by polling devices, not an Input Actions asset; the panel repeats the W/E/R labels | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset, labels read from it |
+| `EditorApp/EditorController.cs`, `Tools/ToolDefinition.cs` | Input read by polling devices, not an Input Actions asset; tool keys are fixed `Key`s in `ToolCatalog` | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset, labels read from it |

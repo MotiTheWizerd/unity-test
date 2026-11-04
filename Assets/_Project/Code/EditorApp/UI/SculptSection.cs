@@ -6,12 +6,11 @@ using UnityEngine.UIElements;
 
 namespace Forge.EditorApp.UI
 {
-    /// <summary>The sculpt tool button and, while sculpting, the brush options.</summary>
+    /// <summary>The sculpt tool's options: brush mode, radius and strength, and whether objects follow the ground.</summary>
     public sealed class SculptSection : IPanelSection
     {
         readonly EditorContext _context;
-        readonly Button _tool;
-        readonly VisualElement _options;
+        readonly VisualElement _group;
         readonly ChoiceRow<BrushMode> _modes;
         readonly Slider _radius;
         readonly Slider _strength;
@@ -21,9 +20,7 @@ namespace Forge.EditorApp.UI
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
 
-            _tool = PanelElements.Required<Button>(root, "sculpt-tool");
-            _tool.clicked += () => _context.ActiveTool = ToolKind.Sculpt;
-            _options = PanelElements.Required<VisualElement>(root, "sculpt-options");
+            _group = PanelElements.Required<VisualElement>(root, "options-sculpt");
             _modes = new ChoiceRow<BrushMode>(
                 PanelElements.Required<VisualElement>(root, "brush-modes"),
                 mode => mode.ToString(),
@@ -45,9 +42,8 @@ namespace Forge.EditorApp.UI
 
         public void Refresh()
         {
-            var sculpting = _context.ActiveTool == ToolKind.Sculpt;
-            PanelElements.SetActive(_tool, sculpting);
-            PanelElements.SetVisible(_options, sculpting);
+            var sculpting = _context.CurrentTool == ToolKind.Sculpt;
+            PanelElements.SetVisible(_group, sculpting);
             if (!sculpting)
                 return;
 

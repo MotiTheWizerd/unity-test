@@ -9,7 +9,8 @@ using UnityEngine.UIElements;
 namespace Forge.EditorApp.UI
 {
     /// <summary>
-    /// The editor's UI Toolkit panel: the editing dock on the left, the agent dock on the right and a status bar,
+    /// The editor's UI Toolkit panel: the editing dock on the left, the tool strip beside it, the tool options bar
+    /// across the top, the agent dock on the right and a status bar,
     /// laid out in EditorPanel.uxml and styled by EditorPanel.uss. A thin adapter: each section is its own
     /// presenter (<see cref="IPanelSection"/>), and this component only composes them, refreshes them every frame
     /// and answers whether the UI owns the input.
@@ -39,7 +40,10 @@ namespace Forge.EditorApp.UI
             {
                 new WorldSection(Root, context),
                 new SpaceSection(Root, context),
-                new TransformSection(Root, context, commands),
+                new ToolStrip(Root, context),
+                new ToolOptionsBar(Root, context),
+                new SelectionSection(Root, context, commands),
+                new PlacementSection(Root, context),
                 new SculptSection(Root, context),
                 new PaletteSection(Root, context),
                 new HistorySection(Root, context),
@@ -75,6 +79,8 @@ namespace Forge.EditorApp.UI
         public void ShowFatal(string message)
         {
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "dock"), false);
+            PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "tool-strip"), false);
+            PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "tool-options"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "agent-dock"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "status"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "fatal"), true);

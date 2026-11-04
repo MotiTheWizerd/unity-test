@@ -40,7 +40,7 @@ namespace Forge.EditorApp.UI
             _markText = PanelElements.Required<Label>(root, "agent-mark-text");
             _mark = PanelElements.Required<Button>(root, "agent-mark");
             _clearMark = PanelElements.Required<Button>(root, "agent-mark-clear");
-            _mark.clicked += () => _context.ActiveTool = _context.ActiveTool == ToolKind.Mark ? ToolKind.Select : ToolKind.Mark;
+            _mark.clicked += () => _context.SelectTool(_context.ActiveTool == ToolKind.Mark ? ToolKind.Select : ToolKind.Mark);
             _clearMark.clicked += () => _context.Mark = null;
             _transcript = PanelElements.Required<ScrollView>(root, "agent-transcript");
             _review = PanelElements.Required<VisualElement>(root, "agent-review");

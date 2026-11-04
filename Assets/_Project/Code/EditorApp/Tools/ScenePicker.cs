@@ -82,9 +82,14 @@ namespace Forge.EditorApp.Tools
         const float ProbeTop = 1000f;
 
         /// <summary>The placed object under the ray, if the first world hit is one.</summary>
-        public bool TryPickPlacedObject(Ray ray, IRecordStore records, out RecordId id)
+        public bool TryPickPlacedObject(Ray ray, IRecordStore records, out RecordId id) =>
+            TryPickPlacedObject(ray, records, out id, out _);
+
+        /// <summary>The placed object under the ray, if the first world hit is one, and the point on it that was hit.</summary>
+        public bool TryPickPlacedObject(Ray ray, IRecordStore records, out RecordId id, out Vector3 point)
         {
             id = default;
+            point = default;
             if (!TryPickWorld(ray, out var hit))
                 return false;
 
@@ -93,6 +98,7 @@ namespace Forge.EditorApp.Tools
                 return false;
 
             id = link.RecordId;
+            point = hit.point;
             return true;
         }
     }

@@ -64,7 +64,36 @@ namespace Forge.EditorApp
 
         public Selection Selection { get; } = new Selection();
 
-        public ToolKind ActiveTool { get; set; } = ToolKind.Select;
+        /// <summary>The tool the user picked (<see cref="SelectTool"/>).</summary>
+        public ToolKind ActiveTool { get; private set; } = ToolKind.Select;
+
+        /// <summary>
+        /// A tool held for the moment (Space: the hand), standing in for <see cref="ActiveTool"/> until it is let go;
+        /// null when none is. Set by the controller, which owns the keys.
+        /// </summary>
+        public ToolKind? HeldTool { get; set; }
+
+        /// <summary>The tool the mouse drives right now: the held one, else the picked one.</summary>
+        public ToolKind CurrentTool => HeldTool ?? ActiveTool;
+
+        /// <summary>
+        /// Picks <paramref name="kind"/> (its key, the tool strip, Esc back to Select). Tools that change the world
+        /// wait while the agent's build is open, and the place tool needs an object from the palette.
+        /// </summary>
+        public bool SelectTool(ToolKind kind)
+        {
+            var tool = ToolCatalog.Of(kind);
+            if (tool.EditsWorld && RefusedForDraft(tool.Name))
+                return false;
+            if (kind == ToolKind.Place && SelectedBaseObject == null)
+            {
+                Report("Place: pick an object in the palette first");
+                return false;
+            }
+
+            ActiveTool = kind;
+            return true;
+        }
 
         /// <summary>The space shown and edited: tools, commands and the agent all work in it.</summary>
         public RecordId ActiveSpace { get; private set; }
@@ -103,16 +132,6 @@ namespace Forge.EditorApp
         /// <summary>The spot or area the user marked for the agent (M), or null. Editor state: never saved or undone.</summary>
         public GroundMark Mark { get; set; }
 
-        /// <summary>What dragging the select tool's gizmo does.</summary>
-        public TransformMode TransformMode { get; private set; } = TransformMode.Move;
-
-        /// <summary>Switches to the select tool in <paramref name="mode"/> (W / E / R and the panel buttons).</summary>
-        public void SelectTransformMode(TransformMode mode)
-        {
-            TransformMode = mode;
-            ActiveTool = ToolKind.Select;
-        }
-
         public string ActivePluginPath => _activeStore.PathFor(Session.ActivePluginId);
 
         /// <summary>Base object the place tool creates.</summary>
@@ -126,8 +145,8 @@ namespace Forge.EditorApp
         public void SelectPlacement(RecordId baseId)
         {
             SelectedBaseId = baseId;
-            ActiveTool = ToolKind.Place;
             RerollPlacement();
+            SelectTool(ToolKind.Place);
         }
 
         /// <summary>Turn per [ / ] press while placing; with Shift, <see cref="PlacementCoarseStep"/>.</summary>

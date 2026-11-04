@@ -5,9 +5,12 @@ namespace Forge.EditorApp.Tools
     /// <summary>One frame of pointer and key input, already filtered by the controller (e.g. UI hits removed).</summary>
     public readonly struct ToolInput
     {
-        public ToolInput(Ray ray, bool pointerOverUI, bool primaryPressed, bool primaryHeld, bool primaryReleased, bool additive, bool cancel, bool delete, bool snap, float deltaTime)
+        public ToolInput(Ray ray, Vector2 pointer, Vector2 pointerDelta, bool pointerOverUI, bool primaryPressed, bool primaryHeld,
+            bool primaryReleased, bool additive, bool cancel, bool delete, bool snap, float deltaTime)
         {
             Ray = ray;
+            Pointer = pointer;
+            PointerDelta = pointerDelta;
             PointerOverUI = pointerOverUI;
             DeltaTime = deltaTime;
             PrimaryPressed = primaryPressed;
@@ -21,6 +24,12 @@ namespace Forge.EditorApp.Tools
 
         /// <summary>World ray under the pointer.</summary>
         public Ray Ray { get; }
+
+        /// <summary>The pointer's screen position, in pixels from the bottom left.</summary>
+        public Vector2 Pointer { get; }
+
+        /// <summary>How far the pointer moved since the previous frame, in pixels.</summary>
+        public Vector2 PointerDelta { get; }
 
         /// <summary>The pointer is over the UI panel, so <see cref="Ray"/> points at the panel, not the world.</summary>
         public bool PointerOverUI { get; }

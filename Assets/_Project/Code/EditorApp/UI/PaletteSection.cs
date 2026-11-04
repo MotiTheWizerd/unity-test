@@ -5,7 +5,6 @@ using Forge.Data;
 using Forge.Data.Records;
 using Forge.EditorApp.Tools;
 using Forge.Editing.Palette;
-using Forge.Editing.Placement;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -24,13 +23,6 @@ namespace Forge.EditorApp.UI
         readonly EditorContext _context;
         readonly TextField _search;
         readonly Label _count;
-        readonly VisualElement _placementOptions;
-        readonly Label _rotation;
-        readonly Toggle _randomize;
-        readonly Toggle _alignToSlope;
-        readonly VisualElement _strokeOptions;
-        readonly Slider _gap;
-        readonly Slider _gapRandom;
         readonly VisualElement _container;
         readonly Dictionary<RecordId, Button> _buttons = new Dictionary<RecordId, Button>();
 
@@ -47,17 +39,6 @@ namespace Forge.EditorApp.UI
             _search = PanelElements.Required<TextField>(root, "palette-search");
             _count = PanelElements.Required<Label>(root, "palette-count");
             _container = PanelElements.Required<VisualElement>(root, "palette");
-            _placementOptions = PanelElements.Required<VisualElement>(root, "placement-options");
-            _rotation = PanelElements.Required<Label>(root, "placement-rotation");
-            PanelElements.Required<Button>(root, "rotate-left").clicked += () => _context.RotatePlacement(-EditorContext.PlacementStep);
-            PanelElements.Required<Button>(root, "rotate-right").clicked += () => _context.RotatePlacement(EditorContext.PlacementStep);
-            _randomize = PanelElements.Required<Toggle>(root, "placement-randomize");
-            _randomize.RegisterValueChangedCallback(e => _context.RandomizePlacement = e.newValue);
-            _alignToSlope = PanelElements.Required<Toggle>(root, "placement-align-slope");
-            _alignToSlope.RegisterValueChangedCallback(e => _context.AlignPlacementToSlope = e.newValue);
-            _strokeOptions = PanelElements.Required<VisualElement>(root, "stroke-options");
-            _gap = GapSlider(root, "placement-gap", value => _context.PlacementGap = value);
-            _gapRandom = GapSlider(root, "placement-gap-random", value => _context.PlacementGapRandom = value);
             _search.RegisterValueChangedCallback(e => _query = e.newValue ?? string.Empty);
 
             // Esc clears the search (EditorPanel also releases the focus on Esc).
@@ -84,29 +65,8 @@ namespace Forge.EditorApp.UI
                     : $"{shown.Count} of {source.Count} objects");
             }
 
+            // The object being placed stays marked while the hand is only held for a moment (Space).
             var placing = _context.ActiveTool == ToolKind.Place;
-            PanelElements.SetVisible(_placementOptions, placing);
-            PanelElements.SetVisible(_randomize, placing);
-            PanelElements.SetVisible(_alignToSlope, placing);
-            if (placing)
-            {
-                var roll = _context.PlacementRoll;
-                var varies = _context.PlacementCanVary;
-                PanelElements.SetText(_rotation, varies && _context.RandomizePlacement
-                    ? $"Rotation {_context.PlacementYaw:0}° + {roll.YawDegrees:0}°, size ×{roll.Scale:0.00}"
-                    : $"Rotation {_context.PlacementYaw:0}°");
-                _randomize.SetValueWithoutNotify(_context.RandomizePlacement);
-                // Objects without variation (houses, walls) are always placed exactly as chosen.
-                _randomize.SetEnabled(varies);
-                // Upright things (trees, houses) never tilt, so the toggle only matters for fences, walls, rocks.
-                _alignToSlope.SetValueWithoutNotify(_context.AlignPlacementToSlope);
-                _alignToSlope.SetEnabled(_context.PlacementCanAlignToSlope);
-                // Gaps are remembered per object, so switching objects changes what the sliders show.
-                Mirror(_gap, _context.PlacementGap);
-                Mirror(_gapRandom, _context.PlacementGapRandom);
-            }
-
-            PanelElements.SetVisible(_strokeOptions, placing);
             foreach (var pair in _buttons)
                 PanelElements.SetActive(pair.Value, placing && pair.Key == _context.SelectedBaseId);
         }
@@ -159,21 +119,6 @@ namespace Forge.EditorApp.UI
             };
             _buttons.Add(id, button);
             return button;
-        }
-
-        static Slider GapSlider(VisualElement root, string name, Action<float> set)
-        {
-            var slider = PanelElements.Required<Slider>(root, name);
-            slider.lowValue = 0f;
-            slider.highValue = RowGap.Max;
-            slider.RegisterValueChangedCallback(e => set(e.newValue));
-            return slider;
-        }
-
-        static void Mirror(Slider slider, float value)
-        {
-            if (!Mathf.Approximately(slider.value, value))
-                slider.SetValueWithoutNotify(value);
         }
 
         static string CategoryLabel(string category) =>

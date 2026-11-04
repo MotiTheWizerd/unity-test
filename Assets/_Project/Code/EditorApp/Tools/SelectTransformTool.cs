@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Forge.Data;
 using Forge.Data.Records;
 using Forge.Editing;
 using Forge.Editing.Geometry;
+using Forge.Editing.Placement;
 using Forge.Editing.Transforms;
 using Forge.EditorApp.Gizmos;
 using Forge.World;
@@ -13,48 +13,59 @@ using UnityEngine;
 namespace Forge.EditorApp.Tools
 {
     /// <summary>
-    /// Click to select (Shift adds/removes), then drag the gizmo to move, rotate or
-    /// scale the selection (<see cref="EditorContext.TransformMode"/>, W / E / R; hold
-    /// Ctrl to snap). Del deletes the selection. Esc cancels a drag or clears the
-    /// selection. A drag previews on the scene objects and commits one undoable edit on release.
+    /// The select tool and the three transform tools, which share picking: click to select (Shift adds or removes),
+    /// Del deletes the selection, Esc cancels a drag or clears the selection.
+    /// <list type="bullet">
+    /// <item><see cref="ToolKind.Select"/> only selects.</item>
+    /// <item><see cref="ToolKind.Move"/> also drags objects themselves over the ground (<see cref="GroundSlide"/>:
+    /// pressing an object selects it if it isn't already, and dragging slides the whole selection), or the gizmo's
+    /// arrows along one axis and its ball across the level.</item>
+    /// <item><see cref="ToolKind.Rotate"/> and <see cref="ToolKind.Scale"/> drag their gizmo's rings and cubes.</item>
+    /// </list>
+    /// Ctrl snaps. A drag previews on the scene objects and commits one undoable edit on release.
     /// </summary>
     public sealed class SelectTransformTool : IEditorTool, IDisposable
     {
+        // A press on an object only becomes a slide once the pointer has moved this far, so a click that selects
+        // never nudges the object by a hand's jitter.
+        const float SlideDeadZonePixels = 4f;
+
+        readonly ToolKind _kind;
         readonly EditorContext _context;
         readonly WorldView _view;
         readonly ScenePicker _picker;
         readonly Camera _camera;
-        readonly Dictionary<TransformMode, Gizmo> _gizmos;
+        readonly ObjectSeating _seating;
+        readonly Gizmo _gizmo;
         ActiveDrag _drag;
 
-        /// <param name="gizmoMaterial">Material for the gizmos (the always-on-top overlay); null for the default.</param>
-        public SelectTransformTool(EditorContext context, WorldView view, ScenePicker picker, Camera camera, Material gizmoMaterial)
+        /// <param name="kind">Select, Move, Rotate or Scale.</param>
+        /// <param name="gizmoMaterial">Material for the gizmo (the always-on-top overlay); null for the default.</param>
+        /// <param name="seating">How sliding objects are set down on the ground, exactly as placing does.</param>
+        public SelectTransformTool(ToolKind kind, EditorContext context, WorldView view, ScenePicker picker, Camera camera,
+            Material gizmoMaterial, ObjectSeating seating)
         {
+            _kind = kind;
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _picker = picker ?? throw new ArgumentNullException(nameof(picker));
             _camera = camera != null ? camera : throw new ArgumentNullException(nameof(camera));
-            _gizmos = new Dictionary<TransformMode, Gizmo>
-            {
-                { TransformMode.Move, GizmoShapes.Translate(picker.GizmoLayer, gizmoMaterial) },
-                { TransformMode.Rotate, GizmoShapes.Rotate(picker.GizmoLayer, gizmoMaterial) },
-                { TransformMode.Scale, GizmoShapes.Scale(picker.GizmoLayer, gizmoMaterial) },
-            };
+            _seating = seating ?? throw new ArgumentNullException(nameof(seating));
+            _gizmo = CreateGizmo(kind, picker.GizmoLayer, gizmoMaterial);
         }
 
-        public void Activate() => _context.Report("Select: click objects; W move, E rotate, R scale; Ctrl snaps");
+        // The controller shows the tool's hint (ToolCatalog).
+        public void Activate()
+        {
+        }
 
         public void Deactivate()
         {
             CancelDrag();
-            HideAll();
+            _gizmo?.Hide();
         }
 
-        public void Dispose()
-        {
-            foreach (var gizmo in _gizmos.Values)
-                gizmo.Dispose();
-        }
+        public void Dispose() => _gizmo?.Dispose();
 
         public void Tick(in ToolInput input)
         {
@@ -75,79 +86,108 @@ namespace Forge.EditorApp.Tools
             if (input.Cancel)
                 selection.Clear();
 
-            var gizmo = ShowOnly(_context.TransformMode);
             var pivot = ObjectEdits.Pivot(_context.Session, selection.Ids);
-            GizmoHandle? hovered = null;
-            if (pivot.HasValue)
-            {
-                gizmo.Show(pivot.Value.ToUnity(), _camera);
-                if (_picker.TryPickHandle(input.Ray, out var handle))
-                    hovered = handle;
-            }
-            else
-            {
-                gizmo.Hide();
-            }
-
-            gizmo.Highlight(hovered);
-
+            var hovered = HoveredHandle(input.Ray, pivot);
             if (!input.PrimaryPressed)
                 return;
 
             if (hovered.HasValue && pivot.HasValue)
-                BeginDrag(hovered.Value, pivot.Value, input.Ray);
+                BeginHandleDrag(hovered.Value, pivot.Value, input.Ray);
             else
-                Pick(input);
+                PressInWorld(input);
         }
 
-        void Pick(in ToolInput input)
+        // Shows the gizmo on the selection and returns the handle under the pointer, if any.
+        GizmoHandle? HoveredHandle(Ray ray, System.Numerics.Vector3? pivot)
+        {
+            if (_gizmo == null)
+                return null;
+
+            GizmoHandle? hovered = null;
+            if (pivot.HasValue)
+            {
+                _gizmo.Show(pivot.Value.ToUnity(), _camera);
+                if (_picker.TryPickHandle(ray, out var handle))
+                    hovered = handle;
+            }
+            else
+            {
+                _gizmo.Hide();
+            }
+
+            _gizmo.Highlight(hovered);
+            return hovered;
+        }
+
+        void PressInWorld(in ToolInput input)
         {
             var selection = _context.Selection;
-            if (_picker.TryPickPlacedObject(input.Ray, _context.Session.World.Records, out var id))
+            if (!_picker.TryPickPlacedObject(input.Ray, _context.Session.World.Records, out var id, out var point))
             {
-                if (input.Additive)
-                    selection.Toggle(id);
-                else
-                    selection.Set(id);
+                if (!input.Additive)
+                    selection.Clear();
+                return;
             }
-            else if (!input.Additive)
+
+            if (input.Additive)
             {
-                selection.Clear();
+                selection.Toggle(id);
+                return;
             }
+
+            // Moving keeps a selection the press is part of, so the whole group slides together.
+            if (_kind != ToolKind.Move || !selection.Contains(id))
+                selection.Set(id);
+            if (_kind == ToolKind.Move)
+                BeginSlide(point, input);
         }
 
-        void BeginDrag(GizmoHandle handle, System.Numerics.Vector3 pivot, Ray ray)
+        void BeginSlide(Vector3 grabPoint, in ToolInput input)
+        {
+            var pivot = ObjectEdits.Pivot(_context.Session, _context.Selection.Ids);
+            if (!pivot.HasValue)
+                return;
+
+            var records = _context.Session.World.Records;
+            var slide = GroundSlide.TryBegin(pivot.Value, grabPoint.ToNumerics(), input.Ray.origin.ToNumerics(), input.Ray.direction.ToNumerics(),
+                _seating, id => records.TryGet(id, out var record) ? record as BaseObjectRecord : null);
+            Begin(slide, input.Pointer, SlideDeadZonePixels);
+        }
+
+        void BeginHandleDrag(GizmoHandle handle, System.Numerics.Vector3 pivot, Ray ray) =>
+            Begin(CreateHandleDrag(handle, pivot, ray), Vector2.zero, deadZonePixels: 0f);
+
+        void Begin(ITransformDrag drag, Vector2 pressPointer, float deadZonePixels)
         {
             var originals = _context.Selection.Ids
                 .Select(id => _context.Session.World.Records.TryGet(id, out var r) ? r as PlacedObjectRecord : null)
                 .Where(p => p != null)
                 .ToList();
-            var drag = CreateDrag(_context.TransformMode, handle, pivot, ray);
             if (originals.Count == 0 || drag == null)
                 return;
 
-            _drag = new ActiveDrag(drag, _gizmos[_context.TransformMode], originals);
+            _drag = new ActiveDrag(drag, originals, pressPointer, deadZonePixels);
         }
 
-        // Which drag a handle starts depends on the mode; null if the ray can't start it.
-        ITransformDrag CreateDrag(TransformMode mode, GizmoHandle handle, System.Numerics.Vector3 pivot, Ray ray)
+        // Which drag a handle starts depends on the tool; null if the ray can't start it.
+        ITransformDrag CreateHandleDrag(GizmoHandle handle, System.Numerics.Vector3 pivot, Ray ray)
         {
             var origin = ray.origin.ToNumerics();
             var direction = ray.direction.ToNumerics();
             var axis = handle.Direction().ToNumerics();
 
-            switch (mode)
+            switch (_kind)
             {
-                case TransformMode.Move:
+                case ToolKind.Move:
                     var moveConstraint = handle.IsAxis()
                         ? DragConstraint.Line(pivot, axis)
                         : DragConstraint.Plane(pivot, System.Numerics.Vector3.UnitY);
                     return MoveDrag.TryBegin(moveConstraint, origin, direction);
 
-                case TransformMode.Rotate:
+                case ToolKind.Rotate:
                     return handle.IsAxis() ? RotateDrag.TryBegin(pivot, axis, origin, direction) : null;
 
-                case TransformMode.Scale:
+                case ToolKind.Scale:
                     // The center handle scales by distance on a plane facing the camera.
                     var scaleConstraint = handle.IsAxis()
                         ? DragConstraint.Line(pivot, axis)
@@ -168,14 +208,29 @@ namespace Forge.EditorApp.Tools
                 return;
             }
 
+            var released = input.PrimaryReleased || !input.PrimaryHeld;
+            if (!_drag.Started)
+            {
+                // Still a click: let go now and nothing moved.
+                if (released)
+                {
+                    _drag = null;
+                    return;
+                }
+
+                if (Vector2.Distance(input.Pointer, _drag.PressPointer) < _drag.DeadZonePixels)
+                    return;
+                _drag.Started = true;
+            }
+
             var drag = _drag.Drag;
             drag.Update(input.Ray.origin.ToNumerics(), input.Ray.direction.ToNumerics(), input.Snap);
             foreach (var original in _drag.Originals)
                 _view.PreviewObject(drag.Apply(original));
-            _drag.Gizmo.Show(drag.HandlePosition.ToUnity(), _camera);
+            _gizmo?.Show(drag.HandlePosition.ToUnity(), _camera);
             _context.Report($"{drag.Verb} {drag.Readout}");
 
-            if (input.PrimaryReleased || !input.PrimaryHeld)
+            if (released)
                 CommitDrag();
         }
 
@@ -202,42 +257,47 @@ namespace Forge.EditorApp.Tools
         {
             if (_drag == null)
                 return;
-            _view.ResetTransforms(_drag.Originals.Select(p => p.Id));
+            if (_drag.Started)
+                _view.ResetTransforms(_drag.Originals.Select(p => p.Id));
             _drag = null;
         }
 
-        Gizmo ShowOnly(TransformMode mode)
+        static Gizmo CreateGizmo(ToolKind kind, int layer, Material material)
         {
-            foreach (var pair in _gizmos)
+            switch (kind)
             {
-                if (pair.Key != mode)
-                    pair.Value.Hide();
+                case ToolKind.Select: return null;
+                case ToolKind.Move: return GizmoShapes.Translate(layer, material);
+                case ToolKind.Rotate: return GizmoShapes.Rotate(layer, material);
+                case ToolKind.Scale: return GizmoShapes.Scale(layer, material);
+                default: throw new ArgumentOutOfRangeException(nameof(kind), kind, "Not a select or transform tool.");
             }
-
-            return _gizmos[mode];
-        }
-
-        void HideAll()
-        {
-            foreach (var gizmo in _gizmos.Values)
-                gizmo.Hide();
         }
 
         sealed class ActiveDrag
         {
-            public ActiveDrag(ITransformDrag drag, Gizmo gizmo, IReadOnlyList<PlacedObjectRecord> originals)
+            public ActiveDrag(ITransformDrag drag, IReadOnlyList<PlacedObjectRecord> originals, Vector2 pressPointer, float deadZonePixels)
             {
                 Drag = drag;
-                Gizmo = gizmo;
                 Originals = originals;
+                PressPointer = pressPointer;
+                DeadZonePixels = deadZonePixels;
+                Started = deadZonePixels <= 0f;
             }
 
             public ITransformDrag Drag { get; }
 
-            public Gizmo Gizmo { get; }
-
             /// <summary>The selected objects as they were when the drag began.</summary>
             public IReadOnlyList<PlacedObjectRecord> Originals { get; }
+
+            /// <summary>Where the pointer pressed, in screen pixels.</summary>
+            public Vector2 PressPointer { get; }
+
+            /// <summary>How far the pointer must move before the drag starts changing anything.</summary>
+            public float DeadZonePixels { get; }
+
+            /// <summary>Whether the pointer has left the dead zone, so the drag previews and commits.</summary>
+            public bool Started { get; set; }
         }
     }
 }

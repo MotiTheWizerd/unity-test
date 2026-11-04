@@ -9,7 +9,8 @@ namespace Forge.EditorApp
     /// Editor-style camera, like Unity's and Unreal's scene views:
     /// hold right mouse to look and fly with WASD/QE (Shift = fast); mouse wheel dollies
     /// towards the point under the cursor; hold middle mouse to pan, with the world staying
-    /// under the cursor; <see cref="Frame"/> glides to fit a selection.
+    /// under the cursor (<see cref="BeginPan"/> / <see cref="Pan"/>, which the hand tool uses too);
+    /// <see cref="Frame"/> glides to fit a selection.
     /// </summary>
     [RequireComponent(typeof(Camera))]
     public sealed class FlyCamera : MonoBehaviour, ICameraRig
@@ -91,7 +92,7 @@ namespace Forge.EditorApp
 
             var pointer = mouse.position.ReadValue();
             var fast = keyboard.shiftKey.isPressed ? _fastMultiplier : 1f;
-            var manual = Look(keyboard, mouse, fast) | Zoom(mouse, pointer, fast) | Pan(mouse, pointer);
+            var manual = Look(keyboard, mouse, fast) | Zoom(mouse, pointer, fast) | PanWithMiddleButton(mouse, pointer);
 
             // Any manual movement takes over from a Frame glide.
             if (manual)
@@ -142,14 +143,25 @@ namespace Forge.EditorApp
             return true;
         }
 
-        // Drag the world with the middle button: the point grabbed stays under the cursor,
-        // because one pixel of motion covers more meters the deeper that point is.
-        bool Pan(Mouse mouse, Vector2 pointer)
+        public void BeginPan(Vector2 screenPoint) => _panDepth = DepthUnder(_camera.ScreenPointToRay(screenPoint));
+
+        // The point grabbed stays under the cursor, because one pixel of motion covers more meters the deeper
+        // that point is. Panning takes over from a Frame glide.
+        public void Pan(Vector2 screenDelta)
+        {
+            var metersPerPixel = 2f * _panDepth * Mathf.Tan(_camera.fieldOfView * 0.5f * Mathf.Deg2Rad) / Screen.height;
+            var delta = screenDelta * metersPerPixel;
+            transform.position -= transform.right * delta.x + transform.up * delta.y;
+            _glideTarget = null;
+        }
+
+        // Drag the world with the middle button, in any tool (the hand tool does the same with the left one).
+        bool PanWithMiddleButton(Mouse mouse, Vector2 pointer)
         {
             if (mouse.middleButton.wasPressedThisFrame && !IsOverUI(pointer))
             {
                 _panning = true;
-                _panDepth = DepthUnder(_camera.ScreenPointToRay(pointer));
+                BeginPan(pointer);
             }
 
             if (!mouse.middleButton.isPressed)
@@ -157,9 +169,7 @@ namespace Forge.EditorApp
             if (!_panning)
                 return false;
 
-            var metersPerPixel = 2f * _panDepth * Mathf.Tan(_camera.fieldOfView * 0.5f * Mathf.Deg2Rad) / Screen.height;
-            var delta = mouse.delta.ReadValue() * metersPerPixel;
-            transform.position -= transform.right * delta.x + transform.up * delta.y;
+            Pan(mouse.delta.ReadValue());
             return true;
         }
 

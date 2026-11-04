@@ -14,11 +14,11 @@ namespace Forge.EditorApp
 {
     /// <summary>
     /// Builds the editing services the tools share (picking, shapes, seating, commands, the agent) and routes
-    /// input: global shortcuts (Ctrl+S save, Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z undo/redo, 1-9 palette, B sculpt,
-    /// W/E/R move/rotate/scale, [ ] brush size, End drop to ground, F frame selection, M mark for the agent) are
-    /// handled here; everything else is passed to the active tool. Pointer clicks over the UI panel are filtered
-    /// out, and so are shortcuts while a UI text field has the keyboard. While the agent's draft is open, the
-    /// tools rest, except the mark tool, which edits nothing.
+    /// input: global shortcuts (each tool's key from <see cref="ToolCatalog"/>, Space held for the hand, Ctrl+S save,
+    /// Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z undo/redo, 1-9 palette, [ ] brush size or placement turn, End drop to ground,
+    /// F frame selection) are handled here; everything else is passed to the current tool. Pointer clicks over the
+    /// UI panel are filtered out, and so are shortcuts while a UI text field has the keyboard. While the agent's
+    /// draft is open, the tools that change the world rest; select, hand and mark keep working.
     /// </summary>
     public sealed class EditorController : MonoBehaviour
     {
@@ -59,7 +59,11 @@ namespace Forge.EditorApp
             Commands = new EditorCommands(context, view, picker, _flyCamera, slopes);
             _tools = new Dictionary<ToolKind, IEditorTool>
             {
-                { ToolKind.Select, new SelectTransformTool(context, view, picker, _camera, _gizmoMaterial) },
+                { ToolKind.Select, new SelectTransformTool(ToolKind.Select, context, view, picker, _camera, _gizmoMaterial, seating) },
+                { ToolKind.Move, new SelectTransformTool(ToolKind.Move, context, view, picker, _camera, _gizmoMaterial, seating) },
+                { ToolKind.Rotate, new SelectTransformTool(ToolKind.Rotate, context, view, picker, _camera, _gizmoMaterial, seating) },
+                { ToolKind.Scale, new SelectTransformTool(ToolKind.Scale, context, view, picker, _camera, _gizmoMaterial, seating) },
+                { ToolKind.Hand, new HandTool(context, _flyCamera) },
                 { ToolKind.Place, new PlaceTool(context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
                 { ToolKind.Sculpt, new SculptTool(context, view, picker, slopes) },
                 { ToolKind.Mark, new MarkTool(context, picker) },
@@ -94,17 +98,16 @@ namespace Forge.EditorApp
 
             // Keys typed into a UI text field (palette search, slider inputs) are text, not commands.
             var typing = _ui.IsKeyboardCaptured;
+            HoldHandWithSpace(keyboard, mouse, typing);
             if (!typing)
-                HandleViewShortcuts(keyboard);
+                HandleShortcuts(keyboard, mouse);
 
-            if (_context.IsDraftOpen && _context.ActiveTool != ToolKind.Mark)
+            if (_context.IsDraftOpen && ToolCatalog.Of(_context.CurrentTool).EditsWorld)
             {
                 RestWhileDraftIsOpen();
                 return;
             }
 
-            if (!typing && !_context.IsDraftOpen)
-                HandleShortcuts(keyboard);
             SwitchToolIfNeeded();
 
             // Right mouse belongs to the fly camera; tools see the left button only.
@@ -113,6 +116,8 @@ namespace Forge.EditorApp
             var looking = mouse.rightButton.isPressed;
             var input = new ToolInput(
                 _camera.ScreenPointToRay(pointer),
+                pointer,
+                mouse.delta.ReadValue(),
                 pointerOverUI: overPanel,
                 primaryPressed: mouse.leftButton.wasPressedThisFrame && !overPanel && !looking,
                 primaryHeld: mouse.leftButton.isPressed,
@@ -126,23 +131,20 @@ namespace Forge.EditorApp
             _tools[_activeKind.Value].Tick(input);
         }
 
-        // Shortcuts that never edit the world, so they work while the agent's build is open too:
-        // F frames the selection, M toggles the mark tool.
-        void HandleViewShortcuts(Keyboard keyboard)
+        // Holding Space lends the hand to any tool, as in image editors. It only starts between drags (never in the
+        // middle of one), and ends once Space and the button are both let go, so a pan in progress finishes.
+        void HoldHandWithSpace(Keyboard keyboard, Mouse mouse, bool typing)
         {
-            // Hold right mouse = flying; the camera owns the keyboard then.
-            if (keyboard.ctrlKey.isPressed || Mouse.current.rightButton.isPressed)
-                return;
-
-            if (keyboard.fKey.wasPressedThisFrame)
-                Commands.FrameSelection();
-
-            if (keyboard.mKey.wasPressedThisFrame)
-                _context.ActiveTool = _context.ActiveTool == ToolKind.Mark ? ToolKind.Select : ToolKind.Mark;
+            var holding = _context.HeldTool == ToolKind.Hand;
+            if (!holding && !typing && keyboard.spaceKey.wasPressedThisFrame && !mouse.leftButton.isPressed)
+                _context.HeldTool = ToolKind.Hand;
+            else if (holding && !keyboard.spaceKey.isPressed && !mouse.leftButton.isPressed)
+                _context.HeldTool = null;
         }
 
-        void HandleShortcuts(Keyboard keyboard)
+        void HandleShortcuts(Keyboard keyboard, Mouse mouse)
         {
+            // Saving, undo and redo wait while the agent's build is open; the context says so.
             if (keyboard.ctrlKey.isPressed)
             {
                 if (keyboard.sKey.wasPressedThisFrame)
@@ -155,27 +157,31 @@ namespace Forge.EditorApp
             }
 
             // Hold right mouse = flying; the camera owns the keyboard then.
-            if (Mouse.current.rightButton.isPressed)
+            if (mouse.rightButton.isPressed)
                 return;
 
-            if (keyboard.bKey.wasPressedThisFrame)
-                _context.ActiveTool = ToolKind.Sculpt;
+            if (keyboard.fKey.wasPressedThisFrame)
+                Commands.FrameSelection();
 
-            if (keyboard.wKey.wasPressedThisFrame)
-                _context.SelectTransformMode(TransformMode.Move);
-            else if (keyboard.eKey.wasPressedThisFrame)
-                _context.SelectTransformMode(TransformMode.Rotate);
-            else if (keyboard.rKey.wasPressedThisFrame)
-                _context.SelectTransformMode(TransformMode.Scale);
+            // Tools that change the world refuse while the agent's build is open; the context says so.
+            foreach (var tool in ToolCatalog.All)
+            {
+                if (keyboard[tool.Key].wasPressedThisFrame)
+                    _context.SelectTool(tool.Kind);
+            }
+
+            // The rest edits the world, or the tools that do.
+            if (_context.IsDraftOpen)
+                return;
 
             if (keyboard.endKey.wasPressedThisFrame)
                 Commands.DropSelectionToGround();
 
-            // [ ] adjust the active tool: brush size while sculpting, rotation while placing.
+            // [ ] adjust the current tool: brush size while sculpting, rotation while placing.
             var bracket = (keyboard.rightBracketKey.wasPressedThisFrame ? 1 : 0) - (keyboard.leftBracketKey.wasPressedThisFrame ? 1 : 0);
-            if (bracket != 0 && _context.ActiveTool == ToolKind.Sculpt)
+            if (bracket != 0 && _context.CurrentTool == ToolKind.Sculpt)
                 _context.BrushRadius *= Mathf.Pow(1.25f, bracket);
-            else if (bracket != 0 && _context.ActiveTool == ToolKind.Place)
+            else if (bracket != 0 && _context.CurrentTool == ToolKind.Place)
                 _context.RotatePlacement(bracket * (keyboard.shiftKey.isPressed ? EditorContext.PlacementCoarseStep : EditorContext.PlacementStep));
 
             var palette = _context.Palette.Objects;
@@ -188,18 +194,22 @@ namespace Forge.EditorApp
 
         void SwitchToolIfNeeded()
         {
-            if (_activeKind == _context.ActiveTool)
+            var current = _context.CurrentTool;
+            if (_activeKind == current)
                 return;
 
             if (_activeKind.HasValue)
                 _tools[_activeKind.Value].Deactivate();
-            _activeKind = _context.ActiveTool;
-            _tools[_activeKind.Value].Activate();
+            _activeKind = current;
+            var tool = ToolCatalog.Of(current);
+            _context.Report($"{tool.Name}: {tool.Hint}");
+            // A tool may say something more specific (e.g. which object it places).
+            _tools[current].Activate();
         }
 
-        // While the agent builds, or its build waits for review, nothing else edits the world: the active tool
+        // While the agent builds, or its build waits for review, nothing else edits the world: a tool that would
         // rests (its ghosts and gizmos go away) until the draft is accepted or discarded. The camera still flies,
-        // F still frames the build, and the mark tool (which edits nothing) still works.
+        // F still frames the build, and the tools that edit nothing (select, hand, mark) still work.
         void RestWhileDraftIsOpen()
         {
             if (_activeKind.HasValue)

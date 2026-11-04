@@ -145,6 +145,92 @@
     width: 48px;
 }
 
+/* Active choice inside a button made of labels (the tool strip). */
+.forge-root Button.is-active Label {
+    color: rgb(20, 20, 20);
+}
+
+/* The tool strip: one button per tool, right of the dock, groups split by a gap. */
+.forge-tool-strip {
+    position: absolute;
+    left: 320px;
+    top: 10px;
+    width: 78px;
+    padding: 4px;
+    background-color: rgba(24, 26, 31, 0.93);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.forge-tool {
+    flex-direction: row;
+    justify-content: space-between;
+    margin: 1px 0;
+    padding: 4px 6px;
+}
+
+.forge-root .forge-tool__key {
+    color: rgb(128, 138, 156);
+    -unity-font-style: bold;
+}
+
+.forge-tool-strip__gap {
+    height: 8px;
+}
+
+/* The tool options bar: the current tool's name, settings and hint, across the top of the view. */
+.forge-options {
+    position: absolute;
+    left: 408px;
+    right: 360px;
+    top: 10px;
+    padding: 4px 10px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    background-color: rgba(24, 26, 31, 0.93);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.forge-options__name {
+    margin-right: 12px;
+    font-size: 11px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+}
+
+.forge-options__group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.forge-options__group > * {
+    margin-right: 8px;
+}
+
+.forge-options__readout {
+    min-width: 150px;
+}
+
+.forge-options__slider {
+    width: 220px;
+}
+
+/* Toggles in the bar size to their label; the dock's fixed label column would cut them off. */
+.forge-options .unity-toggle > .unity-base-field__label {
+    min-width: 0;
+    width: auto;
+}
+
+.forge-options__hint {
+    width: 100%;
+    margin-top: 2px;
+}
+
 /* The agent's dock, on the right: transcript, review bar, message box. */
 .forge-dock--right {
     left: auto;

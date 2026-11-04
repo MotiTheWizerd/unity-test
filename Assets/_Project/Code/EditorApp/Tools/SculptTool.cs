@@ -60,7 +60,7 @@ namespace Forge.EditorApp.Tools
                 }
                 else
                 {
-                    _context.ActiveTool = ToolKind.Select;
+                    _context.SelectTool(ToolKind.Select);
                 }
 
                 return;
