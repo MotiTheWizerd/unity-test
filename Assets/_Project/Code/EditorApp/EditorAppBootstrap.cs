@@ -8,6 +8,7 @@ using Forge.Data.Json;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Data.Serialization;
+using Forge.Data.Terrain;
 using Forge.EditorApp.Agent;
 using Forge.EditorApp.Diagnostics;
 using Forge.EditorApp.UI;
@@ -15,6 +16,7 @@ using Forge.Editing;
 using Forge.Streaming;
 using Forge.World;
 using Forge.World.Assets;
+using Forge.World.Sky;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -50,6 +52,12 @@ namespace Forge.EditorApp
         [SerializeField, Tooltip("Material of the sea and the lakes (Materials/Water); without one no water is shown.")]
         Material _water;
 
+        [SerializeField, Tooltip("How the sky looks (Settings/Sky); without one the scene keeps its own sky and light.")]
+        SkyProfile _sky;
+
+        [SerializeField, Tooltip("The scene's directional light, which the sky drives as the sun.")]
+        Light _sun;
+
         [SerializeField, Tooltip("How the world-building agent runs; leave empty for an editor without one.")]
         AgentSettings _agent;
 
@@ -64,6 +72,7 @@ namespace Forge.EditorApp
         [NonSerialized] FrameTimeTracker _frames;
         [NonSerialized] InteriorFloor _interiorFloor;
         [NonSerialized] WaterView _waterView;
+        [NonSerialized] SkyView _skyView;
         [NonSerialized] SpaceCameras _spaceCameras;
         [NonSerialized] RecordId _shownSpace;
 
@@ -95,6 +104,7 @@ namespace Forge.EditorApp
                 _view.Sync(_context.Session.World);
                 _interiorFloor = InteriorFloor.Create(transform);
                 _waterView = CreateWaterView();
+                _skyView = CreateSkyView();
                 _spaceCameras = new SpaceCameras();
                 _context.SpaceChanged += OnSpaceChanged;
                 if (!RecordId.TryParse(_profile.StartSpace, out var startSpace) || !_context.ShowSpace(startSpace))
@@ -144,6 +154,7 @@ namespace Forge.EditorApp
 
             _view?.Dispose();
             _waterView?.Dispose();
+            _skyView?.Dispose();
         }
 
         // The camera moves to where it last was in the new space (the scene's own view for the first one), then the
@@ -178,6 +189,20 @@ namespace Forge.EditorApp
             _waterView.Sync(world, _context.ActiveSpace);
             _context.Selection.Prune(world.Records);
             _highlighter.Refresh();
+        }
+
+        // The fog is thick where streaming stops loading land, so the world fades into the sky instead of ending.
+        SkyView CreateSkyView()
+        {
+            if (_sky == null || _sun == null)
+            {
+                Debug.LogWarning("[Forge] EditorApp has no sky profile or sun (EditorAppBootstrap._sky, _sun); the scene keeps its own sky.");
+                return null;
+            }
+
+            var sky = new SkyView(_sky, _sun, transform, _loadRadius * WorldGrid.ChunkSize);
+            sky.ShowProfileSun();
+            return sky;
         }
 
         // The sea is as large as the camera can see in every direction, so it reaches the horizon.

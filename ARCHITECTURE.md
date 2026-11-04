@@ -32,9 +32,9 @@ Assets/_Project/
   Scenes/        Main.unity (editor scene: EditorApp + Main Camera)
   UI/            EditorPanel.uxml/.uss (runtime editor UI), ForgeRuntimeTheme.tss, ForgePanelSettings
   Content/       PrefabCatalog.asset (asset key → prefab); Placeholder/ holds generated placeholder prefabs + materials
-  Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview), Water.shader (the sea)
-  Materials/     GizmoOverlay.mat, PlacementGhost.mat, Water.mat
-  Settings/      URP, input and volume assets; Worlds/ holds the WorldProfile assets; Agent/ the agent's settings and instructions
+  Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview), Water.shader (sea and lakes), Sky.shader (the skybox)
+  Materials/     GizmoOverlay.mat, PlacementGhost.mat, Water.mat, Sky.mat
+  Settings/      URP, input and volume assets; Worlds/ holds the WorldProfile assets; Agent/ the agent's settings and instructions; Sky/ the SkyProfile assets
 Assets/StreamingAssets/Plugins/   shipped base plugins (forge.core.json = our "Skyrim.esm")
 Assets/StreamingAssets/StressWorld/  generated stress-test world (git-ignored, Forge/Generate Stress World)
 <persistentDataPath>/Plugins/     user plugins; the active plugin (forge.user) is saved here
@@ -154,7 +154,8 @@ from its space and coordinate (`terrain/{space ns}/{space name}/c{x}_{z}`), so m
   lowest id and logs a warning.
 - Sculpting only edits existing chunks and never creates new ones. Upright objects follow the ground
   by its height change under their pivot; slope objects (fences, rocks) are also re-tilted.
-- The edge of the streamed area is a hard cut (no fog, distant LOD or impostors yet).
+- The edge of the streamed area is hidden by fog, thick at the load radius; there is no distant LOD or impostors yet, so
+  nothing beyond it shows.
   Plugins load whole into memory at startup, so only the *scene* streams, not the *data*. A
   30 MB JSON plugin takes ~1.3 s to load.
 - The sea is one level for the whole worldspace, so any hollow below it fills, inland or not. Picks go through water
@@ -354,6 +355,15 @@ slopes), so results are exact and every edit goes through the edit session.
   clip across, kept under the camera; each lake (`World/LakeSurfaces`) is a mesh of one quad per `CellRuns` run at its
   level, plus a preview surface the Water tool shows in place of a lake while its level is set. The land hides water
   where it stands higher; there are no colliders.
+  And the **`SkyView`** (`World/Sky`, from `_sky`, a `SkyProfile` in `Settings/Sky`, driving the scene's directional light
+  `_sun`): `Show(sun height, bearing)` sets a runtime copy of the `Forge/Sky` skybox (horizon-to-zenith gradient,
+  ground below the horizon, sun disk, glow and horizon haze), the sun light's direction, color and intensity,
+  exponential-squared fog in the horizon color that is 95% thick at the load radius (so land and sea fade into the
+  sky), ambient light from the skybox (`DynamicGI.UpdateEnvironment`) and a realtime reflection probe that sees only
+  the sky (what the water reflects). Every color comes from the profile's gradients **over the sun's height** (10° below
+  the horizon to overhead), so dawn, noon and dusk are one table; for now the sun stands where the profile puts it
+  (`ShowProfileSun`), and the coming world clock will call `Show` a few times per game hour. Interiors show the same
+  sky until they get lighting templates.
   `Water.shader` (URP, transparent) colors by the water's depth from the camera depth texture, ripples the normals
   with four scrolling sine waves, reflects the sky by fresnel, adds the sun's glint and a foam line at the shore.
 - **Assets**: records store engine-agnostic asset keys; `IAssetCatalog` turns a key into a scene object.
