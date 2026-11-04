@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,8 +10,6 @@ using Forge.Data.Terrain;
 using Forge.UnityEditor.Content;
 using UnityEditor;
 using UnityEngine;
-using Vector3 = System.Numerics.Vector3;
-using Quaternion = System.Numerics.Quaternion;
 
 namespace Forge.UnityEditor
 {
@@ -47,23 +44,10 @@ namespace Forge.UnityEditor
             };
             records.AddRange(PlaceholderContent.All.Select(c => BaseObject(c.Name, c.DisplayName, c.AssetKey, c.Category, c.Placement)));
 
+            // Bare land: the base world ships the objects to build with, and nothing placed.
             for (var cz = -ChunkRadius; cz <= ChunkRadius; cz++)
             for (var cx = -ChunkRadius; cx <= ChunkRadius; cx++)
                 records.Add(ProceduralTerrain.Chunk(PluginId, new ChunkCoord(cx, cz)));
-
-            // A ring of pillars around the origin, standing on the terrain.
-            for (var i = 0; i < 6; i++)
-            {
-                var angle = i * Math.PI * 2 / 6;
-                var x = (float)Math.Cos(angle) * 20f;
-                var z = (float)Math.Sin(angle) * 20f;
-                records.Add(new PlacedObjectRecord(
-                    new RecordId(PluginId, $"ref/pillar_{i + 1:D2}"),
-                    new RecordId(PluginId, "pillar"),
-                    new Vector3(x, ProceduralTerrain.HeightAt(x, z) + 1f, z),
-                    Quaternion.Identity,
-                    1f));
-            }
 
             return new Plugin(new PluginManifest(PluginId, "0.1.0"), records);
         }
