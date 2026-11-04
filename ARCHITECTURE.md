@@ -348,7 +348,10 @@ slopes), so results are exact and every edit goes through the edit session.
   modifiers) to the current tool. Clicks over the UI panel and while the right mouse button is held are removed.
   - `SelectTransformTool` serves Select, Move, Rotate and Scale (one instance each, built with its `ToolKind`
     and that tool's gizmo): click / Shift+click to select, Del deletes, Esc cancels a drag or clears the
-    selection. **Move** drags objects themselves: pressing an object selects it (a selection it belongs to is
+    selection. **Box select**: a press on empty space that is dragged past the dead zone draws a box
+    (`EditorContext.SelectionBox`, an engine-free `ScreenBox` in screen pixels, drawn by `SelectionBoxView`);
+    letting go selects every loaded object (`WorldView.PlacedObjects`) whose renderer-bounds center shows inside
+    it, Shift adds them. A press on empty space that isn't dragged clears the selection, as a click always did. **Move** drags objects themselves: pressing an object selects it (a selection it belongs to is
     kept, so the group moves together) and dragging slides them over the ground (`GroundSlide`, engine-free:
     the pointer moves across the level plane through the grabbed point, and each object is re-seated by
     `ObjectSeating` exactly as `adjust_objects` does, keeping heading and size; without ground it moves

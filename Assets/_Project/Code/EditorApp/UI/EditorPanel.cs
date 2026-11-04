@@ -40,6 +40,7 @@ namespace Forge.EditorApp.UI
             {
                 new WorldSection(Root, context),
                 new SpaceSection(Root, context),
+                new SelectionBoxView(Root, context),
                 new ToolStrip(Root, context),
                 new ToolOptionsBar(Root, context),
                 new SelectionSection(Root, context, commands),

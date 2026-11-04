@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Forge.Data;
 using Forge.Data.Records;
 using Forge.Editing;
 using Forge.Editing.Geometry;
@@ -14,6 +15,7 @@ namespace Forge.EditorApp.Tools
 {
     /// <summary>
     /// The select tool and the three transform tools, which share picking: click to select (Shift adds or removes),
+    /// drag on empty space for a box that selects every loaded object whose middle shows inside it (Shift adds them),
     /// Del deletes the selection, Esc cancels a drag or clears the selection.
     /// <list type="bullet">
     /// <item><see cref="ToolKind.Select"/> only selects.</item>
@@ -26,9 +28,9 @@ namespace Forge.EditorApp.Tools
     /// </summary>
     public sealed class SelectTransformTool : IEditorTool, IDisposable
     {
-        // A press on an object only becomes a slide once the pointer has moved this far, so a click that selects
-        // never nudges the object by a hand's jitter.
-        const float SlideDeadZonePixels = 4f;
+        // A press only becomes a slide or a selection box once the pointer has moved this far, so a click that
+        // selects never nudges an object by a hand's jitter, and a click on empty space stays a click.
+        const float DragDeadZonePixels = 4f;
 
         readonly ToolKind _kind;
         readonly EditorContext _context;
@@ -38,6 +40,10 @@ namespace Forge.EditorApp.Tools
         readonly ObjectSeating _seating;
         readonly Gizmo _gizmo;
         ActiveDrag _drag;
+
+        // A press on empty space: where it started, and whether Shift adds the box to the selection.
+        Vector2? _boxStart;
+        bool _boxAdditive;
 
         /// <param name="kind">Select, Move, Rotate or Scale.</param>
         /// <param name="gizmoMaterial">Material for the gizmo (the always-on-top overlay); null for the default.</param>
@@ -62,6 +68,7 @@ namespace Forge.EditorApp.Tools
         public void Deactivate()
         {
             CancelDrag();
+            DropBox();
             _gizmo?.Hide();
         }
 
@@ -72,6 +79,12 @@ namespace Forge.EditorApp.Tools
             if (_drag != null)
             {
                 TickDrag(input);
+                return;
+            }
+
+            if (_boxStart.HasValue)
+            {
+                TickBox(input);
                 return;
             }
 
@@ -124,8 +137,9 @@ namespace Forge.EditorApp.Tools
             var selection = _context.Selection;
             if (!_picker.TryPickPlacedObject(input.Ray, _context.Session.World.Records, out var id, out var point))
             {
-                if (!input.Additive)
-                    selection.Clear();
+                // Empty space: a drag draws a selection box, a click clears the selection (Shift: keeps it).
+                _boxStart = input.Pointer;
+                _boxAdditive = input.Additive;
                 return;
             }
 
@@ -142,6 +156,59 @@ namespace Forge.EditorApp.Tools
                 BeginSlide(point, input);
         }
 
+        // The box follows the pointer once it leaves the dead zone; letting go selects what is inside, while a
+        // press that never became a drag is a click on empty space.
+        void TickBox(in ToolInput input)
+        {
+            if (input.Cancel)
+            {
+                DropBox();
+                return;
+            }
+
+            var start = _boxStart.Value;
+            if (_context.SelectionBox != null || Vector2.Distance(input.Pointer, start) >= DragDeadZonePixels)
+                _context.SelectionBox = Box(start, input.Pointer);
+
+            if (input.PrimaryHeld && !input.PrimaryReleased)
+                return;
+
+            var box = _context.SelectionBox;
+            var additive = _boxAdditive;
+            DropBox();
+            if (box.HasValue)
+                SelectInside(box.Value, additive);
+            else if (!additive)
+                _context.Selection.Clear();
+        }
+
+        // Every loaded object whose middle shows inside the box.
+        void SelectInside(ScreenBox box, bool additive)
+        {
+            var inside = new List<RecordId>();
+            foreach (var pair in _view.PlacedObjects)
+            {
+                if (!RendererBounds.TryGet(pair.Value, out var bounds))
+                    continue;
+                var screen = _camera.WorldToScreenPoint(bounds.center);
+                if (screen.z > 0f && box.Contains(new System.Numerics.Vector2(screen.x, screen.y)))
+                    inside.Add(pair.Key);
+            }
+
+            var selection = _context.Selection;
+            selection.Replace(additive ? selection.Ids.Concat(inside).Distinct().ToList() : inside);
+            _context.Report(additive ? $"Added {inside.Count} object(s): {selection.Count} selected" : $"Selected {inside.Count} object(s)");
+        }
+
+        void DropBox()
+        {
+            _boxStart = null;
+            _context.SelectionBox = null;
+        }
+
+        static ScreenBox Box(Vector2 corner, Vector2 opposite) =>
+            new ScreenBox(new System.Numerics.Vector2(corner.x, corner.y), new System.Numerics.Vector2(opposite.x, opposite.y));
+
         void BeginSlide(Vector3 grabPoint, in ToolInput input)
         {
             var pivot = ObjectEdits.Pivot(_context.Session, _context.Selection.Ids);
@@ -151,7 +218,7 @@ namespace Forge.EditorApp.Tools
             var records = _context.Session.World.Records;
             var slide = GroundSlide.TryBegin(pivot.Value, grabPoint.ToNumerics(), input.Ray.origin.ToNumerics(), input.Ray.direction.ToNumerics(),
                 _seating, id => records.TryGet(id, out var record) ? record as BaseObjectRecord : null);
-            Begin(slide, input.Pointer, SlideDeadZonePixels);
+            Begin(slide, input.Pointer, DragDeadZonePixels);
         }
 
         void BeginHandleDrag(GizmoHandle handle, System.Numerics.Vector3 pivot, Ray ray) =>

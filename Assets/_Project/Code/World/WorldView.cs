@@ -57,6 +57,12 @@ namespace Forge.World
 
         public bool IsLoaded(ChunkCoord coord) => _loaded.Contains(coord);
 
+        /// <summary>The placed objects presented now (those in the loaded chunks of the shown space) and their scene objects.</summary>
+        public IEnumerable<KeyValuePair<RecordId, GameObject>> PlacedObjects =>
+            _presented
+                .Where(pair => pair.Value.Record is PlacedObjectRecord)
+                .Select(pair => new KeyValuePair<RecordId, GameObject>(pair.Key, pair.Value.GameObject));
+
         /// <summary>The scene object presenting <paramref name="id"/>, if it is loaded.</summary>
         public bool TryGetObject(RecordId id, out GameObject gameObject)
         {

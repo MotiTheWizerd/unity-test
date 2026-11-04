@@ -52,10 +52,12 @@
                 </ui:Foldout>
 
                 <ui:Foldout text="Controls" value="false" class="forge-foldout">
-                    <ui:Label class="forge-muted" text="Tools: Q select · W move · E rotate · R scale · H hand&#10;P place · O outline · B sculpt · M mark · Esc: back to select&#10;Outline: drag a rectangle · Shift square · [ ] turn it&#10;Click / Shift+click: select · Ctrl snaps&#10;Move: drag objects over the ground, or the arrows&#10;Hold Space: hand in any tool&#10;Del: delete · End: drop to ground · F: frame&#10;Sculpt: hold left mouse · [ ]: brush size&#10;1-9: place object · [ ]: rotate it (Shift: 90°)&#10;Hold + drag: paint a row · + Shift: straight line&#10;Type in Search to filter, Esc clears&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
+                    <ui:Label class="forge-muted" text="Tools: Q select · W move · E rotate · R scale · H hand&#10;P place · O outline · B sculpt · M mark · Esc: back to select&#10;Outline: drag a rectangle · Shift square · [ ] turn it&#10;Click / Shift+click: select · Ctrl snaps&#10;Drag on empty space: box select (Shift adds)&#10;Move: drag objects over the ground, or the arrows&#10;Hold Space: hand in any tool&#10;Del: delete · End: drop to ground · F: frame&#10;Sculpt: hold left mouse · [ ]: brush size&#10;1-9: place object · [ ]: rotate it (Shift: 90°)&#10;Hold + drag: paint a row · + Shift: straight line&#10;Type in Search to filter, Esc clears&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
                 </ui:Foldout>
             </ui:ScrollView>
         </ui:VisualElement>
+
+        <ui:VisualElement name="selection-box" class="forge-selection-box forge-hidden" picking-mode="Ignore" />
 
         <ui:VisualElement name="tool-strip" class="forge-tool-strip" />
 

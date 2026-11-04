@@ -150,6 +150,14 @@
     color: rgb(20, 20, 20);
 }
 
+/* The box a drag on empty space draws to select what is inside it. */
+.forge-selection-box {
+    position: absolute;
+    border-width: 1px;
+    border-color: rgb(205, 145, 40);
+    background-color: rgba(205, 145, 40, 0.12);
+}
+
 /* The tool strip: one button per tool, right of the dock, groups split by a gap. */
 .forge-tool-strip {
     position: absolute;

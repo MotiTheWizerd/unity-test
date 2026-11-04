@@ -129,6 +129,9 @@ namespace Forge.EditorApp
         public SpaceRecord ActiveSpaceRecord =>
             Session.World.Records.TryGet(ActiveSpace, out var record) ? record as SpaceRecord : null;
 
+        /// <summary>The box being dragged to select what is inside it (screen pixels, bottom-left origin), or null.</summary>
+        public ScreenBox? SelectionBox { get; set; }
+
         /// <summary>The spot or area the user marked for the agent (M), or null. Editor state: never saved or undone.</summary>
         public GroundMark Mark { get; set; }
 
