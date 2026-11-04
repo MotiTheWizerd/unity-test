@@ -155,7 +155,7 @@
     position: absolute;
     left: 320px;
     top: 10px;
-    width: 78px;
+    width: 96px;
     padding: 4px;
     background-color: rgba(24, 26, 31, 0.93);
     border-radius: 6px;
@@ -170,9 +170,19 @@
     padding: 4px 6px;
 }
 
-.forge-root .forge-tool__key {
-    color: rgb(128, 138, 156);
+/* The labels sit on the light button face, so they take the button's dark text, not the panel's light one. */
+.forge-root .forge-tool Label {
+    color: rgb(24, 26, 31);
+}
+
+.forge-root .forge-tool .forge-tool__key {
+    color: rgb(96, 104, 118);
     -unity-font-style: bold;
+}
+
+/* A tool resting while the agent's build is open reads as disabled. */
+.forge-root .forge-tool:disabled Label {
+    color: rgb(140, 146, 158);
 }
 
 .forge-tool-strip__gap {
@@ -182,7 +192,7 @@
 /* The tool options bar: the current tool's name, settings and hint, across the top of the view. */
 .forge-options {
     position: absolute;
-    left: 408px;
+    left: 426px;
     right: 360px;
     top: 10px;
     padding: 4px 10px;
