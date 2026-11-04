@@ -36,7 +36,7 @@ namespace Forge.EditorApp.Tools
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _picker = picker ?? throw new ArgumentNullException(nameof(picker));
             _slopes = slopes ?? throw new ArgumentNullException(nameof(slopes));
-            _cursor = new BrushCursor(ray => _picker.TryPickTerrain(ray, out var hit) ? (true, hit.point) : (false, default(Vector3)));
+            _cursor = new BrushCursor(new TerrainSurface(picker));
         }
 
         public void Activate() => _context.Report($"Sculpt: hold left mouse on the terrain ({_context.BrushMode})");

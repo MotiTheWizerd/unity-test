@@ -34,16 +34,36 @@ namespace Forge.Editing.Geometry
         /// <summary>Distance from the center to the farthest corner.</summary>
         public float Reach => (float)Math.Sqrt(Width * Width + Depth * Depth) / 2f;
 
+        /// <summary>The four corners, going around: back-left, back-right, front-right, front-left (seen from above, facing the front).</summary>
+        public Vector2[] Corners()
+        {
+            var (across, front) = Axes();
+            var halfAcross = across * (Width / 2f);
+            var halfFront = front * (Depth / 2f);
+            return new[]
+            {
+                Center - halfAcross - halfFront,
+                Center + halfAcross - halfFront,
+                Center + halfAcross + halfFront,
+                Center - halfAcross + halfFront,
+            };
+        }
+
         /// <summary>How far <paramref name="point"/> lies outside the rectangle; 0 inside or on its edge.</summary>
         public float DistanceOutside(Vector2 point)
         {
-            var across = PlacementMath.LocalXAxis(HeadingDegrees);
-            // The front is a quarter turn from local +X: (sin, cos) for heading h.
-            var front = new Vector2(-across.Y, across.X);
+            var (across, front) = Axes();
             var offset = point - Center;
             var outsideAcross = Math.Max(Math.Abs(Vector2.Dot(offset, across)) - Width / 2f, 0f);
             var outsideFront = Math.Max(Math.Abs(Vector2.Dot(offset, front)) - Depth / 2f, 0f);
             return (float)Math.Sqrt(outsideAcross * outsideAcross + outsideFront * outsideFront);
+        }
+
+        // Unit vectors across the front (local +X) and toward the front, a quarter turn on: (sin, cos) for heading h.
+        (Vector2 Across, Vector2 Front) Axes()
+        {
+            var across = PlacementMath.LocalXAxis(HeadingDegrees);
+            return (across, new Vector2(-across.Y, across.X));
         }
     }
 }

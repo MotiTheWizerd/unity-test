@@ -8,6 +8,7 @@ using Forge.Data.Records;
 using Forge.Data.Serialization;
 using Forge.EditorApp.Tools;
 using Forge.Editing;
+using Forge.Editing.Geometry;
 using Forge.Editing.Palette;
 using Forge.Editing.Placement;
 using Forge.Editing.Terrain;
@@ -64,6 +65,9 @@ namespace Forge.EditorApp
         public Selection Selection { get; } = new Selection();
 
         public ToolKind ActiveTool { get; set; } = ToolKind.Select;
+
+        /// <summary>The spot or area the user marked for the agent (M), or null. Editor state: never saved or undone.</summary>
+        public GroundMark Mark { get; set; }
 
         /// <summary>What dragging the select tool's gizmo does.</summary>
         public TransformMode TransformMode { get; private set; } = TransformMode.Move;

@@ -15,9 +15,10 @@ namespace Forge.EditorApp
     /// <summary>
     /// Builds the editing services the tools share (picking, shapes, seating, commands, the agent) and routes
     /// input: global shortcuts (Ctrl+S save, Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z undo/redo, 1-9 palette, B sculpt,
-    /// W/E/R move/rotate/scale, [ ] brush size, End drop to ground, F frame selection) are handled here;
-    /// everything else is passed to the active tool. Pointer clicks over the UI panel are filtered out, and so
-    /// are shortcuts while a UI text field has the keyboard. While the agent's draft is open, the tools rest.
+    /// W/E/R move/rotate/scale, [ ] brush size, End drop to ground, F frame selection, M mark for the agent) are
+    /// handled here; everything else is passed to the active tool. Pointer clicks over the UI panel are filtered
+    /// out, and so are shortcuts while a UI text field has the keyboard. While the agent's draft is open, the
+    /// tools rest, except the mark tool, which edits nothing.
     /// </summary>
     public sealed class EditorController : MonoBehaviour
     {
@@ -35,6 +36,7 @@ namespace Forge.EditorApp
         [NonSerialized] IInputBlocker _ui;
         [NonSerialized] Dictionary<ToolKind, IEditorTool> _tools;
         [NonSerialized] ToolKind? _activeKind;
+        [NonSerialized] MarkView _markView;
 
         /// <summary>One-shot actions, shared with the UI. Available after <see cref="Initialize"/>.</summary>
         public EditorCommands Commands { get; private set; }
@@ -60,7 +62,9 @@ namespace Forge.EditorApp
                 { ToolKind.Select, new SelectTransformTool(context, view, picker, _camera, _gizmoMaterial) },
                 { ToolKind.Place, new PlaceTool(context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
                 { ToolKind.Sculpt, new SculptTool(context, view, picker, slopes) },
+                { ToolKind.Mark, new MarkTool(context, picker) },
             };
+            _markView = new MarkView(new TerrainSurface(picker));
 
             if (agent != null)
                 Agent = new AgentHost(context, seating, new EditorBriefing(context, () => GroundInView(picker)), agent);
@@ -69,6 +73,7 @@ namespace Forge.EditorApp
         void OnDestroy()
         {
             Agent?.Dispose();
+            _markView?.Dispose();
             if (_tools == null)
                 return;
             foreach (var tool in _tools.Values.OfType<IDisposable>())
@@ -85,15 +90,20 @@ namespace Forge.EditorApp
             if (_context == null || keyboard == null || mouse == null)
                 return;
 
+            _markView.Refresh(_context.Mark, _context.Session.World);
+
             // Keys typed into a UI text field (palette search, slider inputs) are text, not commands.
             var typing = _ui.IsKeyboardCaptured;
-            if (_context.IsDraftOpen)
+            if (!typing)
+                HandleViewShortcuts(keyboard);
+
+            if (_context.IsDraftOpen && _context.ActiveTool != ToolKind.Mark)
             {
-                RestWhileDraftIsOpen(keyboard, typing);
+                RestWhileDraftIsOpen();
                 return;
             }
 
-            if (!typing)
+            if (!typing && !_context.IsDraftOpen)
                 HandleShortcuts(keyboard);
             SwitchToolIfNeeded();
 
@@ -114,6 +124,21 @@ namespace Forge.EditorApp
                 deltaTime: Time.unscaledDeltaTime);
 
             _tools[_activeKind.Value].Tick(input);
+        }
+
+        // Shortcuts that never edit the world, so they work while the agent's build is open too:
+        // F frames the selection, M toggles the mark tool.
+        void HandleViewShortcuts(Keyboard keyboard)
+        {
+            // Hold right mouse = flying; the camera owns the keyboard then.
+            if (keyboard.ctrlKey.isPressed || Mouse.current.rightButton.isPressed)
+                return;
+
+            if (keyboard.fKey.wasPressedThisFrame)
+                Commands.FrameSelection();
+
+            if (keyboard.mKey.wasPressedThisFrame)
+                _context.ActiveTool = _context.ActiveTool == ToolKind.Mark ? ToolKind.Select : ToolKind.Mark;
         }
 
         void HandleShortcuts(Keyboard keyboard)
@@ -146,9 +171,6 @@ namespace Forge.EditorApp
             if (keyboard.endKey.wasPressedThisFrame)
                 Commands.DropSelectionToGround();
 
-            if (keyboard.fKey.wasPressedThisFrame)
-                Commands.FrameSelection();
-
             // [ ] adjust the active tool: brush size while sculpting, rotation while placing.
             var bracket = (keyboard.rightBracketKey.wasPressedThisFrame ? 1 : 0) - (keyboard.leftBracketKey.wasPressedThisFrame ? 1 : 0);
             if (bracket != 0 && _context.ActiveTool == ToolKind.Sculpt)
@@ -176,18 +198,15 @@ namespace Forge.EditorApp
         }
 
         // While the agent builds, or its build waits for review, nothing else edits the world: the active tool
-        // rests (its ghosts and gizmos go away) until the draft is accepted or discarded; the camera still flies
-        // and F still frames the build.
-        void RestWhileDraftIsOpen(Keyboard keyboard, bool typing)
+        // rests (its ghosts and gizmos go away) until the draft is accepted or discarded. The camera still flies,
+        // F still frames the build, and the mark tool (which edits nothing) still works.
+        void RestWhileDraftIsOpen()
         {
             if (_activeKind.HasValue)
             {
                 _tools[_activeKind.Value].Deactivate();
                 _activeKind = null;
             }
-
-            if (!typing && !Mouse.current.rightButton.isPressed && keyboard.fKey.wasPressedThisFrame)
-                Commands.FrameSelection();
         }
 
         // The terrain at the middle of the view: where "here" is when the user asks the agent to build.

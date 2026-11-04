@@ -1,5 +1,6 @@
 using System;
 using Forge.Agent;
+using Forge.EditorApp.Tools;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -15,7 +16,11 @@ namespace Forge.EditorApp.UI
         const string EntryClass = "forge-chat";
 
         readonly AgentConversation _conversation;
+        readonly EditorContext _context;
         readonly ScrollView _transcript;
+        readonly Label _markText;
+        readonly Button _mark;
+        readonly Button _clearMark;
         readonly VisualElement _review;
         readonly Label _reviewSummary;
         readonly Label _status;
@@ -28,9 +33,15 @@ namespace Forge.EditorApp.UI
         AgentState _shownState;
         float _workingSince;
 
-        public AgentSection(VisualElement root, AgentConversation conversation)
+        public AgentSection(VisualElement root, AgentConversation conversation, EditorContext context)
         {
             _conversation = conversation ?? throw new ArgumentNullException(nameof(conversation));
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _markText = PanelElements.Required<Label>(root, "agent-mark-text");
+            _mark = PanelElements.Required<Button>(root, "agent-mark");
+            _clearMark = PanelElements.Required<Button>(root, "agent-mark-clear");
+            _mark.clicked += () => _context.ActiveTool = _context.ActiveTool == ToolKind.Mark ? ToolKind.Select : ToolKind.Mark;
+            _clearMark.clicked += () => _context.Mark = null;
             _transcript = PanelElements.Required<ScrollView>(root, "agent-transcript");
             _review = PanelElements.Required<VisualElement>(root, "agent-review");
             _reviewSummary = PanelElements.Required<Label>(root, "agent-review-summary");
@@ -77,6 +88,16 @@ namespace Forge.EditorApp.UI
             PanelElements.SetVisible(_status, working);
             if (working)
                 PanelElements.SetText(_status, $"Working… {Time.realtimeSinceStartup - _workingSince:0} s");
+
+            RefreshMark();
+        }
+
+        void RefreshMark()
+        {
+            var mark = _context.Mark;
+            PanelElements.SetText(_markText, mark == null ? "No mark: \"here\" is where the camera looks." : $"Here: {mark.Describe()}");
+            PanelElements.SetActive(_mark, _context.ActiveTool == ToolKind.Mark);
+            _clearMark.SetEnabled(mark != null);
         }
 
         void Send()

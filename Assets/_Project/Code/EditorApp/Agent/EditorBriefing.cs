@@ -8,8 +8,8 @@ using UnityEngine;
 namespace Forge.EditorApp.Agent
 {
     /// <summary>
-    /// What the agent is told about the editor with each message: where the camera is looking (the default
-    /// building site), how far the terrain reaches, and what is selected.
+    /// What the agent is told about the editor with each message: where the camera is looking, the spot or area
+    /// the user marked (where "here" is), how far the terrain reaches, and what is selected.
     /// </summary>
     public sealed class EditorBriefing
     {
@@ -27,7 +27,7 @@ namespace Forge.EditorApp.Agent
 
         public string Describe()
         {
-            var lines = new List<string> { View(), Terrain(), Selection() };
+            var lines = new List<string> { View(), Mark(), Terrain(), Selection() };
             return string.Join("\n", lines.Where(line => line != null));
         }
 
@@ -37,6 +37,12 @@ namespace Forge.EditorApp.Agent
             return ground.HasValue
                 ? FormattableString.Invariant($"The camera is looking at the ground at x={ground.Value.x:0.#}, z={ground.Value.z:0.#} (height {ground.Value.y:0.#} m).")
                 : "The camera is not looking at the ground.";
+        }
+
+        string Mark()
+        {
+            var mark = _context.Mark;
+            return mark == null ? "The user has marked nothing." : $"The user marked {mark.Describe()}.";
         }
 
         string Terrain()

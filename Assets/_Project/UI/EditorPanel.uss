@@ -226,6 +226,17 @@
     color: rgb(169, 211, 255);
 }
 
+.forge-agent-mark {
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.forge-agent-mark-text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    font-size: 11px;
+}
+
 .forge-agent-review {
     margin-bottom: 6px;
     padding: 6px;

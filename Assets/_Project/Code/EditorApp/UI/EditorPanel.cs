@@ -47,7 +47,7 @@ namespace Forge.EditorApp.UI
             };
 
             if (agent != null)
-                _sections.Add(new AgentSection(Root, agent));
+                _sections.Add(new AgentSection(Root, agent, context));
             else
                 PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "agent-dock"), false);
             Refresh();

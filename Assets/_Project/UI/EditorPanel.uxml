@@ -88,6 +88,11 @@
                 </ui:VisualElement>
             </ui:VisualElement>
             <ui:Label name="agent-status" class="forge-muted" />
+            <ui:VisualElement class="forge-row forge-agent-mark">
+                <ui:Label name="agent-mark-text" class="forge-muted forge-wrap forge-agent-mark-text" />
+                <ui:Button name="agent-mark" text="Mark (M)" />
+                <ui:Button name="agent-mark-clear" text="Clear" />
+            </ui:VisualElement>
             <ui:TextField name="agent-input" multiline="true" placeholder-text="Describe what to build…  (Enter sends, Shift+Enter: new line)" class="forge-agent-input" />
             <ui:VisualElement class="forge-row forge-choices">
                 <ui:Button name="agent-send" text="Send" />

@@ -390,6 +390,11 @@ slopes), so results are exact and every edit goes through the edit session.
   Markdown: `Forge.Core.Text.Markdown` (engine-free) parses the subset chat uses into blocks and styled spans, and
   `MarkdownView` lays them out (a label per block, list items as marker + text, rich text wrapped in `<noparse>`
   so the words are never read as tags). Everything else in the transcript is shown exactly as written.
+- **The mark** (`GroundMark`, M / the dock's Mark button, `MarkTool`): a spot (click) or an axis-aligned area (drag)
+  the user puts on the ground to show the agent where "here" is. It is editor state on `EditorContext.Mark`
+  (never saved, never undone), drawn by `MarkView` in every tool, and the mark tool works while a draft is open
+  because it edits nothing. `EditorBriefing` tells the agent `GroundMark.Describe()`; the camera point is the
+  fallback. Lines laid on the ground (the brush ring, the mark) share `LineGizmo` + `TerrainSurface`.
 - `EditorCommands` holds one-shot actions shared by shortcuts and UI buttons.
   `DropSelectionToGround` (End) finds the terrain under each selected object, looking through
   other objects, and moves the object so the lowest point of its renderer bounds rests on
