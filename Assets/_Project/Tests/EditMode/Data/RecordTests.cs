@@ -162,6 +162,35 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void Space_WaterLevel_IsOptional_AndChangesAlone()
+        {
+            var dry = new SpaceRecord(TestRecords.Space, "Main", SpaceKind.Worldspace, 50f);
+            Assert.That(dry.WaterLevel, Is.Null);
+
+            var sea = dry.WithWaterLevel(48f);
+
+            Assert.That(sea.WaterLevel, Is.EqualTo(48f));
+            Assert.That((sea.Id, sea.DisplayName, sea.Kind, sea.BaseHeight), Is.EqualTo((dry.Id, dry.DisplayName, dry.Kind, dry.BaseHeight)));
+            Assert.That(sea.WithWaterLevel(null).WaterLevel, Is.Null);
+        }
+
+        [TestCase(-1f)]
+        [TestCase(WorldGrid.MaxTerrainHeight + 1f)]
+        [TestCase(float.NaN)]
+        public void Space_RejectsWaterLevelOutOfRange(float waterLevel)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new SpaceRecord(TestRecords.Space, "Main", SpaceKind.Worldspace, 50f, waterLevel));
+        }
+
+        [Test]
+        public void Space_Interior_HasNoSea()
+        {
+            var interior = new SpaceRecord(SpaceRecord.IdFor("core", "cave"), "Cave", SpaceKind.Interior, 0f, 10f);
+
+            Assert.That(interior.WaterLevel, Is.Null);
+        }
+
+        [Test]
         public void DefaultRegistry_MapsBuiltInTypesBothWays()
         {
             var registry = RecordTypeRegistry.CreateDefault();

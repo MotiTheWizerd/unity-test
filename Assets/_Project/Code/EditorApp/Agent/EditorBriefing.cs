@@ -50,9 +50,11 @@ namespace Forge.EditorApp.Agent
             var space = _context.ActiveSpaceRecord;
             if (space == null)
                 return "No space is open.";
-            return space.Kind == SpaceKind.Interior
-                ? $"You are building inside {space.DisplayName}, an interior: there is no terrain, floors and walls are objects."
-                : $"You are building in {space.DisplayName}, a worldspace.";
+            if (space.Kind == SpaceKind.Interior)
+                return $"You are building inside {space.DisplayName}, an interior: there is no terrain, floors and walls are objects.";
+            return space.WaterLevel is float sea
+                ? FormattableString.Invariant($"You are building in {space.DisplayName}, a worldspace with a sea at {sea:0.##} m: ground below that is under water.")
+                : $"You are building in {space.DisplayName}, a worldspace without a sea.";
         }
 
         string Terrain()

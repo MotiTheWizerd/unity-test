@@ -8,6 +8,7 @@ using Forge.Data.Records;
 using Forge.Editing.Commands;
 using Forge.Editing.Placement;
 using Forge.Editing.Terrain;
+using Forge.Editing.Water;
 
 namespace Forge.Editing.Building
 {
@@ -21,6 +22,7 @@ namespace Forge.Editing.Building
         readonly Func<RecordId> _space;
         ResolvedWorld _terrainWorld;
         TerrainGrid _terrain;
+        WaterMap _water;
 
         /// <param name="space">The space the commands build in, read on every use (it follows the editor's view).</param>
         public BuildContext(EditSession session, Func<RecordId> space, ObjectSeating seating, PlacementOptions options)
@@ -45,15 +47,33 @@ namespace Forge.Editing.Building
         {
             get
             {
-                var space = Space;
-                if (!ReferenceEquals(_terrainWorld, Session.World) || _terrain.Space != space)
-                {
-                    _terrainWorld = Session.World;
-                    _terrain = new TerrainGrid(_terrainWorld.Records, space);
-                }
-
+                Refresh();
                 return _terrain;
             }
+        }
+
+        /// <summary>The space's water over that terrain (the sea), cached alongside it.</summary>
+        public WaterMap Water
+        {
+            get
+            {
+                Refresh();
+                return _water;
+            }
+        }
+
+        /// <summary>The record of the space the commands build in, or null if it has none.</summary>
+        public SpaceRecord SpaceRecord => Session.World.Records.TryGet(Space, out var record) ? record as SpaceRecord : null;
+
+        void Refresh()
+        {
+            var space = Space;
+            if (ReferenceEquals(_terrainWorld, Session.World) && _terrain.Space == space)
+                return;
+
+            _terrainWorld = Session.World;
+            _terrain = new TerrainGrid(_terrainWorld.Records, space);
+            _water = WaterMap.Of(_terrainWorld.Records, _terrain);
         }
 
         /// <summary>

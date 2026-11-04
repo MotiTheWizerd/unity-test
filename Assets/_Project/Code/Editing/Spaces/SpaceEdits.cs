@@ -8,7 +8,7 @@ using Forge.Data.Terrain;
 
 namespace Forge.Editing.Spaces
 {
-    /// <summary>Creates spaces in the active plugin.</summary>
+    /// <summary>Creates spaces in the active plugin and changes their settings.</summary>
     public static class SpaceEdits
     {
         /// <summary>Land sizes offered for a new worldspace, in chunks along each edge.</summary>
@@ -38,6 +38,29 @@ namespace Forge.Editing.Spaces
         /// <summary>Creates an empty interior as one undo step. Returns the new space's id.</summary>
         public static RecordId CreateInterior(EditSession session, string displayName) =>
             Create(session, displayName, SpaceKind.Interior, 0f, _ => Enumerable.Empty<Record>());
+
+        /// <summary>
+        /// Sets the sea of worldspace <paramref name="space"/> to <paramref name="level"/> meters, or removes it (null),
+        /// as one undo step; a master's space is overridden in the active plugin. Returns false when it already is.
+        /// </summary>
+        public static bool SetWaterLevel(EditSession session, RecordId space, float? level)
+        {
+            if (session == null)
+                throw new ArgumentNullException(nameof(session));
+            if (!(session.World.Records.TryGet(space, out var record) && record is SpaceRecord spaceRecord))
+                throw new ArgumentException($"There is no space '{space}'.", nameof(space));
+            if (spaceRecord.Kind != SpaceKind.Worldspace)
+                throw new ArgumentException($"{spaceRecord.DisplayName} is an interior; only worldspaces have a sea.", nameof(space));
+            if (spaceRecord.WaterLevel == level)
+                return false;
+
+            var changed = spaceRecord.WithWaterLevel(level);
+            var description = level.HasValue
+                ? FormattableString.Invariant($"Sea level of {spaceRecord.DisplayName}: {level.Value:0.##} m")
+                : $"Remove the sea of {spaceRecord.DisplayName}";
+            session.Batch(description, () => session.Put(changed));
+            return true;
+        }
 
         static RecordId Create(EditSession session, string displayName, SpaceKind kind, float baseHeight, Func<RecordId, IEnumerable<Record>> content)
         {

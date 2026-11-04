@@ -23,7 +23,8 @@ namespace Forge.Data.Records
         public const string NamePrefix = "space/";
 
         /// <param name="baseHeight">Height of new land in a worldspace, in meters; ignored for interiors.</param>
-        public SpaceRecord(RecordId id, string displayName, SpaceKind kind, float baseHeight = 0f)
+        /// <param name="waterLevel">Height of the sea's surface in a worldspace, in meters, or null for no sea; ignored for interiors.</param>
+        public SpaceRecord(RecordId id, string displayName, SpaceKind kind, float baseHeight = 0f, float? waterLevel = null)
             : base(id)
         {
             if (!id.Name.StartsWith(NamePrefix, StringComparison.Ordinal))
@@ -32,12 +33,15 @@ namespace Forge.Data.Records
                 throw new ArgumentException("Display name is required.", nameof(displayName));
             if (!Enum.IsDefined(typeof(SpaceKind), kind))
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown space kind.");
-            if (!(baseHeight >= 0f && baseHeight <= WorldGrid.MaxTerrainHeight))
+            if (!IsTerrainHeight(baseHeight))
                 throw new ArgumentOutOfRangeException(nameof(baseHeight), baseHeight, $"Base height must be within [0, {WorldGrid.MaxTerrainHeight}] m.");
+            if (waterLevel.HasValue && !IsTerrainHeight(waterLevel.Value))
+                throw new ArgumentOutOfRangeException(nameof(waterLevel), waterLevel, $"Water level must be within [0, {WorldGrid.MaxTerrainHeight}] m.");
 
             DisplayName = displayName;
             Kind = kind;
             BaseHeight = kind == SpaceKind.Worldspace ? baseHeight : 0f;
+            WaterLevel = kind == SpaceKind.Worldspace ? waterLevel : null;
         }
 
         public string DisplayName { get; }
@@ -47,6 +51,16 @@ namespace Forge.Data.Records
         /// <summary>Height new land is created at, in meters (0 for interiors, which have no land).</summary>
         public float BaseHeight { get; }
 
+        /// <summary>
+        /// Height of the sea's surface in meters, or null for no sea (always null for interiors). Land below it is
+        /// under water, whether it is a coast, a bay or a hollow inland.
+        /// </summary>
+        public float? WaterLevel { get; }
+
+        public SpaceRecord WithWaterLevel(float? waterLevel) => new SpaceRecord(Id, DisplayName, Kind, BaseHeight, waterLevel);
+
         public static RecordId IdFor(string ns, string name) => new RecordId(ns, NamePrefix + name);
+
+        static bool IsTerrainHeight(float height) => height >= 0f && height <= WorldGrid.MaxTerrainHeight;
     }
 }

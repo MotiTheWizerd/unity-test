@@ -47,6 +47,9 @@ namespace Forge.EditorApp
         [SerializeField, Tooltip("Prefabs for the asset keys of base objects; unlisted keys fall back to primitives.")]
         PrefabCatalog _prefabs;
 
+        [SerializeField, Tooltip("Material of the sea's surface (Materials/Water); without one the sea isn't shown.")]
+        Material _water;
+
         [SerializeField, Tooltip("How the world-building agent runs; leave empty for an editor without one.")]
         AgentSettings _agent;
 
@@ -60,6 +63,7 @@ namespace Forge.EditorApp
         [NonSerialized] SelectionHighlighter _highlighter;
         [NonSerialized] FrameTimeTracker _frames;
         [NonSerialized] InteriorFloor _interiorFloor;
+        [NonSerialized] SeaSurface _sea;
         [NonSerialized] SpaceCameras _spaceCameras;
         [NonSerialized] RecordId _shownSpace;
 
@@ -90,6 +94,7 @@ namespace Forge.EditorApp
                 _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs);
                 _view.Sync(_context.Session.World);
                 _interiorFloor = InteriorFloor.Create(transform);
+                _sea = CreateSea();
                 _spaceCameras = new SpaceCameras();
                 _context.SpaceChanged += OnSpaceChanged;
                 if (!RecordId.TryParse(_profile.StartSpace, out var startSpace) || !_context.ShowSpace(startSpace))
@@ -125,6 +130,8 @@ namespace Forge.EditorApp
             // Chunks that stream back in must show their selection tint again.
             if (_streamer.Tick(_focus.position))
                 _highlighter.Refresh();
+            if (_sea != null)
+                _sea.Follow(_focus.position);
         }
 
         void OnDestroy()
@@ -156,6 +163,7 @@ namespace Forge.EditorApp
 
             _shownSpace = space;
             _interiorFloor.Show(record.Kind == SpaceKind.Interior);
+            ShowSea();
             _streamer.ShowSpace(space, _focus.position);
             _highlighter?.Refresh();
         }
@@ -167,8 +175,29 @@ namespace Forge.EditorApp
             if (_context.ActiveSpaceRecord == null && RecordId.TryParse(_profile.StartSpace, out var startSpace))
                 _context.ShowSpace(startSpace);
             _view.Sync(world);
+            ShowSea();
             _context.Selection.Prune(world.Records);
             _highlighter.Refresh();
+        }
+
+        // As large as the camera can see in every direction, so the sea reaches the horizon.
+        SeaSurface CreateSea()
+        {
+            if (_water == null)
+            {
+                Debug.LogWarning("[Forge] EditorApp has no water material (EditorAppBootstrap._water); the sea isn't shown.");
+                return null;
+            }
+
+            var reach = _focus.TryGetComponent<Camera>(out var view) ? view.farClipPlane : 1000f;
+            return SeaSurface.Create(transform, _water, 2f * reach);
+        }
+
+        // A sea belongs to the space on show; undo and the agent change it like any record.
+        void ShowSea()
+        {
+            if (_sea != null)
+                _sea.Show(_context.ActiveSpaceRecord?.WaterLevel);
         }
 
         IReadOnlyList<Plugin> LoadMasters(IPluginSerializer serializer)

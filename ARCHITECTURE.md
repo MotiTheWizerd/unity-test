@@ -32,8 +32,8 @@ Assets/_Project/
   Scenes/        Main.unity (editor scene: EditorApp + Main Camera)
   UI/            EditorPanel.uxml/.uss (runtime editor UI), ForgeRuntimeTheme.tss, ForgePanelSettings
   Content/       PrefabCatalog.asset (asset key → prefab); Placeholder/ holds generated placeholder prefabs + materials
-  Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview)
-  Materials/     GizmoOverlay.mat, PlacementGhost.mat
+  Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview), Water.shader (the sea)
+  Materials/     GizmoOverlay.mat, PlacementGhost.mat, Water.mat
   Settings/      URP, input and volume assets; Worlds/ holds the WorldProfile assets; Agent/ the agent's settings and instructions
 Assets/StreamingAssets/Plugins/   shipped base plugins (forge.core.json = our "Skyrim.esm")
 Assets/StreamingAssets/StressWorld/  generated stress-test world (git-ignored, Forge/Generate Stress World)
@@ -44,7 +44,7 @@ Planned modules (each is created when its first code arrives, not before):
 
 | Assembly         | Engine?  | Purpose                                                     |
 |------------------|----------|-------------------------------------------------------------|
-| `Forge.Game`     | Unity    | The game runtime: player and gameplay over the same data   |
+| `Forge.Game`     | Unity    | The game runtime: player and gameplay over the same data. `TerrainGrid` and `WaterMap` move below `Forge.Editing` for it (the game asks them for ground and swimming) |
 
 ### Dependency rule
 
@@ -132,6 +132,12 @@ no terrain, and the editor gives it a floor grid at height 0 to stand on. Every 
 added as chunks, and a mod adds land to its master's worldspace with chunks in its own namespace. The editor
 shows and edits one space at a time (`EditorContext.ActiveSpace`); the chunk index, terrain grid, terrain edits,
 terrain followers and the agent's commands are all per space.
+A worldspace may have a **sea**: `SpaceRecord.WaterLevel` (meters, optional, omitted from the JSON when there is
+none; interiors never have one). All ground below it is under water, coasts and hollows alike; beyond the land the sea
+goes on. It is the first of three water layers: the **data** (records, saved in plugins) and the **query**
+(`WaterMap`) are fixed contracts, the **look** (`SeaSurface` + `Water.shader`) is meant to be replaced. Lakes (a
+seed point + a surface height, flood-filled over the terrain, so the shore follows sculpting) and rivers (splines)
+come later as their own records and join the same `WaterMap`.
 
 **Terrain**: a worldspace is a grid of `WorldGrid.ChunkSize` (64 m) chunks. A
 `TerrainChunkRecord` holds a `HeightField` (2^n+1 samples per edge, meters in
@@ -149,6 +155,8 @@ from its space and coordinate (`terrain/{space ns}/{space name}/c{x}_{z}`), so m
 - The edge of the streamed area is a hard cut (no fog, distant LOD or impostors yet).
   Plugins load whole into memory at startup, so only the *scene* streams, not the *data*. A
   30 MB JSON plugin takes ~1.3 s to load.
+- The sea is one level for the whole worldspace, so any hollow below it fills, inland or not; lakes above the sea
+  need the planned Water tool. Picks go through water to the ground beneath, and placing under water is allowed.
 - Drop to ground samples the terrain under an upright object's pivot only, so on steep slopes part of its base
   can float or clip. Slope objects are seated on their whole footprint, up to a 35° tilt; steeper ground leaves
   their ends off the surface.
@@ -187,6 +195,10 @@ from its space and coordinate (`terrain/{space ns}/{space name}/c{x}_{z}`), so m
 - `TerrainGrid` (`Editing/Terrain`) reads the world's terrain records as one grid of global samples (chunks
   share their edge samples; lowest id wins on duplicate coordinates; one heightmap resolution): sample heights,
   bilinear heights anywhere, and which chunk holds a sample. Sculpting and the building commands both read it.
+- `WaterMap` (`Editing/Water`, engine-free) is **the one water question**: `SurfaceAt(x, z)` (null where dry; the sea
+  level beyond the land) and `DepthAt(x, z)` (0 where dry, null without terrain). The commands, and later the player
+  (swimming) and NPCs, ask it, never the scene. `SpaceEdits.SetWaterLevel` sets or removes a sea as one undo step
+  (overriding a master's space in the active plugin).
 - **Terrain edits** (`Editing/Terrain`): a `TerrainEdit` snapshots the terrain and keeps a working copy on
   the **global sample grid**. Subclasses compute every new height from the state before the write, then
   `Write` puts each sample into *every* chunk that shares it. That's why chunk seams can't open.
@@ -231,9 +243,12 @@ from its space and coordinate (`terrain/{space ns}/{space name}/c{x}_{z}`), so m
   - `list_objects`: ids, names, categories, footprint (width across the front, depth front to back) and placement rules.
   - `inspect_area`: lowest/highest ground and steepest slope from every terrain sample in the square (exact,
     however coarse a grid the agent asks for), an overview height grid (rows south to north, columns west to
-    east), and the objects inside, nearest first. It reads the terrain *data* (`BuildContext.Terrain`, a
+    east), the water when there is a sea (its level, the share of samples under water and the deepest, from every
+    sample, through `BuildContext.Water`), and the objects inside, nearest first. It reads the terrain *data* (`BuildContext.Terrain`, a
     `TerrainGrid` cached per world version), so it answers for unloaded chunks too; placing still seats on the
     loaded scene, and a skipped spot says whether its terrain is missing or just not loaded.
+  - `set_sea_level`: sets or removes the worldspace's sea (refused in interiors) and reports how many objects now
+    stand below it. The instructions tell the agent to use it only when the user asks.
   - `flatten_area`: levels a rectangle (`AreaFlattening`) to a height, by default the average ground height
     inside it (as much dug away as filled in), with a soft edge (default 4 m); objects on the reshaped ground
     follow it (`BuildContext.FollowTerrain`). The agent levels sloped building sites before placing on them.
@@ -316,6 +331,11 @@ slopes), so results are exact and every edit goes through the edit session.
   `forge.stress_edits`. Each world has its own edit plugin, because a plugin may only override its
   masters' records. A missing base folder fails loudly instead of opening a smaller world.
   It then wires `EditSession` → `WorldView` + `WorldStreamer` → tools and UI through a shared `EditorContext`.
+  It also owns the **sea surface** (`World/SeaSurface`, `_water` = `Materials/Water.mat`): one quad twice the camera's
+  far clip across, kept under the camera and raised to the active space's `WaterLevel` after every space switch and
+  world change (so undo and the agent move it too). The land hides it where it stands higher; it has no collider.
+  `Water.shader` (URP, transparent) colors by the water's depth from the camera depth texture, ripples the normals
+  with four scrolling sine waves, reflects the sky by fresnel, adds the sun's glint and a foam line at the shore.
 - **Assets**: records store engine-agnostic asset keys; `IAssetCatalog` turns a key into a scene object.
   `PrefabAssetCatalog` looks the key up in the `PrefabCatalog` ScriptableObject (`Content/PrefabCatalog.asset`,
   assigned on `EditorAppBootstrap._prefabs`) and falls back to `PrimitiveAssetCatalog` (`primitive/*`, and a
@@ -449,7 +469,8 @@ slopes), so results are exact and every edit goes through the edit session.
 - **UI** (`EditorApp/UI`, UI Toolkit): the layout lives in `UI/EditorPanel.uxml` and the style in
   `UI/EditorPanel.uss`, rendered by a `UIDocument` with `ForgePanelSettings`.
   `EditorPanel` (MonoBehaviour) only composes **one presenter per section**
-  (`IPanelSection`: World, Space, ToolStrip, ToolOptionsBar, Selection, Placement, Sculpt, Palette, History,
+  (`IPanelSection`: World, Space (with the worldspace's **Sea level**: a toggle, new seas start 2 m below the base
+  land, and a number field; each change is one undo step), ToolStrip, ToolOptionsBar, Selection, Placement, Sculpt, Palette, History,
   Performance, StatusBar, Agent). The **tool strip** (right of the dock) is built from `ToolCatalog`, grouped,
   with the current tool highlighted. The **tool options bar** (across the top of the view) shows the current
   tool's name and hint, and each tool's settings are their own section inside it, shown while that tool is

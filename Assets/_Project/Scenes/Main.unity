@@ -507,6 +507,7 @@ MonoBehaviour:
   _unloadRadius: 8
   _frameBudgetMs: 4
   _prefabs: {fileID: 11400000, guid: ef98c5dbdddd92a499bac64fa87db9b0, type: 2}
+  _water: {fileID: 2100000, guid: 648d42d9baa219046adaf74fd39cd111, type: 2}
   _agent: {fileID: 11400000, guid: faebb307bb913f44f8457abe26252145, type: 2}
   _controller: {fileID: 1624300795}
   _panel: {fileID: 1624300798}

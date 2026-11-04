@@ -22,7 +22,8 @@ namespace Forge.Editing.Building
             : base("inspect_area",
                 "Describes a square area of the world: the lowest and highest ground and the steepest slope (read from " +
                 "every terrain sample in the area), an overview grid of heights (meters; rows run south to north, " +
-                "columns west to east, null where there is no terrain), and the objects standing inside, nearest the center first.")
+                "columns west to east, null where there is no terrain), the water if the world has a sea (its level, " +
+                "how much of the area is under water and how deep), and the objects standing inside, nearest the center first.")
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
@@ -44,10 +45,11 @@ namespace Forge.Editing.Building
 
         public sealed class Result : ICommandResult
         {
-            internal Result(string summary, TerrainInfo terrain, int objectCount, IReadOnlyList<PlacedObjectInfo> objects)
+            internal Result(string summary, TerrainInfo terrain, WaterInfo water, int objectCount, IReadOnlyList<PlacedObjectInfo> objects)
             {
                 Summary = summary;
                 Terrain = terrain;
+                Water = water;
                 ObjectCount = objectCount;
                 Objects = objects;
             }
@@ -56,6 +58,9 @@ namespace Forge.Editing.Building
 
             /// <summary>Null when no part of the area has terrain.</summary>
             public TerrainInfo Terrain { get; }
+
+            /// <summary>Null when the world has no sea or the area no terrain.</summary>
+            public WaterInfo Water { get; }
 
             /// <summary>How many objects stand in the area (the list may be shorter).</summary>
             public int ObjectCount { get; }
@@ -88,11 +93,31 @@ namespace Forge.Editing.Building
             public IReadOnlyList<IReadOnlyList<float?>> Heights { get; }
         }
 
+        public sealed class WaterInfo
+        {
+            internal WaterInfo(float seaLevel, int underwaterPercent, float deepest)
+            {
+                SeaLevel = seaLevel;
+                UnderwaterPercent = underwaterPercent;
+                Deepest = deepest;
+            }
+
+            /// <summary>Height of the sea's surface, in meters.</summary>
+            public float SeaLevel { get; }
+
+            /// <summary>How much of the area's ground is under water, in percent of its terrain samples.</summary>
+            public int UnderwaterPercent { get; }
+
+            /// <summary>The deepest water in the area, in meters; 0 when it is all dry.</summary>
+            public float Deepest { get; }
+        }
+
         protected override Result Run(Arguments arguments)
         {
             var center = new Vector2(arguments.X, arguments.Z);
             var half = arguments.Size / 2f;
             var terrain = DescribeTerrain(center, arguments.Size, arguments.Samples ?? DefaultSamples);
+            var water = terrain != null ? DescribeWater(center, half) : null;
 
             var inside = _context.PlacedObjects()
                 .Where(p => Math.Abs(p.Position.X - center.X) <= half && Math.Abs(p.Position.Z - center.Y) <= half)
@@ -103,7 +128,41 @@ namespace Forge.Editing.Building
                 .Select(p => new PlacedObjectInfo(p, _context.NameOf(p.BaseId)))
                 .ToList();
 
-            return new Result(Summarize(arguments, terrain, inside.Count), terrain, inside.Count, listed);
+            return new Result(Summarize(arguments, terrain, water, inside.Count), terrain, water, inside.Count, listed);
+        }
+
+        // Like the ground's extremes, the share under water and the deepest point come from every terrain sample.
+        WaterInfo DescribeWater(Vector2 center, float half)
+        {
+            var water = _context.Water;
+            if (!(water.SeaLevel is float seaLevel))
+                return null;
+
+            var samples = 0;
+            var underwater = 0;
+            var deepest = 0f;
+            foreach (var sample in _context.Terrain.SamplesAround(center, half))
+            {
+                samples++;
+                if (!(water.DepthAt(sample.Ground) is float depth) || depth <= 0f)
+                    continue;
+                underwater++;
+                deepest = Math.Max(deepest, depth);
+            }
+
+            // An area narrower than the sample spacing may hold no sample at all; its center still has a depth.
+            if (samples == 0 && water.DepthAt(center) is float middle)
+            {
+                samples = 1;
+                underwater = middle > 0f ? 1 : 0;
+                deepest = middle;
+            }
+
+            var percent = samples > 0 ? (int)Math.Round(100.0 * underwater / samples) : 0;
+            // Any water at all shows as at least 1%, so a sliver of shore is never reported as dry.
+            if (underwater > 0 && percent == 0)
+                percent = 1;
+            return new WaterInfo(Rounding.Coarse(seaLevel), percent, Rounding.Coarse(deepest));
         }
 
         // Lowest, highest and steepest ground come from every terrain sample in the square, so they are exact
@@ -160,13 +219,22 @@ namespace Forge.Editing.Building
 
         static float Slope(float a, float b, float run) => (float)Math.Atan(Math.Abs(b - a) / run) * RadiansToDegrees;
 
-        static string Summarize(Arguments arguments, TerrainInfo terrain, int objectCount)
+        static string Summarize(Arguments arguments, TerrainInfo terrain, WaterInfo water, int objectCount)
         {
             var area = FormattableString.Invariant($"{arguments.Size:0.#} m square around ({arguments.X:0.#}, {arguments.Z:0.#})");
             var ground = terrain == null
                 ? "no terrain (outside the world)"
                 : FormattableString.Invariant($"ground {terrain.MinHeight:0.#}–{terrain.MaxHeight:0.#} m, steepest slope {terrain.SteepestSlope:0}°");
-            return $"{area}: {ground}, {objectCount} object(s).";
+            return $"{area}: {ground}{WaterPhrase(water)}, {objectCount} object(s).";
+        }
+
+        static string WaterPhrase(WaterInfo water)
+        {
+            if (water == null)
+                return string.Empty;
+            return water.UnderwaterPercent == 0
+                ? FormattableString.Invariant($", all above the sea (sea level {water.SeaLevel:0.#} m)")
+                : FormattableString.Invariant($", {water.UnderwaterPercent}% under water up to {water.Deepest:0.#} m deep (sea level {water.SeaLevel:0.#} m)");
         }
     }
 }

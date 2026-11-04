@@ -10,13 +10,19 @@ using UnityEngine.UIElements;
 namespace Forge.EditorApp.UI
 {
     /// <summary>
-    /// The space being shown and edited (a picker of every worldspace and interior), and New… to create one: a
-    /// worldspace of a chosen size of flat land, or an empty interior. Creating one switches to it.
+    /// The space being shown and edited (a picker of every worldspace and interior), a worldspace's sea level, and
+    /// New… to create a space: a worldspace of a chosen size of flat land, or an empty interior. Creating one switches to it.
     /// </summary>
     public sealed class SpaceSection : IPanelSection
     {
+        /// <summary>How far below the land a sea starts when it is switched on, so turning it on floods nothing.</summary>
+        const float NewSeaBelowLand = 2f;
+
         readonly EditorContext _context;
         readonly DropdownField _picker;
+        readonly VisualElement _seaRow;
+        readonly Toggle _seaOn;
+        readonly FloatField _seaLevel;
         readonly Button _new;
         readonly VisualElement _form;
         readonly TextField _name;
@@ -33,6 +39,11 @@ namespace Forge.EditorApp.UI
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _picker = PanelElements.Required<DropdownField>(root, "space-picker");
             _picker.RegisterValueChangedCallback(_ => ShowPicked());
+            _seaRow = PanelElements.Required<VisualElement>(root, "space-sea");
+            _seaOn = PanelElements.Required<Toggle>(root, "space-sea-on");
+            _seaOn.RegisterValueChangedCallback(change => SetSea(change.newValue ? NewSeaLevel() : (float?)null));
+            _seaLevel = PanelElements.Required<FloatField>(root, "space-sea-level");
+            _seaLevel.RegisterValueChangedCallback(change => SetSea(change.newValue));
             _new = PanelElements.Required<Button>(root, "space-new");
             _new.clicked += () => SetFormOpen(!IsFormOpen);
 
@@ -56,6 +67,7 @@ namespace Forge.EditorApp.UI
         public void Refresh()
         {
             RefreshPicker();
+            RefreshSea();
             if (!IsFormOpen)
                 return;
 
@@ -93,6 +105,33 @@ namespace Forge.EditorApp.UI
             var active = _spaces.FindIndex(s => s.Id == _context.ActiveSpace);
             if (active >= 0 && _picker.index != active)
                 _picker.SetValueWithoutNotify(_picker.choices[active]);
+        }
+
+        // Mirrors the space's record, which undo and the agent change too. A value being typed isn't the field's
+        // value until it is committed (the field is delayed), so it is never overwritten mid-edit.
+        void RefreshSea()
+        {
+            var space = _context.ActiveSpaceRecord;
+            var worldspace = space != null && space.Kind == SpaceKind.Worldspace;
+            PanelElements.SetVisible(_seaRow, worldspace);
+            if (!worldspace)
+                return;
+
+            var level = space.WaterLevel;
+            _seaOn.SetValueWithoutNotify(level.HasValue);
+            _seaLevel.SetEnabled(level.HasValue);
+            if (level.HasValue && _seaLevel.value != level.Value)
+                _seaLevel.SetValueWithoutNotify(level.Value);
+        }
+
+        float NewSeaLevel() => Math.Max(0f, (_context.ActiveSpaceRecord?.BaseHeight ?? 0f) - NewSeaBelowLand);
+
+        void SetSea(float? level)
+        {
+            var clamped = level.HasValue ? Math.Max(0f, Math.Min(WorldGrid.MaxTerrainHeight, level.Value)) : (float?)null;
+            var changed = false;
+            if (_context.TryEdit("Sea level", () => changed = SpaceEdits.SetWaterLevel(_context.Session, _context.ActiveSpace, clamped)) && changed)
+                _context.Report(_context.Session.UndoDescription);
         }
 
         void ShowPicked()

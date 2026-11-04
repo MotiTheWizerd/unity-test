@@ -80,6 +80,58 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void SetWaterLevel_SetsAndRemovesTheSea_EachAsOneUndoStep()
+        {
+            var session = NewSession();
+            var id = SpaceEdits.CreateWorldspace(session, "Coast", 3, 50f);
+
+            Assert.That(SpaceEdits.SetWaterLevel(session, id, 48f), Is.True);
+            Assert.That(session.World.Records.Get<SpaceRecord>(id).WaterLevel, Is.EqualTo(48f));
+            Assert.That(session.UndoDescription, Is.EqualTo("Sea level of Coast: 48 m"));
+
+            Assert.That(SpaceEdits.SetWaterLevel(session, id, null), Is.True);
+            Assert.That(session.World.Records.Get<SpaceRecord>(id).WaterLevel, Is.Null);
+            Assert.That(session.UndoDescription, Is.EqualTo("Remove the sea of Coast"));
+
+            session.Undo();
+            Assert.That(session.World.Records.Get<SpaceRecord>(id).WaterLevel, Is.EqualTo(48f));
+        }
+
+        [Test]
+        public void SetWaterLevel_ToTheSameLevel_ChangesNothing()
+        {
+            var session = NewSession();
+            var id = SpaceEdits.CreateWorldspace(session, "Coast", 3, 50f);
+            SpaceEdits.SetWaterLevel(session, id, 48f);
+            var world = session.World;
+
+            Assert.That(SpaceEdits.SetWaterLevel(session, id, 48f), Is.False);
+            Assert.That(session.World, Is.SameAs(world));
+        }
+
+        [Test]
+        public void SetWaterLevel_OnAMastersSpace_OverridesItInTheActivePlugin()
+        {
+            var session = new EditSession(new[] { Plugin("core", new SpaceRecord(Space, "Tamriel", SpaceKind.Worldspace, 50f)) }, Plugin("user", new[] { "core" }));
+
+            SpaceEdits.SetWaterLevel(session, Space, 40f);
+
+            var space = session.World.Records.Get<SpaceRecord>(Space);
+            Assert.That((space.DisplayName, space.BaseHeight, space.WaterLevel), Is.EqualTo(("Tamriel", 50f, (float?)40f)));
+            Assert.That(session.BuildActivePlugin().Records.OfType<SpaceRecord>().Single().Id, Is.EqualTo(Space));
+        }
+
+        [Test]
+        public void SetWaterLevel_IsRefusedForInteriorsAndMissingSpaces()
+        {
+            var session = NewSession();
+            var interior = SpaceEdits.CreateInterior(session, "Cellar");
+
+            Assert.Throws<ArgumentException>(() => SpaceEdits.SetWaterLevel(session, interior, 1f));
+            Assert.Throws<ArgumentException>(() => SpaceEdits.SetWaterLevel(session, OtherSpace, 1f));
+        }
+
+        [Test]
         public void SizesOutOfRange_AreRefused()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => SpaceEdits.CreateWorldspace(NewSession(), "Huge", SpaceEdits.MaxSize + 1, 50f));

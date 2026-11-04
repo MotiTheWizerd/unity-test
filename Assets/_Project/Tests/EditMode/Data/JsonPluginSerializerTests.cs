@@ -114,6 +114,22 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesTheSeaLevel_AndLeavesItOutWhenThereIsNone()
+        {
+            var plugin = Plugin("core",
+                new SpaceRecord(Space, "Tamriel", SpaceKind.Worldspace, 50f, 47.5f),
+                new SpaceRecord(OtherSpace, "Dry Land", SpaceKind.Worldspace, 50f));
+
+            var json = Write(plugin);
+            var copy = Read(json).Records.OfType<SpaceRecord>().ToDictionary(r => r.Id);
+
+            Assert.That(copy[Space].WaterLevel, Is.EqualTo(47.5f));
+            Assert.That(copy[OtherSpace].WaterLevel, Is.Null);
+            Assert.That(Regex.Matches(json, "\"waterLevel\"").Count, Is.EqualTo(1), "No sea is no field, not null.");
+            Assert.That(Write(Read(json)), Is.EqualTo(json));
+        }
+
+        [Test]
         public void Read_UnknownSpaceKind_IsRejected()
         {
             var json = Write(Plugin("core", new SpaceRecord(Space, "Tamriel", SpaceKind.Worldspace))).Replace("\"worldspace\"", "\"dungeon\"");
