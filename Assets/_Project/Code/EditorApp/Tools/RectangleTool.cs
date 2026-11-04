@@ -11,18 +11,19 @@ using UnityEngine;
 namespace Forge.EditorApp.Tools
 {
     /// <summary>
-    /// Drag a rectangle on the ground from corner to corner to lay the palette's object around it (walls, fences)
-    /// or over it (floor tiles), by <see cref="EditorContext.OutlinePattern"/>, with the same layout as the
-    /// <c>place_outline</c> command (<see cref="RectLayout"/>). The rectangle snaps to whole pieces unless that is
-    /// switched off, Shift makes it square, and it is turned by the placement turn ([ ]). The pieces preview as
-    /// ghosts, seated on the ground exactly as placing seats them, and are placed as one undo step on release;
-    /// Esc drops the rectangle, or returns to the Select tool.
+    /// The Outline and Fill tools: drag a rectangle on the ground from corner to corner to lay the palette's object
+    /// around it (walls, fences) or over it (floors, paving), one instance per <see cref="RectPattern"/>, with the same
+    /// layout as the <c>place_outline</c> command (<see cref="RectLayout"/>). The rectangle snaps to whole pieces
+    /// unless that is switched off, Shift makes it square, and it is turned by the placement turn ([ ]). The pieces
+    /// preview as ghosts, seated on the ground exactly as placing seats them, and are placed as one undo step on
+    /// release; Esc drops the rectangle, or returns to the Select tool.
     /// </summary>
-    public sealed class OutlineTool : IEditorTool, IDisposable
+    public sealed class RectangleTool : IEditorTool, IDisposable
     {
         // A press only becomes a rectangle once dragged this far, so a stray click places nothing.
         const float MinDragDistance = 0.5f;
 
+        readonly RectPattern _pattern;
         readonly EditorContext _context;
         readonly ScenePicker _picker;
         readonly PlacementGhost _ghost;
@@ -31,8 +32,10 @@ namespace Forge.EditorApp.Tools
         readonly List<ObjectPlacement> _placements = new List<ObjectPlacement>();
         System.Numerics.Vector2? _start;
 
-        public OutlineTool(EditorContext context, ScenePicker picker, PlacementGhost ghost, ObjectSeating seating)
+        /// <param name="pattern">Outline (around the rectangle) or Fill (over it).</param>
+        public RectangleTool(RectPattern pattern, EditorContext context, ScenePicker picker, PlacementGhost ghost, ObjectSeating seating)
         {
+            _pattern = pattern;
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _picker = picker ?? throw new ArgumentNullException(nameof(picker));
             _ghost = ghost ?? throw new ArgumentNullException(nameof(ghost));
@@ -55,7 +58,7 @@ namespace Forge.EditorApp.Tools
                 if (_start.HasValue)
                 {
                     DropRectangle();
-                    _context.Report("Outline cancelled");
+                    _context.Report($"{_pattern} cancelled");
                 }
                 else
                 {
@@ -99,14 +102,12 @@ namespace Forge.EditorApp.Tools
                 _ghost.Hide();
                 return;
             }
-
-            var pattern = _context.OutlinePattern;
             var footprint = _seating.ShapeOf(baseObject).Footprint;
             var gap = _context.PlacementGap;
-            var rect = RectLayout.FromDrag(_start.Value, pointer, _context.PlacementYaw, square, pattern, footprint, gap, _context.OutlineSnapToPieces);
+            var rect = RectLayout.FromDrag(_start.Value, pointer, _context.PlacementYaw, square, _pattern, footprint, gap, _context.RectangleSnapToPieces);
             var size = FormattableString.Invariant($"{rect.Width:0.#} × {rect.Depth:0.#} m");
 
-            var count = RectLayout.Count(rect, pattern, footprint, gap);
+            var count = RectLayout.Count(rect, _pattern, footprint, gap);
             if (count > RectLayout.MaxItems)
             {
                 _ghost.Hide();
@@ -114,7 +115,7 @@ namespace Forge.EditorApp.Tools
                 return;
             }
 
-            var items = RectLayout.Lay(rect, pattern, footprint, gap, alignToRect: !_context.PlacementHasRandomYaw, RollAt);
+            var items = RectLayout.Lay(rect, _pattern, footprint, gap, alignToRect: !_context.PlacementHasRandomYaw, RollAt);
             _ghost.Use(baseObject.AssetKey);
             foreach (var item in items)
             {
@@ -141,14 +142,13 @@ namespace Forge.EditorApp.Tools
         void Commit(BaseObjectRecord baseObject)
         {
             var placements = _placements.ToList();
-            var pattern = _context.OutlinePattern;
             DropRectangle();
             if (placements.Count == 0)
                 return;
 
-            var description = $"Place {placements.Count} {baseObject.DisplayName} {RectLayout.Preposition(pattern)} a rectangle";
+            var description = $"Place {placements.Count} {baseObject.DisplayName} {RectLayout.Preposition(_pattern)} a rectangle";
             IReadOnlyList<PlacedObjectRecord> records = null;
-            if (_context.TryEdit("Outline", () => records = ObjectEdits.Place(_context.Session, _context.ActiveSpace, placements, description)))
+            if (_context.TryEdit(_pattern.ToString(), () => records = ObjectEdits.Place(_context.Session, _context.ActiveSpace, placements, description)))
             {
                 _context.Selection.Replace(records.Select(r => r.Id));
                 _context.Report($"Placed {records.Count} × {baseObject.DisplayName}");

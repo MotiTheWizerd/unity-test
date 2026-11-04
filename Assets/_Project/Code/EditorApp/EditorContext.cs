@@ -156,11 +156,8 @@ namespace Forge.EditorApp
                 SelectTool(ToolKind.Place);
         }
 
-        /// <summary>Whether the outline tool goes around its rectangle or covers it.</summary>
-        public RectPattern OutlinePattern { get; set; } = RectPattern.Outline;
-
-        /// <summary>Whether the outline tool sizes its rectangle to whole pieces, so every side ends cleanly.</summary>
-        public bool OutlineSnapToPieces { get; set; } = true;
+        /// <summary>Whether the outline and fill tools size their rectangle to whole pieces, so every side ends cleanly.</summary>
+        public bool RectangleSnapToPieces { get; set; } = true;
 
         /// <summary>Turn per [ / ] press while placing; with Shift, <see cref="PlacementCoarseStep"/>.</summary>
         public const float PlacementStep = 15f;

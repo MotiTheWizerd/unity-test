@@ -52,7 +52,7 @@
                 </ui:Foldout>
 
                 <ui:Foldout text="Controls" value="false" class="forge-foldout">
-                    <ui:Label class="forge-muted" text="Tools: Q select · W move · E rotate · R scale · H hand&#10;P place · O outline · B sculpt · M mark · Esc: back to select&#10;Outline: drag a rectangle · Shift square · [ ] turn it&#10;Click / Shift+click: select · Ctrl snaps&#10;Drag on empty space: box select (Shift adds)&#10;Move: drag objects over the ground, or the arrows&#10;Hold Space: hand in any tool&#10;Del: delete · End: drop to ground · F: frame&#10;Sculpt: hold left mouse · [ ]: brush size&#10;1-9: place object · [ ]: rotate it (Shift: 90°)&#10;Hold + drag: paint a row · + Shift: straight line&#10;Type in Search to filter, Esc clears&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
+                    <ui:Label class="forge-muted" text="Tools: Q select · W move · E rotate · R scale · H hand&#10;P place · O outline · G fill · B sculpt · M mark · Esc: back to select&#10;Outline / Fill: drag a rectangle · Shift square · [ ] turn it&#10;Click / Shift+click: select · Ctrl snaps&#10;Drag on empty space: box select (Shift adds)&#10;Move: drag objects over the ground, or the arrows&#10;Hold Space: hand in any tool&#10;Del: delete · End: drop to ground · F: frame&#10;Sculpt: hold left mouse · [ ]: brush size&#10;1-9: place object · [ ]: rotate it (Shift: 90°)&#10;Hold + drag: paint a row · + Shift: straight line&#10;Type in Search to filter, Esc clears&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
                 </ui:Foldout>
             </ui:ScrollView>
         </ui:VisualElement>
@@ -68,9 +68,8 @@
                 <ui:Button name="frame-selection" text="Frame (F)" />
                 <ui:Button name="drop-to-ground" text="Drop (End)" />
             </ui:VisualElement>
-            <ui:VisualElement name="options-outline" class="forge-options__group">
-                <ui:VisualElement name="outline-patterns" class="forge-row forge-choices" />
-                <ui:Toggle name="outline-snap" label="Whole pieces" />
+            <ui:VisualElement name="options-rectangle" class="forge-options__group">
+                <ui:Toggle name="rectangle-snap" label="Whole pieces" />
             </ui:VisualElement>
             <ui:VisualElement name="options-place" class="forge-options__group">
                 <ui:Label name="placement-rotation" class="forge-options__readout" />

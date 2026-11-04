@@ -340,7 +340,7 @@ slopes), so results are exact and every edit goes through the edit session.
 - **Tools** (`Tools/IEditorTool`), Photoshop style: exactly one drives the mouse. **`ToolCatalog`** is the one
   table of tools (`ToolDefinition`: kind, name, key, strip group, hint, and `EditsWorld`); the tool strip, the
   keys, the options bar and the status hint all read it. Q Select, W Move, E Rotate, R Scale, H Hand, P Place,
-  O Outline, B Sculpt, M Mark. `EditorContext.SelectTool` picks one (`ActiveTool`); tools that change the world refuse
+  O Outline, G Fill, B Sculpt, M Mark. `EditorContext.SelectTool` picks one (`ActiveTool`); tools that change the world refuse
   while the agent's build is open, and Place needs a palette object. **Holding Space lends the hand** to any
   tool (`EditorContext.HeldTool`; it only starts between drags and ends once Space and the button are let go);
   `CurrentTool` is the held tool, else the picked one. `EditorController` handles the global shortcuts, reports
@@ -360,18 +360,18 @@ slopes), so results are exact and every edit goes through the edit session.
     (camera-facing plane). Ctrl snaps. Every drag previews through `WorldView.PreviewObject` and commits one
     `ObjectEdits.Transform` on release; Esc resets the preview.
   - `HandTool`: left-drag pans through `ICameraRig.BeginPan` / `Pan`, the same pan as the middle button.
-  - `OutlineTool` (O): drag a rectangle from corner to corner to lay the palette's object around it (walls,
-    fences) or over it (Fill: floor tiles), `EditorContext.OutlinePattern`. It uses the engine-free **`RectLayout`**
+  - `RectangleTool` serves **Outline (O)** and **Fill (G)**, one instance per `RectPattern`: drag a rectangle from
+    corner to corner to lay the palette's object around it (walls, fences) or over it (floor tiles). It uses the engine-free **`RectLayout`**
     (`Forge.Editing.Placement`), shared with the `place_outline` command: an outline is a **pinwheel** (each side
     starts at its own corner, one thickness inside the edge, and stops one thickness short of the next corner,
     so every corner is closed by exactly one piece with no overlap); a fill is rows over the whole rectangle. A
     side that isn't whole pieces ends with its last piece slid back to the corner. "Whole pieces" (default on,
-    `OutlineSnapToPieces`) sizes the rectangle so it never has to: whole pieces per side plus one thickness for an
+    `RectangleSnapToPieces`) sizes the rectangle so it never has to: whole pieces per side plus one thickness for an
     outline, whole tiles for a fill, so walls dragged from a floor's corner meet it exactly (under the near walls,
     up to the far walls' inner face). Shift makes it square, `[` / `]` turn it (the placement turn), the gap is
     the object's row gap. Pieces are seated by `ObjectSeating` and preview as ghosts; release places them as one
     undo step and selects them. Tools that lay the palette's object (`ToolDefinition.LaysPaletteObject`: Place,
-    Outline) keep going when another object is picked in the palette, and share the placement options.
+    Outline, Fill) keep going when another object is picked in the palette, and share the placement options.
   - `PlaceTool`: a `PlacementGhost` (a see-through copy built from the same asset catalog, no colliders, no
     shadows, `Shaders/PlacementGhost.shader` via `EditorController._ghostMaterial`) rests on the surface under the
     pointer: its lowest point on the hit (`RendererBounds.PivotAboveBottom`, so center-pivot primitives no
@@ -453,8 +453,8 @@ slopes), so results are exact and every edit goes through the edit session.
   Performance, StatusBar, Agent). The **tool strip** (right of the dock) is built from `ToolCatalog`, grouped,
   with the current tool highlighted. The **tool options bar** (across the top of the view) shows the current
   tool's name and hint, and each tool's settings are their own section inside it, shown while that tool is
-  current: `SelectionSection` (count, Frame, Drop) for Select/Move/Rotate/Scale, `OutlineSection` (Outline / Fill,
-  whole pieces) for Outline, `PlacementSection` (turn, random turn & size, align to slope, gaps) for Place and Outline, `SculptSection` (brush) for Sculpt. Each presenter
+  current: `SelectionSection` (count, Frame, Drop) for Select/Move/Rotate/Scale, `RectangleSection` (whole pieces)
+  for Outline and Fill, `PlacementSection` (turn, random turn & size, align to slope, gaps) for Place, Outline and Fill, `SculptSection` (brush) for Sculpt. Each presenter
   binds its UXML elements by name (`PanelElements.Required` fails loudly on a mismatch), sends
   actions to `EditorContext` / `EditorCommands`, and mirrors state in `Refresh()` every frame,
   because shortcuts change the same state. `ChoiceRow<TEnum>` is the reusable segmented control.
@@ -467,7 +467,7 @@ slopes), so results are exact and every edit goes through the edit session.
   `PaletteSection`: a search field (Esc clears) over one foldout per category; folded categories
   stay folded across rebuilds, and a search opens every group with a match. Buttons are plain
   elements, fine for hundreds of objects; a virtualized `ListView` is the next step for thousands.
-- Controls: the tool keys above (Q / W / E / R / H / P / O / B / M) or the tool strip; hold Space → hand; 1–9 or the
+- Controls: the tool keys above (Q / W / E / R / H / P / O / G / B / M) or the tool strip; hold Space → hand; 1–9 or the
   palette → Place tool (`[` / `]` rotate, hold + drag paints a row, + Shift a straight one); Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
   (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly; wheel
   dollies towards the point under the cursor; hold middle mouse to pan (the grabbed point stays under

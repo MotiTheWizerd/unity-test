@@ -65,7 +65,8 @@ namespace Forge.EditorApp
                 { ToolKind.Scale, new SelectTransformTool(ToolKind.Scale, context, view, picker, _camera, _gizmoMaterial, seating) },
                 { ToolKind.Hand, new HandTool(context, _flyCamera) },
                 { ToolKind.Place, new PlaceTool(context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
-                { ToolKind.Outline, new OutlineTool(context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
+                { ToolKind.Outline, new RectangleTool(RectPattern.Outline, context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
+                { ToolKind.Fill, new RectangleTool(RectPattern.Fill, context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
                 { ToolKind.Sculpt, new SculptTool(context, view, picker, slopes) },
                 { ToolKind.Mark, new MarkTool(context, picker) },
             };
