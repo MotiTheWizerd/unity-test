@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -142,6 +143,12 @@ namespace Forge.EditorApp
 
         /// <summary>The shape of the day the sky follows: one for every worldspace until climates per worldspace exist.</summary>
         public DayCycle DayCycle => DayCycle.Default;
+
+        /// <summary>The moons in the sky: the same for every worldspace until climates per worldspace exist.</summary>
+        public IReadOnlyList<Moon> Moons => Moon.Defaults;
+
+        /// <summary>The sky the editor shows now, from <see cref="Clock"/>.</summary>
+        public SkyState Sky => SkyState.At(DayCycle, Moons, Clock.Day, Clock.Hour);
 
         /// <summary>The lake the Water tool last made or clicked, whose level its options show; null for none.</summary>
         public RecordId? CurrentLake { get; set; }

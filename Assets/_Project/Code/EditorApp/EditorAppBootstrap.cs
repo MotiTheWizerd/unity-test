@@ -108,7 +108,7 @@ namespace Forge.EditorApp
                 _skyView = CreateSkyView();
                 if (_skyView != null)
                 {
-                    _skyDirector = new SkyDirector(_skyView, _context.Clock, _context.DayCycle);
+                    _skyDirector = new SkyDirector(_skyView, _context);
                     _skyDirector.Tick(0f);
                 }
                 _spaceCameras = new SpaceCameras();

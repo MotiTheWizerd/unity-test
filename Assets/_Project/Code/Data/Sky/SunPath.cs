@@ -14,22 +14,29 @@ namespace Forge.Data.Sky
         public const float NightDepth = 40f;
 
         /// <param name="hour">Time of day in hours, wrapped into [0, 24).</param>
-        public static SunPosition At(DayCycle day, float hour)
+        public static SkyPosition At(DayCycle day, float hour) => Arc(day.Sunrise, day.Sunset, day.NoonHeight, hour);
+
+        /// <summary>
+        /// The arc itself, for anything that crosses the sky the sun's way (the moons do, with their own height and a
+        /// delay): up at <paramref name="rise"/> in the east, <paramref name="highest"/> degrees up in the south
+        /// halfway to <paramref name="set"/> in the west, under the horizon through the north in between.
+        /// </summary>
+        public static SkyPosition Arc(float rise, float set, float highest, float hour)
         {
             var time = WorldClock.Wrap(hour);
-            var dayLength = day.Sunset - day.Sunrise;
-            var nightLength = WorldClock.HoursPerDay - dayLength;
+            var upLength = set - rise;
+            var downLength = WorldClock.HoursPerDay - upLength;
 
-            if (time >= day.Sunrise && time <= day.Sunset)
+            if (time >= rise && time <= set)
             {
-                var progress = (time - day.Sunrise) / dayLength;
-                return new SunPosition(day.NoonHeight * (float)Math.Sin(Math.PI * progress), 90f + 180f * progress);
+                var progress = (time - rise) / upLength;
+                return new SkyPosition(highest * (float)Math.Sin(Math.PI * progress), 90f + 180f * progress);
             }
 
-            // Hours since sunset, across midnight.
-            var sinceSunset = time > day.Sunset ? time - day.Sunset : time + WorldClock.HoursPerDay - day.Sunset;
-            var night = sinceSunset / nightLength;
-            return new SunPosition(-NightDepth * (float)Math.Sin(Math.PI * night), (270f + 180f * night) % 360f);
+            // Hours since setting, across midnight.
+            var sinceSet = time > set ? time - set : time + WorldClock.HoursPerDay - set;
+            var down = sinceSet / downLength;
+            return new SkyPosition(-NightDepth * (float)Math.Sin(Math.PI * down), (270f + 180f * down) % 360f);
         }
     }
 }

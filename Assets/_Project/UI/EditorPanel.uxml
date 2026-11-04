@@ -36,6 +36,8 @@
                         <ui:Label name="time-readout" class="forge-time-readout" />
                     </ui:VisualElement>
                     <ui:Toggle name="time-run" label="Run (20×)" />
+                    <ui:IntegerField name="time-day" label="Day" />
+                    <ui:Label name="time-moons" class="forge-muted" />
                 </ui:VisualElement>
 
                 <ui:VisualElement class="forge-section">

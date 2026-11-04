@@ -1,3 +1,4 @@
+using Forge.Data.Sky;
 using Forge.World.Sky;
 using NUnit.Framework;
 using UnityEngine;
@@ -10,9 +11,9 @@ namespace Forge.Tests.World
         [TestCase(0f, 90f, 1f, 0f, 0f)]
         [TestCase(0f, 180f, 0f, 0f, -1f)]
         [TestCase(90f, 123f, 0f, 1f, 0f)]
-        public void SunDirection_IsHeightAboveTheHorizon_TowardACompassBearing(float height, float bearing, float x, float y, float z)
+        public void Direction_IsHeightAboveTheHorizon_TowardACompassBearing(float height, float bearing, float x, float y, float z)
         {
-            var direction = SkyView.SunDirection(height, bearing);
+            var direction = SkyView.Direction(new SkyPosition(height, bearing));
 
             Assert.That(direction.x, Is.EqualTo(x).Within(1e-5f));
             Assert.That(direction.y, Is.EqualTo(y).Within(1e-5f));
@@ -34,6 +35,22 @@ namespace Forge.Tests.World
                 Assert.That(noon.SunIntensity, Is.GreaterThan(sunrise.SunIntensity));
                 Assert.That(night.SunIntensity, Is.EqualTo(0f));
                 Assert.That(night.Zenith.grayscale, Is.LessThan(noon.Zenith.grayscale));
+            }
+            finally
+            {
+                Object.DestroyImmediate(profile);
+            }
+        }
+
+        [Test]
+        public void Profile_MoonlightIsFaint_AndNoneOnceTheMoonHasSet()
+        {
+            var profile = ScriptableObject.CreateInstance<SkyProfile>();
+            try
+            {
+                Assert.That(profile.MoonIntensityAt(-10f), Is.EqualTo(0f));
+                Assert.That(profile.MoonIntensityAt(40f), Is.GreaterThan(profile.MoonIntensityAt(5f)));
+                Assert.That(profile.MoonIntensityAt(90f), Is.LessThan(profile.ColorsAt(20f).SunIntensity), "A moon never outshines the day.");
             }
             finally
             {

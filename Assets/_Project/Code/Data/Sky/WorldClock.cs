@@ -14,6 +14,7 @@ namespace Forge.Data.Sky
         public const float DefaultScale = 20f;
 
         float _hour;
+        int _day;
         float _scale = DefaultScale;
 
         /// <param name="hour">The time of day to start at, in hours.</param>
@@ -34,8 +35,12 @@ namespace Forge.Data.Sky
             }
         }
 
-        /// <summary>Days passed since the clock started.</summary>
-        public int Day { get; private set; }
+        /// <summary>Days passed since the world began (day 0); the moons' phases follow it.</summary>
+        public int Day
+        {
+            get => _day;
+            set => _day = value >= 0 ? value : throw new ArgumentOutOfRangeException(nameof(value), value, "The day can't be before day 0.");
+        }
 
         /// <summary>Game seconds per real second.</summary>
         public float Scale
@@ -55,7 +60,7 @@ namespace Forge.Data.Sky
 
             var hour = _hour + realSeconds * _scale / 3600f;
             var days = (int)Math.Floor(hour / HoursPerDay);
-            Day += days;
+            _day += days;
             _hour = hour - days * HoursPerDay;
         }
 

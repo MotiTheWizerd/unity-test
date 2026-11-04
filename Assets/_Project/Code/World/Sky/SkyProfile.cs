@@ -39,9 +39,36 @@ namespace Forge.World.Sky
         [SerializeField, Min(0f), Tooltip("Multiplies the light the sky casts on everything (ambient).")]
         float _ambientIntensity = 1f;
 
+        [Header("Night")]
+        [SerializeField, Tooltip("A moon's lit face.")]
+        Color _moonColor = new Color(0.92f, 0.90f, 0.84f);
+
+        [SerializeField, Range(0f, 1f), Tooltip("How bright a moon looks by day, against its brightness at night.")]
+        float _moonByDay = 0.35f;
+
+        [SerializeField, Tooltip("The light a moon casts once it outshines the sun.")]
+        Color _moonLight = new Color(0.62f, 0.72f, 1f);
+
+        [SerializeField, Tooltip("A full moon's light intensity by its height (in degrees); a half moon casts half of it.")]
+        AnimationCurve _moonIntensity = new AnimationCurve(new Keyframe(-2f, 0f), new Keyframe(8f, 0.3f), new Keyframe(40f, 0.45f), new Keyframe(90f, 0.5f));
+
+        [SerializeField, Min(0f), Tooltip("How bright the stars are once the sun is well down.")]
+        float _starBrightness = 1.5f;
+
         public Material Material => _material;
 
         public float AmbientIntensity => _ambientIntensity;
+
+        public Color MoonColor => _moonColor;
+
+        public float MoonByDay => _moonByDay;
+
+        public Color MoonLight => _moonLight;
+
+        public float StarBrightness => _starBrightness;
+
+        /// <summary>The light a full moon casts from <paramref name="moonHeight"/> degrees above the horizon.</summary>
+        public float MoonIntensityAt(float moonHeight) => Mathf.Max(0f, _moonIntensity.Evaluate(moonHeight));
 
         /// <summary>The sky's colors with the sun <paramref name="sunHeight"/> degrees above the horizon.</summary>
         public SkyColors ColorsAt(float sunHeight)
