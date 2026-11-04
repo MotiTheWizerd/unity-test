@@ -1,0 +1,89 @@
+using System;
+using System.Linq;
+using Forge.Data.Records;
+using Forge.Data.Terrain;
+using Forge.Editing;
+using Forge.Editing.Spaces;
+using NUnit.Framework;
+using static Forge.Tests.Data.TestRecords;
+
+namespace Forge.Tests.Editing
+{
+    public class SpaceEditsTests
+    {
+        static EditSession NewSession() =>
+            new EditSession(new[] { Plugin("core", Array.Empty<Record>()) }, Plugin("user", new[] { "core" }));
+
+        [Test]
+        public void CreateWorldspace_LaysFlatLandCenteredOnTheOrigin_AsOneUndoStep()
+        {
+            var session = NewSession();
+
+            var id = SpaceEdits.CreateWorldspace(session, "Whiterun", 3, 40f);
+
+            Assert.That(id.ToString(), Is.EqualTo("user:space/whiterun"));
+            var space = session.World.Records.Get<SpaceRecord>(id);
+            Assert.That((space.DisplayName, space.Kind, space.BaseHeight), Is.EqualTo(("Whiterun", SpaceKind.Worldspace, 40f)));
+
+            var chunks = session.World.Records.OfType<TerrainChunkRecord>().Where(c => c.Space == id).ToList();
+            Assert.That(chunks.Select(c => c.Coord), Is.EquivalentTo(
+                from z in new[] { -1, 0, 1 } from x in new[] { -1, 0, 1 } select new ChunkCoord(x, z)));
+            Assert.That(chunks.All(c => c.Heights.ToArray().All(h => h == 40f)), Is.True);
+
+            Assert.That(session.UndoDescription, Is.EqualTo("New worldspace Whiterun"));
+            session.Undo();
+            Assert.That(session.World.Records.TryGet(id, out _), Is.False);
+            Assert.That(session.World.Records.OfType<TerrainChunkRecord>(), Is.Empty);
+        }
+
+        [Test]
+        public void AnEvenSize_StaysCenteredOnTheOrigin()
+        {
+            var session = NewSession();
+
+            var id = SpaceEdits.CreateWorldspace(session, "Wide", 8, 50f);
+
+            var coords = session.World.Records.OfType<TerrainChunkRecord>().Where(c => c.Space == id).Select(c => c.Coord).ToList();
+            Assert.That(coords.Count, Is.EqualTo(64));
+            Assert.That((coords.Min(c => c.X), coords.Max(c => c.X)), Is.EqualTo((-4, 3)));
+        }
+
+        [Test]
+        public void CreateInterior_HasNoLand()
+        {
+            var session = NewSession();
+
+            var id = SpaceEdits.CreateInterior(session, "Bannered Mare");
+
+            Assert.That(session.World.Records.Get<SpaceRecord>(id).Kind, Is.EqualTo(SpaceKind.Interior));
+            Assert.That(session.World.Records.OfType<TerrainChunkRecord>(), Is.Empty);
+            Assert.That(session.UndoDescription, Is.EqualTo("New interior Bannered Mare"));
+        }
+
+        [Test]
+        public void ATakenName_GetsANumber()
+        {
+            var session = NewSession();
+            SpaceEdits.CreateInterior(session, "Cave");
+
+            var second = SpaceEdits.CreateInterior(session, "cave!");
+
+            Assert.That(second.Name, Is.EqualTo("space/cave_2"));
+        }
+
+        [TestCase("Whiterun Hall", "whiterun_hall")]
+        [TestCase("  Dragonsreach -- Jarl's Room ", "dragonsreach_jarl_s_room")]
+        [TestCase("???", "space")]
+        public void Slug_MakesAValidName(string displayName, string expected)
+        {
+            Assert.That(SpaceEdits.Slug(displayName), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void SizesOutOfRange_AreRefused()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => SpaceEdits.CreateWorldspace(NewSession(), "Huge", SpaceEdits.MaxSize + 1, 50f));
+            Assert.Throws<ArgumentException>(() => SpaceEdits.CreateInterior(NewSession(), " "));
+        }
+    }
+}

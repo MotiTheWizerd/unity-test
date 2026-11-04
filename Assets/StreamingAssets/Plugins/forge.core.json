@@ -81,6 +81,13 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:floor_wood",
+      "displayName": "Wooden Floor",
+      "assetKey": "architecture/floor_wood",
+      "category": "Architecture/Interior"
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:house_small",
       "displayName": "Small House",
       "assetKey": "architecture/house_small",
@@ -121,8 +128,16 @@
       "category": "Props/Decor"
     },
     {
+      "type": "space",
+      "id": "forge.core:space/main",
+      "displayName": "Main World",
+      "kind": "worldspace",
+      "baseHeight": 50.0
+    },
+    {
       "type": "terrain_chunk",
-      "id": "forge.core:terrain/c-1_-1",
+      "id": "forge.core:terrain/forge.core/space/main/c-1_-1",
+      "space": "forge.core:space/main",
       "coord": [
         -1,
         -1
@@ -134,7 +149,8 @@
     },
     {
       "type": "terrain_chunk",
-      "id": "forge.core:terrain/c-1_0",
+      "id": "forge.core:terrain/forge.core/space/main/c-1_0",
+      "space": "forge.core:space/main",
       "coord": [
         -1,
         0
@@ -146,7 +162,8 @@
     },
     {
       "type": "terrain_chunk",
-      "id": "forge.core:terrain/c-1_1",
+      "id": "forge.core:terrain/forge.core/space/main/c-1_1",
+      "space": "forge.core:space/main",
       "coord": [
         -1,
         1
@@ -158,7 +175,8 @@
     },
     {
       "type": "terrain_chunk",
-      "id": "forge.core:terrain/c0_-1",
+      "id": "forge.core:terrain/forge.core/space/main/c0_-1",
+      "space": "forge.core:space/main",
       "coord": [
         0,
         -1
@@ -170,7 +188,8 @@
     },
     {
       "type": "terrain_chunk",
-      "id": "forge.core:terrain/c0_0",
+      "id": "forge.core:terrain/forge.core/space/main/c0_0",
+      "space": "forge.core:space/main",
       "coord": [
         0,
         0
@@ -182,7 +201,8 @@
     },
     {
       "type": "terrain_chunk",
-      "id": "forge.core:terrain/c0_1",
+      "id": "forge.core:terrain/forge.core/space/main/c0_1",
+      "space": "forge.core:space/main",
       "coord": [
         0,
         1
@@ -194,7 +214,8 @@
     },
     {
       "type": "terrain_chunk",
-      "id": "forge.core:terrain/c1_-1",
+      "id": "forge.core:terrain/forge.core/space/main/c1_-1",
+      "space": "forge.core:space/main",
       "coord": [
         1,
         -1
@@ -206,7 +227,8 @@
     },
     {
       "type": "terrain_chunk",
-      "id": "forge.core:terrain/c1_0",
+      "id": "forge.core:terrain/forge.core/space/main/c1_0",
+      "space": "forge.core:space/main",
       "coord": [
         1,
         0
@@ -218,7 +240,8 @@
     },
     {
       "type": "terrain_chunk",
-      "id": "forge.core:terrain/c1_1",
+      "id": "forge.core:terrain/forge.core/space/main/c1_1",
+      "space": "forge.core:space/main",
       "coord": [
         1,
         1
@@ -260,6 +283,13 @@
         "maxScale": 1.35,
         "alignToSlope": false
       }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:wall_interior",
+      "displayName": "Interior Wall",
+      "assetKey": "architecture/wall_interior",
+      "category": "Architecture/Interior"
     },
     {
       "type": "base_object",

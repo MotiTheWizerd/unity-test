@@ -49,14 +49,17 @@ namespace Forge.EditorApp.Tools
         public bool TryPickWorld(Ray ray, out RaycastHit hit) =>
             Physics.Raycast(ray, out hit, _maxDistance, _worldMask);
 
-        /// <summary>Nearest terrain hit, looking through any placed objects in front of it.</summary>
+        /// <summary>
+        /// Nearest ground hit, looking through any placed objects in front of it. The ground is the terrain, or in an
+        /// interior its floor grid.
+        /// </summary>
         public bool TryPickTerrain(Ray ray, out RaycastHit hit)
         {
             hit = default;
             var found = false;
             foreach (var candidate in Physics.RaycastAll(ray, _maxDistance, _worldMask))
             {
-                if (candidate.collider is TerrainCollider && (!found || candidate.distance < hit.distance))
+                if (IsGround(candidate.collider) && (!found || candidate.distance < hit.distance))
                 {
                     hit = candidate;
                     found = true;
@@ -66,7 +69,9 @@ namespace Forge.EditorApp.Tools
             return found;
         }
 
-        /// <summary>Terrain height straight below (x, z), looking through objects; null where there is no terrain.</summary>
+        static bool IsGround(Collider collider) => collider is TerrainCollider || collider.GetComponent<InteriorFloor>() != null;
+
+        /// <summary>Ground height straight below (x, z), looking through objects; null where there is no ground.</summary>
         public float? TerrainHeightAt(float x, float z) =>
             TryPickTerrain(new Ray(new Vector3(x, ProbeTop, z), Vector3.down), out var hit) ? hit.point.y : (float?)null;
 

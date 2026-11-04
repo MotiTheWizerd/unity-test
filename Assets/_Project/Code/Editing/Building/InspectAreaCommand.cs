@@ -94,7 +94,7 @@ namespace Forge.Editing.Building
             var half = arguments.Size / 2f;
             var terrain = DescribeTerrain(center, arguments.Size, arguments.Samples ?? DefaultSamples);
 
-            var inside = _context.Session.World.Records.OfType<PlacedObjectRecord>()
+            var inside = _context.PlacedObjects()
                 .Where(p => Math.Abs(p.Position.X - center.X) <= half && Math.Abs(p.Position.Z - center.Y) <= half)
                 .OrderBy(p => Vector2.DistanceSquared(new Vector2(p.Position.X, p.Position.Z), center))
                 .ToList();

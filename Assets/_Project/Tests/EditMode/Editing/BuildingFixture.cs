@@ -15,13 +15,17 @@ namespace Forge.Tests.Editing
 {
     /// <summary>
     /// A small world for the building commands: a pine (random turn and size, upright), a fence (follows the
-    /// slope) and a house (exact), on four terrain chunks covering [0, 127] on both axes (1 m samples) that
-    /// rise 1 m per 10 m eastwards. Objects are seated on that terrain's data, standing in for the scene's probe.
+    /// slope) and a house (exact), on four terrain chunks of <see cref="Space"/> covering [0, 127] on both axes
+    /// (1 m samples) that rise 1 m per 10 m eastwards. Objects are seated on that terrain's data, standing in for
+    /// the scene's probe. The commands build in <see cref="Space"/>.
     /// </summary>
     sealed class BuildingFixture
     {
         /// <summary>Where the terrain data reaches; the last sample row (x or z = 128) belongs to no chunk.</summary>
         public const float TerrainEdge = 127f;
+
+        /// <summary>The space the fixture's terrain belongs to and the commands build in.</summary>
+        public static readonly RecordId Space = Forge.Tests.Data.TestRecords.Space;
 
         public static readonly RecordId Tree = RecordId.Parse("core:tree");
         public static readonly RecordId Fence = RecordId.Parse("core:fence");
@@ -38,7 +42,7 @@ namespace Forge.Tests.Editing
             { "house", HouseShape },
         };
 
-        BuildingFixture()
+        BuildingFixture(Record[] extra)
         {
             var records = new List<Record>
             {
@@ -49,16 +53,18 @@ namespace Forge.Tests.Editing
             for (var x = 0; x <= 1; x++)
             for (var z = 0; z <= 1; z++)
                 records.Add(SlopeChunk(x, z));
+            records.AddRange(extra);
 
             Session = new EditSession(new[] { Plugin("core", records.ToArray()) }, Plugin("user", new[] { "core" }));
             Options = new PlacementOptions(new Random(1));
-            var terrain = new TerrainGrid(Session.World.Records);
+            var terrain = new TerrainGrid(Session.World.Records, Space);
             var seating = new ObjectSeating(terrain.HeightAt, SlopeShapeOf, key => ShapesByKey[key]);
-            Context = new BuildContext(Session, seating, Options);
+            Context = new BuildContext(Session, () => Space, seating, Options);
             BuildingCommands.AddTo(Registry, Context);
         }
 
-        public static BuildingFixture Create() => new BuildingFixture();
+        /// <param name="extra">More "core" records, e.g. objects or terrain in another space.</param>
+        public static BuildingFixture Create(params Record[] extra) => new BuildingFixture(extra);
 
         public EditSession Session { get; }
 
@@ -77,7 +83,7 @@ namespace Forge.Tests.Editing
             var coord = new ChunkCoord(x, z);
             var samples = WorldGrid.DefaultHeightmapResolution;
             var spacing = WorldGrid.ChunkSize / (samples - 1);
-            return new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", coord), coord,
+            return new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", Space, coord), Space, coord,
                 HeightField.FromFunction((sx, sz) => 10f + 0.1f * (x * WorldGrid.ChunkSize + sx * spacing), samples));
         }
 

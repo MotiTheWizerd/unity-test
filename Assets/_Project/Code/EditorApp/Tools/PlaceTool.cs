@@ -178,7 +178,7 @@ namespace Forge.EditorApp.Tools
             var name = baseObject.DisplayName;
             var description = placements.Count == 1 ? $"Place {name}" : $"Place {placements.Count} {name}";
             IReadOnlyList<PlacedObjectRecord> records = null;
-            if (_context.TryEdit("Place", () => records = ObjectEdits.Place(_context.Session, placements, description)))
+            if (_context.TryEdit("Place", () => records = ObjectEdits.Place(_context.Session, _context.ActiveSpace, placements, description)))
             {
                 _context.Selection.Replace(records.Select(r => r.Id));
                 _context.Report(records.Count == 1 ? $"Placed {name} ({records[0].Id})" : $"Placed {records.Count} × {name}");

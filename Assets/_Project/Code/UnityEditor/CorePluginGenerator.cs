@@ -23,6 +23,9 @@ namespace Forge.UnityEditor
         const string PluginId = "forge.core";
         const int ChunkRadius = 1;
 
+        /// <summary>The main worldspace, where the editor opens (see the world profiles).</summary>
+        public static readonly RecordId MainSpace = SpaceRecord.IdFor(PluginId, "main");
+
         [MenuItem("Forge/Generate Core Plugin")]
         static void Generate()
         {
@@ -45,9 +48,10 @@ namespace Forge.UnityEditor
             records.AddRange(PlaceholderContent.All.Select(c => BaseObject(c.Name, c.DisplayName, c.AssetKey, c.Category, c.Placement)));
 
             // Bare land: the base world ships the objects to build with, and nothing placed.
+            records.Add(new SpaceRecord(MainSpace, "Main World", SpaceKind.Worldspace, ProceduralTerrain.BaseHeight));
             for (var cz = -ChunkRadius; cz <= ChunkRadius; cz++)
             for (var cx = -ChunkRadius; cx <= ChunkRadius; cx++)
-                records.Add(ProceduralTerrain.Chunk(PluginId, new ChunkCoord(cx, cz)));
+                records.Add(ProceduralTerrain.Chunk(PluginId, MainSpace, new ChunkCoord(cx, cz)));
 
             return new Plugin(new PluginManifest(PluginId, "0.1.0"), records);
         }

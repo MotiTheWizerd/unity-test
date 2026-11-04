@@ -6,6 +6,7 @@ using Forge.Data;
 using Forge.Data.Json;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
+using Forge.Data.Terrain;
 using NUnit.Framework;
 using static Forge.Tests.Data.TestRecords;
 
@@ -41,6 +42,7 @@ namespace Forge.Tests.Data
                     new PlacedObjectRecord(
                         RecordId.Parse("mymod:ref/oak_1"),
                         RecordId.Parse("core:tree_oak"),
+                        Space,
                         new Vector3(1.5f, -2f, 3.25f),
                         Quaternion.CreateFromYawPitchRoll(0.5f, 0.1f, 0f),
                         2f),
@@ -70,6 +72,7 @@ namespace Forge.Tests.Data
             var placed = (PlacedObjectRecord)copy.Records.Single(r => r is PlacedObjectRecord);
             Assert.That(placed.Id, Is.EqualTo(expected.Id));
             Assert.That(placed.BaseId, Is.EqualTo(expected.BaseId));
+            Assert.That(placed.Space, Is.EqualTo(expected.Space));
             Assert.That(placed.Position, Is.EqualTo(expected.Position));
             Assert.That(placed.Rotation, Is.EqualTo(expected.Rotation));
             Assert.That(placed.Scale, Is.EqualTo(expected.Scale));
@@ -85,8 +88,65 @@ namespace Forge.Tests.Data
             StringAssert.Contains("\"type\": \"base_object\"", json);
             StringAssert.Contains("\"id\": \"core:tree_oak\"", json);
             StringAssert.Contains("\"baseId\": \"core:tree_oak\"", json);
+            StringAssert.Contains("\"space\": \"core:space/main\"", json);
             Assert.That(json.IndexOf("core:tree_oak\""), Is.LessThan(json.IndexOf("mymod:ref/oak_1")),
                 "Records are written sorted by id.");
+        }
+
+        [Test]
+        public void RoundTrip_PreservesSpaces_WritingTheKindByName()
+        {
+            var plugin = Plugin("core",
+                new SpaceRecord(Space, "Tamriel", SpaceKind.Worldspace, 50f),
+                new SpaceRecord(SpaceRecord.IdFor("core", "inn"), "The Inn", SpaceKind.Interior));
+
+            var json = Write(plugin);
+            var copy = Read(json).Records.OfType<SpaceRecord>().ToDictionary(r => r.Id.ToString());
+
+            var main = copy["core:space/main"];
+            Assert.That((main.DisplayName, main.Kind, main.BaseHeight), Is.EqualTo(("Tamriel", SpaceKind.Worldspace, 50f)));
+            var inn = copy["core:space/inn"];
+            Assert.That((inn.DisplayName, inn.Kind, inn.BaseHeight), Is.EqualTo(("The Inn", SpaceKind.Interior, 0f)));
+            StringAssert.Contains("\"type\": \"space\"", json);
+            StringAssert.Contains("\"kind\": \"worldspace\"", json);
+            StringAssert.Contains("\"kind\": \"interior\"", json);
+            Assert.That(Write(Read(json)), Is.EqualTo(json));
+        }
+
+        [Test]
+        public void Read_UnknownSpaceKind_IsRejected()
+        {
+            var json = Write(Plugin("core", new SpaceRecord(Space, "Tamriel", SpaceKind.Worldspace))).Replace("\"worldspace\"", "\"dungeon\"");
+
+            Assert.Throws<DataValidationException>(() => Read(json));
+        }
+
+        [Test]
+        public void RoundTrip_PreservesTheSpaceOfObjectsAndTerrain()
+        {
+            var coord = new ChunkCoord(1, -1);
+            var chunkId = TerrainChunkRecord.IdFor("core", OtherSpace, coord);
+            var plugin = Plugin("core",
+                Base("core:rock"),
+                new PlacedObjectRecord(RecordId.Parse("core:ref/a"), RecordId.Parse("core:rock"), Space, Vector3.Zero, Quaternion.Identity, 1f),
+                new PlacedObjectRecord(RecordId.Parse("core:ref/b"), RecordId.Parse("core:rock"), OtherSpace, Vector3.Zero, Quaternion.Identity, 1f),
+                new TerrainChunkRecord(chunkId, OtherSpace, coord, HeightField.Flat(10f, 17)));
+
+            var copy = Read(Write(plugin)).Records.ToDictionary(r => r.Id.ToString());
+
+            Assert.That(((PlacedObjectRecord)copy["core:ref/a"]).Space, Is.EqualTo(Space));
+            Assert.That(((PlacedObjectRecord)copy["core:ref/b"]).Space, Is.EqualTo(OtherSpace));
+            var chunk = (TerrainChunkRecord)copy[chunkId.ToString()];
+            Assert.That((chunk.Space, chunk.Coord), Is.EqualTo((OtherSpace, coord)));
+        }
+
+        [Test]
+        public void Read_PlacedObjectWithoutSpace_IsRejected()
+        {
+            var json = Regex.Replace(Write(SamplePlugin()), @",\s*""space"": ""core:space/main""", string.Empty);
+            StringAssert.DoesNotContain("\"space\"", json);
+
+            Assert.Throws<DataValidationException>(() => Read(json));
         }
 
         [Test]

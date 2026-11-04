@@ -66,6 +66,40 @@ namespace Forge.EditorApp
 
         public ToolKind ActiveTool { get; set; } = ToolKind.Select;
 
+        /// <summary>The space shown and edited: tools, commands and the agent all work in it.</summary>
+        public RecordId ActiveSpace { get; private set; }
+
+        /// <summary>Raised after <see cref="ActiveSpace"/> changes, so the view can switch over.</summary>
+        public event Action<RecordId> SpaceChanged;
+
+        /// <summary>
+        /// Shows and edits <paramref name="space"/> from now on. What belonged to the old space (the selection, the
+        /// mark) is cleared. Refused while the agent's build is open, which belongs to the current space.
+        /// </summary>
+        public bool ShowSpace(RecordId space)
+        {
+            if (space == ActiveSpace)
+                return true;
+            if (RefusedForDraft("Switching space"))
+                return false;
+            if (!(Session.World.Records.TryGet(space, out var record) && record is SpaceRecord spaceRecord))
+            {
+                Report($"There is no space '{space}'.");
+                return false;
+            }
+
+            ActiveSpace = space;
+            Selection.Clear();
+            Mark = null;
+            SpaceChanged?.Invoke(space);
+            Report($"Showing {spaceRecord.DisplayName}");
+            return true;
+        }
+
+        /// <summary>The record of <see cref="ActiveSpace"/>, or null if it no longer exists.</summary>
+        public SpaceRecord ActiveSpaceRecord =>
+            Session.World.Records.TryGet(ActiveSpace, out var record) ? record as SpaceRecord : null;
+
         /// <summary>The spot or area the user marked for the agent (M), or null. Editor state: never saved or undone.</summary>
         public GroundMark Mark { get; set; }
 

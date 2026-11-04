@@ -90,7 +90,7 @@ namespace Forge.Editing.Building
                     $"There is no terrain at ({arguments.X:0.#}, {arguments.Z:0.#}); inspect_area shows where the ground is."));
 
             var height = arguments.Height ?? natural.Value;
-            var flattening = new AreaFlattening(_context.Session.World.Records, area, height, arguments.Blend ?? DefaultBlend);
+            var flattening = new AreaFlattening(_context.Session.World.Records, _context.Space, area, height, arguments.Blend ?? DefaultBlend);
             TerrainEdits.Commit(_context.Session, flattening, _context.FollowTerrain(), out var moved);
 
             return new Result(Summarize(flattening, moved), Rounding.Coarse(height),

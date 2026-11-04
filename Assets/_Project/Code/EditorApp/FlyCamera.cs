@@ -61,9 +61,21 @@ namespace Forge.EditorApp
             _glideVelocity = Vector3.zero;
         }
 
+        /// <summary>Puts the camera at <paramref name="position"/> looking along <paramref name="rotation"/> at once, ending any glide.</summary>
+        public void Teleport(Vector3 position, Quaternion rotation)
+        {
+            _glideTarget = null;
+            _glideVelocity = Vector3.zero;
+            transform.SetPositionAndRotation(position, rotation);
+            SyncAngles();
+        }
+
         void Awake() => _camera = GetComponent<Camera>();
 
-        void Start()
+        void Start() => SyncAngles();
+
+        // Looking around adds to these, so they must match the camera's actual rotation.
+        void SyncAngles()
         {
             var euler = transform.eulerAngles;
             _yaw = euler.y;

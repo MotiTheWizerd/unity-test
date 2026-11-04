@@ -38,6 +38,7 @@ namespace Forge.EditorApp.UI
             _sections = new List<IPanelSection>
             {
                 new WorldSection(Root, context),
+                new SpaceSection(Root, context),
                 new TransformSection(Root, context, commands),
                 new SculptSection(Root, context),
                 new PaletteSection(Root, context),

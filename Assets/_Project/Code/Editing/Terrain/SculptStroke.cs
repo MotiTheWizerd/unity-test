@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Terrain;
 
@@ -9,11 +10,12 @@ namespace Forge.Editing.Terrain
     /// <summary>One brush stroke: dabs of one brush into a working copy of the terrain.</summary>
     public sealed class SculptStroke : TerrainEdit
     {
-        /// <param name="store">World to sculpt; its terrain is snapshotted now.</param>
+        /// <param name="store">World to sculpt; the terrain of <paramref name="space"/> is snapshotted now.</param>
+        /// <param name="space">The worldspace sculpted.</param>
         /// <param name="brush">Brush used for every dab of this stroke.</param>
         /// <param name="start">World XZ where the stroke began (sets the Flatten target).</param>
-        public SculptStroke(IRecordStore store, BrushSettings brush, Vector2 start)
-            : base(store)
+        public SculptStroke(IRecordStore store, RecordId space, BrushSettings brush, Vector2 start)
+            : base(store, space)
         {
             Brush = brush ?? throw new ArgumentNullException(nameof(brush));
             FlattenHeight = SampleHeight(start) ?? 0f;

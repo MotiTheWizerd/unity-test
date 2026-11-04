@@ -8,8 +8,8 @@ using UnityEngine;
 namespace Forge.EditorApp.Agent
 {
     /// <summary>
-    /// What the agent is told about the editor with each message: where the camera is looking, the spot or area
-    /// the user marked (where "here" is), how far the terrain reaches, and what is selected.
+    /// What the agent is told about the editor with each message: the space being built in, where the camera is
+    /// looking, the spot or area the user marked (where "here" is), how far the terrain reaches, and what is selected.
     /// </summary>
     public sealed class EditorBriefing
     {
@@ -27,7 +27,7 @@ namespace Forge.EditorApp.Agent
 
         public string Describe()
         {
-            var lines = new List<string> { View(), Mark(), Terrain(), Selection() };
+            var lines = new List<string> { Space(), View(), Mark(), Terrain(), Selection() };
             return string.Join("\n", lines.Where(line => line != null));
         }
 
@@ -45,9 +45,20 @@ namespace Forge.EditorApp.Agent
             return mark == null ? "The user has marked nothing." : $"The user marked {mark.Describe()}.";
         }
 
+        string Space()
+        {
+            var space = _context.ActiveSpaceRecord;
+            if (space == null)
+                return "No space is open.";
+            return space.Kind == SpaceKind.Interior
+                ? $"You are building inside {space.DisplayName}, an interior: there is no terrain, floors and walls are objects."
+                : $"You are building in {space.DisplayName}, a worldspace.";
+        }
+
         string Terrain()
         {
-            var chunks = _context.Session.World.Records.OfType<TerrainChunkRecord>().Select(c => c.Coord).ToList();
+            var space = _context.ActiveSpace;
+            var chunks = _context.Session.World.Records.OfType<TerrainChunkRecord>().Where(c => c.Space == space).Select(c => c.Coord).ToList();
             if (chunks.Count == 0)
                 return "There is no terrain.";
 

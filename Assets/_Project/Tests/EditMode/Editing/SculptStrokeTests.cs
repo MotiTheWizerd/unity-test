@@ -17,11 +17,14 @@ namespace Forge.Tests.Editing
         const int Resolution = 17;
         const float Spacing = WorldGrid.ChunkSize / (Resolution - 1); // 4 m
 
-        static TerrainChunkRecord Chunk(int x, int z, float height = 10f) =>
+        static TerrainChunkRecord Chunk(int x, int z, float height = 10f) => Chunk(Space, x, z, height);
+
+        static TerrainChunkRecord Chunk(RecordId space, int x, int z, float height = 10f, int resolution = Resolution) =>
             new TerrainChunkRecord(
-                TerrainChunkRecord.IdFor("core", new ChunkCoord(x, z)),
+                TerrainChunkRecord.IdFor("core", space, new ChunkCoord(x, z)),
+                space,
                 new ChunkCoord(x, z),
-                HeightField.Flat(height, Resolution));
+                HeightField.Flat(height, resolution));
 
         // Four chunks meeting at the world origin.
         static EditSession NewSession(params TerrainChunkRecord[] extra) =>
@@ -30,7 +33,7 @@ namespace Forge.Tests.Editing
                 Plugin("user", new[] { "core" }));
 
         static SculptStroke Stroke(EditSession session, BrushMode mode, float radius = 10f, float strength = 1f, Vector2 start = default) =>
-            new SculptStroke(session.World.Records, new BrushSettings(mode, radius, strength), start);
+            new SculptStroke(session.World.Records, Space, new BrushSettings(mode, radius, strength), start);
 
         [Test]
         public void BrushWeight_IsOneAtCenterAndZeroAtRim()
@@ -153,7 +156,7 @@ namespace Forge.Tests.Editing
             stroke.ApplyDab(new Vector2(20f, 20f));
 
             Assert.That(session.CanUndo, Is.False);
-            var chunk = session.World.Records.Get<TerrainChunkRecord>(TerrainChunkRecord.IdFor("core", new ChunkCoord(0, 0)));
+            var chunk = session.World.Records.Get<TerrainChunkRecord>(TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(0, 0)));
             Assert.That(chunk.Heights[5, 5], Is.EqualTo(10f));
         }
 
@@ -169,7 +172,7 @@ namespace Forge.Tests.Editing
 
             Assert.That(written, Is.EqualTo(4));
             Assert.That(session.UndoDescription, Is.EqualTo("Sculpt (Raise)"));
-            var id = TerrainChunkRecord.IdFor("core", new ChunkCoord(0, 0));
+            var id = TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(0, 0));
             Assert.That(session.World.Records.GetSource(id), Is.EqualTo("user"));
             Assert.That(session.World.Records.Get<TerrainChunkRecord>(id).Heights[0, 0], Is.GreaterThan(10f));
 
@@ -190,9 +193,28 @@ namespace Forge.Tests.Editing
         [Test]
         public void MixedResolutions_AreRejected()
         {
-            var odd = new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", new ChunkCoord(5, 5)), new ChunkCoord(5, 5), HeightField.Flat(0f, 33));
+            var odd = Chunk(Space, 5, 5, 0f, resolution: 33);
 
             Assert.Throws<InvalidOperationException>(() => Stroke(NewSession(odd), BrushMode.Raise));
+        }
+
+        [Test]
+        public void AnotherSpace_IsNeitherReadNorWritten()
+        {
+            // The other space has land at the same coordinates, higher and at another resolution.
+            var session = NewSession(Chunk(OtherSpace, 0, 0, 50f, resolution: 33), Chunk(OtherSpace, 9, 9, 50f, resolution: 33));
+            var stroke = Stroke(session, BrushMode.Raise, radius: 12f);
+
+            Assert.That(stroke.SampleHeight(new Vector2(20f, 20f)), Is.EqualTo(10f));
+            Assert.That(stroke.SampleHeight(new Vector2(9 * 64f + 10f, 9 * 64f + 10f)), Is.Null);
+
+            stroke.ApplyDab(new Vector2(20f, 20f));
+            TerrainEdits.Commit(session, stroke);
+
+            var other = TerrainChunkRecord.IdFor("core", OtherSpace, new ChunkCoord(0, 0));
+            Assert.That(session.World.Records.GetSource(other), Is.EqualTo("core"), "the other space's chunk isn't overridden");
+            Assert.That(session.World.Records.Get<TerrainChunkRecord>(other).Heights[5, 5], Is.EqualTo(50f));
+            Assert.That(session.World.Records.GetSource(TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(0, 0))), Is.EqualTo("user"));
         }
     }
 }

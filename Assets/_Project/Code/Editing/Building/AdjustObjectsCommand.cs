@@ -120,9 +120,10 @@ namespace Forge.Editing.Building
         {
             adjusted = null;
             var world = _context.Session.World.Records;
-            if (!RecordId.TryParse(item.Id, out var id) || !world.TryGet(id, out var record) || !(record is PlacedObjectRecord placed))
+            var placed = _context.PlacedInSpace(item.Id);
+            if (placed == null)
             {
-                reason = "no placed object has that id; inspect_area lists the objects in an area";
+                reason = "no placed object here has that id; inspect_area lists the objects in an area";
                 return false;
             }
 

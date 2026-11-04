@@ -66,26 +66,61 @@ namespace Forge.Tests.Data
             Assert.That(WorldGrid.ChunkOf(x, z), Is.EqualTo(new ChunkCoord(expectedX, expectedZ)));
         }
 
-        [TestCase(0, 0, "terrain/c0_0")]
-        [TestCase(-1, 2, "terrain/c-1_2")]
-        [TestCase(3, -4, "terrain/c3_-4")]
-        [TestCase(-5, -6, "terrain/c-5_-6")]
-        public void ChunkId_IsDerivedFromCoordinate(int x, int z, string expectedName)
+        [TestCase(0, 0, "terrain/core/space/main/c0_0")]
+        [TestCase(-1, 2, "terrain/core/space/main/c-1_2")]
+        [TestCase(3, -4, "terrain/core/space/main/c3_-4")]
+        [TestCase(-5, -6, "terrain/core/space/main/c-5_-6")]
+        public void ChunkId_IsDerivedFromSpaceAndCoordinate(int x, int z, string expectedName)
         {
-            var id = TerrainChunkRecord.IdFor("forge.core", new ChunkCoord(x, z));
+            var id = TerrainChunkRecord.IdFor("forge.core", TestRecords.Space, new ChunkCoord(x, z));
 
+            Assert.That(id.Namespace, Is.EqualTo("forge.core"));
             Assert.That(id.Name, Is.EqualTo(expectedName));
+        }
+
+        [Test]
+        public void ChunkId_OfAnotherSpace_Differs()
+        {
+            var coord = new ChunkCoord(0, 0);
+
+            Assert.That(TerrainChunkRecord.IdFor("core", TestRecords.OtherSpace, coord).ToString(), Is.EqualTo("core:terrain/core/space/other/c0_0"));
+            Assert.That(TerrainChunkRecord.IdFor("core", TestRecords.OtherSpace, coord), Is.Not.EqualTo(TerrainChunkRecord.IdFor("core", TestRecords.Space, coord)));
         }
 
         [Test]
         public void ChunkRecord_RequiresMatchingName()
         {
             var coord = new ChunkCoord(1, 1);
+            var space = TestRecords.Space;
 
             Assert.Throws<ArgumentException>(() =>
-                new TerrainChunkRecord(RecordId.Parse("core:terrain/c0_0"), coord, HeightField.Flat(0f, 17)));
+                new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", space, new ChunkCoord(0, 0)), space, coord, HeightField.Flat(0f, 17)));
+            Assert.Throws<ArgumentException>(() =>
+                new TerrainChunkRecord(RecordId.Parse("core:terrain/c1_1"), space, coord, HeightField.Flat(0f, 17)), "the old name, without the space");
+            Assert.Throws<ArgumentException>(() =>
+                new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", TestRecords.OtherSpace, coord), space, coord, HeightField.Flat(0f, 17)),
+                "named for another space");
             Assert.DoesNotThrow(() =>
-                new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", coord), coord, HeightField.Flat(0f, 17)));
+                new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", space, coord), space, coord, HeightField.Flat(0f, 17)));
+        }
+
+        [Test]
+        public void ChunkRecord_RequiresASpace()
+        {
+            var coord = new ChunkCoord(0, 0);
+
+            Assert.Throws<ArgumentException>(() =>
+                new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", TestRecords.Space, coord), default, coord, HeightField.Flat(0f, 17)));
+        }
+
+        [Test]
+        public void ChunkRecord_StoresItsSpace_AndWithHeightsKeepsIt()
+        {
+            var coord = new ChunkCoord(2, -1);
+            var chunk = new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", TestRecords.OtherSpace, coord), TestRecords.OtherSpace, coord, HeightField.Flat(0f, 17));
+
+            Assert.That(chunk.Space, Is.EqualTo(TestRecords.OtherSpace));
+            Assert.That(chunk.WithHeights(HeightField.Flat(5f, 17)).Space, Is.EqualTo(TestRecords.OtherSpace));
         }
 
         [Test]
@@ -95,7 +130,7 @@ namespace Forge.Tests.Data
             var heights = HeightField.FromFunction((x, z) => (x * 7 + z * 13) % 150 + 0.25f, 33);
             var plugin = new Plugin(
                 new PluginManifest("core", "1.0.0"),
-                new[] { new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", coord), coord, heights) });
+                new[] { new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", TestRecords.OtherSpace, coord), TestRecords.OtherSpace, coord, heights) });
             var serializer = new JsonPluginSerializer(RecordTypeRegistry.CreateDefault());
 
             string json;
@@ -110,10 +145,12 @@ namespace Forge.Tests.Data
                 copy = serializer.Read(reader);
 
             var chunk = (TerrainChunkRecord)copy.Records.Single();
+            Assert.That(chunk.Space, Is.EqualTo(TestRecords.OtherSpace));
             Assert.That(chunk.Coord, Is.EqualTo(coord));
             Assert.That(chunk.Heights.Resolution, Is.EqualTo(33));
             Assert.That(chunk.Heights.ToArray(), Is.EqualTo(heights.ToArray()));
             StringAssert.Contains("\"type\": \"terrain_chunk\"", json);
+            StringAssert.Contains("\"space\": \"core:space/other\"", json);
         }
     }
 }

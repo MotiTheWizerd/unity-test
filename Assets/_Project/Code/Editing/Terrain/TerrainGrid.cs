@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Data.Terrain;
@@ -10,7 +11,7 @@ using Forge.Editing.Geometry;
 namespace Forge.Editing.Terrain
 {
     /// <summary>
-    /// The world's terrain as one grid of height samples across all its chunks, read from the terrain records.
+    /// A worldspace's terrain as one grid of height samples across all its chunks, read from the terrain records.
     /// Neighbouring chunks share their edge samples, so each global sample (gx, gz) has one height. Engine-free:
     /// it answers for any position, whether or not the scene has that chunk loaded.
     /// </summary>
@@ -18,13 +19,15 @@ namespace Forge.Editing.Terrain
     {
         readonly Dictionary<ChunkCoord, TerrainChunkRecord> _chunks = new Dictionary<ChunkCoord, TerrainChunkRecord>();
 
-        public TerrainGrid(IRecordStore store)
+        /// <param name="space">The worldspace whose land this is; other spaces' chunks are left out.</param>
+        public TerrainGrid(IRecordStore store, RecordId space)
         {
             if (store == null)
                 throw new ArgumentNullException(nameof(store));
 
+            Space = space;
             // The lowest id wins if two plugins define the same coordinate, as in the world view.
-            foreach (var chunk in store.OfType<TerrainChunkRecord>().OrderBy(c => c.Id))
+            foreach (var chunk in store.OfType<TerrainChunkRecord>().Where(c => c.Space == space).OrderBy(c => c.Id))
             {
                 if (!_chunks.ContainsKey(chunk.Coord))
                     _chunks.Add(chunk.Coord, chunk);
@@ -37,6 +40,8 @@ namespace Forge.Editing.Terrain
             Resolution = resolutions.Count == 1 ? resolutions[0] : WorldGrid.DefaultHeightmapResolution;
             Spacing = WorldGrid.ChunkSize / (Resolution - 1);
         }
+
+        public RecordId Space { get; }
 
         /// <summary>Samples along each chunk edge.</summary>
         public int Resolution { get; }

@@ -23,6 +23,9 @@ namespace Forge.UnityEditor.Content
             new ContentDefinition("house_small", "Small House", "Architecture/Buildings", "architecture/house_small", SmallHouse),
             new ContentDefinition("wall_stone", "Stone Wall", "Architecture/Walls", "architecture/wall_stone", StoneWall, FollowsSlope),
             new ContentDefinition("fence_wood", "Wooden Fence", "Architecture/Walls", "architecture/fence_wood", WoodenFence, FollowsSlope),
+            // Interior pieces on a 4 m grid: floors tile edge to edge, walls stand on a floor's edge.
+            new ContentDefinition("floor_wood", "Wooden Floor", "Architecture/Interior", "architecture/floor_wood", WoodenFloor),
+            new ContentDefinition("wall_interior", "Interior Wall", "Architecture/Interior", "architecture/wall_interior", InteriorWall),
             new ContentDefinition("lamp_post", "Lamp Post", "Props/Lighting", "props/lamp_post", LampPost),
             new ContentDefinition("campfire", "Campfire", "Props/Lighting", "props/campfire", Campfire, FollowsSlope),
             new ContentDefinition("barrel", "Barrel", "Props/Containers", "props/barrel", Barrel),
@@ -81,6 +84,19 @@ namespace Forge.UnityEditor.Content
             .Cube(Wood, V(1.5f, 0.6f, 0), V(0.15f, 1.2f, 0.15f))
             .Cube(Wood, V(0, 0.9f, 0), V(3.1f, 0.1f, 0.06f))
             .Cube(Wood, V(0, 0.45f, 0), V(3.1f, 0.1f, 0.06f));
+
+        // 4 × 4 m of planks, 0.2 m thick, with the boards running front to back.
+        static void WoodenFloor(PrefabBuilder b)
+        {
+            b.Cube(WoodDark, V(0, 0.08f, 0), V(4f, 0.16f, 4f));
+            for (var i = 0; i < 8; i++)
+                b.Cube(i % 2 == 0 ? Wood : WoodDark, V(-1.75f + i * 0.5f, 0.18f, 0), V(0.48f, 0.04f, 4f));
+        }
+
+        // 4 m long, 3 m high, 0.25 m thick, with a skirting board along the front.
+        static void InteriorWall(PrefabBuilder b) => b
+            .Cube(Plaster, V(0, 1.5f, 0), V(4f, 3f, 0.25f))
+            .Cube(WoodDark, V(0, 0.08f, 0.14f), V(4f, 0.16f, 0.04f));
 
         static void LampPost(PrefabBuilder b) => b
             .Post(Metal, Vector3.zero, 0.35f, 0.2f)

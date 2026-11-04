@@ -59,6 +59,9 @@ namespace Forge.EditorApp
         [NonSerialized] EditorContext _context;
         [NonSerialized] SelectionHighlighter _highlighter;
         [NonSerialized] FrameTimeTracker _frames;
+        [NonSerialized] InteriorFloor _interiorFloor;
+        [NonSerialized] SpaceCameras _spaceCameras;
+        [NonSerialized] RecordId _shownSpace;
 
         void Start()
         {
@@ -86,7 +89,11 @@ namespace Forge.EditorApp
                 _view = new WorldView(transform, assets);
                 _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs);
                 _view.Sync(_context.Session.World);
-                _streamer.LoadAll(_focus.position);
+                _interiorFloor = InteriorFloor.Create(transform);
+                _spaceCameras = new SpaceCameras();
+                _context.SpaceChanged += OnSpaceChanged;
+                if (!RecordId.TryParse(_profile.StartSpace, out var startSpace) || !_context.ShowSpace(startSpace))
+                    throw new DataValidationException(new[] { $"World '{_profile.name}' has no start space '{_profile.StartSpace}'." });
                 var viewMs = Lap(clock);
 
                 _frames = new FrameTimeTracker();
@@ -125,15 +132,40 @@ namespace Forge.EditorApp
             if (_context != null)
             {
                 _context.Session.WorldChanged -= OnWorldChanged;
+                _context.SpaceChanged -= OnSpaceChanged;
                 _context.Selection.Changed -= _highlighter.Refresh;
             }
 
             _view?.Dispose();
         }
 
+        // The camera moves to where it last was in the new space (the scene's own view for the first one), then the
+        // space streams in around it at once: a few chunks around the view, the same load as startup.
+        void OnSpaceChanged(RecordId space)
+        {
+            var record = _context.ActiveSpaceRecord;
+            if (!_shownSpace.IsDefault)
+            {
+                _spaceCameras.Remember(_shownSpace, _focus);
+                var pose = _spaceCameras.Recall(record);
+                if (_focus.TryGetComponent<FlyCamera>(out var flyCamera))
+                    flyCamera.Teleport(pose.position, pose.rotation);
+                else
+                    _focus.SetPositionAndRotation(pose.position, pose.rotation);
+            }
+
+            _shownSpace = space;
+            _interiorFloor.Show(record.Kind == SpaceKind.Interior);
+            _streamer.ShowSpace(space, _focus.position);
+            _highlighter?.Refresh();
+        }
+
         // Order matters: rebuild the scene, drop selections of vanished records, then re-tint.
         void OnWorldChanged(ResolvedWorld world)
         {
+            // The space on show can vanish (an undone "New space"); the world opens where it started instead.
+            if (_context.ActiveSpaceRecord == null && RecordId.TryParse(_profile.StartSpace, out var startSpace))
+                _context.ShowSpace(startSpace);
             _view.Sync(world);
             _context.Selection.Prune(world.Records);
             _highlighter.Refresh();

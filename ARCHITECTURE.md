@@ -125,10 +125,19 @@ one in the active plugin.
 - Record types go through the closed registry only. `TypeNameHandling` is
   never used, `$type` metadata is rejected, and unknown fields are errors. Plugin files are untrusted input.
 
-**Terrain**: the world is a grid of `WorldGrid.ChunkSize` (64 m) chunks. A
+**Spaces** (`SpaceRecord`, `space/<name>`), like Bethesda worldspaces and interior cells: the world is made of
+separate spaces, each with its own coordinates. A *worldspace* is open land; an *interior* (a house, a cave) has
+no terrain, and the editor gives it a floor grid at height 0 to stand on. Every `TerrainChunkRecord` and
+`PlacedObjectRecord` names its `Space`. A worldspace has no size field: its extent is its chunks, so land is
+added as chunks, and a mod adds land to its master's worldspace with chunks in its own namespace. The editor
+shows and edits one space at a time (`EditorContext.ActiveSpace`); the chunk index, terrain grid, terrain edits,
+terrain followers and the agent's commands are all per space.
+
+**Terrain**: a worldspace is a grid of `WorldGrid.ChunkSize` (64 m) chunks. A
 `TerrainChunkRecord` holds a `HeightField` (2^n+1 samples per edge, meters in
-[0, `MaxTerrainHeight`]). Its record name is derived from its coordinate
-(`terrain/c{x}_{z}`), so mods reshape terrain by *overriding* the master's chunk.
+[0, `MaxTerrainHeight`]; new land starts at `WorldGrid.DefaultLandHeight`, 50 m). Its record name is derived
+from its space and coordinate (`terrain/{space ns}/{space name}/c{x}_{z}`), so mods reshape terrain by
+*overriding* the master's chunk.
 
 **Known v1 limits** (deliberate, revisit when needed):
 - No field-level merge between conflicting overrides.

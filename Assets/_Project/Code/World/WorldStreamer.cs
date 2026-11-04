@@ -39,6 +39,14 @@ namespace Forge.World
         /// <summary>Loads the whole window around <paramref name="focus"/> now, ignoring the budget (e.g. at startup).</summary>
         public void LoadAll(Vector3 focus) => Step(focus, double.PositiveInfinity);
 
+        /// <summary>Switches the view to <paramref name="space"/> and loads the window around <paramref name="focus"/> in it now.</summary>
+        public void ShowSpace(Forge.Data.RecordId space, Vector3 focus)
+        {
+            _view.ShowSpace(space);
+            _lastFocus = null;
+            LoadAll(focus);
+        }
+
         /// <summary>Streams towards <paramref name="focus"/> within the frame budget. Returns true if chunks came or went.</summary>
         public bool Tick(Vector3 focus) => Step(focus, _frameBudgetMs);
 

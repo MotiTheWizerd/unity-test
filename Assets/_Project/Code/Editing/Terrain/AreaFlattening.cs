@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Terrain;
 using Forge.Editing.Geometry;
@@ -15,12 +16,13 @@ namespace Forge.Editing.Terrain
         /// <summary>Widest soft edge around the area, in meters.</summary>
         public const float MaxBlend = 32f;
 
-        /// <param name="store">World to edit; its terrain is snapshotted now.</param>
+        /// <param name="store">World to edit; the terrain of <paramref name="space"/> is snapshotted now.</param>
+        /// <param name="space">The worldspace whose land is levelled.</param>
         /// <param name="area">The ground to make level.</param>
         /// <param name="height">The height to level it to, in meters.</param>
         /// <param name="blend">Width of the soft edge around the area, in meters; 0 for a hard edge.</param>
-        public AreaFlattening(IRecordStore store, GroundRect area, float height, float blend)
-            : base(store)
+        public AreaFlattening(IRecordStore store, RecordId space, GroundRect area, float height, float blend)
+            : base(store, space)
         {
             if (!(height >= 0f && height <= WorldGrid.MaxTerrainHeight))
                 throw new ArgumentOutOfRangeException(nameof(height), height, $"Height must be within [0, {WorldGrid.MaxTerrainHeight}] m.");

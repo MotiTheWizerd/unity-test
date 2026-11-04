@@ -11,6 +11,12 @@ namespace Forge.Data.Terrain
         /// <summary>Highest terrain height in meters; heights are stored in [0, MaxTerrainHeight].</summary>
         public const float MaxTerrainHeight = 200f;
 
+        /// <summary>
+        /// Height new land starts at, in meters. Heights can't go below 0, so land starts well above it: room to dig
+        /// lakes and valleys down, and the rest of <see cref="MaxTerrainHeight"/> to raise hills.
+        /// </summary>
+        public const float DefaultLandHeight = 50f;
+
         /// <summary>Default samples per chunk edge (2^n + 1, so neighbours share edge samples).</summary>
         public const int DefaultHeightmapResolution = 65;
 

@@ -4,9 +4,11 @@ using System.Linq;
 using System.Numerics;
 using Forge.Data;
 using Forge.Data.Records;
+using Forge.Data.Terrain;
 using Forge.Editing.Building;
 using Forge.Editing.Commands;
 using Forge.Editing.Placement;
+using Forge.Tests.Data;
 using NUnit.Framework;
 
 namespace Forge.Tests.Editing
@@ -167,7 +169,7 @@ namespace Forge.Tests.Editing
         {
             var world = BuildingFixture.Create();
             var nothingLoaded = new ObjectSeating(p => null, id => null, key => BuildingFixture.HouseShape);
-            var command = new PlaceObjectsCommand(new BuildContext(world.Session, nothingLoaded, world.Options));
+            var command = new PlaceObjectsCommand(new BuildContext(world.Session, () => BuildingFixture.Space, nothingLoaded, world.Options));
 
             var error = Assert.Throws<CommandException>(() => command.Execute(new PlaceObjectsCommand.Arguments
             {
@@ -269,6 +271,111 @@ namespace Forge.Tests.Editing
 
             Assert.Throws<CommandException>(() => new DeleteObjectsCommand(world.Context)
                 .Execute(new DeleteObjectsCommand.Arguments { Ids = new List<string> { "core:tree" } }));
+        }
+
+        static readonly RecordId ElsewhereId = RecordId.Parse("core:ref/elsewhere");
+
+        // A house standing in another space, at a spot that also has ground in the fixture's space.
+        static PlacedObjectRecord Elsewhere(float x, float z) =>
+            new PlacedObjectRecord(ElsewhereId, BuildingFixture.House, TestRecords.OtherSpace, new Vector3(x, 15f, z), Quaternion.Identity, 1f);
+
+        [Test]
+        public void PlaceObjects_PutsThemInTheSpaceBeingBuiltIn()
+        {
+            var world = BuildingFixture.Create();
+
+            Place(world, Item(BuildingFixture.House, 20f, 20f));
+
+            Assert.That(Placed(world).Single().Space, Is.EqualTo(BuildingFixture.Space));
+        }
+
+        [Test]
+        public void DeleteObjects_AnObjectInAnotherSpace_IsNotFound()
+        {
+            var world = BuildingFixture.Create(Elsewhere(20f, 20f));
+            var placed = Place(world, Item(BuildingFixture.House, 40f, 20f));
+
+            var result = new DeleteObjectsCommand(world.Context).Execute(new DeleteObjectsCommand.Arguments
+            {
+                Ids = new List<string> { placed.Placed[0].Id, ElsewhereId.ToString() },
+            });
+
+            Assert.That(result.Removed, Is.EqualTo(1));
+            Assert.That(result.Missing, Is.EqualTo(new[] { ElsewhereId.ToString() }));
+            Assert.That(world.Session.World.Records.Contains(ElsewhereId), Is.True);
+        }
+
+        [Test]
+        public void DeleteObjects_OnlyObjectsInAnotherSpace_IsRefused()
+        {
+            var world = BuildingFixture.Create(Elsewhere(20f, 20f));
+
+            Assert.Throws<CommandException>(() => new DeleteObjectsCommand(world.Context)
+                .Execute(new DeleteObjectsCommand.Arguments { Ids = new List<string> { ElsewhereId.ToString() } }));
+            Assert.That(world.Session.World.Records.Contains(ElsewhereId), Is.True);
+            Assert.That(world.Session.CanUndo, Is.False);
+        }
+
+        [Test]
+        public void AdjustObjects_AnObjectInAnotherSpace_IsSkippedAsNotFound()
+        {
+            var world = BuildingFixture.Create(Elsewhere(20f, 20f));
+            var house = Place(world, Item(BuildingFixture.House, 40f, 20f)).Placed[0];
+
+            var result = new AdjustObjectsCommand(world.Context).Execute(new AdjustObjectsCommand.Arguments
+            {
+                Objects = new List<AdjustObjectsCommand.Item>
+                {
+                    new AdjustObjectsCommand.Item { Id = house.Id, X = 50f },
+                    new AdjustObjectsCommand.Item { Id = ElsewhereId.ToString(), X = 30f },
+                },
+            });
+
+            Assert.That(result.Adjusted.Select(o => o.Id), Is.EqualTo(new[] { house.Id }));
+            Assert.That(result.Skipped.Single().Id, Is.EqualTo(ElsewhereId.ToString()));
+            Assert.That(result.Skipped[0].Reason, Does.Contain("no placed object"));
+            Assert.That(world.Session.World.Records.Get<PlacedObjectRecord>(ElsewhereId).Position.X, Is.EqualTo(20f));
+        }
+
+        [Test]
+        public void AdjustObjects_OnlyObjectsInAnotherSpace_IsRefused()
+        {
+            var world = BuildingFixture.Create(Elsewhere(20f, 20f));
+
+            Assert.Throws<CommandException>(() => new AdjustObjectsCommand(world.Context).Execute(new AdjustObjectsCommand.Arguments
+            {
+                Objects = new List<AdjustObjectsCommand.Item> { new AdjustObjectsCommand.Item { Id = ElsewhereId.ToString(), X = 30f } },
+            }));
+            Assert.That(world.Session.CanUndo, Is.False);
+        }
+
+        [Test]
+        public void InspectArea_LeavesOutObjectsInAnotherSpace()
+        {
+            var world = BuildingFixture.Create(Elsewhere(50f, 50f));
+            Place(world, Item(BuildingFixture.House, 51f, 50f));
+
+            var result = new InspectAreaCommand(world.Context).Execute(new InspectAreaCommand.Arguments { X = 50f, Z = 50f, Size = 20f });
+
+            Assert.That(result.ObjectCount, Is.EqualTo(1));
+            Assert.That(result.Objects.Select(o => o.X), Is.EqualTo(new[] { 51f }));
+        }
+
+        [Test]
+        public void BuildContext_FollowsTheSpaceItIsGiven()
+        {
+            var world = BuildingFixture.Create(Elsewhere(20f, 20f));
+            var space = BuildingFixture.Space;
+            var context = new BuildContext(world.Session, () => space, world.Context.Seating, world.Options);
+            Assert.That(context.PlacedInSpace(ElsewhereId.ToString()), Is.Null);
+            Assert.That(context.Terrain.Contains(new ChunkCoord(0, 0)), Is.True);
+
+            space = TestRecords.OtherSpace;
+
+            Assert.That(context.Space, Is.EqualTo(TestRecords.OtherSpace));
+            Assert.That(context.PlacedInSpace(ElsewhereId.ToString()).Id, Is.EqualTo(ElsewhereId));
+            Assert.That(context.PlacedObjects().Select(p => p.Id), Is.EqualTo(new[] { ElsewhereId }));
+            Assert.That(context.Terrain.Contains(new ChunkCoord(0, 0)), Is.False, "The other space has no land.");
         }
     }
 }

@@ -9,10 +9,10 @@ using Forge.Data.Terrain;
 namespace Forge.Streaming
 {
     /// <summary>
-    /// The presentable records of a world grouped by terrain chunk, so the world
+    /// The presentable records of one space grouped by terrain chunk, so the space
     /// can be loaded and unloaded chunk by chunk. A placed object belongs to the
-    /// chunk under its position. Build it once, then <see cref="Update"/> it with
-    /// the ids that changed; the cost of an update follows the change, not the world.
+    /// chunk under its position. Records of other spaces are left out. Build it once, then
+    /// <see cref="Update"/> it with the ids that changed; the cost of an update follows the change, not the world.
     /// </summary>
     public sealed class ChunkIndex
     {
@@ -25,6 +25,15 @@ namespace Forge.Streaming
         readonly Dictionary<ChunkCoord, List<PlacedObjectRecord>> _objects = new Dictionary<ChunkCoord, List<PlacedObjectRecord>>();
         readonly Dictionary<RecordId, ChunkCoord> _location = new Dictionary<RecordId, ChunkCoord>();
 
+        /// <param name="space">The space indexed; default for an empty index that shows nothing.</param>
+        public ChunkIndex(RecordId space = default)
+        {
+            Space = space;
+        }
+
+        /// <summary>The space whose records are indexed.</summary>
+        public RecordId Space { get; }
+
         public int TerrainCount => _terrain.Count;
 
         public int ObjectCount { get; private set; }
@@ -36,12 +45,12 @@ namespace Forge.Streaming
         public IEnumerable<TerrainChunkRecord> ShadowedTerrain =>
             _terrain.Values.SelectMany(list => list.Skip(1)).OrderBy(c => c.Id);
 
-        public static ChunkIndex Build(IRecordStore store)
+        public static ChunkIndex Build(IRecordStore store, RecordId space)
         {
             if (store == null)
                 throw new ArgumentNullException(nameof(store));
 
-            var index = new ChunkIndex();
+            var index = new ChunkIndex(space);
             foreach (var chunk in store.OfType<TerrainChunkRecord>())
                 index.Add(chunk, sorted: false);
             foreach (var placed in store.OfType<PlacedObjectRecord>())
@@ -61,7 +70,7 @@ namespace Forge.Streaming
         /// <summary>
         /// Re-indexes <paramref name="changed"/> against the new <paramref name="store"/>
         /// and returns every chunk whose content changed (old and new location of each record).
-        /// Ids of other record types are ignored.
+        /// Ids of other record types or other spaces are ignored.
         /// </summary>
         public IReadOnlyCollection<ChunkCoord> Update(IRecordStore store, IEnumerable<RecordId> changed)
         {
@@ -115,12 +124,12 @@ namespace Forge.Streaming
         {
             switch (record)
             {
-                case TerrainChunkRecord chunk:
+                case TerrainChunkRecord chunk when chunk.Space == Space:
                     Insert(_terrain, chunk.Coord, chunk, sorted);
                     _location[chunk.Id] = chunk.Coord;
                     return chunk.Coord;
 
-                case PlacedObjectRecord placed:
+                case PlacedObjectRecord placed when placed.Space == Space:
                     var coord = ChunkOf(placed);
                     Insert(_objects, coord, placed, sorted);
                     _location[placed.Id] = coord;

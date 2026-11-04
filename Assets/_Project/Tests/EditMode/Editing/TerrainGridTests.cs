@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Forge.Data;
 using Forge.Data.Records;
 using Forge.Data.Terrain;
 using Forge.Editing;
@@ -13,12 +14,18 @@ namespace Forge.Tests.Editing
     {
         const int Resolution = 17; // 4 m between samples
 
-        static TerrainChunkRecord Chunk(int x, int z, Func<int, int, float> heightAt, int resolution = Resolution) =>
-            new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", new ChunkCoord(x, z)), new ChunkCoord(x, z),
+        static TerrainChunkRecord Chunk(int x, int z, Func<int, int, float> heightAt, int resolution = Resolution, RecordId space = default)
+        {
+            if (space.IsDefault)
+                space = Space;
+            return new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", space, new ChunkCoord(x, z)), space, new ChunkCoord(x, z),
                 HeightField.FromFunction(heightAt, resolution));
+        }
 
-        static TerrainGrid Grid(params TerrainChunkRecord[] chunks) =>
-            new TerrainGrid(new EditSession(new[] { Plugin("core", chunks) }, Plugin("user", new[] { "core" })).World.Records);
+        static TerrainGrid Grid(params TerrainChunkRecord[] chunks) => Grid(Space, chunks);
+
+        static TerrainGrid Grid(RecordId space, params TerrainChunkRecord[] chunks) =>
+            new TerrainGrid(new EditSession(new[] { Plugin("core", chunks) }, Plugin("user", new[] { "core" })).World.Records, space);
 
         [Test]
         public void HeightAt_IsBilinearBetweenSamples()
@@ -54,6 +61,27 @@ namespace Forge.Tests.Editing
         public void MixedResolutions_AreRejected()
         {
             Assert.Throws<InvalidOperationException>(() => Grid(Chunk(0, 0, (x, z) => 1f), Chunk(1, 0, (x, z) => 1f, 33)));
+        }
+
+        [Test]
+        public void OnlyTheGridsOwnSpace_IsRead()
+        {
+            var chunks = new[]
+            {
+                Chunk(0, 0, (x, z) => 5f),
+                Chunk(0, 0, (x, z) => 50f, 33, OtherSpace),
+                Chunk(1, 0, (x, z) => 50f, 33, OtherSpace),
+            };
+
+            var grid = Grid(Space, chunks);
+            var other = Grid(OtherSpace, chunks);
+
+            Assert.That(grid.Space, Is.EqualTo(Space));
+            Assert.That(grid.HeightAt(new Vector2(8f, 8f)), Is.EqualTo(5f), "A chunk at the same coordinate in another space is ignored.");
+            Assert.That(grid.Contains(new ChunkCoord(1, 0)), Is.False);
+            Assert.That(grid.Resolution, Is.EqualTo(Resolution), "Other spaces' resolutions don't clash with this one's.");
+            Assert.That(other.HeightAt(new Vector2(8f, 8f)), Is.EqualTo(50f));
+            Assert.That(other.Contains(new ChunkCoord(1, 0)), Is.True);
         }
     }
 }

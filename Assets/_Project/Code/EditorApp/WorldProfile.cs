@@ -18,8 +18,13 @@ namespace Forge.EditorApp
         [SerializeField, Tooltip("Plugin that receives all edits; saved under the user's data folder.")]
         string _activePluginId = "forge.user";
 
+        [SerializeField, Tooltip("Space the editor opens in, e.g. \"forge.core:space/main\".")]
+        string _startSpace = "forge.core:space/main";
+
         public IReadOnlyList<string> BaseFolders => _baseFolders;
 
         public string ActivePluginId => _activePluginId;
+
+        public string StartSpace => _startSpace;
     }
 }

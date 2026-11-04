@@ -12,7 +12,7 @@ using UnityEngine;
 namespace Forge.World
 {
     /// <summary>
-    /// Presents the loaded chunks of a record store in the scene and keeps them
+    /// Presents the loaded chunks of one space of a record store in the scene and keeps them
     /// in sync. Which chunks are loaded is decided outside (see
     /// <see cref="WorldStreamer"/>). Records are immutable, so a changed record is
     /// simply a different instance: Sync only touches what actually changed,
@@ -34,6 +34,23 @@ namespace Forge.World
         }
 
         public int PresentedCount => _presented.Count;
+
+        /// <summary>The space shown.</summary>
+        public RecordId Space => _index.Space;
+
+        /// <summary>
+        /// Shows <paramref name="space"/> instead of the current one: everything presented is removed and no chunk
+        /// stays loaded, so the streamer loads the new space from scratch.
+        /// </summary>
+        public void ShowSpace(RecordId space)
+        {
+            if (space == Space)
+                return;
+
+            UnloadAll();
+            _index = _world != null ? ChunkIndex.Build(_world.Records, space) : new ChunkIndex(space);
+            WarnShadowed(_index.ShadowedTerrain);
+        }
 
         /// <summary>Loaded chunk coordinates, including empty ones (they pick up content added later).</summary>
         public IReadOnlyCollection<ChunkCoord> LoadedChunks => _loaded;
@@ -116,7 +133,7 @@ namespace Forge.World
 
         void Rebuild()
         {
-            _index = ChunkIndex.Build(_world.Records);
+            _index = ChunkIndex.Build(_world.Records, Space);
             WarnShadowed(_index.ShadowedTerrain);
 
             // Drop what vanished, was shadowed, or moved into a chunk that isn't loaded.
@@ -146,7 +163,7 @@ namespace Forge.World
         static void WarnShadowed(IEnumerable<TerrainChunkRecord> shadowed)
         {
             foreach (var chunk in shadowed)
-                Debug.LogWarning($"[Forge] Terrain chunk {chunk.Coord} is defined by more than one plugin; '{chunk.Id}' is hidden by the record with the lowest id.");
+                Debug.LogWarning($"[Forge] Terrain chunk {chunk.Coord} of {chunk.Space} is defined by more than one plugin; '{chunk.Id}' is hidden by the record with the lowest id.");
         }
 
         /// <summary>Presents everything in the chunk. Returns how many records it holds (0 if already loaded).</summary>
@@ -161,7 +178,9 @@ namespace Forge.World
                 Remove(id);
         }
 
-        public void Dispose()
+        public void Dispose() => UnloadAll();
+
+        void UnloadAll()
         {
             foreach (var id in _presented.Keys.ToList())
                 Remove(id);

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Linq;
+using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Data.Terrain;
@@ -25,17 +27,18 @@ namespace Forge.Editing.Terrain
         readonly Func<PlacedObjectRecord, PlacementShape?> _slopeShapeOf;
 
         /// <param name="world">The world as it was when the edit began.</param>
+        /// <param name="space">The space whose land is edited; objects in other spaces never follow it.</param>
         /// <param name="slopeShapeOf">
         /// The shape of an object that should be tilted to the slope, or null to only move it vertically
         /// (decided by the editor from the object's placement rules). Omit to never tilt.
         /// </param>
-        public TerrainFollower(IRecordStore world, Func<PlacedObjectRecord, PlacementShape?> slopeShapeOf = null)
+        public TerrainFollower(IRecordStore world, RecordId space, Func<PlacedObjectRecord, PlacementShape?> slopeShapeOf = null)
         {
             if (world == null)
                 throw new ArgumentNullException(nameof(world));
 
             _slopeShapeOf = slopeShapeOf ?? (_ => null);
-            foreach (var placed in world.OfType<PlacedObjectRecord>())
+            foreach (var placed in world.OfType<PlacedObjectRecord>().Where(p => p.Space == space))
             {
                 var coord = WorldGrid.ChunkOf(placed.Position.X, placed.Position.Z);
                 if (!_byChunk.TryGetValue(coord, out var list))

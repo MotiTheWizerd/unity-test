@@ -19,7 +19,7 @@ namespace Forge.Tests.Editing
         static Vector3 Above(float x, float z) => new Vector3(x, 10f, z);
 
         static PlacedObjectRecord At(float x, float y = 0f, float z = 0f, float scale = 1f) =>
-            new PlacedObjectRecord(RecordId.Parse("core:ref/1"), RecordId.Parse("core:tree"), new Vector3(x, y, z), Quaternion.Identity, scale);
+            new PlacedObjectRecord(RecordId.Parse("core:ref/1"), RecordId.Parse("core:tree"), Space, new Vector3(x, y, z), Quaternion.Identity, scale);
 
         static void AssertNear(Vector3 actual, Vector3 expected) =>
             Assert.That(Vector3.Distance(actual, expected), Is.LessThan(Tolerance), $"expected {expected} but was {actual}");

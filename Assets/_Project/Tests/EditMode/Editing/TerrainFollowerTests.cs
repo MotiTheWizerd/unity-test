@@ -20,25 +20,29 @@ namespace Forge.Tests.Editing
 
         // One flat chunk at height 10 with an object resting on it at the brush center,
         // one floating 5 m above the ground nearby, and one beyond the brush.
-        static EditSession NewSession() =>
+        static EditSession NewSession(params Record[] extra) =>
             new EditSession(
                 new[]
                 {
-                    Plugin("core",
-                        new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", new ChunkCoord(0, 0)), new ChunkCoord(0, 0), HeightField.Flat(10f, Resolution)),
+                    Plugin("core", new Record[]
+                    {
+                        new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(0, 0)), Space, new ChunkCoord(0, 0), HeightField.Flat(10f, Resolution)),
                         Base("core:rock"),
                         At("core:ref/resting", 20f, 10f, 20f),
                         At("core:ref/floating", 24f, 15f, 20f),
-                        At("core:ref/far", 50f, 10f, 50f)),
+                        At("core:ref/far", 50f, 10f, 50f),
+                    }.Concat(extra).ToArray()),
                 },
                 Plugin("user", new[] { "core" }));
 
-        static PlacedObjectRecord At(string id, float x, float y, float z) =>
-            new PlacedObjectRecord(RecordId.Parse(id), RecordId.Parse("core:rock"), new Vector3(x, y, z), Quaternion.Identity, 1f);
+        static PlacedObjectRecord At(string id, float x, float y, float z) => At(Space, id, x, y, z);
+
+        static PlacedObjectRecord At(RecordId space, string id, float x, float y, float z) =>
+            new PlacedObjectRecord(RecordId.Parse(id), RecordId.Parse("core:rock"), space, new Vector3(x, y, z), Quaternion.Identity, 1f);
 
         static SculptStroke RaiseStroke(EditSession session, int dabs)
         {
-            var stroke = new SculptStroke(session.World.Records, new BrushSettings(BrushMode.Raise, 10f, 1f), new Vector2(20f, 20f));
+            var stroke = new SculptStroke(session.World.Records, Space, new BrushSettings(BrushMode.Raise, 10f, 1f), new Vector2(20f, 20f));
             for (var i = 0; i < dabs; i++)
                 stroke.ApplyDab(new Vector2(20f, 20f));
             return stroke;
@@ -51,7 +55,7 @@ namespace Forge.Tests.Editing
         {
             var session = NewSession();
             var stroke = RaiseStroke(session, dabs: 4);
-            var follower = new TerrainFollower(session.World.Records);
+            var follower = new TerrainFollower(session.World.Records, Space);
 
             var followed = follower.Follow(stroke).ToDictionary(p => p.Id);
 
@@ -70,7 +74,7 @@ namespace Forge.Tests.Editing
             var session = NewSession();
             var stroke = RaiseStroke(session, dabs: 2);
 
-            TerrainEdits.Commit(session, stroke, new TerrainFollower(session.World.Records));
+            TerrainEdits.Commit(session, stroke, new TerrainFollower(session.World.Records, Space));
 
             Assert.That(HeightOf(session, Resting), Is.EqualTo(11f).Within(1e-4f));
             Assert.That(session.World.Records.GetSource(Far), Is.EqualTo("core"), "unmoved objects are not overridden");
@@ -98,11 +102,11 @@ namespace Forge.Tests.Editing
         {
             var session = NewSession();
             // A hill rising east of the resting "fence" (3 m long along X): its east end ends up higher.
-            var stroke = new SculptStroke(session.World.Records, new BrushSettings(BrushMode.Raise, 8f, 1f), new Vector2(26f, 20f));
+            var stroke = new SculptStroke(session.World.Records, Space, new BrushSettings(BrushMode.Raise, 8f, 1f), new Vector2(26f, 20f));
             for (var i = 0; i < 4; i++)
                 stroke.ApplyDab(new Vector2(26f, 20f));
             var fence = new PlacementShape(new Footprint(3f, 0.2f), 0f);
-            var follower = new TerrainFollower(session.World.Records, placed => placed.Id == Resting || placed.Id == Floating ? fence : (PlacementShape?)null);
+            var follower = new TerrainFollower(session.World.Records, Space, placed => placed.Id == Resting || placed.Id == Floating ? fence : (PlacementShape?)null);
 
             var followed = follower.Follow(stroke).ToDictionary(p => p.Id);
 
@@ -124,12 +128,12 @@ namespace Forge.Tests.Editing
         public void SlopeObjects_OnUnchangedGround_AreLeftExactlyAsTheyWere()
         {
             var session = NewSession();
-            var stroke = new SculptStroke(session.World.Records, new BrushSettings(BrushMode.Raise, 3f, 1f), new Vector2(5f, 5f));
+            var stroke = new SculptStroke(session.World.Records, Space, new BrushSettings(BrushMode.Raise, 3f, 1f), new Vector2(5f, 5f));
             stroke.ApplyDab(new Vector2(5f, 5f));
             var shape = new PlacementShape(new Footprint(1f, 1f), 0f);
             var original = session.World.Records.Get<PlacedObjectRecord>(Resting);
 
-            var followed = new TerrainFollower(session.World.Records, _ => shape).Follow(stroke).ToDictionary(p => p.Id);
+            var followed = new TerrainFollower(session.World.Records, Space, _ => shape).Follow(stroke).ToDictionary(p => p.Id);
 
             Assert.That(followed[Resting], Is.SameAs(original));
         }
@@ -142,7 +146,26 @@ namespace Forge.Tests.Editing
 
             Assert.That(stroke.HeightChangeAt(new Vector2(30f, 30f)), Is.EqualTo(0f));
             Assert.That(stroke.HeightChangeAt(new Vector2(-30f, 30f)), Is.Null);
-            Assert.That(new TerrainFollower(session.World.Records).Follow(stroke), Is.Empty);
+            Assert.That(new TerrainFollower(session.World.Records, Space).Follow(stroke), Is.Empty);
+        }
+
+        [Test]
+        public void ObjectsInAnotherSpace_DoNotFollow()
+        {
+            var elsewhere = RecordId.Parse("core:ref/elsewhere");
+            var session = NewSession(At(OtherSpace, "core:ref/elsewhere", 20f, 10f, 20f));
+            var stroke = RaiseStroke(session, dabs: 2);
+
+            var followed = new TerrainFollower(session.World.Records, Space).Follow(stroke).Select(p => p.Id).ToList();
+
+            Assert.That(followed, Has.Member(Resting));
+            Assert.That(followed, Has.No.Member(elsewhere));
+
+            TerrainEdits.Commit(session, stroke, new TerrainFollower(session.World.Records, Space));
+
+            Assert.That(HeightOf(session, Resting), Is.EqualTo(11f).Within(1e-4f));
+            Assert.That(HeightOf(session, elsewhere), Is.EqualTo(10f), "standing at the same spot in another space, it isn't on this land");
+            Assert.That(session.World.Records.GetSource(elsewhere), Is.EqualTo("core"));
         }
     }
 }

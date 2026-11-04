@@ -42,7 +42,7 @@ namespace Forge.EditorApp.Agent
                 throw new ArgumentNullException(nameof(settings));
 
             var commands = new CommandRegistry();
-            BuildingCommands.AddTo(commands, new BuildContext(context.Session, seating, context.PlacementOptions));
+            BuildingCommands.AddTo(commands, new BuildContext(context.Session, () => context.ActiveSpace, seating, context.PlacementOptions));
             var tools = new AgentToolHost(new ToolInvoker(commands), _mainThread);
             var backend = new ClaudeCodeBackend(settings.ClaudeCode(Path.Combine(Application.persistentDataPath, WorkingFolder)), tools);
             backend.EndpointFailed += ex => _mainThread.Post(() => Debug.LogException(ex));

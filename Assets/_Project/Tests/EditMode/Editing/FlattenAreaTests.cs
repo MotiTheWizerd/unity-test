@@ -21,13 +21,13 @@ namespace Forge.Tests.Editing
             });
 
         static float GroundAt(BuildingFixture world, float x, float z) =>
-            new TerrainGrid(world.Session.World.Records).HeightAt(new Vector2(x, z)).Value;
+            new TerrainGrid(world.Session.World.Records, BuildingFixture.Space).HeightAt(new Vector2(x, z)).Value;
 
         [Test]
         public void Flattening_LevelsTheArea_AndEasesBackOverTheBlend()
         {
             var world = BuildingFixture.Create();
-            var flattening = new AreaFlattening(world.Session.World.Records, new GroundRect(new Vector2(50f, 50f), 20f, 10f), 15f, blend: 4f);
+            var flattening = new AreaFlattening(world.Session.World.Records, BuildingFixture.Space, new GroundRect(new Vector2(50f, 50f), 20f, 10f), 15f, blend: 4f);
 
             Assert.That(flattening.SampleHeight(new Vector2(41f, 46f)), Is.EqualTo(15f).Within(1e-4f));
             Assert.That(flattening.SampleHeight(new Vector2(59f, 54f)), Is.EqualTo(15f).Within(1e-4f));
@@ -43,7 +43,7 @@ namespace Forge.Tests.Editing
         public void Flattening_WithoutBlend_StopsAtTheEdge()
         {
             var world = BuildingFixture.Create();
-            var flattening = new AreaFlattening(world.Session.World.Records, new GroundRect(new Vector2(50f, 50f), 20f, 10f), 15f, blend: 0f);
+            var flattening = new AreaFlattening(world.Session.World.Records, BuildingFixture.Space, new GroundRect(new Vector2(50f, 50f), 20f, 10f), 15f, blend: 0f);
 
             Assert.That(flattening.SampleHeight(new Vector2(60f, 50f)), Is.EqualTo(15f).Within(1e-4f));
             Assert.That(flattening.SampleHeight(new Vector2(61f, 50f)), Is.EqualTo(16.1f).Within(1e-4f));
@@ -55,8 +55,8 @@ namespace Forge.Tests.Editing
             var store = BuildingFixture.Create().Session.World.Records;
             var area = new GroundRect(new Vector2(50f, 50f), 10f, 10f);
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => new AreaFlattening(store, area, -1f, 4f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new AreaFlattening(store, area, 15f, AreaFlattening.MaxBlend + 1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new AreaFlattening(store, BuildingFixture.Space, area, -1f, 4f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new AreaFlattening(store, BuildingFixture.Space, area, 15f, AreaFlattening.MaxBlend + 1f));
         }
 
         [Test]

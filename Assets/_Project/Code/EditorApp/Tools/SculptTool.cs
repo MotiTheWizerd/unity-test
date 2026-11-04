@@ -101,11 +101,12 @@ namespace Forge.EditorApp.Tools
         {
             var brush = _context.CurrentBrush();
             var world = _context.Session.World.Records;
-            _context.TryEdit("Sculpt", () => _stroke = new SculptStroke(world, brush, Flat(point)));
+            var space = _context.ActiveSpace;
+            _context.TryEdit("Sculpt", () => _stroke = new SculptStroke(world, space, brush, Flat(point)));
             if (_stroke == null)
                 return;
 
-            _follower = _context.ObjectsFollowTerrain ? new TerrainFollower(world, _slopes.ShapeToAlign) : null;
+            _follower = _context.ObjectsFollowTerrain ? new TerrainFollower(world, space, _slopes.ShapeToAlign) : null;
             _dabTimer = 0f;
             Dab(point);
         }

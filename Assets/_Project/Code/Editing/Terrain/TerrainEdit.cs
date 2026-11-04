@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Data.Terrain;
@@ -18,12 +19,13 @@ namespace Forge.Editing.Terrain
         readonly Dictionary<ChunkCoord, float[]> _working = new Dictionary<ChunkCoord, float[]>();
         readonly HashSet<ChunkCoord> _touched = new HashSet<ChunkCoord>();
 
-        /// <param name="store">World to edit; its terrain is snapshotted now.</param>
-        protected TerrainEdit(IRecordStore store)
+        /// <param name="store">World to edit; the terrain of <paramref name="space"/> is snapshotted now.</param>
+        /// <param name="space">The worldspace whose land is edited.</param>
+        protected TerrainEdit(IRecordStore store, RecordId space)
         {
             if (store == null)
                 throw new ArgumentNullException(nameof(store));
-            Terrain = new TerrainGrid(store);
+            Terrain = new TerrainGrid(store, space);
         }
 
         /// <summary>Names the edit in the undo history, e.g. "Sculpt (Raise)".</summary>

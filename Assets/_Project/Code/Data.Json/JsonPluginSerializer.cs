@@ -6,6 +6,7 @@ using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Data.Serialization;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 
 namespace Forge.Data.Json
@@ -36,6 +37,8 @@ namespace Forge.Data.Json
                     new QuaternionConverter(),
                     new ChunkCoordConverter(),
                     new HeightFieldConverter(),
+                    // Enums by name ("worldspace"), so files stay readable and survive reordering the enum.
+                    new StringEnumConverter(new CamelCaseNamingStrategy(), allowIntegerValues: false),
                 },
                 Formatting = Formatting.Indented,
                 TypeNameHandling = TypeNameHandling.None,

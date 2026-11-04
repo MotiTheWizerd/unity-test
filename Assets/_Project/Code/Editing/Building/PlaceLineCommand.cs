@@ -98,7 +98,7 @@ namespace Forge.Editing.Building
                 throw new CommandException($"Nothing was placed: {skipReason}. inspect_area shows where the ground is.");
 
             var name = baseObject.DisplayName;
-            var records = ObjectEdits.Place(_context.Session, placements, $"Place {placements.Count} {name}");
+            var records = ObjectEdits.Place(_context.Session, _context.Space, placements, $"Place {placements.Count} {name}");
             var length = Length(path);
             var summary = FormattableString.Invariant($"Placed {records.Count} {name} along {length:0.#} m ({path.Count - 1} stretch(es)).");
             var skipped = items.Count - placements.Count;

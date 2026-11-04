@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Forge.Data;
 using Forge.Data.Records;
+using Forge.Data.Terrain;
 using NUnit.Framework;
 
 namespace Forge.Tests.Data
@@ -69,9 +70,10 @@ namespace Forge.Tests.Data
         public void PlacedObject_StoresValues()
         {
             var rotation = Quaternion.CreateFromYawPitchRoll(1f, 0f, 0f);
-            var record = new PlacedObjectRecord(PlacedId, TreeId, new Vector3(1, 2, 3), rotation, 1.5f);
+            var record = new PlacedObjectRecord(PlacedId, TreeId, TestRecords.Space, new Vector3(1, 2, 3), rotation, 1.5f);
 
             Assert.That(record.BaseId, Is.EqualTo(TreeId));
+            Assert.That(record.Space, Is.EqualTo(TestRecords.Space));
             Assert.That(record.Position, Is.EqualTo(new Vector3(1, 2, 3)));
             Assert.That(record.Rotation, Is.EqualTo(rotation));
             Assert.That(record.Scale, Is.EqualTo(1.5f));
@@ -84,14 +86,79 @@ namespace Forge.Tests.Data
         public void PlacedObject_RejectsInvalidScale(float scale)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() =>
-                new PlacedObjectRecord(PlacedId, TreeId, Vector3.Zero, Quaternion.Identity, scale));
+                new PlacedObjectRecord(PlacedId, TreeId, TestRecords.Space, Vector3.Zero, Quaternion.Identity, scale));
         }
 
         [Test]
         public void PlacedObject_RequiresBaseId()
         {
             Assert.Throws<ArgumentException>(() =>
-                new PlacedObjectRecord(PlacedId, default, Vector3.Zero, Quaternion.Identity, 1f));
+                new PlacedObjectRecord(PlacedId, default, TestRecords.Space, Vector3.Zero, Quaternion.Identity, 1f));
+        }
+
+        [Test]
+        public void PlacedObject_RequiresSpace()
+        {
+            Assert.Throws<ArgumentException>(() =>
+                new PlacedObjectRecord(PlacedId, TreeId, default, Vector3.Zero, Quaternion.Identity, 1f));
+        }
+
+        [Test]
+        public void PlacedObject_WithMethods_KeepTheSpace()
+        {
+            var record = new PlacedObjectRecord(PlacedId, TreeId, TestRecords.OtherSpace, Vector3.Zero, Quaternion.Identity, 1f);
+
+            Assert.That(record.WithPosition(new Vector3(1, 2, 3)).Space, Is.EqualTo(TestRecords.OtherSpace));
+            Assert.That(record.WithRotation(Quaternion.CreateFromYawPitchRoll(1f, 0f, 0f)).Space, Is.EqualTo(TestRecords.OtherSpace));
+            Assert.That(record.WithScale(2f).Space, Is.EqualTo(TestRecords.OtherSpace));
+            Assert.That(record.WithTransform(Vector3.One, Quaternion.Identity, 3f).Space, Is.EqualTo(TestRecords.OtherSpace));
+        }
+
+        [Test]
+        public void Space_StoresValues()
+        {
+            var id = SpaceRecord.IdFor("forge.core", "main");
+            var space = new SpaceRecord(id, "Tamriel", SpaceKind.Worldspace, 50f);
+
+            Assert.That(id.ToString(), Is.EqualTo("forge.core:space/main"));
+            Assert.That(space.DisplayName, Is.EqualTo("Tamriel"));
+            Assert.That(space.Kind, Is.EqualTo(SpaceKind.Worldspace));
+            Assert.That(space.BaseHeight, Is.EqualTo(50f));
+        }
+
+        [Test]
+        public void Space_RequiresASpaceNameAndADisplayName()
+        {
+            Assert.Throws<ArgumentException>(() => new SpaceRecord(RecordId.Parse("core:main"), "Main", SpaceKind.Worldspace));
+            Assert.Throws<ArgumentException>(() => new SpaceRecord(RecordId.Parse("core:ref/space/main"), "Main", SpaceKind.Worldspace));
+            Assert.Throws<ArgumentException>(() => new SpaceRecord(TestRecords.Space, " ", SpaceKind.Worldspace));
+            Assert.Throws<ArgumentException>(() => new SpaceRecord(TestRecords.Space, null, SpaceKind.Worldspace));
+        }
+
+        [TestCase(-1f)]
+        [TestCase(WorldGrid.MaxTerrainHeight + 1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void Space_RejectsBaseHeightOutOfRange(float baseHeight)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new SpaceRecord(TestRecords.Space, "Main", SpaceKind.Worldspace, baseHeight));
+        }
+
+        [Test]
+        public void Space_BaseHeightBounds_AreAllowed()
+        {
+            Assert.That(new SpaceRecord(TestRecords.Space, "Main", SpaceKind.Worldspace, 0f).BaseHeight, Is.EqualTo(0f));
+            Assert.That(new SpaceRecord(TestRecords.Space, "Main", SpaceKind.Worldspace, WorldGrid.MaxTerrainHeight).BaseHeight,
+                Is.EqualTo(WorldGrid.MaxTerrainHeight));
+        }
+
+        [Test]
+        public void Space_Interior_HasNoBaseHeight()
+        {
+            var interior = new SpaceRecord(SpaceRecord.IdFor("core", "house"), "House", SpaceKind.Interior, 80f);
+
+            Assert.That(interior.Kind, Is.EqualTo(SpaceKind.Interior));
+            Assert.That(interior.BaseHeight, Is.EqualTo(0f));
         }
 
         [Test]
@@ -102,6 +169,7 @@ namespace Forge.Tests.Data
             Assert.That(registry.GetKey(typeof(PlacedObjectRecord)), Is.EqualTo("placed_object"));
             Assert.That(registry.TryGetType("base_object", out var type), Is.True);
             Assert.That(type, Is.EqualTo(typeof(BaseObjectRecord)));
+            Assert.That(registry.GetKey(typeof(SpaceRecord)), Is.EqualTo("space"));
         }
 
         [Test]

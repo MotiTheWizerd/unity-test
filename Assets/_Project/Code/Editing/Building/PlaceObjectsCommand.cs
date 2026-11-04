@@ -105,7 +105,7 @@ namespace Forge.Editing.Building
                 throw new CommandException($"Nothing was placed: {skipped[0].Reason}. inspect_area shows where the ground is.");
 
             var description = placements.Count == 1 ? $"Place {baseObjects[0].DisplayName}" : $"Place {placements.Count} objects";
-            var records = ObjectEdits.Place(_context.Session, placements, description);
+            var records = ObjectEdits.Place(_context.Session, _context.Space, placements, description);
 
             var summary = $"Placed {records.Count} object(s): {_context.CountByName(records)}.";
             if (skipped.Count > 0)

@@ -8,6 +8,23 @@
             </ui:VisualElement>
             <ui:ScrollView name="editing" class="forge-scroll">
                 <ui:VisualElement class="forge-section">
+                    <ui:Label class="forge-section__header" text="SPACE" />
+                    <ui:VisualElement class="forge-row">
+                        <ui:DropdownField name="space-picker" class="forge-grow" />
+                        <ui:Button name="space-new" text="New…" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="space-new-form" class="forge-indented">
+                        <ui:TextField name="space-new-name" placeholder-text="Name, e.g. Whiterun or Bannered Mare" />
+                        <ui:VisualElement name="space-new-kinds" class="forge-row forge-choices" />
+                        <ui:VisualElement name="space-new-sizes" class="forge-row forge-choices" />
+                        <ui:VisualElement class="forge-row forge-choices">
+                            <ui:Button name="space-create" text="Create" />
+                            <ui:Button name="space-cancel" text="Cancel" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement class="forge-section">
                     <ui:Label class="forge-section__header" text="TRANSFORM" />
                     <ui:VisualElement name="transform-modes" class="forge-row forge-choices" />
                     <ui:VisualElement class="forge-row forge-spaced">

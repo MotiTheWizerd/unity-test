@@ -65,7 +65,8 @@ namespace Forge.UnityEditor
                 if (Math.Abs(cx) <= CoreRadius && Math.Abs(cz) <= CoreRadius)
                     continue;
 
-                records.Add(ProceduralTerrain.Chunk(PluginId, coord));
+                // More land for forge.core's main world, the way a mod extends its master's worldspace.
+                records.Add(ProceduralTerrain.Chunk(PluginId, CorePluginGenerator.MainSpace, coord));
                 ScatterObjects(coord, records);
             }
 
@@ -87,6 +88,7 @@ namespace Forge.UnityEditor
                 records.Add(new PlacedObjectRecord(
                     new RecordId(PluginId, $"ref/c{coord.X}_{coord.Z}_{i:D2}"),
                     new RecordId(MasterId, name),
+                    CorePluginGenerator.MainSpace,
                     new Vector3(x, ProceduralTerrain.HeightAt(x, z) + halfHeight * scale, z),
                     Quaternion.CreateFromYawPitchRoll(yaw, 0f, 0f),
                     scale));

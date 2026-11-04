@@ -47,13 +47,13 @@ namespace Forge.Editing.Building
 
         protected override Result Run(Arguments arguments)
         {
-            var world = _context.Session.World.Records;
             var present = new List<RecordId>();
             var missing = new List<string>();
             foreach (var id in arguments.Ids.Distinct())
             {
-                if (RecordId.TryParse(id, out var recordId) && world.TryGet(recordId, out var record) && record is PlacedObjectRecord)
-                    present.Add(recordId);
+                var placed = _context.PlacedInSpace(id);
+                if (placed != null)
+                    present.Add(placed.Id);
                 else
                     missing.Add(id);
             }
