@@ -244,6 +244,10 @@
     width: 220px;
 }
 
+.forge-options__number {
+    width: 150px;
+}
+
 /* Toggles in the bar size to their label; the dock's fixed label column would cut them off. */
 .forge-options .unity-toggle > .unity-base-field__label {
     min-width: 0;

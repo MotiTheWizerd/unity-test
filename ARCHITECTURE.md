@@ -135,9 +135,11 @@ terrain followers and the agent's commands are all per space.
 A worldspace may have a **sea**: `SpaceRecord.WaterLevel` (meters, optional, omitted from the JSON when there is
 none; interiors never have one). All ground below it is under water, coasts and hollows alike; beyond the land the sea
 goes on. It is the first of three water layers: the **data** (records, saved in plugins) and the **query**
-(`WaterMap`) are fixed contracts, the **look** (`SeaSurface` + `Water.shader`) is meant to be replaced. Lakes (a
-seed point + a surface height, flood-filled over the terrain, so the shore follows sculpting) and rivers (splines)
-come later as their own records and join the same `WaterMap`.
+(`WaterMap`) are fixed contracts, the **look** (`SeaSurface`, `LakeSurfaces` + `Water.shader`) is meant to be replaced.
+**Lakes** (`LakeRecord`, `lake/<n>`): a point in the water (x, z) and a surface `Level`. Their shape is not stored:
+the water fills every terrain sample below the level connected to the point (`LakeFill`), so the shore follows
+sculpting and a mod that reshapes the land reshapes its lakes. Rivers (splines) come later as their own records and
+join the same `WaterMap`.
 
 **Terrain**: a worldspace is a grid of `WorldGrid.ChunkSize` (64 m) chunks. A
 `TerrainChunkRecord` holds a `HeightField` (2^n+1 samples per edge, meters in
@@ -155,8 +157,11 @@ from its space and coordinate (`terrain/{space ns}/{space name}/c{x}_{z}`), so m
 - The edge of the streamed area is a hard cut (no fog, distant LOD or impostors yet).
   Plugins load whole into memory at startup, so only the *scene* streams, not the *data*. A
   30 MB JSON plugin takes ~1.3 s to load.
-- The sea is one level for the whole worldspace, so any hollow below it fills, inland or not; lakes above the sea
-  need the planned Water tool. Picks go through water to the ground beneath, and placing under water is allowed.
+- The sea is one level for the whole worldspace, so any hollow below it fills, inland or not. Picks go through water
+  to the ground beneath, and placing under water is allowed.
+- A lake whose shore is dug away (so its water would run off) **spills** and shows no water until the shore is rebuilt
+  or it is removed; the Water tool still picks it near its point. Lakes don't follow a sculpt stroke live, only once it
+  is committed. `WaterMap.Of` fills every lake of the space each time it is built (per relevant world change).
 - Drop to ground samples the terrain under an upright object's pivot only, so on steep slopes part of its base
   can float or clip. Slope objects are seated on their whole footprint, up to a 35° tilt; steeper ground leaves
   their ends off the surface.
@@ -197,8 +202,17 @@ from its space and coordinate (`terrain/{space ns}/{space name}/c{x}_{z}`), so m
   bilinear heights anywhere, and which chunk holds a sample. Sculpting and the building commands both read it.
 - `WaterMap` (`Editing/Water`, engine-free) is **the one water question**: `SurfaceAt(x, z)` (null where dry; the sea
   level beyond the land) and `DepthAt(x, z)` (0 where dry, null without terrain). The commands, and later the player
-  (swimming) and NPCs, ask it, never the scene. `SpaceEdits.SetWaterLevel` sets or removes a sea as one undo step
-  (overriding a master's space in the active plugin).
+  (swimming) and NPCs, ask it, never the scene; `LakeAt(x, z)` names the lake there. The highest water wins (a sea
+  above a lake covers it). `SpaceEdits.SetWaterLevel` sets or removes a sea as one undo step (overriding a master's
+  space in the active plugin).
+- **Lake fill** (`LakeFill`, engine-free, 4-neighbour on the global sample grid, capped at `MaxSamples` = 128 Ki samples):
+  `Fill(point, level)` floods from the sample nearest the point to every connected sample below the level
+  (`LakeExtent`; it `Spills` when it reaches the land's edge or the cap). `Survey(point)` is a priority flood (always
+  step to the lowest sample around what is reached, `Forge.Core.Collections.MinHeap`): the highest ground crossed on
+  the way to the land's edge is the hollow's **brim**, the lowest point of its rim, so any level up to it stays in
+  (`LakeBasin`; `FullLevel` = a quarter meter under the brim, where new lakes start). `LakeExtent.CellRuns` gives the
+  cells with a wet corner as runs per row, one quad each when drawn. `WaterEdits` adds, re-levels and removes lakes,
+  one undo step each, refusing a dry point or a spill with the brim's height.
 - **Terrain edits** (`Editing/Terrain`): a `TerrainEdit` snapshots the terrain and keeps a working copy on
   the **global sample grid**. Subclasses compute every new height from the state before the write, then
   `Write` puts each sample into *every* chunk that shares it. That's why chunk seams can't open.
@@ -244,11 +258,14 @@ from its space and coordinate (`terrain/{space ns}/{space name}/c{x}_{z}`), so m
   - `inspect_area`: lowest/highest ground and steepest slope from every terrain sample in the square (exact,
     however coarse a grid the agent asks for), an overview height grid (rows south to north, columns west to
     east), the water when there is a sea (its level, the share of samples under water and the deepest, from every
-    sample, through `BuildContext.Water`), and the objects inside, nearest first. It reads the terrain *data* (`BuildContext.Terrain`, a
+    sample, through `BuildContext.Water`), and the lakes reaching into it (id, point, level, whether it spills), and
+    the objects inside, nearest first. It reads the terrain *data* (`BuildContext.Terrain`, a
     `TerrainGrid` cached per world version), so it answers for unloaded chunks too; placing still seats on the
     loaded scene, and a skipped spot says whether its terrain is missing or just not loaded.
   - `set_sea_level`: sets or removes the worldspace's sea (refused in interiors) and reports how many objects now
     stand below it. The instructions tell the agent to use it only when the user asks.
+  - `add_lake` (x, z, optional level, default the hollow's full level), `set_lake_level`, `remove_lake`: lakes through
+    `WaterEdits`; refusals say how high the water can go, or to dig a hollow first (`flatten_area` lower).
   - `flatten_area`: levels a rectangle (`AreaFlattening`) to a height, by default the average ground height
     inside it (as much dug away as filled in), with a soft edge (default 4 m); objects on the reshaped ground
     follow it (`BuildContext.FollowTerrain`). The agent levels sloped building sites before placing on them.
@@ -279,8 +296,8 @@ from its space and coordinate (`terrain/{space ns}/{space name}/c{x}_{z}`), so m
 - `WorldView.Sync(world)` is **incremental** when `ResolvedWorld.TryGetChangesSince` knows the
   changed ids, which it does when both worlds layer over the same `MasterLayer`.
   `ChunkIndex.Update` re-indexes just those ids and returns the dirty chunks, and only loaded
-  dirty chunks are re-presented. A change to a non-presentable record (e.g. a base object, which
-  many placed objects depend on) falls back to a full rebuild.
+  dirty chunks are re-presented. A change to a dependency (a base object, which many placed objects
+  depend on) falls back to a full rebuild; records the view doesn't present (spaces, lakes) are skipped.
 - `WorldStreamer` follows the camera. It unloads at once and loads within a per-frame time
   budget (`EditorAppBootstrap`: radius 6 / 8 chunks, 4 ms). A new chunk starts only if the
   average build time still fits. Terrains use `allowAutoConnect`, so LOD edges stitch.
@@ -331,9 +348,12 @@ slopes), so results are exact and every edit goes through the edit session.
   `forge.stress_edits`. Each world has its own edit plugin, because a plugin may only override its
   masters' records. A missing base folder fails loudly instead of opening a smaller world.
   It then wires `EditSession` → `WorldView` + `WorldStreamer` → tools and UI through a shared `EditorContext`.
-  It also owns the **sea surface** (`World/SeaSurface`, `_water` = `Materials/Water.mat`): one quad twice the camera's
-  far clip across, kept under the camera and raised to the active space's `WaterLevel` after every space switch and
-  world change (so undo and the agent move it too). The land hides it where it stands higher; it has no collider.
+  It also builds the **`WaterView`** (`_water` = `Materials/Water.mat`): the active space's `WaterMap` plus its scene
+  surfaces, synced after every space switch and every world change that touches a space, a lake or the terrain (so
+  undo, sculpting and the agent move the water too). The sea (`World/SeaSurface`) is one quad twice the camera's far
+  clip across, kept under the camera; each lake (`World/LakeSurfaces`) is a mesh of one quad per `CellRuns` run at its
+  level, plus a preview surface the Water tool shows in place of a lake while its level is set. The land hides water
+  where it stands higher; there are no colliders.
   `Water.shader` (URP, transparent) colors by the water's depth from the camera depth texture, ripples the normals
   with four scrolling sine waves, reflects the sky by fresnel, adds the sun's glint and a foam line at the shore.
 - **Assets**: records store engine-agnostic asset keys; `IAssetCatalog` turns a key into a scene object.
@@ -360,7 +380,7 @@ slopes), so results are exact and every edit goes through the edit session.
 - **Tools** (`Tools/IEditorTool`), Photoshop style: exactly one drives the mouse. **`ToolCatalog`** is the one
   table of tools (`ToolDefinition`: kind, name, key, strip group, hint, and `EditsWorld`); the tool strip, the
   keys, the options bar and the status hint all read it. Q Select, W Move, E Rotate, R Scale, H Hand, P Place,
-  O Outline, G Fill, B Sculpt, M Mark. `EditorContext.SelectTool` picks one (`ActiveTool`); tools that change the world refuse
+  O Outline, G Fill, B Sculpt, L Water, M Mark. `EditorContext.SelectTool` picks one (`ActiveTool`); tools that change the world refuse
   while the agent's build is open, and Place needs a palette object. **Holding Space lends the hand** to any
   tool (`EditorContext.HeldTool`; it only starts between drags and ends once Space and the button are let go);
   `CurrentTool` is the held tool, else the picked one. `EditorController` handles the global shortcuts, reports
@@ -435,6 +455,11 @@ slopes), so results are exact and every edit goes through the edit session.
   - `SculptTool` (B): hold left mouse on the terrain. Dabs fire at a fixed 30/s (independent of
     frame rate, capped per frame) and preview live, and the stroke commits on release. `[` / `]`
     change the radius. `BrushCursor` draws a ring that follows the ground, colored by mode.
+  - `WaterTool` (L), a paint bucket for lakes: a press in a hollow surveys it and previews a full lake; dragging up
+    or down sets the level (50 px per meter, Ctrl half meters), clamped between just above the ground and the brim,
+    so it can't spill; release places it (`WaterEdits`, one undo step). A press on a lake (`WaterMap.LakeAt`, or near
+    the point of one that spills) re-levels it the same way. The lake last made or pressed is `EditorContext.CurrentLake`:
+    the options bar shows its level and Remove, and Del removes it (`EditorCommands.RemoveCurrentLake`).
 - **The agent in the editor**: `EditorController` builds an `AgentHost` when the bootstrap has `AgentSettings`
   (`Settings/Agent/AgentSettings.asset`: Claude Code command, model `sonnet`, effort, and the instructions as a
   text asset, `WorldBuilderInstructions.md`). The host registers the building commands over the controller's
@@ -475,7 +500,7 @@ slopes), so results are exact and every edit goes through the edit session.
   with the current tool highlighted. The **tool options bar** (across the top of the view) shows the current
   tool's name and hint, and each tool's settings are their own section inside it, shown while that tool is
   current: `SelectionSection` (count, Frame, Drop) for Select/Move/Rotate/Scale, `RectangleSection` (whole pieces)
-  for Outline and Fill, `PlacementSection` (turn, random turn & size, align to slope, gaps) for Place, Outline and Fill, `SculptSection` (brush) for Sculpt. Each presenter
+  for Outline and Fill, `PlacementSection` (turn, random turn & size, align to slope, gaps) for Place, Outline and Fill, `SculptSection` (brush) for Sculpt, `WaterSection` (the current lake's level, Remove) for Water. Each presenter
   binds its UXML elements by name (`PanelElements.Required` fails loudly on a mismatch), sends
   actions to `EditorContext` / `EditorCommands`, and mirrors state in `Refresh()` every frame,
   because shortcuts change the same state. `ChoiceRow<TEnum>` is the reusable segmented control.
@@ -488,7 +513,7 @@ slopes), so results are exact and every edit goes through the edit session.
   `PaletteSection`: a search field (Esc clears) over one foldout per category; folded categories
   stay folded across rebuilds, and a search opens every group with a match. Buttons are plain
   elements, fine for hundreds of objects; a virtualized `ListView` is the next step for thousands.
-- Controls: the tool keys above (Q / W / E / R / H / P / O / G / B / M) or the tool strip; hold Space → hand; 1–9 or the
+- Controls: the tool keys above (Q / W / E / R / H / P / O / G / B / L / M) or the tool strip; hold Space → hand; 1–9 or the
   palette → Place tool (`[` / `]` rotate, hold + drag paints a row, + Shift a straight one); Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
   (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly; wheel
   dollies towards the point under the cursor; hold middle mouse to pan (the grabbed point stays under

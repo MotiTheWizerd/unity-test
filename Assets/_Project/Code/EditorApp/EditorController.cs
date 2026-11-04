@@ -47,7 +47,8 @@ namespace Forge.EditorApp
         /// <param name="ui">Clicks over this UI are kept from the tools; typing into it is kept from the shortcuts.</param>
         /// <param name="assets">The world's asset catalog, so tool previews look like the real objects.</param>
         /// <param name="agent">How the world-building agent runs; null leaves the editor without one.</param>
-        public void Initialize(EditorContext context, WorldView view, IInputBlocker ui, IAssetCatalog assets, AgentSettings agent)
+        /// <param name="water">The water on show, which the Water tool reads and previews through.</param>
+        public void Initialize(EditorContext context, WorldView view, WaterView water, IInputBlocker ui, IAssetCatalog assets, AgentSettings agent)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
@@ -68,6 +69,7 @@ namespace Forge.EditorApp
                 { ToolKind.Outline, new RectangleTool(RectPattern.Outline, context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
                 { ToolKind.Fill, new RectangleTool(RectPattern.Fill, context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
                 { ToolKind.Sculpt, new SculptTool(context, view, picker, slopes) },
+                { ToolKind.Water, new WaterTool(context, picker, Commands, water) },
                 { ToolKind.Mark, new MarkTool(context, picker) },
             };
             _markView = new MarkView(new TerrainSurface(picker));

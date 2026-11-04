@@ -115,7 +115,11 @@ Shader "Forge/Water"
 
                 half4 body = lerp(_ShallowColor, _DeepColor, depthBlend);
                 half3 lit = body.rgb * (0.35 + 0.65 * saturate(dot(normal, sun.direction))) * sun.color + body.rgb * SampleSH(normal) * 0.5;
-                half3 sky = GlossyEnvironmentReflection(reflect(-view, normal), 0.05, 1);
+                // Rippled normals at a low angle can reflect below the horizon, where the sky probe is dark ground
+                // color, which showed as dark blots; water reflects the sky there, so mirror the ray back up.
+                float3 reflected = reflect(-view, normal);
+                reflected.y = abs(reflected.y);
+                half3 sky = GlossyEnvironmentReflection(reflected, 0.05, 1);
                 half3 glint = sun.color * _Glint * pow(saturate(dot(normal, normalize(sun.direction + view))), _GlintSharpness);
                 half foam = (1 - saturate(thickness / max(_FoamWidth, 0.001))) * _FoamColor.a;
 

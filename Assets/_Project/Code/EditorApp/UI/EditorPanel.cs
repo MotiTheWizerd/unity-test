@@ -47,6 +47,7 @@ namespace Forge.EditorApp.UI
                 new RectangleSection(Root, context),
                 new PlacementSection(Root, context),
                 new SculptSection(Root, context),
+                new WaterSection(Root, context, commands),
                 new PaletteSection(Root, context),
                 new HistorySection(Root, context),
                 new PerformanceSection(Root, context, diagnostics),

@@ -2,6 +2,7 @@
     "name": "Forge.Editing",
     "rootNamespace": "Forge.Editing",
     "references": [
+        "Forge.Core",
         "Forge.Data"
     ],
     "includePlatforms": [],

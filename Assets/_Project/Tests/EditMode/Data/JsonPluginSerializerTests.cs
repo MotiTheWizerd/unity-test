@@ -130,6 +130,19 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesLakes()
+        {
+            var lake = new LakeRecord(RecordId.Parse("core:lake/000001"), Space, 12.5f, -40f, 47.25f);
+
+            var json = Write(Plugin("core", lake));
+            var copy = Read(json).Records.OfType<LakeRecord>().Single();
+
+            Assert.That((copy.Id, copy.Space, copy.X, copy.Z, copy.Level), Is.EqualTo((lake.Id, Space, 12.5f, -40f, 47.25f)));
+            StringAssert.Contains("\"type\": \"lake\"", json);
+            Assert.That(Write(Read(json)), Is.EqualTo(json));
+        }
+
+        [Test]
         public void Read_UnknownSpaceKind_IsRejected()
         {
             var json = Write(Plugin("core", new SpaceRecord(Space, "Tamriel", SpaceKind.Worldspace))).Replace("\"worldspace\"", "\"dungeon\"");

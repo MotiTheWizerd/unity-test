@@ -183,6 +183,18 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void Lake_StoresValues_AndRejectsBadOnes()
+        {
+            var lake = new LakeRecord(RecordId.Parse("core:lake/1"), TestRecords.Space, 3f, 4f, 45f);
+
+            Assert.That((lake.Space, lake.X, lake.Z, lake.Level), Is.EqualTo((TestRecords.Space, 3f, 4f, 45f)));
+            Assert.That(lake.WithLevel(46f).Level, Is.EqualTo(46f));
+            Assert.Throws<ArgumentException>(() => new LakeRecord(RecordId.Parse("core:lake/1"), default, 3f, 4f, 45f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new LakeRecord(RecordId.Parse("core:lake/1"), TestRecords.Space, float.NaN, 4f, 45f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new LakeRecord(RecordId.Parse("core:lake/1"), TestRecords.Space, 3f, 4f, -1f));
+        }
+
+        [Test]
         public void Space_Interior_HasNoSea()
         {
             var interior = new SpaceRecord(SpaceRecord.IdFor("core", "cave"), "Cave", SpaceKind.Interior, 0f, 10f);

@@ -35,6 +35,8 @@ namespace Forge.EditorApp.Tools
                 laysPaletteObject: true),
             new ToolDefinition(ToolKind.Sculpt, "Sculpt", Key.B, CreateGroup, editsWorld: true,
                 "Hold left mouse on the terrain to shape it. [ ] brush size."),
+            new ToolDefinition(ToolKind.Water, "Water", Key.L, CreateGroup, editsWorld: true,
+                "Click a hollow to fill it with a lake; drag up or down to set the level, Ctrl in half meters. Click a lake to change it, Del removes it."),
             new ToolDefinition(ToolKind.Mark, "Mark", Key.M, CreateGroup, editsWorld: false,
                 "Click the ground for a spot, or drag for an area, to show the agent \"here\". Del clears it."),
         };

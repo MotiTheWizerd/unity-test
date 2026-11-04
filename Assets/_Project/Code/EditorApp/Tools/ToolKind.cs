@@ -30,6 +30,9 @@ namespace Forge.EditorApp.Tools
         /// <summary>Paint on the terrain to raise, lower, flatten or smooth it.</summary>
         Sculpt,
 
+        /// <summary>Click a hollow to fill it with water (a lake); drag up or down to set its level.</summary>
+        Water,
+
         /// <summary>Click the ground to mark a spot, or drag to mark an area, for the agent ("here").</summary>
         Mark,
     }

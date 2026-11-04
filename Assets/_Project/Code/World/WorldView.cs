@@ -123,19 +123,18 @@ namespace Forge.World
 
             var previous = _world;
             _world = world;
-            if (world.TryGetChangesSince(previous, out var changed) && OnlyPresentableRecords(previous.Records, changed))
+            if (world.TryGetChangesSince(previous, out var changed) && NoDependencyChanged(previous.Records, changed))
                 ApplyChanges(changed);
             else
                 Rebuild();
         }
 
-        // Base objects are dependencies of many placed objects; a change to one
-        // is rare (no tool edits them yet) and simply falls back to a rebuild.
-        bool OnlyPresentableRecords(IRecordStore previous, IEnumerable<RecordId> changed) =>
-            changed.All(id => IsPresentableOrAbsent(previous, id) && IsPresentableOrAbsent(_world.Records, id));
+        // Base objects are dependencies of many placed objects; a change to one is rare (no tool edits them yet) and
+        // simply falls back to a rebuild. Records the view doesn't present (spaces, lakes) are skipped by the index.
+        bool NoDependencyChanged(IRecordStore previous, IEnumerable<RecordId> changed) =>
+            changed.All(id => !IsDependency(previous, id) && !IsDependency(_world.Records, id));
 
-        static bool IsPresentableOrAbsent(IRecordStore store, RecordId id) =>
-            !store.TryGet(id, out var record) || record is PlacedObjectRecord || record is TerrainChunkRecord;
+        static bool IsDependency(IRecordStore store, RecordId id) => store.TryGet(id, out var record) && record is BaseObjectRecord;
 
         void Rebuild()
         {

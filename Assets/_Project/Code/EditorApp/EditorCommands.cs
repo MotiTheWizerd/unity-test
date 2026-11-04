@@ -5,6 +5,7 @@ using Forge.Data.Records;
 using Forge.EditorApp.Tools;
 using Forge.Editing;
 using Forge.Editing.Placement;
+using Forge.Editing.Water;
 using Forge.World;
 using UnityEngine;
 
@@ -32,6 +33,34 @@ namespace Forge.EditorApp
             _picker = picker ?? throw new ArgumentNullException(nameof(picker));
             _camera = camera ?? throw new ArgumentNullException(nameof(camera));
             _slopes = slopes ?? throw new ArgumentNullException(nameof(slopes));
+        }
+
+        /// <summary>Moves the current lake's surface to <paramref name="level"/> (the Water tool's level field).</summary>
+        public void SetCurrentLakeLevel(float level)
+        {
+            var lake = _context.CurrentLakeRecord;
+            if (lake == null)
+                return;
+            var changed = false;
+            if (_context.TryEdit("Lake level", () => changed = WaterEdits.SetLakeLevel(_context.Session, lake.Id, level)) && changed)
+                _context.Report(_context.Session.UndoDescription);
+        }
+
+        /// <summary>Removes the current lake (Del in the Water tool, or its Remove button).</summary>
+        public void RemoveCurrentLake()
+        {
+            var lake = _context.CurrentLakeRecord;
+            if (lake == null)
+            {
+                _context.Report("Water: click a lake to pick it first");
+                return;
+            }
+
+            if (_context.TryEdit("Remove lake", () => WaterEdits.RemoveLake(_context.Session, lake.Id)))
+            {
+                _context.CurrentLake = null;
+                _context.Report("Removed the lake");
+            }
         }
 
         /// <summary>Glides the camera so the whole selection fills the view (F).</summary>

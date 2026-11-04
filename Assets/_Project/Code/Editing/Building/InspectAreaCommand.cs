@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using Forge.Data.Records;
 using Forge.Editing.Commands;
+using Forge.Editing.Water;
 
 namespace Forge.Editing.Building
 {
@@ -22,8 +23,9 @@ namespace Forge.Editing.Building
             : base("inspect_area",
                 "Describes a square area of the world: the lowest and highest ground and the steepest slope (read from " +
                 "every terrain sample in the area), an overview grid of heights (meters; rows run south to north, " +
-                "columns west to east, null where there is no terrain), the water if the world has a sea (its level, " +
-                "how much of the area is under water and how deep), and the objects standing inside, nearest the center first.")
+                "columns west to east, null where there is no terrain), the water (the sea level, the lakes reaching into " +
+                "the area with their ids and levels, how much of the area is under water and how deep), and the objects " +
+                "standing inside, nearest the center first.")
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
@@ -95,21 +97,50 @@ namespace Forge.Editing.Building
 
         public sealed class WaterInfo
         {
-            internal WaterInfo(float seaLevel, int underwaterPercent, float deepest)
+            internal WaterInfo(float? seaLevel, int underwaterPercent, float deepest, IReadOnlyList<LakeInfo> lakes)
             {
                 SeaLevel = seaLevel;
                 UnderwaterPercent = underwaterPercent;
                 Deepest = deepest;
+                Lakes = lakes;
             }
 
-            /// <summary>Height of the sea's surface, in meters.</summary>
-            public float SeaLevel { get; }
+            /// <summary>Height of the sea's surface, in meters; null when there is no sea.</summary>
+            public float? SeaLevel { get; }
 
             /// <summary>How much of the area's ground is under water, in percent of its terrain samples.</summary>
             public int UnderwaterPercent { get; }
 
             /// <summary>The deepest water in the area, in meters; 0 when it is all dry.</summary>
             public float Deepest { get; }
+
+            /// <summary>The lakes in or reaching into the area.</summary>
+            public IReadOnlyList<LakeInfo> Lakes { get; }
+        }
+
+        public sealed class LakeInfo
+        {
+            internal LakeInfo(LakeWater lake)
+            {
+                Id = lake.Record.Id.ToString();
+                X = Rounding.Coarse(lake.Record.X);
+                Z = Rounding.Coarse(lake.Record.Z);
+                Level = Rounding.Meters(lake.Record.Level);
+                Spills = lake.Extent.Spills;
+            }
+
+            public string Id { get; }
+
+            /// <summary>The lake's point, in meters.</summary>
+            public float X { get; }
+
+            public float Z { get; }
+
+            /// <summary>Height of its surface, in meters.</summary>
+            public float Level { get; }
+
+            /// <summary>The land around it no longer holds it (its shore was dug away), so it holds no water.</summary>
+            public bool Spills { get; }
         }
 
         protected override Result Run(Arguments arguments)
@@ -135,7 +166,8 @@ namespace Forge.Editing.Building
         WaterInfo DescribeWater(Vector2 center, float half)
         {
             var water = _context.Water;
-            if (!(water.SeaLevel is float seaLevel))
+            var lakes = water.Lakes.Where(lake => Reaches(lake, center, half)).Select(lake => new LakeInfo(lake)).ToList();
+            if (water.SeaLevel == null && lakes.Count == 0)
                 return null;
 
             var samples = 0;
@@ -162,7 +194,20 @@ namespace Forge.Editing.Building
             // Any water at all shows as at least 1%, so a sliver of shore is never reported as dry.
             if (underwater > 0 && percent == 0)
                 percent = 1;
-            return new WaterInfo(Rounding.Coarse(seaLevel), percent, Rounding.Coarse(deepest));
+            var seaLevel = water.SeaLevel.HasValue ? Rounding.Coarse(water.SeaLevel.Value) : (float?)null;
+            return new WaterInfo(seaLevel, percent, Rounding.Coarse(deepest), lakes);
+        }
+
+        // A lake counts when its point or any of its water lies in the square.
+        bool Reaches(LakeWater lake, Vector2 center, float half)
+        {
+            if (Math.Abs(lake.Record.X - center.X) <= half && Math.Abs(lake.Record.Z - center.Y) <= half)
+                return true;
+            if (lake.Extent.IsEmpty)
+                return false;
+            var spacing = _context.Terrain.Spacing;
+            return lake.Extent.MaxX * spacing >= center.X - half && lake.Extent.MinX * spacing <= center.X + half
+                && lake.Extent.MaxZ * spacing >= center.Y - half && lake.Extent.MinZ * spacing <= center.Y + half;
         }
 
         // Lowest, highest and steepest ground come from every terrain sample in the square, so they are exact
@@ -232,9 +277,17 @@ namespace Forge.Editing.Building
         {
             if (water == null)
                 return string.Empty;
-            return water.UnderwaterPercent == 0
-                ? FormattableString.Invariant($", all above the sea (sea level {water.SeaLevel:0.#} m)")
-                : FormattableString.Invariant($", {water.UnderwaterPercent}% under water up to {water.Deepest:0.#} m deep (sea level {water.SeaLevel:0.#} m)");
+
+            var sources = new List<string>();
+            if (water.SeaLevel is float sea)
+                sources.Add(FormattableString.Invariant($"sea level {sea:0.#} m"));
+            sources.AddRange(water.Lakes.Select(lake => lake.Spills
+                ? $"lake {lake.Id} spills, holding no water"
+                : FormattableString.Invariant($"lake {lake.Id} at {lake.Level:0.##} m")));
+            var where = water.UnderwaterPercent == 0
+                ? (water.SeaLevel.HasValue ? "all above the sea" : "all dry")
+                : FormattableString.Invariant($"{water.UnderwaterPercent}% under water up to {water.Deepest:0.#} m deep");
+            return $", {where} ({string.Join("; ", sources)})";
         }
     }
 }

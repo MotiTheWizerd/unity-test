@@ -120,6 +120,7 @@ namespace Forge.EditorApp
             ActiveSpace = space;
             Selection.Clear();
             Mark = null;
+            CurrentLake = null;
             SpaceChanged?.Invoke(space);
             Report($"Showing {spaceRecord.DisplayName}");
             return true;
@@ -134,6 +135,13 @@ namespace Forge.EditorApp
 
         /// <summary>The spot or area the user marked for the agent (M), or null. Editor state: never saved or undone.</summary>
         public GroundMark Mark { get; set; }
+
+        /// <summary>The lake the Water tool last made or clicked, whose level its options show; null for none.</summary>
+        public RecordId? CurrentLake { get; set; }
+
+        /// <summary>The record of <see cref="CurrentLake"/>, or null if there is none (or it was removed or undone).</summary>
+        public LakeRecord CurrentLakeRecord =>
+            CurrentLake.HasValue && Session.World.Records.TryGet(CurrentLake.Value, out var record) ? record as LakeRecord : null;
 
         public string ActivePluginPath => _activeStore.PathFor(Session.ActivePluginId);
 

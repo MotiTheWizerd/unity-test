@@ -109,6 +109,18 @@ namespace Forge.Editing.Building
                 ? placed
                 : null;
 
+        /// <summary>The lake <paramref name="id"/> in the space the commands build in; refused, with a hint, when there is none.</summary>
+        public LakeRecord LakeInSpace(string id)
+        {
+            if (RecordId.TryParse(id, out var recordId)
+                && Session.World.Records.TryGet(recordId, out var record)
+                && record is LakeRecord lake
+                && lake.Space == Space)
+                return lake;
+
+            throw new CommandException($"There is no lake '{id}' here. inspect_area lists the lakes in an area.");
+        }
+
         /// <summary>Placed objects in the space the commands build in.</summary>
         public IEnumerable<PlacedObjectRecord> PlacedObjects() =>
             Session.World.Records.OfType<PlacedObjectRecord>().Where(p => p.Space == Space);
