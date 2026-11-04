@@ -74,6 +74,12 @@
     flex-grow: 1;
 }
 
+.forge-time-readout {
+    min-width: 44px;
+    margin-left: 6px;
+    -unity-text-align: middle-right;
+}
+
 .forge-indented {
     margin-top: 4px;
     padding-left: 6px;

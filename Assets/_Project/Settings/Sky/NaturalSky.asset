@@ -13,8 +13,6 @@ MonoBehaviour:
   m_Name: NaturalSky
   m_EditorClassIdentifier: Forge.World::Forge.World.Sky.SkyProfile
   _material: {fileID: 2100000, guid: aec4638d19fe16c40b38ac76b3fedd65, type: 2}
-  _sunHeight: 40
-  _sunBearing: 150
   _zenith:
     serializedVersion: 2
     key0: {r: 0.03, g: 0.05, b: 0.1, a: 1}

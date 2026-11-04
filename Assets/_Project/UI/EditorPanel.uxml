@@ -30,6 +30,15 @@
                 </ui:VisualElement>
 
                 <ui:VisualElement class="forge-section">
+                    <ui:Label class="forge-section__header" text="TIME OF DAY" />
+                    <ui:VisualElement class="forge-row">
+                        <ui:Slider name="time-hour" low-value="0" high-value="24" class="forge-grow" />
+                        <ui:Label name="time-readout" class="forge-time-readout" />
+                    </ui:VisualElement>
+                    <ui:Toggle name="time-run" label="Run (20×)" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="forge-section">
                     <ui:Label class="forge-section__header" text="PALETTE  (1-9)" />
                     <ui:TextField name="palette-search" placeholder-text="Search objects…" class="forge-search" />
                     <ui:Label name="palette-count" class="forge-muted" />

@@ -124,7 +124,9 @@ Shader "Forge/Water"
                 half foam = (1 - saturate(thickness / max(_FoamWidth, 0.001))) * _FoamColor.a;
 
                 half3 color = lerp(lit, sky, fresnel * 0.6) + glint;
-                color = lerp(color, _FoamColor.rgb, foam);
+                // Foam is lit like everything else, so it doesn't glow white at night.
+                half3 foamLit = _FoamColor.rgb * (sun.color * saturate(dot(normal, sun.direction)) + SampleSH(normal));
+                color = lerp(color, foamLit, foam);
                 half alpha = saturate(max(max(body.a, fresnel), foam) + dot(glint, 0.33));
                 // The water fades out exactly at the shore line, so it meets the land without a hard edge.
                 alpha *= saturate(thickness / 0.05);

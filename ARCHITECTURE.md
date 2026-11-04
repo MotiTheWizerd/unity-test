@@ -141,6 +141,14 @@ the water fills every terrain sample below the level connected to the point (`La
 sculpting and a mod that reshapes the land reshapes its lakes. Rivers (splines) come later as their own records and
 join the same `WaterMap`.
 
+**Time and the sun** (`Forge.Data.Sky`, engine-free, so the game will use the same): `WorldClock` holds the day number
+and the hour, running at `Scale` game seconds per real second (20, as in Skyrim) while `Running`; in the editor it is a
+view setting (`EditorContext.Clock`, the TIME OF DAY slider and Run toggle, never saved), the game will save it.
+`DayCycle` is the shape of a day (sunrise, sunset, noon height; `DayCycle.Default` = 6:00, 20:00, 60°, for every
+worldspace until climate records exist). `SunPath.At(day, hour)` is a stylized arc: rising east, highest south midway,
+setting west, then under the horizon through the north, `NightDepth` (40°) down at the middle of the night, continuous
+at sunrise and sunset. The agent's briefing names the time and whether the sun is up.
+
 **Terrain**: a worldspace is a grid of `WorldGrid.ChunkSize` (64 m) chunks. A
 `TerrainChunkRecord` holds a `HeightField` (2^n+1 samples per edge, meters in
 [0, `MaxTerrainHeight`]; new land starts at `WorldGrid.DefaultLandHeight`, 50 m). Its record name is derived
@@ -361,9 +369,11 @@ slopes), so results are exact and every edit goes through the edit session.
   exponential-squared fog in the horizon color that is 95% thick at the load radius (so land and sea fade into the
   sky), ambient light from the skybox (`DynamicGI.UpdateEnvironment`) and a realtime reflection probe that sees only
   the sky (what the water reflects). Every color comes from the profile's gradients **over the sun's height** (10° below
-  the horizon to overhead), so dawn, noon and dusk are one table; for now the sun stands where the profile puts it
-  (`ShowProfileSun`), and the coming world clock will call `Show` a few times per game hour. Interiors show the same
-  sky until they get lighting templates.
+  the horizon to overhead), so dawn, noon and dusk are one table; the disk, glow and haze fade out over the 8° of
+  twilight below the horizon. **`SkyDirector`** (EditorApp) keeps it on the clock: each frame it advances
+  `EditorContext.Clock` (if running), works out the sun with `SunPath` and re-renders the sky only once the sun has
+  moved 0.2° (every few seconds at 20×, live while the time slider is dragged). Interiors show the same sky until
+  they get lighting templates.
   `Water.shader` (URP, transparent) colors by the water's depth from the camera depth texture, ripples the normals
   with four scrolling sine waves, reflects the sky by fresnel, adds the sun's glint and a foam line at the shore.
 - **Assets**: records store engine-agnostic asset keys; `IAssetCatalog` turns a key into a scene object.

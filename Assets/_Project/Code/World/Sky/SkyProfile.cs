@@ -4,9 +4,9 @@ namespace Forge.World.Sky
 {
     /// <summary>
     /// How a sky looks: its colors and the sun's light as gradients over the sun's height (from 10° below the
-    /// horizon to straight overhead, so dawn, noon and dusk come from one table), the material that draws it
-    /// (Forge/Sky), and where the sun stands until the world clock moves it. Config, not world data: swapping the
-    /// profile restyles the sky without touching a plugin.
+    /// horizon to straight overhead, so dawn, noon and dusk come from one table) and the material that draws it
+    /// (Forge/Sky). Where the sun stands comes from the world clock. Config, not world data: swapping the profile
+    /// restyles the sky without touching a plugin.
     /// </summary>
     [CreateAssetMenu(fileName = "Sky", menuName = "Forge/Sky Profile")]
     public sealed class SkyProfile : ScriptableObject
@@ -19,13 +19,6 @@ namespace Forge.World.Sky
 
         [SerializeField, Tooltip("A material with the Forge/Sky shader; a copy is drawn, so this asset never changes at runtime.")]
         Material _material;
-
-        [Header("Sun (fixed until the world clock moves it)")]
-        [SerializeField, Range(LowestSun, HighestSun), Tooltip("Degrees above the horizon.")]
-        float _sunHeight = 40f;
-
-        [SerializeField, Range(0f, 360f), Tooltip("Compass bearing toward the sun: 0 north, 90 east, 180 south.")]
-        float _sunBearing = 150f;
 
         [Header("By the sun's height: left = 10° below the horizon, right = overhead")]
         [SerializeField] Gradient _zenith = Over(
@@ -47,10 +40,6 @@ namespace Forge.World.Sky
         float _ambientIntensity = 1f;
 
         public Material Material => _material;
-
-        public float SunHeight => _sunHeight;
-
-        public float SunBearing => _sunBearing;
 
         public float AmbientIntensity => _ambientIntensity;
 

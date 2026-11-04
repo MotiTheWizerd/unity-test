@@ -2,13 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Forge.Data.Records;
+using Forge.Data.Sky;
 using Forge.Data.Terrain;
 using UnityEngine;
 
 namespace Forge.EditorApp.Agent
 {
     /// <summary>
-    /// What the agent is told about the editor with each message: the space being built in, where the camera is
+    /// What the agent is told about the editor with each message: the space being built in, the time of day, where the camera is
     /// looking, the spot or area the user marked (where "here" is), how far the terrain reaches, and what is selected.
     /// </summary>
     public sealed class EditorBriefing
@@ -27,8 +28,16 @@ namespace Forge.EditorApp.Agent
 
         public string Describe()
         {
-            var lines = new List<string> { Space(), View(), Mark(), Terrain(), Selection() };
+            var lines = new List<string> { Space(), Time(), View(), Mark(), Terrain(), Selection() };
             return string.Join("\n", lines.Where(line => line != null));
+        }
+
+        // The editor's time of day, so "at night" or "at sunset" in a request can be checked against what the user sees.
+        string Time()
+        {
+            var hour = _context.Clock.Hour;
+            var sun = SunPath.At(_context.DayCycle, hour);
+            return $"It is {WorldClock.Format(hour)} in the editor, {(sun.IsUp ? "day: the sun is up" : "night: the sun is down")}.";
         }
 
         string View()

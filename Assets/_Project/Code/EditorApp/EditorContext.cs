@@ -6,6 +6,7 @@ using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Data.Serialization;
+using Forge.Data.Sky;
 using Forge.EditorApp.Tools;
 using Forge.Editing;
 using Forge.Editing.Geometry;
@@ -135,6 +136,12 @@ namespace Forge.EditorApp
 
         /// <summary>The spot or area the user marked for the agent (M), or null. Editor state: never saved or undone.</summary>
         public GroundMark Mark { get; set; }
+
+        /// <summary>The time of day the editor shows (the sky follows it). Editor state: never saved or undone.</summary>
+        public WorldClock Clock { get; } = new WorldClock(10f);
+
+        /// <summary>The shape of the day the sky follows: one for every worldspace until climates per worldspace exist.</summary>
+        public DayCycle DayCycle => DayCycle.Default;
 
         /// <summary>The lake the Water tool last made or clicked, whose level its options show; null for none.</summary>
         public RecordId? CurrentLake { get; set; }

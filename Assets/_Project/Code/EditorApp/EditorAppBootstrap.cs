@@ -73,6 +73,7 @@ namespace Forge.EditorApp
         [NonSerialized] InteriorFloor _interiorFloor;
         [NonSerialized] WaterView _waterView;
         [NonSerialized] SkyView _skyView;
+        [NonSerialized] SkyDirector _skyDirector;
         [NonSerialized] SpaceCameras _spaceCameras;
         [NonSerialized] RecordId _shownSpace;
 
@@ -105,6 +106,11 @@ namespace Forge.EditorApp
                 _interiorFloor = InteriorFloor.Create(transform);
                 _waterView = CreateWaterView();
                 _skyView = CreateSkyView();
+                if (_skyView != null)
+                {
+                    _skyDirector = new SkyDirector(_skyView, _context.Clock, _context.DayCycle);
+                    _skyDirector.Tick(0f);
+                }
                 _spaceCameras = new SpaceCameras();
                 _context.SpaceChanged += OnSpaceChanged;
                 if (!RecordId.TryParse(_profile.StartSpace, out var startSpace) || !_context.ShowSpace(startSpace))
@@ -141,6 +147,7 @@ namespace Forge.EditorApp
             if (_streamer.Tick(_focus.position))
                 _highlighter.Refresh();
             _waterView.Follow(_focus.position);
+            _skyDirector?.Tick(Time.unscaledDeltaTime);
         }
 
         void OnDestroy()
@@ -200,9 +207,7 @@ namespace Forge.EditorApp
                 return null;
             }
 
-            var sky = new SkyView(_sky, _sun, transform, _loadRadius * WorldGrid.ChunkSize);
-            sky.ShowProfileSun();
-            return sky;
+            return new SkyView(_sky, _sun, transform, _loadRadius * WorldGrid.ChunkSize);
         }
 
         // The sea is as large as the camera can see in every direction, so it reaches the horizon.

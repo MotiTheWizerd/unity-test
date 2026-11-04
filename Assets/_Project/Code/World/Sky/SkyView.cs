@@ -1,4 +1,5 @@
 using System;
+using Forge.Data.Sky;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -15,6 +16,9 @@ namespace Forge.World.Sky
     {
         // Exponential squared fog lets through exp(-(d·density)²); 1.73 leaves 5% at the reach.
         const float FogAtReach = 1.73f;
+
+        // How far below the horizon the sun's glow still reaches the sky, in degrees.
+        const float TwilightDepth = 8f;
 
         readonly SkyProfile _profile;
         readonly Light _sun;
@@ -38,19 +42,17 @@ namespace Forge.World.Sky
             _reflection = CreateReflection(parent);
         }
 
-        /// <summary>Shows the sky with the sun where the profile puts it (until the world clock moves it).</summary>
-        public void ShowProfileSun() => Show(_profile.SunHeight, _profile.SunBearing);
-
-        /// <summary>Shows the sky with the sun <paramref name="height"/> degrees above the horizon, toward compass <paramref name="bearing"/>.</summary>
-        public void Show(float height, float bearing)
+        /// <summary>Shows the sky with the sun at <paramref name="sun"/>.</summary>
+        public void Show(SunPosition sun)
         {
-            var toSun = SunDirection(height, bearing);
-            var colors = _profile.ColorsAt(height);
+            var toSun = SunDirection(sun.Height, sun.Bearing);
+            var colors = _profile.ColorsAt(sun.Height);
 
             _material.SetColor("_ZenithColor", colors.Zenith);
             _material.SetColor("_HorizonColor", colors.Horizon);
             _material.SetColor("_GroundColor", colors.Ground);
-            _material.SetColor("_SunColor", colors.SunLight);
+            // The disk, its glow and the horizon haze linger through twilight, then fade out under the horizon.
+            _material.SetColor("_SunColor", colors.SunLight * Mathf.Clamp01((sun.Height + TwilightDepth) / TwilightDepth));
             _material.SetVector("_SunDirection", toSun);
             RenderSettings.skybox = _material;
 
