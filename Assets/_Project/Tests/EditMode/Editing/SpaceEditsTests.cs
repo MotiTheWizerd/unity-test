@@ -163,6 +163,87 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void ExtendLand_AddsAStripAlongTheWholeSide_AsOneUndoStep()
+        {
+            var session = NewSession();
+            var id = SpaceEdits.CreateWorldspace(session, "Land", 3, 50f);
+
+            var added = SpaceEdits.ExtendLand(session, id, LandSide.East, 2);
+
+            Assert.That(added, Is.EqualTo(6));
+            var bounds = LandBounds.Of(session.World.Records, id).Value;
+            Assert.That((bounds.MinX, bounds.MaxX, bounds.MinZ, bounds.MaxZ), Is.EqualTo((-1, 3, -1, 1)));
+            Assert.That(bounds.ToString(), Is.EqualTo("5×3 chunks (320 × 192 m)"));
+            Assert.That(session.UndoDescription, Is.EqualTo("Extend Land 2 chunks east"));
+
+            session.Undo();
+            Assert.That(LandBounds.Of(session.World.Records, id).Value.Width, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void ExtendLand_RampsFromTheExistingEdge_ToTheBaseHeight()
+        {
+            var session = NewSession();
+            var id = SpaceEdits.CreateWorldspace(session, "Hills", 1, 50f);
+            // Raise the land's north edge to 60 m: the new chunk north of it must start at 60 and ease back to 50.
+            var chunk = session.World.Records.OfType<TerrainChunkRecord>().Single();
+            var n = chunk.Heights.Resolution;
+            session.Put(chunk.WithHeights(HeightField.FromFunction((x, z) => z == n - 1 ? 60f : 50f, n)));
+
+            SpaceEdits.ExtendLand(session, id, LandSide.North, 1);
+
+            var north = session.World.Records.OfType<TerrainChunkRecord>().Single(c => c.Coord == new ChunkCoord(0, 1)).Heights.Load();
+            Assert.That(north[3, 0], Is.EqualTo(60f), "Shares the edge exactly.");
+            Assert.That(north[3, (n - 1) / 2], Is.EqualTo(55f).Within(1e-4f), "Halfway across, halfway down.");
+            Assert.That(north[3, n - 1], Is.EqualTo(50f), "The far edge is at the base height.");
+        }
+
+        [Test]
+        public void ExtendLand_KeepsChunksAlreadyThere_AndFillsUnevenLand()
+        {
+            var session = NewSession();
+            var id = SpaceEdits.CreateWorldspace(session, "Land", 3, 50f);
+            // A lone chunk sticks out east at z = 0 (as a mod's land might), so the land's reach is already 4 wide.
+            var lone = new ChunkCoord(2, 0);
+            session.Put(new TerrainChunkRecord(TerrainChunkRecord.IdFor("user", id, lone), id, lone, HeightField.Flat(60f)));
+
+            var added = SpaceEdits.ExtendLand(session, id, LandSide.East, 1);
+
+            // The strip goes beyond the land's reach (x = 3); the gaps beside the lone chunk were there and stay.
+            Assert.That(added, Is.EqualTo(3));
+            Assert.That(LandBounds.Of(session.World.Records, id).Value.ToString(), Is.EqualTo("5×3 chunks (320 × 192 m)"));
+            Assert.That(session.World.Records.OfType<TerrainChunkRecord>().Any(c => c.Coord == new ChunkCoord(2, 1)), Is.False);
+            var kept = session.World.Records.OfType<TerrainChunkRecord>().Single(c => c.Coord == lone).Heights.Load();
+            Assert.That(kept[0, 0], Is.EqualTo(60f), "The chunk that was there is untouched.");
+        }
+
+        [Test]
+        public void ExtendLand_IsRefusedForInteriors_BadCounts_AndBeyondTheReach()
+        {
+            var session = NewSession();
+            var interior = SpaceEdits.CreateInterior(session, "Cellar");
+            var land = SpaceEdits.CreateWorldspace(session, "Land", 3, 50f);
+
+            Assert.Throws<ArgumentException>(() => SpaceEdits.ExtendLand(session, interior, LandSide.North, 1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => SpaceEdits.ExtendLand(session, land, LandSide.North, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => SpaceEdits.ExtendLand(session, land, LandSide.North, SpaceEdits.MaxExtendBy + 1));
+        }
+
+        [Test]
+        public void ExtendLand_StopsAtTheLargestSupportedReach()
+        {
+            var session = NewSession();
+            var id = SpaceEdits.CreateWorldspace(session, "Vast", 1, 50f);
+            for (var reach = 1; reach + SpaceEdits.MaxExtendBy <= SpaceEdits.MaxExtent; reach += SpaceEdits.MaxExtendBy)
+                SpaceEdits.ExtendLand(session, id, LandSide.East, SpaceEdits.MaxExtendBy);
+            var width = LandBounds.Of(session.World.Records, id).Value.Width;
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => SpaceEdits.ExtendLand(session, id, LandSide.East, SpaceEdits.MaxExtent - width + 1));
+            Assert.DoesNotThrow(() => SpaceEdits.ExtendLand(session, id, LandSide.East, SpaceEdits.MaxExtent - width));
+            Assert.That(LandBounds.Of(session.World.Records, id).Value.Width, Is.EqualTo(SpaceEdits.MaxExtent));
+        }
+
+        [Test]
         public void SizesOutOfRange_AreRefused()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => SpaceEdits.CreateWorldspace(NewSession(), "Huge", SpaceEdits.MaxSize + 1, 50f));

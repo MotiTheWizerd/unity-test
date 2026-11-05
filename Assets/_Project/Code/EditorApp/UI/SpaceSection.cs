@@ -10,8 +10,9 @@ using UnityEngine.UIElements;
 namespace Forge.EditorApp.UI
 {
     /// <summary>
-    /// The space being shown and edited (a picker of every worldspace and interior), a worldspace's sea level and
-    /// climate, and New… to create a space: a worldspace of a chosen size of flat land, or an empty interior. Creating one switches to it.
+    /// The space being shown and edited (a picker of every worldspace and interior), a worldspace's sea level,
+    /// climate and land (its reach, and N / S / E / W to extend it by a number of chunks), and New… to create a
+    /// space: a worldspace of a chosen size of flat land, or an empty interior. Creating one switches to it.
     /// </summary>
     public sealed class SpaceSection : IPanelSection
     {
@@ -27,6 +28,9 @@ namespace Forge.EditorApp.UI
         readonly Toggle _seaOn;
         readonly FloatField _seaLevel;
         readonly DropdownField _climate;
+        readonly VisualElement _landRow;
+        readonly Label _landSize;
+        readonly IntegerField _landBy;
         readonly Button _new;
         readonly VisualElement _form;
         readonly TextField _name;
@@ -36,6 +40,8 @@ namespace Forge.EditorApp.UI
         List<SpaceRecord> _spaces = new List<SpaceRecord>();
         List<ClimateRecord> _climates = new List<ClimateRecord>();
         object _shownWorld;
+        object _shownLandWorld;
+        RecordId _shownLandSpace;
         SpaceKind _kind = SpaceKind.Worldspace;
         int _size = SpaceEdits.Sizes[0];
 
@@ -51,7 +57,13 @@ namespace Forge.EditorApp.UI
             _seaLevel.RegisterValueChangedCallback(change => SetSea(change.newValue));
             _climate = PanelElements.Required<DropdownField>(root, "space-climate");
             _climate.RegisterValueChangedCallback(_ => SetClimate());
-            _new =PanelElements.Required<Button>(root, "space-new");
+            _landRow = PanelElements.Required<VisualElement>(root, "space-land");
+            _landSize = PanelElements.Required<Label>(root, "space-land-size");
+            _landBy = PanelElements.Required<IntegerField>(root, "space-land-by");
+            _landBy.RegisterValueChangedCallback(change => _landBy.SetValueWithoutNotify(Math.Max(1, Math.Min(SpaceEdits.MaxExtendBy, change.newValue))));
+            foreach (var side in new[] { LandSide.North, LandSide.South, LandSide.East, LandSide.West })
+                PanelElements.Required<Button>(root, $"space-land-{side.Word()}").clicked += () => ExtendLand(side);
+            _new = PanelElements.Required<Button>(root, "space-new");
             _new.clicked += () => SetFormOpen(!IsFormOpen);
 
             _form = PanelElements.Required<VisualElement>(root, "space-new-form");
@@ -76,6 +88,7 @@ namespace Forge.EditorApp.UI
             RefreshPicker();
             RefreshSea();
             RefreshClimate();
+            RefreshLand();
             if (!IsFormOpen)
                 return;
 
@@ -151,6 +164,30 @@ namespace Forge.EditorApp.UI
                 : NoClimate;
             if (_climate.value != shown)
                 _climate.SetValueWithoutNotify(shown);
+        }
+
+        // The land's reach follows the world, which undo and the agent change too.
+        void RefreshLand()
+        {
+            var space = _context.ActiveSpaceRecord;
+            var worldspace = space != null && space.Kind == SpaceKind.Worldspace;
+            PanelElements.SetVisible(_landRow, worldspace);
+            if (!worldspace)
+                return;
+
+            var world = _context.Session.World;
+            if (ReferenceEquals(world, _shownLandWorld) && space.Id == _shownLandSpace)
+                return;
+            _shownLandWorld = world;
+            _shownLandSpace = space.Id;
+            PanelElements.SetText(_landSize, LandBounds.Of(world.Records, space.Id)?.ToString() ?? "No land");
+        }
+
+        void ExtendLand(LandSide side)
+        {
+            var added = 0;
+            if (_context.TryEdit("Extend land", () => added = SpaceEdits.ExtendLand(_context.Session, _context.ActiveSpace, side, _landBy.value)))
+                _context.Report(added > 0 ? _context.Session.UndoDescription : "That land is already there.");
         }
 
         void SetClimate()

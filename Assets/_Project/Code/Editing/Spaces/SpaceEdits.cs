@@ -12,9 +12,19 @@ namespace Forge.Editing.Spaces
     public static class SpaceEdits
     {
         /// <summary>Land sizes offered for a new worldspace, in chunks along each edge.</summary>
-        public static readonly IReadOnlyList<int> Sizes = new[] { 3, 8, 16 };
+        public static readonly IReadOnlyList<int> Sizes = new[] { 3, 8, 16, 32, 64 };
 
-        public const int MaxSize = 16;
+        /// <summary>Largest land a new worldspace starts with, in chunks along each edge (64 × 64 m ≈ 4 km).</summary>
+        public const int MaxSize = 64;
+
+        /// <summary>
+        /// Farthest the land may reach on either axis after extending, in chunks (320 × 64 m ≈ 20 km). A sanity
+        /// bound, not a design limit: land is its chunks, so raising it costs nothing in the data.
+        /// </summary>
+        public const int MaxExtent = 320;
+
+        /// <summary>Most chunks one extension adds on a side.</summary>
+        public const int MaxExtendBy = 64;
 
         /// <summary>
         /// Creates a worldspace of <paramref name="size"/> × <paramref name="size"/> chunks of flat land at
@@ -34,6 +44,90 @@ namespace Forge.Editing.Spaces
                     .Select(coord => new TerrainChunkRecord(TerrainChunkRecord.IdFor(session.ActivePluginId, space, coord), space, coord, heights));
             });
         }
+
+        /// <summary>
+        /// Grows the land of worldspace <paramref name="space"/> by <paramref name="chunks"/> rows of chunks beyond its
+        /// <paramref name="side"/>, the full reach of the land along that side, as one undo step. New land lies at the
+        /// space's base height and, where it touches existing land, ramps from that land's edge so the join is
+        /// seamless. Gaps inside the land's reach are left as they are. Returns how many chunks were added (chunks
+        /// already there are kept).
+        /// </summary>
+        public static int ExtendLand(EditSession session, RecordId space, LandSide side, int chunks)
+        {
+            var spaceRecord = Worldspace(session, space, "have land");
+            if (!(chunks >= 1 && chunks <= MaxExtendBy))
+                throw new ArgumentOutOfRangeException(nameof(chunks), chunks, $"Extend by 1 to {MaxExtendBy} chunks at a time.");
+
+            var existing = session.World.Records.OfType<TerrainChunkRecord>().Where(c => c.Space == space).ToDictionary(c => c.Coord);
+            var bounds = LandBounds.Of(existing.Keys)
+                         ?? throw new ArgumentException($"{spaceRecord.DisplayName} has no land to extend; create some first.", nameof(space));
+            var reach = Math.Max(bounds.Width, bounds.Depth) + chunks;
+            if (reach > MaxExtent)
+                throw new ArgumentOutOfRangeException(nameof(chunks), chunks, $"The land would reach {reach} chunks across; at most {MaxExtent} ({MaxExtent * WorldGrid.ChunkSize / 1000f:0.#} km) is supported.");
+
+            var outward = side.Outward();
+            var added = new List<TerrainChunkRecord>();
+            foreach (var edge in EdgeChunks(bounds, side))
+            {
+                // The ramp starts from the land actually at the edge (it may stop short of the rectangle's corner).
+                existing.TryGetValue(edge, out var neighbour);
+                for (var k = 1; k <= chunks; k++)
+                {
+                    var coord = new ChunkCoord(edge.X + outward.X * k, edge.Z + outward.Z * k);
+                    if (existing.ContainsKey(coord))
+                        continue;
+                    var heights = k == 1 && neighbour != null
+                        ? Ramp(neighbour.Heights.Load(), side, spaceRecord.BaseHeight)
+                        : HeightField.Flat(spaceRecord.BaseHeight, neighbour?.Heights.Resolution ?? WorldGrid.DefaultHeightmapResolution);
+                    added.Add(new TerrainChunkRecord(TerrainChunkRecord.IdFor(session.ActivePluginId, space, coord), space, coord, heights));
+                }
+            }
+
+            if (added.Count == 0)
+                return 0;
+
+            session.Batch($"Extend {spaceRecord.DisplayName} {chunks} chunk{(chunks == 1 ? "" : "s")} {side.Word()}", () =>
+            {
+                foreach (var record in added)
+                    session.Put(record);
+            });
+            return added.Count;
+        }
+
+        // The chunk coordinates along the land's edge on that side, one per column (or row) of the land's reach.
+        static IEnumerable<ChunkCoord> EdgeChunks(LandBounds bounds, LandSide side)
+        {
+            switch (side)
+            {
+                case LandSide.North: return Enumerable.Range(bounds.MinX, bounds.Width).Select(x => new ChunkCoord(x, bounds.MaxZ));
+                case LandSide.South: return Enumerable.Range(bounds.MinX, bounds.Width).Select(x => new ChunkCoord(x, bounds.MinZ));
+                case LandSide.East: return Enumerable.Range(bounds.MinZ, bounds.Depth).Select(z => new ChunkCoord(bounds.MaxX, z));
+                case LandSide.West: return Enumerable.Range(bounds.MinZ, bounds.Depth).Select(z => new ChunkCoord(bounds.MinX, z));
+                default: throw new ArgumentOutOfRangeException(nameof(side), side, null);
+            }
+        }
+
+        // A chunk beyond `side` of `neighbour`: its shared edge copies the neighbour's edge samples (so the two meet
+        // exactly) and the heights ease to `baseHeight` across the chunk.
+        static HeightField Ramp(HeightField neighbour, LandSide side, float baseHeight)
+        {
+            var n = neighbour.Resolution;
+            var last = n - 1;
+            switch (side)
+            {
+                case LandSide.North: // shares the neighbour's top row (z = last) as its bottom row (z = 0)
+                    return HeightField.FromFunction((x, z) => Lerp(neighbour[x, last], baseHeight, z / (float)last), n);
+                case LandSide.South: // shares the neighbour's bottom row as its top row
+                    return HeightField.FromFunction((x, z) => Lerp(neighbour[x, 0], baseHeight, (last - z) / (float)last), n);
+                case LandSide.East: // shares the neighbour's right column as its left column
+                    return HeightField.FromFunction((x, z) => Lerp(neighbour[last, z], baseHeight, x / (float)last), n);
+                case LandSide.West: // shares the neighbour's left column as its right column
+                    return HeightField.FromFunction((x, z) => Lerp(neighbour[0, z], baseHeight, (last - x) / (float)last), n);
+                default: throw new ArgumentOutOfRangeException(nameof(side), side, null);
+            }
+        }
+
+        static float Lerp(float from, float to, float t) => from + (to - from) * t;
 
         /// <summary>Creates an empty interior as one undo step. Returns the new space's id.</summary>
         public static RecordId CreateInterior(EditSession session, string displayName) =>

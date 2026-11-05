@@ -15,6 +15,17 @@
                         <forge:ForgeNumberField name="space-sea-level" unit="m" />
                     </ui:VisualElement>
                     <forge:ForgeDropdown name="space-climate" label="Climate" />
+                    <ui:VisualElement name="space-land">
+                        <ui:Label name="space-land-size" class="forge-muted" tooltip="The land's reach in chunks of 64 m" />
+                        <ui:VisualElement class="forge-row">
+                            <ui:Label text="Extend" />
+                            <forge:ForgeIntegerField name="space-land-by" value="4" digits="2" tooltip="Chunks (64 m each) to add per press" />
+                            <forge:ForgeButton name="space-land-north" text="N" tooltip="Extend the land north (+Z)" />
+                            <forge:ForgeButton name="space-land-south" text="S" tooltip="Extend the land south (−Z)" />
+                            <forge:ForgeButton name="space-land-east" text="E" tooltip="Extend the land east (+X)" />
+                            <forge:ForgeButton name="space-land-west" text="W" tooltip="Extend the land west (−X)" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
                     <ui:VisualElement name="space-new-form" class="forge-indented">
                         <forge:ForgeTextInput name="space-new-name" placeholder-text="Name, e.g. Whiterun or Bannered Mare" />
                         <ui:VisualElement name="space-new-kinds" class="forge-row forge-choices" />

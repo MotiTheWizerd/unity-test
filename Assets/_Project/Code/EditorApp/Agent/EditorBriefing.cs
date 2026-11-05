@@ -4,6 +4,7 @@ using System.Linq;
 using Forge.Data.Records;
 using Forge.Data.Sky;
 using Forge.Data.Terrain;
+using Forge.Editing.Spaces;
 using UnityEngine;
 
 namespace Forge.EditorApp.Agent
@@ -76,13 +77,13 @@ namespace Forge.EditorApp.Agent
         string Terrain()
         {
             var space = _context.ActiveSpace;
-            var chunks = _context.Session.World.Records.OfType<TerrainChunkRecord>().Where(c => c.Space == space).Select(c => c.Coord).ToList();
-            if (chunks.Count == 0)
+            var land = LandBounds.Of(_context.Session.World.Records, space);
+            if (land == null)
                 return "There is no terrain.";
 
             var size = WorldGrid.ChunkSize;
             return FormattableString.Invariant(
-                $"The terrain spans x {chunks.Min(c => c.X) * size:0} to {(chunks.Max(c => c.X) + 1) * size:0} m and z {chunks.Min(c => c.Z) * size:0} to {(chunks.Max(c => c.Z) + 1) * size:0} m.");
+                $"The terrain spans x {land.Value.MinX * size:0} to {(land.Value.MaxX + 1) * size:0} m and z {land.Value.MinZ * size:0} to {(land.Value.MaxZ + 1) * size:0} m ({land}); extend_land grows it.");
         }
 
         string Selection()

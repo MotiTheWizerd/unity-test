@@ -136,8 +136,15 @@ one in the active plugin.
 separate spaces, each with its own coordinates. A *worldspace* is open land; an *interior* (a house, a cave) has
 no terrain, and the editor gives it a floor grid at height 0 to stand on. Every `TerrainChunkRecord` and
 `PlacedObjectRecord` names its `Space`. A worldspace has no size field: its extent is its chunks, so land is
-added as chunks, and a mod adds land to its master's worldspace with chunks in its own namespace. The editor
-shows and edits one space at a time (`EditorContext.ActiveSpace`); the chunk index, terrain grid, terrain edits,
+added as chunks, and a mod adds land to its master's worldspace with chunks in its own namespace. A new
+worldspace starts as flat land of 3 to 64 chunks per edge (`SpaceEdits.Sizes`, `MaxSize`; 64 ≈ 4 km), and grows
+afterwards with `SpaceEdits.ExtendLand`: a strip of chunks along one side (`LandSide`), the full reach of the land
+(`LandBounds`), at the base height, each new chunk ramping from the existing edge so the join is seamless; one undo
+step. The SPACE section shows the reach with N / S / E / W buttons, and the agent has `extend_land`. The only
+cap is a sanity bound of 320 chunks per axis (`MaxExtent`, ≈ 20 km). What still limits big maps, in the order to
+fix them: placed objects load whole at startup (only terrain streams its data); 1 m sample spacing everywhere
+(per-worldspace spacing would quarter the data on open land); 32-bit float positions jitter past ~5–10 km from
+the origin (origin shifting); and no distant terrain level of detail past the load radius. The editor shows and edits one space at a time (`EditorContext.ActiveSpace`); the chunk index, terrain grid, terrain edits,
 terrain followers and the agent's commands are all per space.
 A worldspace may have a **sea**: `SpaceRecord.WaterLevel` (meters, optional, omitted from the JSON when there is
 none; interiors never have one). All ground below it is under water, coasts and hollows alike; beyond the land the sea
