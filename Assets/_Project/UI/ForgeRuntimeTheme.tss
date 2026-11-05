@@ -6,6 +6,7 @@
 @import url("Controls/ForgeSection.uss");
 @import url("Controls/ForgeFields.uss");
 @import url("Controls/ForgeButton.uss");
+@import url("Controls/ForgeSeparator.uss");
 @import url("Controls/TabBar.uss");
 @import url("Controls/AssetTile.uss");
 @import url("Controls/Tooltip.uss");

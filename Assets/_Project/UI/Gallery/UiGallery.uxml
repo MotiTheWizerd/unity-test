@@ -50,6 +50,18 @@
                             <ui:VisualElement name="tabs" class="gallery-row" />
                         </forge:ForgeSection>
 
+                        <forge:ForgeSection title="SEPARATORS">
+                            <ui:Label class="forge-muted" text="Horizontal, between stacked content:" />
+                            <forge:ForgeSeparator />
+                            <ui:Label class="forge-muted" text="Vertical, between the items of a row:" />
+                            <ui:VisualElement class="gallery-row">
+                                <forge:ForgeButton icon="undo-2" variant="Ghost" tooltip="Undo" />
+                                <forge:ForgeButton icon="redo-2" variant="Ghost" tooltip="Redo" />
+                                <forge:ForgeSeparator vertical="true" />
+                                <forge:ForgeButton icon="save" variant="Ghost" tooltip="Save" />
+                            </ui:VisualElement>
+                        </forge:ForgeSection>
+
                         <forge:ForgeSection title="SECTIONS">
                             <forge:ForgeSection title="OPEN" collapsible="true">
                                 <ui:Label class="forge-muted" text="A collapsible section, open. Click the header." />

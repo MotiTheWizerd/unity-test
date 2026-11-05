@@ -1,0 +1,15 @@
+/* ForgeSeparator: a thin divider line, horizontal across stacked content or vertical between the items of a row. */
+
+.forge-separator {
+    background-color: var(--forge-divider);
+    flex-shrink: 0;
+    height: 1px;
+    margin: var(--forge-space-2) 0;
+}
+
+.forge-separator--vertical {
+    width: 1px;
+    height: 18px;
+    margin: 0 var(--forge-space-2);
+    align-self: center;
+}

@@ -589,7 +589,8 @@ slopes), so results are exact and every edit goes through the edit session.
   `ForgeIntegerField` (delayed commit), `ForgeSlider` (number box on), `ForgeCheckbox`, `ForgeDropdown` (thin
   subclasses of Unity's controls that add the field chrome and a `unit` label, `FieldChrome`), `ForgeButton`
   (`icon`, `variant` default / primary / ghost; the icon is the button's background image, because a button with a
-  child is no longer measured by its text), `TabBar`, `AssetTile`, and `Icons.Make(name)`. The theme imports
+  child is no longer measured by its text), `ForgeSeparator` (a hairline, `vertical` between the items of a row),
+  `TabBar`, `AssetTile`, and `Icons.Make(name)`. The theme imports
   every component sheet, so they work in any panel. Runtime UI Toolkit shows no tooltips, so `TooltipLayer` at a
   panel's root draws its own: any element's `tooltip` (UXML or code) shows beside it after a short rest, rich text
   allowed. **The UI gallery** (Forge → UI Gallery, `Scenes/UiGallery.unity`, `UI/Gallery/UiGallery.uxml`,

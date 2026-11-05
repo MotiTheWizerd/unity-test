@@ -140,10 +140,15 @@
     min-height: 30px;
 }
 
-.forge-options__row--global {
-    border-bottom-width: 1px;
-    border-color: var(--forge-divider);
-    margin-bottom: 2px;
+/* The separator between the global row and the tool row sits tight; the rows carry their own height. */
+.forge-options__divider {
+    margin: 0 0 2px 0;
+}
+
+/* The save icon turns accent while there are unsaved edits. */
+.forge-options .is-dirty,
+.forge-options .is-dirty:hover {
+    -unity-background-image-tint-color: var(--forge-accent);
 }
 
 .forge-options__space {

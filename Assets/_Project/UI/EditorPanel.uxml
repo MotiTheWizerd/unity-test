@@ -37,15 +37,6 @@
                     <ui:Label name="time-moons" class="forge-muted" />
                 </forge:ForgeSection>
 
-                <forge:ForgeSection title="HISTORY">
-                    <ui:VisualElement class="forge-row forge-choices">
-                        <forge:ForgeButton name="undo" text="Undo" icon="undo-2" tooltip="Ctrl+Z" />
-                        <forge:ForgeButton name="redo" text="Redo" icon="redo-2" tooltip="Ctrl+Y" />
-                    </ui:VisualElement>
-                    <ui:Label name="undo-description" class="forge-muted" />
-                    <forge:ForgeButton name="save" text="Save" icon="save" tooltip="Ctrl+S" />
-                </forge:ForgeSection>
-
                 <forge:ForgeSection title="WORLD">
                     <ui:Label name="load-order" class="forge-muted forge-wrap" />
                     <ui:Label name="record-counts" class="forge-muted" />
@@ -70,7 +61,13 @@
                 <ui:Label class="forge-options__name" text="SPACE" />
                 <forge:ForgeDropdown name="space-picker" class="forge-options__space" tooltip="The space you are editing" />
                 <forge:ForgeButton name="space-new" icon="plus" variant="Ghost" tooltip="New space…" />
+                <forge:ForgeSeparator vertical="true" />
+                <forge:ForgeButton name="undo" icon="undo-2" variant="Ghost" tooltip="Undo (Ctrl+Z)" />
+                <forge:ForgeButton name="redo" icon="redo-2" variant="Ghost" tooltip="Redo (Ctrl+Y)" />
+                <forge:ForgeSeparator vertical="true" />
+                <forge:ForgeButton name="save" icon="save" variant="Ghost" tooltip="Save (Ctrl+S)" />
             </ui:VisualElement>
+            <forge:ForgeSeparator class="forge-options__divider" />
             <ui:VisualElement class="forge-options__row">
             <ui:Label name="tool-options-name" class="forge-options__name" />
             <ui:VisualElement name="options-selection" class="forge-options__group">
