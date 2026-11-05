@@ -60,12 +60,12 @@
             <ui:VisualElement class="forge-options__row forge-options__row--global">
                 <ui:Label class="forge-options__name" text="SPACE" />
                 <forge:ForgeDropdown name="space-picker" class="forge-options__space" tooltip="The space you are editing" />
-                <forge:ForgeButton name="space-new" icon="plus" variant="Ghost" small="true" tooltip="New space…" />
+                <forge:ForgeButton name="space-new" icon="plus" small="true" tooltip="New space…" />
                 <forge:ForgeSeparator vertical="true" />
-                <forge:ForgeButton name="undo" icon="undo-2" variant="Ghost" small="true" tooltip="Undo (Ctrl+Z)" />
-                <forge:ForgeButton name="redo" icon="redo-2" variant="Ghost" small="true" tooltip="Redo (Ctrl+Y)" />
+                <forge:ForgeButton name="undo" icon="undo-2" small="true" tooltip="Undo (Ctrl+Z)" />
+                <forge:ForgeButton name="redo" icon="redo-2" small="true" tooltip="Redo (Ctrl+Y)" />
                 <forge:ForgeSeparator vertical="true" />
-                <forge:ForgeButton name="save" icon="save" variant="Ghost" small="true" tooltip="Save (Ctrl+S)" />
+                <forge:ForgeButton name="save" icon="save" small="true" tooltip="Save (Ctrl+S)" />
             </ui:VisualElement>
             <forge:ForgeSeparator class="forge-options__divider" />
             <ui:VisualElement class="forge-options__row">

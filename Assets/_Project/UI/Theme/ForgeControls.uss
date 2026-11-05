@@ -64,8 +64,11 @@
     border-color: var(--forge-control-border);
 }
 
+/* Unity's theme grey-fills a disabled button at this specificity; keep the resting look and only dim it. */
 .unity-button:disabled {
     opacity: 0.35;
+    background-color: var(--forge-control-bg);
+    border-color: var(--forge-control-border);
 }
 
 /* The chosen one: the current tool, the selected object, the chosen mode. */

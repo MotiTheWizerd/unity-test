@@ -30,6 +30,7 @@ namespace Forge.EditorApp.UI.Controls
         public ForgeButton(Action clickEvent) : base(clickEvent)
         {
             AddToClassList(Class);
+            AddToClassList(VariantClass(_variant));
             // The text may be set after the icon (UXML applies attributes in its own order), so read both on arrival.
             RegisterCallback<AttachToPanelEvent>(_ => UpdateIconClasses());
         }

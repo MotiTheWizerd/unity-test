@@ -49,6 +49,30 @@
     background-position-x: 7px;
 }
 
+/* Default: an accent outline with accent text and icon, no fill; a soft accent fill on hover. */
+.forge-button--default {
+    background-color: transparent;
+    border-color: var(--forge-accent);
+    color: var(--forge-accent);
+    -unity-background-image-tint-color: var(--forge-accent);
+}
+
+.forge-button--default:hover {
+    background-color: var(--forge-accent-soft);
+    color: var(--forge-accent-hover);
+    -unity-background-image-tint-color: var(--forge-accent-hover);
+}
+
+.forge-button--default:active {
+    background-color: var(--forge-accent-soft);
+}
+
+/* Disabled keeps the outline (Unity's theme would grey-fill it at this specificity); the theme dims it. */
+.forge-button--default:disabled {
+    background-color: transparent;
+    border-color: var(--forge-accent);
+}
+
 /* Primary: the one action of a form. */
 .forge-button--primary,
 .forge-button--primary:hover {
@@ -70,6 +94,11 @@
 
 .forge-button--ghost:hover {
     background-color: var(--forge-control-bg-hover);
+}
+
+.forge-button--ghost:disabled {
+    background-color: transparent;
+    border-color: transparent;
 }
 
 /* This sheet sits above the theme, so the chosen ghost button restates the accent. */

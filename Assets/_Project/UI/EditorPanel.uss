@@ -145,10 +145,11 @@
     margin: 0 0 2px 0;
 }
 
-/* The save icon turns accent while there are unsaved edits. */
+/* The save button fills with the accent while there are unsaved edits. */
 .forge-options .is-dirty,
 .forge-options .is-dirty:hover {
-    -unity-background-image-tint-color: var(--forge-accent);
+    background-color: var(--forge-accent);
+    -unity-background-image-tint-color: var(--forge-text-on-accent);
 }
 
 .forge-options__space {
