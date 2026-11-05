@@ -12,8 +12,8 @@ using UnityEngine.UIElements;
 namespace Forge.EditorApp.UI
 {
     /// <summary>
-    /// The assets browser along the bottom: a tab per top-level category (<see cref="PaletteTabs"/>), a grid of
-    /// tiles for the current tab with a small header per sub-category, and a search that spans every tab. The panel
+    /// The assets browser along the bottom: a tab per top-level category (<see cref="PaletteTabs"/>), a flowing grid
+    /// of tiles for the current tab (the sub-category is in the tooltip), and a search that spans every tab. The panel
     /// collapses to its header and its height can be dragged. Tiles are rebuilt only when the shown objects change.
     /// Picking a tile chooses the object the placing tools lay (<see cref="EditorContext.SelectPlacement"/>).
     /// </summary>
@@ -21,7 +21,6 @@ namespace Forge.EditorApp.UI
     {
         const string UncategorizedTitle = "Uncategorized";
         const string CollapsedClass = "is-collapsed";
-        const string GroupClass = "forge-assets__group";
         const string CollapseIconOpen = "chevron-down";
         const string CollapseIconClosed = "chevron-up";
         const float MinHeight = 140f;
@@ -120,16 +119,10 @@ namespace Forge.EditorApp.UI
                 shownCount = tab?.Count ?? 0;
             }
 
-            // Sub-headers only where they tell something: a search shows full paths; a tab shows what is under it,
-            // and objects sitting directly in the tab's category come first without a header.
+            // One flowing grid, in display order (so sub-categories stay together); the tooltip names the category.
             foreach (var group in groups)
-            {
-                var header = searching ? FullLabel(group.Category) : CategoryPath.Tail(group.Category);
-                if (searching || header.Length > 0)
-                    _grid.Add(GroupHeader(header));
-                foreach (var record in group.Objects)
-                    _grid.Add(CreateTile(record));
-            }
+            foreach (var record in group.Objects)
+                _grid.Add(CreateTile(record));
 
             PanelElements.SetText(_count, searching || shownCount != _source.Count
                 ? $"{shownCount} of {_source.Count}"
@@ -152,13 +145,6 @@ namespace Forge.EditorApp.UI
             var where = record.Category.Length == 0 ? UncategorizedTitle : FullLabel(record.Category);
             var key = shortcut > 0 ? $"  <color=#9EA4AE>{shortcut}</color>" : string.Empty;
             return $"{record.DisplayName}{key}  <color=#9EA4AE>· {where}</color>";
-        }
-
-        static Label GroupHeader(string text)
-        {
-            var header = new Label(text.Length == 0 ? UncategorizedTitle : text) { pickingMode = PickingMode.Ignore };
-            header.AddToClassList(GroupClass);
-            return header;
         }
 
         static string TabTitle(string category) => category.Length == 0 ? UncategorizedTitle : category;

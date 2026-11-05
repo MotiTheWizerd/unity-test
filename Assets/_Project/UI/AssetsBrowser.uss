@@ -56,15 +56,6 @@
     align-content: flex-start;
 }
 
-.forge-assets__group {
-    width: 100%;
-    margin: 6px 0 2px 4px;
-    font-size: var(--forge-font-size-xs);
-    -unity-font-definition: url("Fonts/Inter-Medium.ttf");
-    letter-spacing: 1px;
-    color: var(--forge-text-dim);
-}
-
 /* ---- Collapsed: the header only --------------------------------------------------------------------------- */
 
 .forge-assets.is-collapsed {
