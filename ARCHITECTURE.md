@@ -437,7 +437,8 @@ used let go first; the same `BudgetCache<T>` as `HeightCache`).
   own samples (every 8th at 1 m, every 4th at 2 m: never interpolated, so tile edges and chunk edges share exact
   heights), into an immutable `FarTile` (heights plus which chunks exist, so missing chunks are holes, not land at 0).
   `FarTerrainView` (World) streams the tiles with a `ChunkWindow` over *tile* coordinates (`_farRadius` 16 chunks →
-  4 tiles ≈ 1 km, the fog's reach), under the world root like everything else, and `FarTerrainMesh` builds a plain
+  4 tiles ≈ 1 km; the fog hides everything one tile short of that, `FogReach`, so the outer ring's stepped edge never
+  shows against the sky), under the world root like everything else, and `FarTerrainMesh` builds a plain
   mesh per tile with no collider (`ScenePicker` never hits far land). Tiles cover the near land too, 2 m below it, so
   the real chunks draw over them and there is no seam to stitch at the load radius. `WorldStreamer` gives the far
   land whatever budget the chunks left in the frame (one tile anyway when no chunk loaded, so it never stalls);

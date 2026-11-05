@@ -49,6 +49,12 @@ namespace Forge.World
         /// <summary>Far reach in meters: the edge of the far land.</summary>
         public float Reach => _window.LoadRadius * ChunksPerTile * WorldGrid.ChunkSize;
 
+        /// <summary>
+        /// Where the fog should hide everything: one tile short of the reach, so the outer ring of tiles (a staircase
+        /// of 256 m steps against the sky from high up) fades out before it ends.
+        /// </summary>
+        public float FogReach => Math.Max(Reach - ChunksPerTile * WorldGrid.ChunkSize, ChunksPerTile * WorldGrid.ChunkSize);
+
         /// <summary>Tiles built and pending, in the stats' chunk terms.</summary>
         public StreamingStats Stats { get; } = new StreamingStats();
 

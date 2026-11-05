@@ -250,8 +250,8 @@ namespace Forge.EditorApp
             : _interiorFloorMaterial == null ? "EditorApp has no interior floor material assigned (EditorAppBootstrap._interiorFloorMaterial)."
             : null;
 
-        // The fog is thick where the land stops (the far land's reach, or the loaded chunks' without far land), so
-        // the world fades into the sky instead of ending.
+        // The fog is thick where the land stops (just inside the far land's reach, or at the loaded chunks' without far
+        // land), so the world fades into the sky instead of ending.
         SkyView CreateSkyView()
         {
             if (_sky == null || _sun == null)
@@ -260,7 +260,7 @@ namespace Forge.EditorApp
                 return null;
             }
 
-            var reach = _streamer.Far?.Reach ?? _loadRadius * WorldGrid.ChunkSize;
+            var reach = _streamer.Far?.FogReach ?? _loadRadius * WorldGrid.ChunkSize;
             return new SkyView(_sky, _sun, transform, reach);
         }
 
