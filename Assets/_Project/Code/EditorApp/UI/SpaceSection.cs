@@ -35,15 +35,16 @@ namespace Forge.EditorApp.UI
         readonly VisualElement _form;
         readonly TextField _name;
         readonly ChoiceRow<SpaceKind> _kinds;
-        readonly VisualElement _sizeRow;
-        readonly Dictionary<int, Button> _sizes = new Dictionary<int, Button>();
+        readonly DropdownField _size;
+        readonly VisualElement _spacingRow;
+        readonly ChoiceRow<float> _spacings;
         List<SpaceRecord> _spaces = new List<SpaceRecord>();
         List<ClimateRecord> _climates = new List<ClimateRecord>();
         object _shownWorld;
         object _shownLandWorld;
         RecordId _shownLandSpace;
         SpaceKind _kind = SpaceKind.Worldspace;
-        int _size = SpaceEdits.Sizes[0];
+        float _spacing = SpaceEdits.Spacings[0];
 
         public SpaceSection(VisualElement root, EditorContext context)
         {
@@ -69,14 +70,11 @@ namespace Forge.EditorApp.UI
             _form = PanelElements.Required<VisualElement>(root, "space-new-form");
             _name = PanelElements.Required<TextField>(root, "space-new-name");
             _kinds = new ChoiceRow<SpaceKind>(PanelElements.Required<VisualElement>(root, "space-new-kinds"), kind => kind.ToString(), kind => _kind = kind);
-            _sizeRow = PanelElements.Required<VisualElement>(root, "space-new-sizes");
-            _sizeRow.Clear();
-            foreach (var size in SpaceEdits.Sizes)
-            {
-                var button = new Button(() => _size = size) { text = SizeLabel(size) };
-                _sizeRow.Add(button);
-                _sizes.Add(size, button);
-            }
+            _size = PanelElements.Required<DropdownField>(root, "space-new-size");
+            _size.choices = SpaceEdits.Sizes.Select(SizeLabel).ToList();
+            _size.index = 0;
+            _spacingRow = PanelElements.Required<VisualElement>(root, "space-new-spacings");
+            _spacings = new ChoiceRow<float>(_spacingRow, SpaceEdits.Spacings, SpacingLabel, spacing => _spacing = spacing);
 
             PanelElements.Required<Button>(root, "space-create").clicked += Create;
             PanelElements.Required<Button>(root, "space-cancel").clicked += () => SetFormOpen(false);
@@ -93,9 +91,10 @@ namespace Forge.EditorApp.UI
                 return;
 
             _kinds.Refresh(_kind);
-            PanelElements.SetVisible(_sizeRow, _kind == SpaceKind.Worldspace);
-            foreach (var pair in _sizes)
-                PanelElements.SetActive(pair.Value, pair.Key == _size);
+            var worldspace = _kind == SpaceKind.Worldspace;
+            PanelElements.SetVisible(_size, worldspace);
+            PanelElements.SetVisible(_spacingRow, worldspace);
+            _spacings.Refresh(_spacing);
         }
 
         bool IsFormOpen => !_form.ClassListContains(PanelElements.HiddenClass);
@@ -180,7 +179,8 @@ namespace Forge.EditorApp.UI
                 return;
             _shownLandWorld = world;
             _shownLandSpace = space.Id;
-            PanelElements.SetText(_landSize, LandBounds.Of(world.Records, space.Id)?.ToString() ?? "No land");
+            var reach = LandBounds.Of(world.Records, space.Id)?.ToString() ?? "No land";
+            PanelElements.SetText(_landSize, FormattableString.Invariant($"{reach} · {space.SampleSpacing:0.#} m samples"));
         }
 
         void ExtendLand(LandSide side)
@@ -231,7 +231,7 @@ namespace Forge.EditorApp.UI
             var id = default(RecordId);
             var created = _context.TryEdit("New space", () => id = _kind == SpaceKind.Interior
                 ? SpaceEdits.CreateInterior(_context.Session, name)
-                : SpaceEdits.CreateWorldspace(_context.Session, name, _size, WorldGrid.DefaultLandHeight));
+                : SpaceEdits.CreateWorldspace(_context.Session, name, SpaceEdits.Sizes[Math.Max(0, _size.index)], WorldGrid.DefaultLandHeight, _spacing));
             if (!created)
                 return;
 
@@ -242,6 +242,12 @@ namespace Forge.EditorApp.UI
         static string Label(SpaceRecord space) =>
             space.Kind == SpaceKind.Interior ? $"{space.DisplayName}  (interior)" : space.DisplayName;
 
-        static string SizeLabel(int size) => $"{size}×{size}  ({size * WorldGrid.ChunkSize:0} m)";
+        static string SizeLabel(int size)
+        {
+            var meters = size * WorldGrid.ChunkSize;
+            return meters >= 1000f ? FormattableString.Invariant($"{size}×{size}  ({meters / 1000f:0.#} km)") : $"{size}×{size}  ({meters:0} m)";
+        }
+
+        static string SpacingLabel(float spacing) => FormattableString.Invariant($"{spacing:0.#} m {(spacing <= 1f ? "detailed" : "open land")}");
     }
 }

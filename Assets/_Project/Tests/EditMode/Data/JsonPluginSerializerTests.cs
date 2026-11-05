@@ -119,6 +119,30 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesTheHeightmapResolution()
+        {
+            var plugin = Plugin("core", new SpaceRecord(Space, "Plains", SpaceKind.Worldspace, 50f, heightmapResolution: 33));
+
+            var json = Write(plugin);
+            var copy = Read(json).Records.OfType<SpaceRecord>().Single();
+
+            Assert.That(json, Does.Contain("\"heightmapResolution\": 33"));
+            Assert.That((copy.HeightmapResolution, copy.SampleSpacing), Is.EqualTo((33, 2f)));
+        }
+
+        [Test]
+        public void Read_SpaceWithoutAResolution_GetsAMeter()
+        {
+            var json = Write(Plugin("core", new SpaceRecord(Space, "Old", SpaceKind.Worldspace, 50f)))
+                .Replace("\"heightmapResolution\": 65,", string.Empty)
+                .Replace(",\n      \"heightmapResolution\": 65", string.Empty)
+                .Replace(",\r\n      \"heightmapResolution\": 65", string.Empty);
+            Assume.That(json, Does.Not.Contain("heightmapResolution"), "The field was cut from the JSON as an older file would lack it.");
+
+            Assert.That(Read(json).Records.OfType<SpaceRecord>().Single().HeightmapResolution, Is.EqualTo(65));
+        }
+
+        [Test]
         public void RoundTrip_PreservesTheSeaLevel_AndLeavesItOutWhenThereIsNone()
         {
             var plugin = Plugin("core",

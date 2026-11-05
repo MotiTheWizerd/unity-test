@@ -29,7 +29,8 @@
                     <ui:VisualElement name="space-new-form" class="forge-indented">
                         <forge:ForgeTextInput name="space-new-name" placeholder-text="Name, e.g. Whiterun or Bannered Mare" />
                         <ui:VisualElement name="space-new-kinds" class="forge-row forge-choices" />
-                        <ui:VisualElement name="space-new-sizes" class="forge-row forge-choices" />
+                        <forge:ForgeDropdown name="space-new-size" label="Land" tooltip="Flat land to start with, in chunks of 64 m; extend it later" />
+                        <ui:VisualElement name="space-new-spacings" class="forge-row forge-choices" tooltip="Meters between terrain height samples: 1 m for detailed land, 2 m for open country (a quarter of the data)" />
                         <ui:VisualElement class="forge-row forge-choices">
                             <forge:ForgeButton name="space-create" text="Create" variant="Primary" />
                             <forge:ForgeButton name="space-cancel" text="Cancel" />

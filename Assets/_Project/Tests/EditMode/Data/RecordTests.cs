@@ -195,6 +195,34 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void Space_HeightmapResolution_DefaultsToAMeter_AndIsKeptByWith()
+        {
+            var fine = new SpaceRecord(TestRecords.Space, "Main", SpaceKind.Worldspace, 50f);
+            var coarse = new SpaceRecord(TestRecords.Space, "Plains", SpaceKind.Worldspace, 50f, heightmapResolution: 33);
+
+            Assert.That((fine.HeightmapResolution, fine.SampleSpacing), Is.EqualTo((65, 1f)));
+            Assert.That((coarse.HeightmapResolution, coarse.SampleSpacing), Is.EqualTo((33, 2f)));
+            Assert.That(coarse.WithWaterLevel(40f).HeightmapResolution, Is.EqualTo(33));
+            Assert.That(coarse.WithClimate(null).HeightmapResolution, Is.EqualTo(33));
+        }
+
+        [TestCase(0)]
+        [TestCase(64)]
+        [TestCase(WorldGrid.MaxHeightmapResolution + 1)]
+        public void Space_RejectsHeightmapResolutionsThatAreNotPowersOfTwoPlusOne(int resolution)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new SpaceRecord(TestRecords.Space, "Main", SpaceKind.Worldspace, 50f, heightmapResolution: resolution));
+        }
+
+        [Test]
+        public void Space_Interior_HasTheDefaultResolution()
+        {
+            var interior = new SpaceRecord(SpaceRecord.IdFor("core", "cave"), "Cave", SpaceKind.Interior, heightmapResolution: 33);
+
+            Assert.That(interior.HeightmapResolution, Is.EqualTo(WorldGrid.DefaultHeightmapResolution));
+        }
+
+        [Test]
         public void Space_Interior_HasNoSea()
         {
             var interior = new SpaceRecord(SpaceRecord.IdFor("core", "cave"), "Cave", SpaceKind.Interior, 0f, 10f);

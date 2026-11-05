@@ -25,9 +25,12 @@ namespace Forge.Data.Records
         /// <param name="baseHeight">Height of new land in a worldspace, in meters; ignored for interiors.</param>
         /// <param name="waterLevel">Height of the sea's surface in a worldspace, in meters, or null for no sea; ignored for interiors.</param>
         /// <param name="climate">The <see cref="ClimateRecord"/> a worldspace's sky follows, or null for none; ignored for interiors.</param>
-        public SpaceRecord(RecordId id, string displayName, SpaceKind kind, float baseHeight = 0f, float? waterLevel = null, RecordId? climate = null)
+        /// <param name="heightmapResolution">Samples per edge of each terrain chunk of a worldspace (65 for 1 m between samples, 33 for 2 m), or null for the default; ignored for interiors. Nullable so a file without it (an older plugin) reads as the default: the serializer passes 0, not the C# default, for a missing argument.</param>
+        public SpaceRecord(RecordId id, string displayName, SpaceKind kind, float baseHeight = 0f, float? waterLevel = null, RecordId? climate = null,
+            int? heightmapResolution = null)
             : base(id)
         {
+            var resolution = heightmapResolution ?? WorldGrid.DefaultHeightmapResolution;
             if (!id.Name.StartsWith(NamePrefix, StringComparison.Ordinal))
                 throw new ArgumentException($"Space ids are named '{NamePrefix}…', not '{id.Name}'.", nameof(id));
             if (string.IsNullOrWhiteSpace(displayName))
@@ -40,12 +43,15 @@ namespace Forge.Data.Records
                 throw new ArgumentOutOfRangeException(nameof(waterLevel), waterLevel, $"Water level must be within [0, {WorldGrid.MaxTerrainHeight}] m.");
             if (climate.HasValue && climate.Value.IsDefault)
                 throw new ArgumentException("A climate id must be set; leave it out for none.", nameof(climate));
+            if (!WorldGrid.IsValidHeightmapResolution(resolution))
+                throw new ArgumentOutOfRangeException(nameof(heightmapResolution), resolution, "Heightmap resolution must be 2^n + 1 within the supported range (e.g. 65 or 33).");
 
             DisplayName = displayName;
             Kind = kind;
             BaseHeight = kind == SpaceKind.Worldspace ? baseHeight : 0f;
             WaterLevel = kind == SpaceKind.Worldspace ? waterLevel : null;
             Climate = kind == SpaceKind.Worldspace ? climate : null;
+            HeightmapResolution = kind == SpaceKind.Worldspace ? resolution : WorldGrid.DefaultHeightmapResolution;
         }
 
         public string DisplayName { get; }
@@ -68,9 +74,19 @@ namespace Forge.Data.Records
         /// </summary>
         public RecordId? Climate { get; }
 
-        public SpaceRecord WithWaterLevel(float? waterLevel) => new SpaceRecord(Id, DisplayName, Kind, BaseHeight, waterLevel, Climate);
+        /// <summary>
+        /// Samples per edge of each of this worldspace's terrain chunks: the land's detail, chosen when the space is
+        /// created (new chunks are made at it, and every chunk of a space shares it). 65 is a sample every meter,
+        /// 33 every 2 m: a quarter of the data for open land. See <see cref="SampleSpacing"/>.
+        /// </summary>
+        public int HeightmapResolution { get; }
 
-        public SpaceRecord WithClimate(RecordId? climate) => new SpaceRecord(Id, DisplayName, Kind, BaseHeight, WaterLevel, climate);
+        /// <summary>Meters between the terrain's height samples (1 m at the default resolution).</summary>
+        public float SampleSpacing => WorldGrid.SpacingOf(HeightmapResolution);
+
+        public SpaceRecord WithWaterLevel(float? waterLevel) => new SpaceRecord(Id, DisplayName, Kind, BaseHeight, waterLevel, Climate, HeightmapResolution);
+
+        public SpaceRecord WithClimate(RecordId? climate) => new SpaceRecord(Id, DisplayName, Kind, BaseHeight, WaterLevel, climate, HeightmapResolution);
 
         public static RecordId IdFor(string ns, string name) => new RecordId(ns, NamePrefix + name);
 

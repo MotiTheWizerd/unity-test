@@ -26,18 +26,23 @@ namespace Forge.Editing.Spaces
         /// <summary>Most chunks one extension adds on a side.</summary>
         public const int MaxExtendBy = 64;
 
+        /// <summary>Meters between terrain samples offered for a new worldspace: 1 m for detailed land, 2 m for open country.</summary>
+        public static readonly IReadOnlyList<float> Spacings = new[] { 1f, 2f };
+
         /// <summary>
         /// Creates a worldspace of <paramref name="size"/> × <paramref name="size"/> chunks of flat land at
-        /// <paramref name="baseHeight"/>, centered on the origin, as one undo step. Returns the new space's id.
+        /// <paramref name="baseHeight"/>, centered on the origin, with a height sample every <paramref name="spacing"/>
+        /// meters, as one undo step. Returns the new space's id.
         /// </summary>
-        public static RecordId CreateWorldspace(EditSession session, string displayName, int size, float baseHeight)
+        public static RecordId CreateWorldspace(EditSession session, string displayName, int size, float baseHeight, float spacing = 1f)
         {
             if (!(size >= 1 && size <= MaxSize))
                 throw new ArgumentOutOfRangeException(nameof(size), size, $"Size must be within [1, {MaxSize}] chunks.");
+            var resolution = WorldGrid.ResolutionFor(spacing);
 
-            return Create(session, displayName, SpaceKind.Worldspace, baseHeight, space =>
+            return Create(session, displayName, SpaceKind.Worldspace, baseHeight, resolution, space =>
             {
-                var heights = HeightField.Flat(baseHeight);
+                var heights = HeightField.Flat(baseHeight, resolution);
                 var first = -size / 2;
                 return Enumerable.Range(first, size)
                     .SelectMany(z => Enumerable.Range(first, size).Select(x => new ChunkCoord(x, z)))
@@ -66,19 +71,23 @@ namespace Forge.Editing.Spaces
                 throw new ArgumentOutOfRangeException(nameof(chunks), chunks, $"The land would reach {reach} chunks across; at most {MaxExtent} ({MaxExtent * WorldGrid.ChunkSize / 1000f:0.#} km) is supported.");
 
             var outward = side.Outward();
+            var resolution = spaceRecord.HeightmapResolution;
+            var flat = HeightField.Flat(spaceRecord.BaseHeight, resolution);
             var added = new List<TerrainChunkRecord>();
             foreach (var edge in EdgeChunks(bounds, side))
             {
                 // The ramp starts from the land actually at the edge (it may stop short of the rectangle's corner).
+                // A neighbour at another resolution (a mod's chunk) can't be ramped from; the new land is flat there.
                 existing.TryGetValue(edge, out var neighbour);
+                var rampFrom = neighbour != null && neighbour.Heights.Resolution == resolution ? neighbour : null;
                 for (var k = 1; k <= chunks; k++)
                 {
                     var coord = new ChunkCoord(edge.X + outward.X * k, edge.Z + outward.Z * k);
                     if (existing.ContainsKey(coord))
                         continue;
-                    var heights = k == 1 && neighbour != null
-                        ? Ramp(neighbour.Heights.Load(), side, spaceRecord.BaseHeight)
-                        : HeightField.Flat(spaceRecord.BaseHeight, neighbour?.Heights.Resolution ?? WorldGrid.DefaultHeightmapResolution);
+                    var heights = k == 1 && rampFrom != null
+                        ? Ramp(rampFrom.Heights.Load(), side, spaceRecord.BaseHeight)
+                        : flat;
                     added.Add(new TerrainChunkRecord(TerrainChunkRecord.IdFor(session.ActivePluginId, space, coord), space, coord, heights));
                 }
             }
@@ -131,7 +140,7 @@ namespace Forge.Editing.Spaces
 
         /// <summary>Creates an empty interior as one undo step. Returns the new space's id.</summary>
         public static RecordId CreateInterior(EditSession session, string displayName) =>
-            Create(session, displayName, SpaceKind.Interior, 0f, _ => Enumerable.Empty<Record>());
+            Create(session, displayName, SpaceKind.Interior, 0f, WorldGrid.DefaultHeightmapResolution, _ => Enumerable.Empty<Record>());
 
         /// <summary>
         /// Sets the sea of worldspace <paramref name="space"/> to <paramref name="level"/> meters, or removes it (null),
@@ -184,7 +193,7 @@ namespace Forge.Editing.Spaces
             return spaceRecord;
         }
 
-        static RecordId Create(EditSession session, string displayName, SpaceKind kind, float baseHeight, Func<RecordId, IEnumerable<Record>> content)
+        static RecordId Create(EditSession session, string displayName, SpaceKind kind, float baseHeight, int resolution, Func<RecordId, IEnumerable<Record>> content)
         {
             if (session == null)
                 throw new ArgumentNullException(nameof(session));
@@ -193,7 +202,7 @@ namespace Forge.Editing.Spaces
 
             var name = displayName.Trim();
             var id = FreeId(session, name);
-            var space = new SpaceRecord(id, name, kind, baseHeight);
+            var space = new SpaceRecord(id, name, kind, baseHeight, heightmapResolution: resolution);
             var records = content(id).ToList();
             session.Batch($"New {(kind == SpaceKind.Interior ? "interior" : "worldspace")} {name}", () =>
             {

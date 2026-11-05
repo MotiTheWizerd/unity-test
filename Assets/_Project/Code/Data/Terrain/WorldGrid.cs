@@ -35,5 +35,23 @@ namespace Forge.Data.Terrain
             var cells = resolution - 1;
             return (cells & (cells - 1)) == 0;
         }
+
+        /// <summary>Meters between neighbouring samples of a chunk with <paramref name="resolution"/> samples per edge.</summary>
+        public static float SpacingOf(int resolution)
+        {
+            if (!IsValidHeightmapResolution(resolution))
+                throw new ArgumentOutOfRangeException(nameof(resolution), resolution, "Resolution must be 2^n + 1 within the supported range.");
+            return ChunkSize / (resolution - 1);
+        }
+
+        /// <summary>Samples per chunk edge for <paramref name="spacing"/> meters between samples (1 m → 65, 2 m → 33).</summary>
+        public static int ResolutionFor(float spacing)
+        {
+            var cells = ChunkSize / spacing;
+            var resolution = (int)Math.Round(cells) + 1;
+            if (!(spacing > 0f) || Math.Abs(cells - Math.Round(cells)) > 1e-4 || !IsValidHeightmapResolution(resolution))
+                throw new ArgumentOutOfRangeException(nameof(spacing), spacing, $"Spacing must divide the chunk ({ChunkSize} m) into a power of two of cells, e.g. 1, 2 or 4 m.");
+            return resolution;
+        }
     }
 }

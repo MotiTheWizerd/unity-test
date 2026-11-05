@@ -5,6 +5,7 @@ using Forge.Data.Records;
 using Forge.Data.Terrain;
 using Forge.Editing;
 using Forge.Editing.Spaces;
+using Forge.Editing.Terrain;
 using Forge.Tests.Data;
 using NUnit.Framework;
 using static Forge.Tests.Data.TestRecords;
@@ -160,6 +161,28 @@ namespace Forge.Tests.Editing
 
             Assert.Throws<ArgumentException>(() => SpaceEdits.SetClimate(session, interior, null));
             Assert.Throws<ArgumentException>(() => SpaceEdits.SetClimate(session, land, ClimateRecord.IdFor("core", "nowhere")));
+        }
+
+        [Test]
+        public void CreateWorldspace_At2mSpacing_MakesCoarserChunks_AndExtendLandFollows()
+        {
+            var session = NewSession();
+
+            var id = SpaceEdits.CreateWorldspace(session, "Plains", 3, 50f, spacing: 2f);
+            SpaceEdits.ExtendLand(session, id, LandSide.North, 1);
+
+            var space = session.World.Records.Get<SpaceRecord>(id);
+            Assert.That((space.HeightmapResolution, space.SampleSpacing), Is.EqualTo((33, 2f)));
+            var chunks = session.World.Records.OfType<TerrainChunkRecord>().Where(c => c.Space == id).ToList();
+            Assert.That(chunks.Count, Is.EqualTo(12));
+            Assert.That(chunks.Select(c => c.Heights.Resolution).Distinct(), Is.EqualTo(new[] { 33 }));
+            Assert.That(new TerrainGrid(session.World.Records, id).Spacing, Is.EqualTo(2f));
+        }
+
+        [Test]
+        public void CreateWorldspace_RefusesASpacingThatDoesNotFitTheChunk()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => SpaceEdits.CreateWorldspace(NewSession(), "Odd", 3, 50f, spacing: 3f));
         }
 
         [Test]

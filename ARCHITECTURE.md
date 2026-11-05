@@ -186,7 +186,11 @@ phase.
 
 **Terrain**: a worldspace is a grid of `WorldGrid.ChunkSize` (64 m) chunks. A
 `TerrainChunkRecord` holds `ChunkHeights` (2^n+1 samples per edge, meters in
-[0, `MaxTerrainHeight`]; new land starts at `WorldGrid.DefaultLandHeight`, 50 m). Its record name is derived
+[0, `MaxTerrainHeight`]; new land starts at `WorldGrid.DefaultLandHeight`, 50 m). **Sample spacing is chosen per
+worldspace** when it is created: `SpaceRecord.HeightmapResolution` (65 = a sample every meter, 33 = every 2 m,
+`SampleSpacing` says which; `WorldGrid.SpacingOf` / `ResolutionFor` convert) is the resolution every chunk of
+that space is made at, by `CreateWorldspace` and `ExtendLand`, and `TerrainGrid` insists on one resolution per
+space. 2 m is a quarter of the data for open country; 1 m stays for detailed areas, as their own worldspace. Its record name is derived
 from its space and coordinate (`terrain/{space ns}/{space name}/c{x}_{z}`), so mods reshape terrain by
 *overriding* the master's chunk.
 

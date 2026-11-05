@@ -82,8 +82,9 @@ namespace Forge.EditorApp.Agent
                 return "There is no terrain.";
 
             var size = WorldGrid.ChunkSize;
+            var spacing = _context.ActiveSpaceRecord?.SampleSpacing ?? 1f;
             return FormattableString.Invariant(
-                $"The terrain spans x {land.Value.MinX * size:0} to {(land.Value.MaxX + 1) * size:0} m and z {land.Value.MinZ * size:0} to {(land.Value.MaxZ + 1) * size:0} m ({land}); extend_land grows it.");
+                $"The terrain spans x {land.Value.MinX * size:0} to {(land.Value.MaxX + 1) * size:0} m and z {land.Value.MinZ * size:0} to {(land.Value.MaxZ + 1) * size:0} m ({land}), a height sample every {spacing:0.#} m; extend_land grows it.");
         }
 
         string Selection()
