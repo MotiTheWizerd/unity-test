@@ -191,9 +191,39 @@
     },
     {
       "type": "ground_layer",
+      "id": "forge.core:ground/drygrass",
+      "displayName": "Dry Grass",
+      "assetKey": "ground/drygrass"
+    },
+    {
+      "type": "ground_layer",
+      "id": "forge.core:ground/forestfloor",
+      "displayName": "Forest Floor",
+      "assetKey": "ground/forestfloor"
+    },
+    {
+      "type": "ground_layer",
       "id": "forge.core:ground/grass",
       "displayName": "Grass",
       "assetKey": "ground/grass"
+    },
+    {
+      "type": "ground_layer",
+      "id": "forge.core:ground/gravel",
+      "displayName": "Gravel",
+      "assetKey": "ground/gravel"
+    },
+    {
+      "type": "ground_layer",
+      "id": "forge.core:ground/moss",
+      "displayName": "Moss",
+      "assetKey": "ground/moss"
+    },
+    {
+      "type": "ground_layer",
+      "id": "forge.core:ground/mud",
+      "displayName": "Mud",
+      "assetKey": "ground/mud"
     },
     {
       "type": "ground_layer",
@@ -206,6 +236,12 @@
       "id": "forge.core:ground/sand",
       "displayName": "Sand",
       "assetKey": "ground/sand"
+    },
+    {
+      "type": "ground_layer",
+      "id": "forge.core:ground/snow",
+      "displayName": "Snow",
+      "assetKey": "ground/snow"
     },
     {
       "type": "base_object",

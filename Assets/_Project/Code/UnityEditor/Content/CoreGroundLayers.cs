@@ -15,6 +15,12 @@ namespace Forge.UnityEditor.Content
             yield return Layer(pluginId, "dirt", "Dirt");
             yield return Layer(pluginId, "rock", "Rock");
             yield return Layer(pluginId, "sand", "Sand");
+            yield return Layer(pluginId, "snow", "Snow");
+            yield return Layer(pluginId, "gravel", "Gravel");
+            yield return Layer(pluginId, "mud", "Mud");
+            yield return Layer(pluginId, "forestfloor", "Forest Floor");
+            yield return Layer(pluginId, "moss", "Moss");
+            yield return Layer(pluginId, "drygrass", "Dry Grass");
         }
 
         static GroundLayerRecord Layer(string pluginId, string name, string displayName) =>

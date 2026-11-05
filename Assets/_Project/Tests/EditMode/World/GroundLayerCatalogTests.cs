@@ -23,8 +23,7 @@ namespace Forge.Tests.World
             var catalog = AssetDatabase.LoadAssetAtPath<GroundLayerCatalog>(CatalogPath);
             Assert.That(catalog, Is.Not.Null, $"Missing {CatalogPath}.");
 
-            var store = new PluginFileStore(Path.Combine(Application.streamingAssetsPath, "Plugins"), new JsonPluginSerializer(RecordTypeRegistry.CreateDefault()));
-            var keys = store.Load(CorePluginId).Records.OfType<GroundLayerRecord>().Select(r => r.AssetKey).ToArray();
+            var keys = ShippedKeys();
 
             Assert.That(keys, Is.Not.Empty);
             Assert.That(keys.Where(key => !catalog.TryGet(key, out _)), Is.Empty, "Ground layers whose asset key has no terrain layer in the catalog.");
@@ -33,11 +32,17 @@ namespace Forge.Tests.World
             Assert.That(catalog.Base, Is.Not.Null);
         }
 
+        static string[] ShippedKeys()
+        {
+            var store = new PluginFileStore(Path.Combine(Application.streamingAssetsPath, "Plugins"), new JsonPluginSerializer(RecordTypeRegistry.CreateDefault()));
+            return store.Load(CorePluginId).Records.OfType<GroundLayerRecord>().Select(r => r.AssetKey).ToArray();
+        }
+
         [Test]
         public void ShippedLayers_HaveTheirTextures()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<GroundLayerCatalog>(CatalogPath);
-            foreach (var key in new[] { "ground/grass", "ground/dirt", "ground/rock", "ground/sand" })
+            foreach (var key in ShippedKeys())
             {
                 Assert.That(catalog.TryGet(key, out var layer), Is.True, key);
                 Assert.That((layer.diffuseTexture != null, layer.normalMapTexture != null, layer.maskMapTexture != null), Is.EqualTo((true, true, true)), key);

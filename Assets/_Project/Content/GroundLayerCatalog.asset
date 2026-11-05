@@ -15,20 +15,44 @@ MonoBehaviour:
   _entries:
   - _key: ground/dirt
     _asset: {fileID: 8574412962073106934, guid: cdbfbe0456126494695bc4a3cc27ccae, type: 2}
+  - _key: ground/drygrass
+    _asset: {fileID: 8574412962073106934, guid: 550f02f8fce0e1a4b9f0af5cc5aa9d1f, type: 2}
+  - _key: ground/forestfloor
+    _asset: {fileID: 8574412962073106934, guid: 57129e9a0fb9bd640a8c24f66ba7d73f, type: 2}
   - _key: ground/grass
     _asset: {fileID: 8574412962073106934, guid: 4db6c6efbac1b574095cfc55312a3155, type: 2}
+  - _key: ground/gravel
+    _asset: {fileID: 8574412962073106934, guid: 04eae05e53dd3f14781f9d238bced168, type: 2}
+  - _key: ground/moss
+    _asset: {fileID: 8574412962073106934, guid: d7ab830748ddf2a498f055e1629d6fa3, type: 2}
+  - _key: ground/mud
+    _asset: {fileID: 8574412962073106934, guid: 43412f738e9a4b6429a993e6b29d5f1d, type: 2}
   - _key: ground/rock
     _asset: {fileID: 8574412962073106934, guid: 393fa266cf6a3074c88021a2126d6f61, type: 2}
   - _key: ground/sand
     _asset: {fileID: 8574412962073106934, guid: 856ebd7e557aded4b92aed4d9979727f, type: 2}
+  - _key: ground/snow
+    _asset: {fileID: 8574412962073106934, guid: 5de52635c06f2164ea648bd9da02945e, type: 2}
   _baseKey: ground/grass
   _mapColors:
   - _key: ground/dirt
     _color: {r: 0.0754457, g: 0.04503084, b: 0.033223875, a: 1}
+  - _key: ground/drygrass
+    _color: {r: 0.34487835, g: 0.32718667, b: 0.2848744, a: 1}
+  - _key: ground/forestfloor
+    _color: {r: 0.15319906, g: 0.113693364, b: 0.07607276, a: 1}
   - _key: ground/grass
     _color: {r: 0.1268864, g: 0.16117324, b: 0.034309037, a: 1}
+  - _key: ground/gravel
+    _color: {r: 0.13283308, g: 0.13247263, b: 0.11170653, a: 1}
+  - _key: ground/moss
+    _color: {r: 0.07424783, g: 0.13925773, b: 0.01115449, a: 1}
+  - _key: ground/mud
+    _color: {r: 0.18751265, g: 0.17146453, b: 0.16094561, a: 1}
   - _key: ground/rock
     _color: {r: 0.084009126, g: 0.078426406, b: 0.06562846, a: 1}
   - _key: ground/sand
     _color: {r: 0.33308125, g: 0.2587604, b: 0.15623695, a: 1}
+  - _key: ground/snow
+    _color: {r: 0.73531383, g: 0.8597356, b: 0.97257465, a: 1}
   _previewMaterial: {fileID: 2100000, guid: af952e0d2d66f9a4a8ffcc75ef088999, type: 2}
