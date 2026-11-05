@@ -35,7 +35,7 @@ namespace Forge.Tests.Data
                 Directory.Delete(_directory, true);
         }
 
-        PluginFileStore Store(HeightCache cache = null) =>
+        PluginFileStore Store(TerrainCache cache = null) =>
             new PluginFileStore(_directory, new JsonPluginSerializer(RecordTypeRegistry.CreateDefault()), cache);
 
         static HeightField Hills(int resolution = 65) =>
@@ -95,7 +95,7 @@ namespace Forge.Tests.Data
             using (var stream = File.Create(path))
                 written = TerrainFileWriter.Write(stream, new ChunkHeights[] { flat, Hills(), flat });
 
-            var cache = new HeightCache();
+            var cache = new TerrainCache();
             var file = TerrainFile.Open(path, cache);
 
             Assert.That((written.BlockCount, file.BlockCount), Is.EqualTo((2, 2)));
@@ -123,7 +123,7 @@ namespace Forge.Tests.Data
             var path = Path.Combine(_directory, "bad.terrain");
             File.WriteAllText(path, content);
 
-            Assert.Throws<DataValidationException>(() => TerrainFile.Open(path, new HeightCache()));
+            Assert.Throws<DataValidationException>(() => TerrainFile.Open(path, new TerrainCache()));
         }
 
         [Test]
@@ -133,8 +133,8 @@ namespace Forge.Tests.Data
             var bytes = File.ReadAllBytes(path);
             File.WriteAllBytes(path, bytes.Take(bytes.Length - 3).ToArray());
 
-            Assert.Throws<DataValidationException>(() => TerrainFile.Open(path, new HeightCache()));
-            Assert.Throws<DataValidationException>(() => TerrainFile.Open(Path.Combine(_directory, "gone.terrain"), new HeightCache()));
+            Assert.Throws<DataValidationException>(() => TerrainFile.Open(path, new TerrainCache()));
+            Assert.Throws<DataValidationException>(() => TerrainFile.Open(Path.Combine(_directory, "gone.terrain"), new TerrainCache()));
         }
 
         [Test]
@@ -146,14 +146,14 @@ namespace Forge.Tests.Data
                 bytes[i] ^= 0x5A;
             File.WriteAllBytes(path, bytes);
 
-            var file = TerrainFile.Open(path, new HeightCache());
+            var file = TerrainFile.Open(path, new TerrainCache());
             Assert.Throws<DataValidationException>(() => file.Block(0, 65).Load());
         }
 
         [Test]
         public void File_AsksForABlockItLacks_OrAtAnotherResolution_AreRejected()
         {
-            var file = TerrainFile.Open(WriteFile(Hills()), new HeightCache());
+            var file = TerrainFile.Open(WriteFile(Hills()), new TerrainCache());
 
             Assert.Throws<DataValidationException>(() => file.Block(1, 65));
             Assert.Throws<DataValidationException>(() => file.Block(0, 33));
@@ -163,7 +163,7 @@ namespace Forge.Tests.Data
         public void Cache_LetsGoOfTheLeastRecentlyUsed_OverBudget_AndReadsThemAgain()
         {
             var oneChunk = 65L * 65 * sizeof(float);
-            var cache = new HeightCache(oneChunk * 2);
+            var cache = new TerrainCache(oneChunk * 2);
             var loads = 0;
             HeightField Load() { loads++; return HeightField.Flat(1f); }
             object a = new object(), b = new object(), c = new object();
@@ -181,13 +181,96 @@ namespace Forge.Tests.Data
             Assert.That(loads, Is.EqualTo(4));
         }
 
+        static readonly RecordId Grass = GroundLayerRecord.IdFor("core", "grass");
+        static readonly RecordId Rock = GroundLayerRecord.IdFor("core", "rock");
+
+        // Rock to the east, grass to the west, blended across the chunk.
+        static GroundPaint Stripes()
+        {
+            var weights = new float[2 * GroundPaint.TexelCount];
+            for (var t = 0; t < GroundPaint.TexelCount; t++)
+            {
+                var x = t % GroundPaint.Resolution;
+                weights[t] = GroundPaint.Resolution - x;
+                weights[GroundPaint.TexelCount + t] = x;
+            }
+
+            return GroundPaint.FromWeights(new[] { Grass, Rock }, weights);
+        }
+
+        [Test]
+        public void File_KeepsPaintExactly_BesideHeights_SharedPaintIsOneBlock()
+        {
+            var stripes = Stripes();
+            var uniform = GroundPaint.Uniform(Grass);
+            var path = Path.Combine(_directory, "p.terrain");
+            Directory.CreateDirectory(_directory);
+            WrittenTerrain written;
+            using (var stream = File.Create(path))
+                written = TerrainFileWriter.Write(stream, new ChunkHeights[] { Hills() }, new ChunkPaint[] { stripes, uniform, stripes });
+
+            var file = TerrainFile.Open(path, new TerrainCache());
+
+            Assert.That(file.BlockCount, Is.EqualTo(3), "One heights block, two paint blocks.");
+            Assert.That((written.BlockOf(stripes), written.BlockOf(uniform)), Is.EqualTo((1, 2)));
+            var stored = file.Paint(1, stripes.Layers);
+            Assert.That(stored.Layers, Is.EqualTo(new[] { Grass, Rock }), "The layers are known before loading.");
+            Assert.That(stored.Load().ToArray(), Is.EqualTo(stripes.ToArray()));
+            Assert.That(file.Paint(2, new[] { Grass }).Load().ToArray(), Is.EqualTo(uniform.ToArray()));
+            Assert.That(file.Paint(1, stripes.Layers), Is.SameAs(stored), "One handle per block.");
+        }
+
+        [Test]
+        public void File_AskingForTheWrongKindOfBlock_OrOtherLayers_IsRejected()
+        {
+            var path = Path.Combine(_directory, "p.terrain");
+            Directory.CreateDirectory(_directory);
+            using (var stream = File.Create(path))
+                TerrainFileWriter.Write(stream, new ChunkHeights[] { Hills() }, new ChunkPaint[] { Stripes() });
+            var file = TerrainFile.Open(path, new TerrainCache());
+
+            Assert.Throws<DataValidationException>(() => file.Paint(0, new[] { Grass }), "Block 0 holds heights.");
+            Assert.Throws<DataValidationException>(() => file.Block(1, 65), "Block 1 holds paint.");
+            Assert.Throws<DataValidationException>(() => file.Paint(1, new[] { Grass }).Load(), "The block holds two layers.");
+        }
+
+        [Test]
+        public void File_WithoutPaint_IsTheSameFileAsBefore()
+        {
+            Assert.That(HashOf(Hills()), Is.EqualTo(HashOfWithPaint(Hills())), "Terrain without paint writes no paint blocks.");
+        }
+
+        [Test]
+        public void Store_SavesPaintBesideHeights_CopiesItWhenSavedAgain_AndLeavesUnpaintedChunksUnpainted()
+        {
+            var stripes = Stripes();
+            var painted = Chunk("core", 0, Hills()).WithPaint(stripes);
+            _store.Save(Plugin("core", painted, Chunk("core", 1, HeightField.Flat(5f))));
+            var before = TerrainFiles().Single();
+
+            var store = Store();
+            var loaded = store.Load("core");
+            var chunks = loaded.Records.OfType<TerrainChunkRecord>().ToDictionary(c => c.Coord.X);
+            Assert.That(chunks[0].Paint.Load().ToArray(), Is.EqualTo(stripes.ToArray()));
+            Assert.That(chunks[1].Paint, Is.Null);
+
+            store.Save(loaded);
+            Assert.That(TerrainFiles(), Is.EqualTo(new[] { before }), "Same content, same file.");
+        }
+
+        static string HashOfWithPaint(HeightField heights)
+        {
+            using (var stream = new MemoryStream())
+                return TerrainFileWriter.Write(stream, new ChunkHeights[] { heights }, Array.Empty<ChunkPaint>()).Hash;
+        }
+
         [Test]
         public void Store_SavesHeightsBesideThePlugin_AndLoadsThemOnDemand()
         {
             var hills = Hills();
             _store.Save(Plugin("core", Chunk("core", 0, hills), Chunk("core", 1, HeightField.Flat(50f))));
 
-            var cache = new HeightCache();
+            var cache = new TerrainCache();
             var loaded = Store(cache).Load("core");
             var chunks = loaded.Records.OfType<TerrainChunkRecord>().ToDictionary(c => c.Coord.X);
 
@@ -299,7 +382,7 @@ namespace Forge.Tests.Data
                 try
                 {
                     File.WriteAllBytes(path, stream.ToArray());
-                    return TerrainFile.Open(path, new HeightCache()).Block(0, heights.Resolution).Load();
+                    return TerrainFile.Open(path, new TerrainCache()).Block(0, heights.Resolution).Load();
                 }
                 finally
                 {

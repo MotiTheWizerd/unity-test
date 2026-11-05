@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Forge.Data.Records;
@@ -210,6 +211,63 @@ namespace Forge.Data.Json
                 throw new JsonSerializationException($"The chunk at {json.Path} refers to terrain block {block}, but the plugin names no terrain file.");
 
             return _stored.Block(block, resolution);
+        }
+    }
+
+    /// <summary>
+    /// Writes a chunk's ground paint as the layers it names and where their weights are in the plugin's terrain file:
+    /// <c>{"layers": ["forge.core:ground/grass", …], "block": 7}</c>. Reading gives paint that loads from that block
+    /// when first needed.
+    /// </summary>
+    sealed class ChunkPaintConverter : JsonConverter
+    {
+        const string LayersProperty = "layers";
+        const string BlockProperty = "block";
+
+        readonly ITerrainBlockWriter _written;
+        readonly ITerrainBlockReader _stored;
+
+        /// <param name="written">Writing: where each chunk's paint went; null when the plugin has no terrain.</param>
+        public ChunkPaintConverter(ITerrainBlockWriter written)
+        {
+            _written = written;
+        }
+
+        /// <param name="stored">Reading: the terrain file the plugin names; null when it names none.</param>
+        public ChunkPaintConverter(ITerrainBlockReader stored)
+        {
+            _stored = stored;
+        }
+
+        public override bool CanConvert(Type objectType) => typeof(ChunkPaint).IsAssignableFrom(objectType);
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            var paint = (ChunkPaint)value;
+            if (_written == null)
+                throw new JsonSerializationException("Chunk paint can only be written alongside a terrain file.");
+
+            writer.WriteStartObject();
+            writer.WritePropertyName(LayersProperty);
+            serializer.Serialize(writer, paint.Layers);
+            writer.WritePropertyName(BlockProperty);
+            writer.WriteValue(_written.BlockOf(paint));
+            writer.WriteEndObject();
+        }
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            var json = JObject.Load(reader);
+            if (json.Properties().Any(p => p.Name != LayersProperty && p.Name != BlockProperty))
+                throw new JsonSerializationException($"Chunk paint at {json.Path} holds only '{LayersProperty}' and '{BlockProperty}'.");
+            var layers = (json[LayersProperty] ?? throw new JsonSerializationException($"Missing '{LayersProperty}' at {json.Path}."))
+                .ToObject<List<RecordId>>(serializer);
+            var block = json.Value<int?>(BlockProperty)
+                ?? throw new JsonSerializationException($"Missing '{BlockProperty}' at {json.Path}.");
+            if (_stored == null)
+                throw new JsonSerializationException($"The chunk at {json.Path} refers to paint block {block}, but the plugin names no terrain file.");
+
+            return _stored.Paint(block, layers);
         }
     }
 

@@ -1,6 +1,4 @@
 using System;
-using System.IO;
-using System.IO.Compression;
 using Forge.Data.Terrain;
 
 namespace Forge.Data.Serialization
@@ -37,12 +35,7 @@ namespace Forge.Data.Serialization
                 planes[count + i] = (byte)(zigzag >> 8);
             }
 
-            using (var packed = new MemoryStream())
-            {
-                using (var deflate = new DeflateStream(packed, CompressionLevel.Optimal, leaveOpen: true))
-                    deflate.Write(planes, 0, planes.Length);
-                return packed.ToArray();
-            }
+            return BlockDeflate.Pack(planes);
         }
 
         /// <param name="metersPerStep">The file's step, positive.</param>
@@ -50,30 +43,7 @@ namespace Forge.Data.Serialization
         public static HeightField Decode(byte[] block, int resolution, float metersPerStep)
         {
             var count = resolution * resolution;
-            var planes = new byte[count * 2];
-            try
-            {
-                using (var deflate = new DeflateStream(new MemoryStream(block, writable: false), CompressionMode.Decompress))
-                {
-                    var read = 0;
-                    while (read < planes.Length)
-                    {
-                        var n = deflate.Read(planes, read, planes.Length - read);
-                        if (n == 0)
-                            throw new DataValidationException(new[] { $"A terrain block holds {read} of its {planes.Length} bytes." });
-                        read += n;
-                    }
-
-                    if (deflate.ReadByte() != -1)
-                        throw new DataValidationException(new[] { "A terrain block holds more than its heights." });
-                }
-            }
-            // Runtimes differ: .NET reports bad Deflate data as InvalidDataException, Mono (Unity) as IOException.
-            catch (Exception ex) when (ex is InvalidDataException || ex is IOException)
-            {
-                throw new DataValidationException(new[] { $"A terrain block is damaged: {ex.Message}" }, ex);
-            }
-
+            var planes = BlockDeflate.Unpack(block, count * 2, "heights");
             var steps = new ushort[count];
             var heights = new float[count];
             for (var i = 0; i < count; i++)

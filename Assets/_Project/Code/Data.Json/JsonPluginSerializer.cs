@@ -61,7 +61,7 @@ namespace Forge.Data.Json
                 Deletions = new List<RecordId>(plugin.Deletions),
             };
 
-            CreateSerializer(new ChunkHeightsConverter(terrain?.Blocks)).Serialize(writer, document);
+            CreateSerializer(new ChunkHeightsConverter(terrain?.Blocks), new ChunkPaintConverter(terrain?.Blocks)).Serialize(writer, document);
         }
 
         public Plugin Read(TextReader reader, Func<string, ITerrainBlockReader> openTerrain, Func<string, PluginManifest, IObjectBlocks> openObjects)
@@ -106,7 +106,7 @@ namespace Forge.Data.Json
 
             var document = new PluginDocument();
             var terrain = new TerrainBinding(openTerrain);
-            var serializer = CreateSerializer(new ChunkHeightsConverter(terrain));
+            var serializer = CreateSerializer(new ChunkHeightsConverter(terrain), new ChunkPaintConverter(terrain));
             var formatSeen = false;
             while (json.Read() && json.TokenType == JsonToken.PropertyName)
             {
@@ -163,7 +163,7 @@ namespace Forge.Data.Json
         }
 
         // A serializer per read or write: the terrain blocks differ per plugin, and converters hold no shared state.
-        JsonSerializer CreateSerializer(ChunkHeightsConverter heights) => JsonSerializer.Create(new JsonSerializerSettings
+        JsonSerializer CreateSerializer(ChunkHeightsConverter heights, ChunkPaintConverter paint) => JsonSerializer.Create(new JsonSerializerSettings
         {
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
             Converters =
@@ -174,6 +174,7 @@ namespace Forge.Data.Json
                 new QuaternionConverter(),
                 new ChunkCoordConverter(),
                 heights,
+                paint,
                 // Enums by name ("worldspace"), so files stay readable and survive reordering the enum.
                 new StringEnumConverter(new CamelCaseNamingStrategy(), allowIntegerValues: false),
             },
@@ -208,11 +209,15 @@ namespace Forge.Data.Json
 
             public string Name { get; set; }
 
-            public ChunkHeights Block(int index, int resolution)
+            public ChunkHeights Block(int index, int resolution) => File(index).Block(index, resolution);
+
+            public ChunkPaint Paint(int index, IReadOnlyList<RecordId> layers) => File(index).Paint(index, layers);
+
+            ITerrainBlockReader File(int index)
             {
                 if (Name == null)
                     throw new JsonSerializationException($"A terrain chunk refers to block {index}, but the plugin names no terrain file before its records.");
-                return (_file ?? (_file = _open(Name))).Block(index, resolution);
+                return _file ?? (_file = _open(Name));
             }
         }
 

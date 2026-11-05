@@ -216,6 +216,19 @@ space. 2 m is a quarter of the data for open country; 1 m stays for detailed are
 from its space and coordinate (`terrain/{space ns}/{space name}/c{x}_{z}`), so mods reshape terrain by
 *overriding* the master's chunk.
 
+**Ground paint**, like a Bethesda LAND record's texture layers: what the land looks like, on the same chunk record as
+its heights, so one override reshapes and repaints. **Ground layers** (`GroundLayerRecord`, `ground/<name>`) are the
+kinds of ground: a display name and an asset key the presentation resolves to the look (textures), so a mod restyles a
+layer everywhere by overriding it, or adds its own. `forge.core` ships grass, dirt, rock and sand (`CoreGroundLayers`).
+A chunk's `TerrainChunkRecord.Paint` is a `ChunkPaint` (null: unpainted, shown as the base ground): the layers it
+names (1 to `ChunkPaint.MaxLayers`, 8) and, per texel (`WorldGrid.PaintResolution`, 64 per edge: one per square
+meter, covering the chunk edge to edge, none shared with a neighbour), a byte per layer, the bytes of a texel adding
+up to 255 (`GroundPaint.Full`). In memory it is a `GroundPaint`; painting builds one from amounts
+(`GroundPaint.FromWeights`: scaled per texel and rounded so the bytes add up exactly, layers that show nowhere left
+out, the faintest let go past eight). In the JSON a chunk's `paint` is `{"layers": [...], "block"}` (optional, omitted
+when unpainted, so terrain from before paint reads unchanged, format 3 as before); the weights are a block of the
+terrain file.
+
 **Terrain storage** (`Forge.Data.Serialization`, engine-free): a record's `ChunkHeights` are either in memory (a
 `HeightField`: new or edited land) or stored in its plugin's terrain file and read on first `Load()`; `Resolution` is
 known without loading. Every reader loads once per use, not per sample (`TerrainGrid.HeightsOf` holds a chunk's heights
@@ -223,15 +236,19 @@ for the grid's life; the world view loads a chunk when it is shown). So a world 
 terrain files' block tables only, and only land in use is in memory.
 - **The file** (`TerrainFile`, `{plugin}.{16 hex of SHA-256}.terrain` next to the plugin): a 24-byte header ("FTRN",
   version, meters per step, block count, table offset), the blocks, then the block table (offset, length,
-  resolution, codec). Opening reads the header and table; the file is not held open.
+  resolution, codec). Opening reads the header and table; the file is not held open. The codec tells a heights block
+  (`HeightCodec`, 1) from a paint block (`PaintCodec`, 2: the layer count, then each layer's plane as differences
+  from the byte to the left, Deflated; a one-layer chunk is a few dozen bytes). Heights blocks come first, then paint,
+  so terrain without paint writes the file it always did. Paint is read lazily like heights (`StoredPaint`).
 - **The codec** (`HeightCodec`): heights as 16-bit steps of 1/256 m (under 4 mm; round heights such as 50 m stay exact;
   65,535 steps reach past 200 m), each stored as its difference from left + above − above-left, zigzagged, split into
   low- and high-byte planes, Deflated. Flat land is ~40 bytes a chunk, rolling hills ~3 KB (vs ~22 KB of base64 floats
   before); decoding takes ~0.2 ms a chunk.
-- **The cache** (`HeightCache`): decoded heights of stored chunks up to a byte budget (64 MB default, ~3,900 chunks),
-  least recently used let go first. One cache is shared by all of a world's stores (`EditorAppBootstrap`).
+- **The cache** (`TerrainCache`): decoded heights and paint of stored chunks up to one byte budget (64 MB default,
+  ~2,000 chunks with two layers of paint), least recently used let go first. One cache is shared by all of a world's
+  stores (`EditorAppBootstrap`).
 - **Saving** (`PluginFileStore.Save`): the terrain file is written first (`TerrainFileWriter`: one block per distinct
-  heights instance, so a new worldspace's flat chunks share one; stored blocks are copied packed, without decoding),
+  heights or paint instance, so a new worldspace's flat chunks share one; stored blocks are copied packed, without decoding),
   flushed, and named by its content's hash (same content, same file). Then the JSON, which names it, replaces the old
   one atomically: the commit point, so a crash at any step leaves a matching pair. Then the plugin's other terrain files
   go, except the one it was loaded with, whose blocks the open world still reads. Measured on 1,024 rolling-hill chunks:
@@ -242,7 +259,7 @@ terrain files' block tables only, and only land in use is in memory.
 **Objects storage** (`Forge.Data.Serialization`, engine-free): a loaded plugin's placed objects are an `ObjectsFile`
 (`{plugin}.{16 hex of SHA-256}.objects` next to the plugin), a block per chunk, read when `IObjectBlocks.Read` first
 asks for the block and kept in the shared `ObjectCache` (64 MB default, ~130,000 objects at 512 B each, least recently
-used let go first; the same `BudgetCache<T>` as `HeightCache`).
+used let go first; the same `BudgetCache<T>` as `TerrainCache`).
 - **The file**: a 20-byte header ("FOBJ", version, block count, table offset), the blocks, then the table: the space
   ids as a string table; per block its space, chunk, offset, length, object count, codec, and the 64-bit FNV-1a hash
   of each object's id; then the override ids. Opening reads the header and table (a few bytes per object), which is

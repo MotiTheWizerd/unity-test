@@ -224,6 +224,48 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesGroundLayers()
+        {
+            var grass = new GroundLayerRecord(GroundLayerRecord.IdFor("core", "grass"), "Grass", "ground/grass");
+
+            var json = Write(Plugin("core", grass));
+            var copy = Read(json).Records.OfType<GroundLayerRecord>().Single();
+
+            Assert.That((copy.Id, copy.DisplayName, copy.AssetKey), Is.EqualTo((grass.Id, "Grass", "ground/grass")));
+            StringAssert.Contains("\"type\": \"ground_layer\"", json);
+            Assert.That(Write(Read(json)), Is.EqualTo(json));
+        }
+
+        [Test]
+        public void RoundTrip_PreservesChunkPaint_AndUnpaintedChunksHaveNoPaintField()
+        {
+            var grass = GroundLayerRecord.IdFor("core", "grass");
+            var rock = GroundLayerRecord.IdFor("core", "rock");
+            var weights = new float[2 * GroundPaint.TexelCount];
+            for (var t = 0; t < GroundPaint.TexelCount; t++)
+            {
+                weights[t] = t % GroundPaint.Resolution;
+                weights[GroundPaint.TexelCount + t] = GroundPaint.Resolution - t % GroundPaint.Resolution;
+            }
+
+            var paint = GroundPaint.FromWeights(new[] { grass, rock }, weights);
+            var flat = HeightField.Flat(10f, 17);
+            var painted = new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(0, 0)), Space, new ChunkCoord(0, 0), flat, paint);
+            var bare = new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(1, 0)), Space, new ChunkCoord(1, 0), flat);
+
+            var json = Write(Plugin("core", painted, bare));
+            var chunks = Read(json).Records.OfType<TerrainChunkRecord>().OrderBy(c => c.Coord.X).ToList();
+
+            Assert.That(chunks[0].Paint.Layers, Is.EqualTo(new[] { grass, rock }));
+            Assert.That(chunks[0].Paint.Load().ToArray(), Is.EqualTo(paint.ToArray()));
+            Assert.That(chunks[1].Paint, Is.Null);
+            StringAssert.Contains("\"layers\": [", json);
+            StringAssert.Contains("\"core:ground/rock\"", json);
+            Assert.That(Regex.Matches(json, "\"paint\": ").Count, Is.EqualTo(1), "No paint is no field, not null.");
+            Assert.That(Write(Read(json)), Is.EqualTo(json));
+        }
+
+        [Test]
         public void Read_UnknownSpaceKind_IsRejected()
         {
             var json = Write(Plugin("core", new SpaceRecord(Space, "Tamriel", SpaceKind.Worldspace))).Replace("\"worldspace\"", "\"dungeon\"");

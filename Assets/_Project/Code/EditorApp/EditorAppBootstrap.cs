@@ -107,11 +107,11 @@ namespace Forge.EditorApp
             {
                 var clock = Stopwatch.StartNew();
                 var serializer = new JsonPluginSerializer(RecordTypeRegistry.CreateDefault());
-                // One budget each for the heights and the objects of every plugin the world opens.
-                var heights = new HeightCache();
+                // One budget each for the terrain (heights and paint) and the objects of every plugin the world opens.
+                var terrain = new TerrainCache();
                 var objects = new ObjectCache();
-                var userStore = new PluginFileStore(Path.Combine(Application.persistentDataPath, UserPluginFolder), serializer, heights, objects);
-                var masters = LoadMasters(serializer, heights, objects);
+                var userStore = new PluginFileStore(Path.Combine(Application.persistentDataPath, UserPluginFolder), serializer, terrain, objects);
+                var masters = LoadMasters(serializer, terrain, objects);
                 var active = LoadOrCreateActive(userStore, masters);
                 var loadMs = Lap(clock);
 
@@ -286,7 +286,7 @@ namespace Forge.EditorApp
             return new WaterView(transform, _water, 2f * reach);
         }
 
-        IReadOnlyList<Plugin> LoadMasters(IPluginSerializer serializer, HeightCache heights, ObjectCache objects)
+        IReadOnlyList<Plugin> LoadMasters(IPluginSerializer serializer, TerrainCache terrain, ObjectCache objects)
         {
             var masters = new List<Plugin>();
             foreach (var folder in _profile.BaseFolders)
@@ -296,7 +296,7 @@ namespace Forge.EditorApp
                 // plugin created for it would lack masters it needs later.
                 if (!Directory.Exists(directory))
                     throw new DirectoryNotFoundException($"World '{_profile.name}' needs the plugin folder '{folder}' under StreamingAssets, which does not exist.");
-                masters.AddRange(new PluginFileStore(directory, serializer, heights, objects).LoadAll());
+                masters.AddRange(new PluginFileStore(directory, serializer, terrain, objects).LoadAll());
             }
 
             return masters;

@@ -184,6 +184,30 @@
       "category": "Architecture/Interior"
     },
     {
+      "type": "ground_layer",
+      "id": "forge.core:ground/dirt",
+      "displayName": "Dirt",
+      "assetKey": "ground/dirt"
+    },
+    {
+      "type": "ground_layer",
+      "id": "forge.core:ground/grass",
+      "displayName": "Grass",
+      "assetKey": "ground/grass"
+    },
+    {
+      "type": "ground_layer",
+      "id": "forge.core:ground/rock",
+      "displayName": "Rock",
+      "assetKey": "ground/rock"
+    },
+    {
+      "type": "ground_layer",
+      "id": "forge.core:ground/sand",
+      "displayName": "Sand",
+      "assetKey": "ground/sand"
+    },
+    {
       "type": "base_object",
       "id": "forge.core:house_small",
       "displayName": "Small House",

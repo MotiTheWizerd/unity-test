@@ -24,6 +24,7 @@ namespace Forge.Data.Records
             registry.Register<SpaceRecord>("space");
             registry.Register<LakeRecord>("lake");
             registry.Register<ClimateRecord>("climate");
+            registry.Register<GroundLayerRecord>("ground_layer");
             return registry;
         }
 

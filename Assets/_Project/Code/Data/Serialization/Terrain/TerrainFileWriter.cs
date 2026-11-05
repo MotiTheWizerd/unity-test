@@ -8,9 +8,10 @@ using Forge.Data.Terrain;
 namespace Forge.Data.Serialization
 {
     /// <summary>
-    /// Writes chunk heights as a <see cref="TerrainFile"/>, one block per distinct heights instance (chunks sharing one,
-    /// like the flat land of a new worldspace, share the block). Heights still stored in another terrain file are
-    /// copied as packed, without decoding, so saving a large world costs little more than its changes.
+    /// Writes chunk heights and ground paint as a <see cref="TerrainFile"/>, one block per distinct heights or paint
+    /// instance (chunks sharing one, like the flat land of a new worldspace, share the block). Blocks still stored in
+    /// another terrain file are copied as packed, without decoding, so saving a large world costs little more than its
+    /// changes. Heights come first, then paint, so terrain without paint writes the same file it always did.
     /// </summary>
     public static class TerrainFileWriter
     {
@@ -20,8 +21,11 @@ namespace Forge.Data.Serialization
         /// </summary>
         public const float MetersPerStep = 1f / 256f;
 
-        /// <summary>Writes <paramref name="heights"/> to <paramref name="output"/>, which must be seekable, from its start.</summary>
-        public static WrittenTerrain Write(Stream output, IEnumerable<ChunkHeights> heights)
+        /// <summary>
+        /// Writes <paramref name="heights"/> and <paramref name="paint"/> (none when null) to <paramref name="output"/>,
+        /// which must be seekable, from its start.
+        /// </summary>
+        public static WrittenTerrain Write(Stream output, IEnumerable<ChunkHeights> heights, IEnumerable<ChunkPaint> paint = null)
         {
             if (output == null)
                 throw new ArgumentNullException(nameof(output));
@@ -30,7 +34,7 @@ namespace Forge.Data.Serialization
             if (heights == null)
                 throw new ArgumentNullException(nameof(heights));
 
-            var blocks = new Dictionary<ChunkHeights, int>();
+            var blocks = new Dictionary<object, int>();
             var table = new MemoryStream();
             using (var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
             using (var writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true))
@@ -39,22 +43,32 @@ namespace Forge.Data.Serialization
                 output.Position = 0;
                 writer.Write(new byte[TerrainFile.HeaderSize]);
 
+                void WriteBlock(object value, byte[] block, int resolution, byte codec)
+                {
+                    blocks.Add(value, blocks.Count);
+                    tableWriter.Write(output.Position);
+                    tableWriter.Write(block.Length);
+                    tableWriter.Write((ushort)resolution);
+                    tableWriter.Write(codec);
+                    tableWriter.Write((byte)0);
+                    writer.Write(block);
+                    hash.AppendData(block);
+                }
+
                 foreach (var chunk in heights)
                 {
                     if (chunk == null)
                         throw new ArgumentException("Chunk heights can't be missing.", nameof(heights));
-                    if (blocks.ContainsKey(chunk))
-                        continue;
+                    if (!blocks.ContainsKey(chunk))
+                        WriteBlock(chunk, Pack(chunk), chunk.Resolution, HeightCodec.Id);
+                }
 
-                    var block = Pack(chunk);
-                    blocks.Add(chunk, blocks.Count);
-                    tableWriter.Write(output.Position);
-                    tableWriter.Write(block.Length);
-                    tableWriter.Write((ushort)chunk.Resolution);
-                    tableWriter.Write(HeightCodec.Id);
-                    tableWriter.Write((byte)0);
-                    writer.Write(block);
-                    hash.AppendData(block);
+                foreach (var chunk in paint ?? Array.Empty<ChunkPaint>())
+                {
+                    if (chunk == null)
+                        throw new ArgumentException("Chunk paint can't be missing; leave unpainted chunks out.", nameof(paint));
+                    if (!blocks.ContainsKey(chunk))
+                        WriteBlock(chunk, Pack(chunk), GroundPaint.Resolution, PaintCodec.Id);
                 }
 
                 var tableOffset = output.Position;
@@ -90,6 +104,10 @@ namespace Forge.Data.Serialization
                 ? stored.File.ReadRaw(stored.Index)
                 : HeightCodec.Encode(heights.Load(), MetersPerStep);
 
+        // Stored paint is copied packed: its codec doesn't depend on the file's height step.
+        static byte[] Pack(ChunkPaint paint) =>
+            paint is StoredPaint stored ? stored.File.ReadRaw(stored.Index) : PaintCodec.Encode(paint.Load());
+
         static string Hex(byte[] bytes, int length)
         {
             var text = new StringBuilder(length);
@@ -99,15 +117,15 @@ namespace Forge.Data.Serialization
         }
     }
 
-    /// <summary>What <see cref="TerrainFileWriter"/> wrote: the block of each chunk's heights, and the content's hash.</summary>
+    /// <summary>What <see cref="TerrainFileWriter"/> wrote: the block of each chunk's heights and paint, and the content's hash.</summary>
     public sealed class WrittenTerrain : ITerrainBlockWriter
     {
         /// <summary>Hex digits of the hash that name a terrain file.</summary>
         public const int HashLength = 16;
 
-        readonly Dictionary<ChunkHeights, int> _blocks;
+        readonly Dictionary<object, int> _blocks;
 
-        internal WrittenTerrain(Dictionary<ChunkHeights, int> blocks, string hash)
+        internal WrittenTerrain(Dictionary<object, int> blocks, string hash)
         {
             _blocks = blocks;
             Hash = hash;
@@ -122,5 +140,10 @@ namespace Forge.Data.Serialization
             heights != null && _blocks.TryGetValue(heights, out var block)
                 ? block
                 : throw new ArgumentException("These heights were not written to the terrain file.", nameof(heights));
+
+        public int BlockOf(ChunkPaint paint) =>
+            paint != null && _blocks.TryGetValue(paint, out var block)
+                ? block
+                : throw new ArgumentException("This paint was not written to the terrain file.", nameof(paint));
     }
 }

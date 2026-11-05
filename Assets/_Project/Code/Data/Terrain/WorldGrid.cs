@@ -20,6 +20,13 @@ namespace Forge.Data.Terrain
         /// <summary>Default samples per chunk edge (2^n + 1, so neighbours share edge samples).</summary>
         public const int DefaultHeightmapResolution = 65;
 
+        /// <summary>
+        /// Ground paint texels per chunk edge (<see cref="GroundPaint"/>): one per meter. Texels cover the chunk edge to
+        /// edge (texel x spans [x, x + 1) · ChunkSize / PaintResolution), so unlike height samples none is shared with a
+        /// neighbour.
+        /// </summary>
+        public const int PaintResolution = 64;
+
         public const int MinHeightmapResolution = 17;
 
         public const int MaxHeightmapResolution = 1025;

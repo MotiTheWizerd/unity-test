@@ -10,9 +10,9 @@ namespace Forge.Data.Serialization
 {
     /// <summary>
     /// Loads and saves plugins as files in a directory: one file per plugin named after its id, plus, next to it,
-    /// a terrain file for its chunk heights and an objects file for its placed objects, each named after the plugin
-    /// id and the hash of its content (<c>forge.user.1a2b….terrain</c>, <c>forge.user.3c4d….objects</c>) and named by
-    /// the plugin file. Loading reads only the side files' tables; heights and objects are read when needed.
+    /// a terrain file for its chunk heights and paint and an objects file for its placed objects, each named after the
+    /// plugin id and the hash of its content (<c>forge.user.1a2b….terrain</c>, <c>forge.user.3c4d….objects</c>) and named
+    /// by the plugin file. Loading reads only the side files' tables; heights, paint and objects are read when needed.
     /// </summary>
     /// <remarks>
     /// Saving never leaves a plugin broken, even if it stops halfway. The side files are written first, under names
@@ -25,23 +25,23 @@ namespace Forge.Data.Serialization
         static readonly Encoding Utf8NoBom = new UTF8Encoding(false);
 
         readonly IPluginSerializer _serializer;
-        readonly HeightCache _heights;
+        readonly TerrainCache _terrain;
         readonly ObjectCache _objects;
 
         // The side files each plugin was loaded with, by plugin id: saving keeps them, as their blocks may still be read.
         readonly Dictionary<string, string> _loadedTerrain = new Dictionary<string, string>(StringComparer.Ordinal);
         readonly Dictionary<string, string> _loadedObjects = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        /// <param name="heights">Where loaded heights are kept; share one across a world's stores so one budget covers it.</param>
+        /// <param name="terrain">Where loaded heights and paint are kept; share one across a world's stores so one budget covers it.</param>
         /// <param name="objects">Where loaded objects are kept; share one across a world's stores so one budget covers it.</param>
-        public PluginFileStore(string directory, IPluginSerializer serializer, HeightCache heights = null, ObjectCache objects = null)
+        public PluginFileStore(string directory, IPluginSerializer serializer, TerrainCache terrain = null, ObjectCache objects = null)
         {
             if (string.IsNullOrWhiteSpace(directory))
                 throw new ArgumentException("Directory is required.", nameof(directory));
 
             Directory = directory;
             _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
-            _heights = heights ?? new HeightCache();
+            _terrain = terrain ?? new TerrainCache();
             _objects = objects ?? new ObjectCache();
         }
 
@@ -118,14 +118,16 @@ namespace Forge.Data.Serialization
             return hash.Length == WrittenTerrain.HashLength && hash.All(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'));
         }
 
-        // Writes the plugin's chunk heights to a terrain file named by its content; null when it has no terrain.
+        // Writes the plugin's chunk heights and paint to a terrain file named by its content; null when it has no terrain.
         TerrainLink SaveTerrain(Plugin plugin)
         {
             var chunks = plugin.Records.OfType<TerrainChunkRecord>().ToList();
             if (chunks.Count == 0)
                 return null;
 
-            var written = WriteSideFile(plugin.Id, TerrainFile.Extension, stream => TerrainFileWriter.Write(stream, chunks.Select(c => c.Heights)), w => w.Hash, out var name);
+            var written = WriteSideFile(plugin.Id, TerrainFile.Extension,
+                stream => TerrainFileWriter.Write(stream, chunks.Select(c => c.Heights), chunks.Where(c => c.Paint != null).Select(c => c.Paint)),
+                w => w.Hash, out var name);
             return new TerrainLink(name, written);
         }
 
@@ -222,7 +224,7 @@ namespace Forge.Data.Serialization
         ITerrainBlockReader OpenTerrain(string name)
         {
             CheckSideFileName(name, TerrainFile.Extension, "Terrain");
-            return TerrainFile.Open(Path.Combine(Directory, name), _heights);
+            return TerrainFile.Open(Path.Combine(Directory, name), _terrain);
         }
 
         IObjectBlocks OpenObjects(string name, PluginManifest manifest)
