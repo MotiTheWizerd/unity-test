@@ -170,32 +170,29 @@
     align-items: center;
 }
 
-.unity-base-slider__tracker {
+/* Unity sizes these per orientation, so the orientation is named here too, or its rules win. */
+.unity-base-slider--horizontal .unity-base-slider__tracker {
     height: 3px;
-    margin-top: 0;
+    top: 50%;
+    margin-top: -1px;
     background-color: var(--forge-track);
     border-width: 0;
     border-radius: 2px;
 }
 
-.unity-base-slider--horizontal .unity-base-slider__tracker {
-    top: 50%;
-    margin-top: -1px;
-}
-
-.unity-base-slider__dragger {
+.unity-base-slider--horizontal .unity-base-slider__dragger {
     width: 13px;
     height: 13px;
-    margin-top: -5px;
+    margin-top: -6px;
     background-color: var(--forge-text);
     border-width: 0;
     border-radius: 7px;
-    transition-property: background-color, scale;
+    transition-property: background-color;
     transition-duration: var(--forge-motion-fast);
 }
 
-.unity-base-slider:hover .unity-base-slider__dragger,
-.unity-base-slider:focus .unity-base-slider__dragger {
+.unity-base-slider--horizontal:hover .unity-base-slider__dragger,
+.unity-base-slider--horizontal:focus .unity-base-slider__dragger {
     background-color: var(--forge-accent);
 }
 
@@ -342,24 +339,28 @@
     height: 8px;
 }
 
-.unity-scroller .unity-base-slider__tracker {
+.unity-scroller .unity-base-slider--vertical .unity-base-slider__tracker,
+.unity-scroller .unity-base-slider--horizontal .unity-base-slider__tracker {
     background-color: transparent;
+    border-width: 0;
 }
 
-.unity-scroller .unity-base-slider__dragger {
+.unity-scroller .unity-base-slider--vertical .unity-base-slider__dragger {
     width: 6px;
-    height: auto;
     min-height: 24px;
     margin: 0 1px;
     background-color: rgba(255, 255, 255, 0.18);
+    border-width: 0;
     border-radius: 3px;
 }
 
-.unity-scroller--horizontal .unity-base-slider__dragger {
-    width: auto;
+.unity-scroller .unity-base-slider--horizontal .unity-base-slider__dragger {
     height: 6px;
     min-width: 24px;
     margin: 1px 0;
+    background-color: rgba(255, 255, 255, 0.18);
+    border-width: 0;
+    border-radius: 3px;
 }
 
 .unity-scroller:hover .unity-base-slider__dragger {

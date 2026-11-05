@@ -1,0 +1,92 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:forge="Forge.EditorApp.UI.Controls">
+    <Style src="UiGallery.uss" />
+    <ui:VisualElement name="root" class="gallery-root" picking-mode="Ignore">
+        <forge:ForgePanel class="gallery-panel" title="Forge UI Gallery">
+            <ui:Label class="forge-muted" text="Every component in every state. Hover anything for its tooltip. Styles: UI/Theme (tokens, Unity controls, icons) and UI/Controls (one sheet per component)." />
+            <ui:ScrollView class="gallery-scroll">
+                <ui:VisualElement class="gallery-columns">
+
+                    <ui:VisualElement class="gallery-column">
+                        <forge:ForgeSection title="BUTTONS">
+                            <ui:VisualElement class="gallery-row">
+                                <forge:ForgeButton text="Default" tooltip="A quiet filled button" />
+                                <forge:ForgeButton text="Primary" variant="Primary" tooltip="The one action of a form" />
+                                <forge:ForgeButton text="Ghost" variant="Ghost" tooltip="No fill until hovered" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="gallery-row">
+                                <forge:ForgeButton text="With icon" icon="save" />
+                                <forge:ForgeButton icon="plus" tooltip="Icon only" />
+                                <forge:ForgeButton icon="map-pin" variant="Ghost" tooltip="Ghost, icon only" />
+                                <forge:ForgeButton text="Active" class="is-active" />
+                                <forge:ForgeButton icon="hand" variant="Ghost" class="is-active" tooltip="Active ghost (a chosen tool)" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="gallery-row forge-choices">
+                                <forge:ForgeButton text="One" class="is-active" />
+                                <forge:ForgeButton text="Two" />
+                                <forge:ForgeButton text="Three" />
+                            </ui:VisualElement>
+                        </forge:ForgeSection>
+
+                        <forge:ForgeSection title="TEXT">
+                            <forge:ForgeTextInput label="Name" value="Whiterun" />
+                            <forge:ForgeTextInput label="Empty" placeholder-text="Placeholder text…" />
+                            <forge:ForgeTextInput label="Unit" value="12.5" unit="m" />
+                            <forge:ForgeTextArea placeholder-text="A text area grows with its text, up to a limit. Enter sends, Shift+Enter: new line." />
+                        </forge:ForgeSection>
+
+                        <forge:ForgeSection title="NUMBERS">
+                            <forge:ForgeNumberField label="Sea level" value="48" unit="m" />
+                            <forge:ForgeIntegerField label="Day" value="17" />
+                            <forge:ForgeSlider label="Radius" low-value="0" high-value="50" value="12" unit="m" />
+                            <forge:ForgeSlider label="Strength" low-value="0" high-value="1" value="0.35" />
+                        </forge:ForgeSection>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="gallery-column">
+                        <forge:ForgeSection title="CHOICES">
+                            <forge:ForgeCheckbox label="Checked" value="true" />
+                            <forge:ForgeCheckbox label="Unchecked" />
+                            <forge:ForgeDropdown name="dropdown" label="Climate" />
+                            <ui:VisualElement name="tabs" class="gallery-row" />
+                        </forge:ForgeSection>
+
+                        <forge:ForgeSection title="SECTIONS">
+                            <forge:ForgeSection title="OPEN" collapsible="true">
+                                <ui:Label class="forge-muted" text="A collapsible section, open. Click the header." />
+                            </forge:ForgeSection>
+                            <forge:ForgeSection title="FOLDED" collapsible="true" collapsed="true">
+                                <ui:Label class="forge-muted" text="You found it." />
+                            </forge:ForgeSection>
+                        </forge:ForgeSection>
+
+                        <forge:ForgeSection title="TILES">
+                            <ui:VisualElement name="tiles" class="gallery-row" />
+                        </forge:ForgeSection>
+
+                        <forge:ForgeSection title="DISABLED">
+                            <ui:VisualElement name="disabled">
+                                <ui:VisualElement class="gallery-row">
+                                    <forge:ForgeButton text="Default" />
+                                    <forge:ForgeButton text="Primary" variant="Primary" />
+                                    <forge:ForgeButton icon="save" variant="Ghost" />
+                                </ui:VisualElement>
+                                <forge:ForgeTextInput label="Text" value="Resting" />
+                                <forge:ForgeSlider label="Slider" low-value="0" high-value="1" value="0.5" />
+                                <forge:ForgeCheckbox label="Checkbox" value="true" />
+                            </ui:VisualElement>
+                        </forge:ForgeSection>
+
+                        <forge:ForgeSection title="TEXT TONES">
+                            <ui:Label text="Body text" />
+                            <ui:Label class="forge-muted" text="Muted: hints, secondary lines" />
+                            <ui:Label class="gallery-dim" text="Dim: small caps headers, disabled" />
+                            <ui:Label class="gallery-accent" text="Accent: the chosen thing" />
+                            <ui:Label class="gallery-danger" text="Danger: errors" />
+                        </forge:ForgeSection>
+                    </ui:VisualElement>
+
+                </ui:VisualElement>
+            </ui:ScrollView>
+        </forge:ForgePanel>
+    </ui:VisualElement>
+</ui:UXML>

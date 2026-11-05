@@ -1,155 +1,150 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements">
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:forge="Forge.EditorApp.UI.Controls">
     <Style src="EditorPanel.uss" />
     <Style src="AssetsBrowser.uss" />
     <ui:VisualElement name="root" class="forge-root" picking-mode="Ignore">
-        <ui:VisualElement name="dock" class="forge-panel forge-dock">
-            <ui:VisualElement class="forge-title-bar">
-                <ui:Label name="title" class="forge-title" text="Forge Editor" />
-                <ui:Label name="plugin" class="forge-plugin" />
+
+        <forge:ForgePanel name="dock" class="forge-dock">
+            <ui:VisualElement class="forge-panel__title-bar">
+                <ui:Label name="title" class="forge-panel__title" text="Forge Editor" />
+                <ui:Label name="plugin" class="forge-plugin" tooltip="The plugin your edits are saved to" />
             </ui:VisualElement>
             <ui:ScrollView name="editing" class="forge-scroll">
-                <ui:VisualElement class="forge-section">
-                    <ui:Label class="forge-section__header" text="SPACE" />
+                <forge:ForgeSection title="SPACE">
                     <ui:VisualElement class="forge-row">
-                        <ui:DropdownField name="space-picker" class="forge-grow" />
-                        <ui:Button name="space-new" text="New…" />
+                        <forge:ForgeDropdown name="space-picker" class="forge-grow" />
+                        <forge:ForgeButton name="space-new" text="New…" icon="plus" />
                     </ui:VisualElement>
                     <ui:VisualElement name="space-sea" class="forge-row">
-                        <ui:Toggle name="space-sea-on" label="Sea level" />
-                        <ui:FloatField name="space-sea-level" is-delayed="true" class="forge-grow" />
-                        <ui:Label text="m" class="forge-muted" />
+                        <forge:ForgeCheckbox name="space-sea-on" label="Sea level" />
+                        <forge:ForgeNumberField name="space-sea-level" unit="m" class="forge-grow" />
                     </ui:VisualElement>
-                    <ui:DropdownField name="space-climate" label="Climate" />
+                    <forge:ForgeDropdown name="space-climate" label="Climate" />
                     <ui:VisualElement name="space-new-form" class="forge-indented">
-                        <ui:TextField name="space-new-name" placeholder-text="Name, e.g. Whiterun or Bannered Mare" />
+                        <forge:ForgeTextInput name="space-new-name" placeholder-text="Name, e.g. Whiterun or Bannered Mare" />
                         <ui:VisualElement name="space-new-kinds" class="forge-row forge-choices" />
                         <ui:VisualElement name="space-new-sizes" class="forge-row forge-choices" />
                         <ui:VisualElement class="forge-row forge-choices">
-                            <ui:Button name="space-create" text="Create" />
-                            <ui:Button name="space-cancel" text="Cancel" />
+                            <forge:ForgeButton name="space-create" text="Create" variant="Primary" />
+                            <forge:ForgeButton name="space-cancel" text="Cancel" />
                         </ui:VisualElement>
                     </ui:VisualElement>
-                </ui:VisualElement>
+                </forge:ForgeSection>
 
-                <ui:VisualElement class="forge-section">
-                    <ui:Label class="forge-section__header" text="TIME OF DAY" />
+                <forge:ForgeSection title="TIME OF DAY">
                     <ui:VisualElement class="forge-row">
                         <ui:Slider name="time-hour" low-value="0" high-value="24" class="forge-grow" />
                         <ui:Label name="time-readout" class="forge-time-readout" />
                     </ui:VisualElement>
-                    <ui:Toggle name="time-run" label="Run (20×)" />
-                    <ui:IntegerField name="time-day" label="Day" />
+                    <forge:ForgeCheckbox name="time-run" label="Run (20×)" />
+                    <forge:ForgeIntegerField name="time-day" label="Day" />
                     <ui:Label name="time-date" class="forge-muted" />
                     <ui:Label name="time-moons" class="forge-muted" />
-                </ui:VisualElement>
+                </forge:ForgeSection>
 
-                <ui:VisualElement class="forge-section">
-                    <ui:Label class="forge-section__header" text="HISTORY" />
+                <forge:ForgeSection title="HISTORY">
                     <ui:VisualElement class="forge-row forge-choices">
-                        <ui:Button name="undo" text="Undo (Ctrl+Z)" />
-                        <ui:Button name="redo" text="Redo (Ctrl+Y)" />
+                        <forge:ForgeButton name="undo" text="Undo" icon="undo-2" tooltip="Ctrl+Z" />
+                        <forge:ForgeButton name="redo" text="Redo" icon="redo-2" tooltip="Ctrl+Y" />
                     </ui:VisualElement>
                     <ui:Label name="undo-description" class="forge-muted" />
-                    <ui:Button name="save" text="Save (Ctrl+S)" />
-                </ui:VisualElement>
+                    <forge:ForgeButton name="save" text="Save" icon="save" tooltip="Ctrl+S" />
+                </forge:ForgeSection>
 
-                <ui:VisualElement class="forge-section">
-                    <ui:Label class="forge-section__header" text="WORLD" />
+                <forge:ForgeSection title="WORLD">
                     <ui:Label name="load-order" class="forge-muted forge-wrap" />
                     <ui:Label name="record-counts" class="forge-muted" />
-                </ui:VisualElement>
+                </forge:ForgeSection>
 
-                <ui:Foldout name="performance" text="Performance" value="false" class="forge-foldout">
+                <forge:ForgeSection name="performance" title="PERFORMANCE" collapsible="true" collapsed="true">
                     <ui:Label name="performance-text" class="forge-muted" />
-                </ui:Foldout>
+                </forge:ForgeSection>
 
-                <ui:Foldout text="Controls" value="false" class="forge-foldout">
+                <forge:ForgeSection title="CONTROLS" collapsible="true" collapsed="true">
                     <ui:Label class="forge-muted" text="Tools: Q select · W move · E rotate · R scale · H hand&#10;P place · O outline · G fill · B sculpt · L water · M mark · Esc: back to select&#10;Outline / Fill: drag a rectangle · Shift square · [ ] turn it&#10;Click / Shift+click: select · Ctrl snaps&#10;Drag on empty space: box select (Shift adds)&#10;Move: drag objects over the ground, or the arrows&#10;Hold Space: hand in any tool&#10;Del: delete · End: drop to ground · F: frame&#10;Sculpt: hold left mouse · [ ]: brush size&#10;Water: click a hollow, drag up/down for the level · Del removes the lake&#10;1-9: place object · [ ]: rotate it (Shift: 90°)&#10;Hold + drag: paint a row · + Shift: straight line&#10;Type in Search to filter, Esc clears&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
-                </ui:Foldout>
+                </forge:ForgeSection>
             </ui:ScrollView>
-        </ui:VisualElement>
+        </forge:ForgePanel>
 
         <ui:VisualElement name="selection-box" class="forge-selection-box forge-hidden" picking-mode="Ignore" />
 
-        <ui:VisualElement name="tool-strip" class="forge-panel forge-tool-strip" />
+        <forge:ForgePanel name="tool-strip" class="forge-tool-strip" />
 
-        <ui:VisualElement name="tool-options" class="forge-panel forge-options">
+        <forge:ForgePanel name="tool-options" class="forge-options">
             <ui:Label name="tool-options-name" class="forge-options__name" />
             <ui:VisualElement name="options-selection" class="forge-options__group">
                 <ui:Label name="selection-count" />
-                <ui:Button name="frame-selection" text="Frame (F)" />
-                <ui:Button name="drop-to-ground" text="Drop (End)" />
+                <forge:ForgeButton name="frame-selection" text="Frame" tooltip="F" />
+                <forge:ForgeButton name="drop-to-ground" text="Drop" tooltip="End" />
             </ui:VisualElement>
             <ui:VisualElement name="options-rectangle" class="forge-options__group">
-                <ui:Toggle name="rectangle-snap" label="Whole pieces" />
+                <forge:ForgeCheckbox name="rectangle-snap" label="Whole pieces" />
             </ui:VisualElement>
             <ui:VisualElement name="options-place" class="forge-options__group">
                 <ui:Label name="placement-rotation" class="forge-options__readout" />
-                <ui:Button name="rotate-left" text="[  -15°" />
-                <ui:Button name="rotate-right" text="+15°  ]" />
-                <ui:Toggle name="placement-randomize" label="Random turn &amp; size" />
-                <ui:Toggle name="placement-align-slope" label="Align to slope" />
-                <ui:Slider name="placement-gap" label="Gap (m)" show-input-field="true" class="forge-options__slider" />
-                <ui:Slider name="placement-gap-random" label="Random +" show-input-field="true" class="forge-options__slider" />
+                <forge:ForgeButton name="rotate-left" text="-15°" tooltip="[" />
+                <forge:ForgeButton name="rotate-right" text="+15°" tooltip="]" />
+                <forge:ForgeCheckbox name="placement-randomize" label="Random turn &amp; size" />
+                <forge:ForgeCheckbox name="placement-align-slope" label="Align to slope" />
+                <forge:ForgeSlider name="placement-gap" label="Gap" unit="m" class="forge-options__slider" />
+                <forge:ForgeSlider name="placement-gap-random" label="Random +" unit="m" class="forge-options__slider" />
             </ui:VisualElement>
             <ui:VisualElement name="options-sculpt" class="forge-options__group">
                 <ui:VisualElement name="brush-modes" class="forge-row forge-choices" />
-                <ui:Slider name="brush-radius" label="Radius" show-input-field="true" class="forge-options__slider" />
-                <ui:Slider name="brush-strength" label="Strength" show-input-field="true" class="forge-options__slider" />
-                <ui:Toggle name="objects-follow" label="Objects follow terrain" />
+                <forge:ForgeSlider name="brush-radius" label="Radius" unit="m" class="forge-options__slider" />
+                <forge:ForgeSlider name="brush-strength" label="Strength" class="forge-options__slider" />
+                <forge:ForgeCheckbox name="objects-follow" label="Objects follow terrain" />
             </ui:VisualElement>
             <ui:VisualElement name="options-water" class="forge-options__group">
                 <ui:Label name="water-lake" />
-                <ui:FloatField name="water-level" label="Level (m)" is-delayed="true" class="forge-options__number" />
-                <ui:Button name="water-remove" text="Remove (Del)" />
+                <forge:ForgeNumberField name="water-level" label="Level" unit="m" class="forge-options__number" />
+                <forge:ForgeButton name="water-remove" text="Remove" icon="x" tooltip="Del" />
             </ui:VisualElement>
             <ui:Label name="tool-options-hint" class="forge-muted forge-options__hint" />
-        </ui:VisualElement>
+        </forge:ForgePanel>
 
-        <ui:VisualElement name="assets" class="forge-panel forge-assets">
+        <forge:ForgePanel name="assets" class="forge-assets">
             <ui:VisualElement name="assets-resize" class="forge-assets__resize" />
             <ui:VisualElement class="forge-assets__header">
-                <ui:Label class="forge-section__header forge-assets__title" text="ASSETS" />
-                <ui:VisualElement name="assets-tabs" class="forge-grow" />
+                <ui:Label class="forge-section__title forge-assets__title" text="ASSETS" />
+                <ui:VisualElement name="assets-tabs" class="forge-assets__tabs" />
                 <ui:Label name="assets-count" class="forge-muted forge-assets__count" />
-                <ui:TextField name="assets-search" placeholder-text="Search…" class="forge-assets__search" />
-                <ui:Button name="assets-collapse" class="forge-icon-button" />
+                <forge:ForgeTextInput name="assets-search" placeholder-text="Search…" class="forge-assets__search" />
+                <forge:ForgeButton name="assets-collapse" variant="Ghost" tooltip="Collapse / expand" />
             </ui:VisualElement>
             <ui:ScrollView name="assets-grid" class="forge-assets__grid" />
-        </ui:VisualElement>
+        </forge:ForgePanel>
 
-        <ui:VisualElement name="agent-dock" class="forge-panel forge-dock forge-dock--right">
-            <ui:VisualElement class="forge-title-bar">
-                <ui:Label class="forge-title" text="Agent" />
-                <ui:Button name="agent-new" text="New chat" />
+        <forge:ForgePanel name="agent-dock" class="forge-dock forge-dock--right">
+            <ui:VisualElement class="forge-panel__title-bar">
+                <ui:Label class="forge-panel__title" text="Agent" />
+                <forge:ForgeButton name="agent-new" text="New chat" icon="sparkles" variant="Ghost" />
             </ui:VisualElement>
             <ui:ScrollView name="agent-transcript" class="forge-agent-transcript" />
             <ui:VisualElement name="agent-review" class="forge-agent-review">
                 <ui:Label name="agent-review-summary" class="forge-muted forge-wrap" />
                 <ui:VisualElement class="forge-row forge-choices">
-                    <ui:Button name="agent-accept" text="Accept" />
-                    <ui:Button name="agent-retry" text="Retry" />
-                    <ui:Button name="agent-discard" text="Discard" />
+                    <forge:ForgeButton name="agent-accept" text="Accept" variant="Primary" />
+                    <forge:ForgeButton name="agent-retry" text="Retry" />
+                    <forge:ForgeButton name="agent-discard" text="Discard" />
                 </ui:VisualElement>
             </ui:VisualElement>
             <ui:Label name="agent-status" class="forge-muted" />
             <ui:VisualElement class="forge-row forge-agent-mark">
                 <ui:Label name="agent-mark-text" class="forge-muted forge-wrap forge-agent-mark-text" />
-                <ui:Button name="agent-mark" text="Mark (M)" />
-                <ui:Button name="agent-mark-clear" text="Clear" />
+                <forge:ForgeButton name="agent-mark" text="Mark" icon="map-pin" tooltip="M" />
+                <forge:ForgeButton name="agent-mark-clear" text="Clear" />
             </ui:VisualElement>
-            <ui:TextField name="agent-input" multiline="true" placeholder-text="Describe what to build…  (Enter sends, Shift+Enter: new line)" class="forge-agent-input" />
+            <forge:ForgeTextArea name="agent-input" placeholder-text="Describe what to build…  (Enter sends, Shift+Enter: new line)" class="forge-agent-input" />
             <ui:VisualElement class="forge-row forge-choices">
-                <ui:Button name="agent-send" text="Send" />
-                <ui:Button name="agent-stop" text="Stop" />
+                <forge:ForgeButton name="agent-send" text="Send" variant="Primary" />
+                <forge:ForgeButton name="agent-stop" text="Stop" />
             </ui:VisualElement>
-        </ui:VisualElement>
+        </forge:ForgePanel>
 
         <ui:Label name="status" class="forge-panel forge-status" />
 
-        <ui:VisualElement name="fatal" class="forge-fatal forge-hidden">
-            <ui:Label class="forge-title" text="Forge failed to start" />
+        <forge:ForgePanel name="fatal" class="forge-fatal forge-hidden" title="Forge failed to start">
             <ui:Label name="fatal-message" class="forge-wrap" />
-        </ui:VisualElement>
+        </forge:ForgePanel>
     </ui:VisualElement>
 </ui:UXML>

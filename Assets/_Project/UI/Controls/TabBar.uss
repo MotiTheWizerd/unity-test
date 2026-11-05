@@ -1,0 +1,35 @@
+/* TabBar: a row of tabs, one current; dimmed while they don't apply (a search across all of them). */
+
+.forge-tabs {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    transition-property: opacity;
+    transition-duration: var(--forge-motion-fast);
+}
+
+.forge-tabs.is-dimmed {
+    opacity: 0.4;
+}
+
+.forge-tab {
+    margin: 0 2px 0 0;
+    padding: 3px 10px;
+    background-color: transparent;
+    border-color: transparent;
+    border-radius: 4px;
+    color: var(--forge-text-muted);
+}
+
+.forge-tab:hover {
+    background-color: var(--forge-control-bg-hover);
+    color: var(--forge-text);
+}
+
+/* The chosen tab is a quiet lift, not the accent. */
+.forge-tab.is-active,
+.forge-tab.is-active:hover {
+    background-color: var(--forge-control-bg-pressed);
+    border-color: var(--forge-control-border);
+    color: var(--forge-text);
+}

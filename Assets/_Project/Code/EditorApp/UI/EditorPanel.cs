@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Forge.Agent;
 using Forge.EditorApp.Diagnostics;
+using Forge.EditorApp.UI.Controls;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
@@ -23,6 +24,7 @@ namespace Forge.EditorApp.UI
         [NonSerialized] List<IPanelSection> _sections;
         [NonSerialized] EditorContext _context;
         [NonSerialized] VisualElement _editing;
+        [NonSerialized] TooltipLayer _tooltips; // keeps the panel's tooltips alive for as long as the panel
 
         VisualElement Root => _document.rootVisualElement;
 
@@ -36,21 +38,21 @@ namespace Forge.EditorApp.UI
             Root.pickingMode = PickingMode.Ignore;
             DisableKeyboardNavigation();
             _editing = PanelElements.Required<VisualElement>(Root, "editing");
-            var tooltips = new TooltipLayer(Root);
+            _tooltips = new TooltipLayer(Root);
             _sections = new List<IPanelSection>
             {
                 new WorldSection(Root, context),
                 new SpaceSection(Root, context),
                 new TimeSection(Root, context),
                 new SelectionBoxView(Root, context),
-                new ToolStrip(Root, context, tooltips),
+                new ToolStrip(Root, context),
                 new ToolOptionsBar(Root, context),
                 new SelectionSection(Root, context, commands),
                 new RectangleSection(Root, context),
                 new PlacementSection(Root, context),
                 new SculptSection(Root, context),
                 new WaterSection(Root, context, commands),
-                new AssetsBrowser(Root, context, tooltips),
+                new AssetsBrowser(Root, context),
                 new HistorySection(Root, context),
                 new PerformanceSection(Root, context, diagnostics),
                 new StatusBar(Root, context),

@@ -1,0 +1,67 @@
+/*
+ * ForgeButton: text, icon or both; default, primary and ghost variants. On top of the themed Unity button.
+ * The icon is the button's background image (its .forge-icon--{name} class), drawn small at the left or centred.
+ */
+
+.forge-button {
+    -unity-background-image-tint-color: var(--forge-text-muted);
+    background-repeat: no-repeat;
+    transition-property: background-color, border-color, color, -unity-background-image-tint-color;
+    transition-duration: var(--forge-motion-fast);
+}
+
+.forge-button:hover {
+    -unity-background-image-tint-color: var(--forge-text);
+}
+
+.forge-button.is-active,
+.forge-button.is-active:hover {
+    -unity-background-image-tint-color: var(--forge-text-on-accent);
+}
+
+/* Icon beside text: the text keeps its room, the icon sits in the left padding. */
+.forge-button--with-icon {
+    padding-left: 30px;
+    background-size: 16px 16px;
+    background-position-x: 9px;
+    background-position-y: center;
+}
+
+/* Icon only: a square with the icon centred. */
+.forge-button--icon-only {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    background-size: 16px 16px;
+    background-position: center;
+}
+
+/* Primary: the one action of a form. */
+.forge-button--primary,
+.forge-button--primary:hover {
+    background-color: var(--forge-accent);
+    border-color: var(--forge-accent);
+    color: var(--forge-text-on-accent);
+    -unity-background-image-tint-color: var(--forge-text-on-accent);
+}
+
+.forge-button--primary:hover {
+    background-color: var(--forge-accent-hover);
+}
+
+/* Ghost: no fill until hovered. */
+.forge-button--ghost {
+    background-color: transparent;
+    border-color: transparent;
+}
+
+.forge-button--ghost:hover {
+    background-color: var(--forge-control-bg-hover);
+}
+
+/* This sheet sits above the theme, so the chosen ghost button restates the accent. */
+.forge-button--ghost.is-active,
+.forge-button--ghost.is-active:hover {
+    background-color: var(--forge-accent);
+    border-color: var(--forge-accent);
+}

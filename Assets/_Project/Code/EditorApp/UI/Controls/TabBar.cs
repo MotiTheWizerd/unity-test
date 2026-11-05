@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using UnityEngine.UIElements;
 
-namespace Forge.EditorApp.UI
+namespace Forge.EditorApp.UI.Controls
 {
     /// <summary>
     /// A row of tabs, one of them current. Reusable: the assets browser picks a category with it; any later
-    /// panel with pages can too. Styled by .forge-tabs / .forge-tab in AssetsBrowser.uss.
+    /// panel with pages can too. Styled by TabBar.uss.
     /// </summary>
     public sealed class TabBar : VisualElement
     {

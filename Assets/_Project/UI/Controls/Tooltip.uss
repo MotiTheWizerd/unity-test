@@ -1,0 +1,11 @@
+/* TooltipLayer: one label at the panel root, placed beside the hovered element. */
+
+.forge-tooltip {
+    padding: 4px 9px;
+    background-color: rgba(12, 12, 14, 0.96);
+    border-width: 1px;
+    border-color: var(--forge-panel-border);
+    border-radius: var(--forge-control-radius);
+    font-size: var(--forge-font-size-sm);
+    white-space: nowrap;
+}

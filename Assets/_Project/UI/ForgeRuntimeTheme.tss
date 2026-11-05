@@ -2,3 +2,10 @@
 @import url("Theme/ForgeTokens.uss");
 @import url("Theme/ForgeControls.uss");
 @import url("Theme/ForgeIcons.uss");
+@import url("Controls/ForgePanel.uss");
+@import url("Controls/ForgeSection.uss");
+@import url("Controls/ForgeFields.uss");
+@import url("Controls/ForgeButton.uss");
+@import url("Controls/TabBar.uss");
+@import url("Controls/AssetTile.uss");
+@import url("Controls/Tooltip.uss");

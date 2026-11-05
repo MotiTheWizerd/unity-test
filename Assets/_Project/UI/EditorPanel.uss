@@ -1,22 +1,15 @@
 /*
- * Forge runtime editor layout: the editing dock on the left, the tool strip, the options bar across the top,
- * the agent dock on the right and a status bar. Colours, radii, sizes and motion come from Theme/ForgeTokens.uss;
- * the built-in controls are styled in Theme/ForgeControls.uss. This file only lays panels out and styles Forge's
- * own elements.
+ * Forge runtime editor layout: the tool strip down the left edge, the editing dock beside it, the options bar
+ * across the top, the agent dock on the right and a status bar. The panels, sections, fields and buttons are
+ * components (UI/Controls) with their own sheets; this file only places them and styles what is particular to
+ * the editor. Tokens from Theme/ForgeTokens.uss.
  */
 
 .forge-root {
     flex-grow: 1;
 }
 
-/* ---- Panels: dark glass ------------------------------------------------------------------------------------ */
-
-.forge-panel {
-    background-color: var(--forge-panel-bg);
-    border-width: 1px;
-    border-color: var(--forge-panel-border);
-    border-radius: var(--forge-panel-radius);
-}
+/* ---- Docks ----------------------------------------------------------------------------------------------- */
 
 .forge-dock {
     position: absolute;
@@ -24,19 +17,12 @@
     top: 10px;
     bottom: 46px;
     width: 300px;
-    padding: var(--forge-space-3);
 }
 
-.forge-title-bar {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: var(--forge-space-2);
-}
-
-.forge-title {
-    font-size: var(--forge-font-size-title);
-    -unity-font-definition: url("Fonts/Inter-SemiBold.ttf");
+.forge-dock--right {
+    left: auto;
+    right: 10px;
+    width: 340px;
 }
 
 .forge-plugin {
@@ -51,22 +37,7 @@
     flex-grow: 1;
 }
 
-/* ---- Sections ------------------------------------------------------------------------------------------- */
-
-.forge-section {
-    margin-bottom: var(--forge-space-3);
-    padding-bottom: var(--forge-space-2);
-    border-bottom-width: 1px;
-    border-color: var(--forge-divider);
-}
-
-.forge-section__header {
-    font-size: var(--forge-font-size-xs);
-    -unity-font-definition: url("Fonts/Inter-Medium.ttf");
-    letter-spacing: 1.5px;
-    margin-bottom: var(--forge-space-1);
-    color: var(--forge-text-muted);
-}
+/* ---- Small layout helpers ---------------------------------------------------------------------------------- */
 
 .forge-row {
     flex-direction: row;
@@ -81,28 +52,6 @@
     flex-grow: 1;
 }
 
-.forge-time-readout {
-    min-width: 44px;
-    margin-left: 6px;
-    -unity-text-align: middle-right;
-    color: var(--forge-text-muted);
-}
-
-.forge-indented {
-    margin-top: var(--forge-space-1);
-    padding-left: var(--forge-space-2);
-    border-left-width: 2px;
-    border-color: var(--forge-accent-border);
-}
-
-/* Segmented choices: equal buttons sharing the row. */
-.forge-choices > Button {
-    flex-grow: 1;
-    flex-basis: 0;
-    margin-left: 1px;
-    margin-right: 1px;
-}
-
 .forge-muted {
     font-size: var(--forge-font-size-sm);
     white-space: normal;
@@ -113,8 +62,31 @@
     white-space: normal;
 }
 
-.forge-foldout {
-    margin-top: 2px;
+.forge-hidden {
+    display: none;
+}
+
+.forge-time-readout {
+    min-width: 44px;
+    margin-left: 6px;
+    -unity-text-align: middle-right;
+    color: var(--forge-text-muted);
+}
+
+/* A form opened inside a section: a thin accent rule on its left. */
+.forge-indented {
+    margin-top: var(--forge-space-1);
+    padding-left: var(--forge-space-2);
+    border-left-width: 2px;
+    border-color: var(--forge-accent-border);
+}
+
+/* Segmented choices: equal buttons sharing the row. */
+.forge-choices > .unity-button {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-left: 1px;
+    margin-right: 1px;
 }
 
 /* The box a drag on empty space draws to select what is inside it. */
@@ -140,36 +112,8 @@
     width: 34px;
     height: 34px;
     margin: 1px 0;
-    padding: 0;
-    justify-content: center;
-    align-items: center;
-    background-color: transparent;
-    border-color: transparent;
     border-radius: 6px;
-}
-
-.forge-tool:hover {
-    background-color: var(--forge-control-bg-hover);
-}
-
-/* This sheet sits above the theme, so the chosen tool's accent is restated here. */
-.forge-tool.is-active,
-.forge-tool.is-active:hover {
-    background-color: var(--forge-accent);
-    border-color: var(--forge-accent);
-}
-
-.forge-tool .forge-icon {
-    -unity-background-image-tint-color: var(--forge-text-muted);
-}
-
-.forge-tool:hover .forge-icon {
-    -unity-background-image-tint-color: var(--forge-text);
-}
-
-.forge-tool.is-active .forge-icon,
-.forge-tool.is-active:hover .forge-icon {
-    -unity-background-image-tint-color: var(--forge-text-on-accent);
+    background-size: 18px 18px;
 }
 
 .forge-tool-strip__gap {
@@ -177,17 +121,6 @@
     height: 1px;
     margin: 5px 0;
     background-color: var(--forge-divider);
-}
-
-/* The tooltip: one label at the root, placed beside the hovered element by TooltipLayer. */
-.forge-tooltip {
-    padding: 4px 9px;
-    background-color: rgba(12, 12, 14, 0.96);
-    border-width: 1px;
-    border-color: var(--forge-panel-border);
-    border-radius: var(--forge-control-radius);
-    font-size: var(--forge-font-size-sm);
-    white-space: nowrap;
 }
 
 /* ---- The tool options bar: the current tool's name, settings and hint, across the top of the view ------- */
@@ -198,6 +131,12 @@
     right: 360px;
     top: 10px;
     padding: var(--forge-space-1) var(--forge-space-3);
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.forge-options > .forge-panel__body {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
@@ -222,7 +161,7 @@
 }
 
 /* Segmented choices in the bar size to their labels (the dock stretches them to share its width). */
-.forge-options .forge-choices > Button {
+.forge-options .forge-choices > .unity-button {
     flex-grow: 0;
     flex-basis: auto;
 }
@@ -251,12 +190,6 @@
 }
 
 /* ---- The agent's dock, on the right: transcript, review bar, message box -------------------------------- */
-
-.forge-dock--right {
-    left: auto;
-    right: 10px;
-    width: 340px;
-}
 
 .forge-agent-transcript {
     flex-grow: 1;
@@ -356,13 +289,6 @@
     margin-left: 0;
     margin-right: 0;
     margin-top: 4px;
-    min-height: 64px;
-    max-height: 160px;
-}
-
-.forge-agent-input > .unity-text-field__input {
-    -unity-text-align: upper-left;
-    white-space: normal;
 }
 
 /* ---- Status bar and the fatal box ------------------------------------------------------------------------ */
@@ -373,8 +299,7 @@
     right: 10px;
     bottom: 10px;
     height: 28px;
-    padding-left: var(--forge-space-3);
-    padding-right: var(--forge-space-3);
+    padding: 0 var(--forge-space-3);
     -unity-text-align: middle-left;
     color: var(--forge-text-muted);
 }
@@ -384,11 +309,6 @@
     left: 10px;
     top: 10px;
     width: 520px;
-    padding: var(--forge-space-3);
     background-color: var(--forge-danger-bg);
-    border-radius: var(--forge-panel-radius);
-}
-
-.forge-hidden {
-    display: none;
+    border-color: transparent;
 }

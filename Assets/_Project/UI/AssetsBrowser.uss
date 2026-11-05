@@ -1,6 +1,7 @@
 /*
  * The assets browser along the bottom of the view (AssetsBrowser): header with tabs, search and collapse,
- * a grid of tiles (AssetTile), a drag handle on its top edge. Tokens from Theme/ForgeTokens.uss.
+ * a grid of tiles, a drag handle on its top edge. The tabs (TabBar) and tiles (AssetTile) are components with
+ * their own sheets under Controls. Tokens from Theme/ForgeTokens.uss.
  */
 
 .forge-assets {
@@ -30,6 +31,10 @@
     margin: 0 var(--forge-space-3) 0 0;
 }
 
+.forge-assets__tabs {
+    flex-grow: 1;
+}
+
 .forge-assets__count {
     margin: 0 var(--forge-space-2);
 }
@@ -37,68 +42,6 @@
 .forge-assets__search {
     width: 180px;
     margin: 0 var(--forge-space-1) 0 0;
-}
-
-/* ---- Tabs (TabBar) --------------------------------------------------------------------------------------- */
-
-.forge-tabs {
-    flex-direction: row;
-    align-items: center;
-    flex-grow: 1;
-    flex-wrap: wrap;
-    transition-property: opacity;
-    transition-duration: var(--forge-motion-fast);
-}
-
-.forge-tabs.is-dimmed {
-    opacity: 0.4;
-}
-
-.forge-tab {
-    margin: 0 2px 0 0;
-    padding: 3px 10px;
-    background-color: transparent;
-    border-color: transparent;
-    border-radius: 4px;
-    color: var(--forge-text-muted);
-}
-
-.forge-tab:hover {
-    background-color: var(--forge-control-bg-hover);
-    color: var(--forge-text);
-}
-
-/* This sheet sits above the theme, so the chosen tab is restated: a quiet lift, not the accent. */
-.forge-tab.is-active,
-.forge-tab.is-active:hover {
-    background-color: var(--forge-control-bg-pressed);
-    border-color: var(--forge-control-border);
-    color: var(--forge-text);
-}
-
-/* ---- Small icon-only buttons (collapse) ------------------------------------------------------------------ */
-
-.forge-icon-button {
-    width: 26px;
-    height: 26px;
-    margin: 0;
-    padding: 0;
-    justify-content: center;
-    align-items: center;
-    background-color: transparent;
-    border-color: transparent;
-}
-
-.forge-icon-button:hover {
-    background-color: var(--forge-control-bg-hover);
-}
-
-.forge-icon-button .forge-icon {
-    -unity-background-image-tint-color: var(--forge-text-muted);
-}
-
-.forge-icon-button:hover .forge-icon {
-    -unity-background-image-tint-color: var(--forge-text);
 }
 
 /* ---- The grid --------------------------------------------------------------------------------------------- */
@@ -120,81 +63,6 @@
     -unity-font-definition: url("Fonts/Inter-Medium.ttf");
     letter-spacing: 1px;
     color: var(--forge-text-dim);
-}
-
-/* ---- Tiles (AssetTile) ------------------------------------------------------------------------------------ */
-
-.forge-tile {
-    width: 78px;
-    height: 94px;
-    margin: 3px;
-    padding: 5px 4px 4px 4px;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    background-color: var(--forge-control-bg);
-    border-color: transparent;
-    border-radius: 6px;
-}
-
-.forge-tile:hover {
-    background-color: var(--forge-control-bg-hover);
-    border-color: var(--forge-control-border);
-}
-
-/* The chosen object: an accent frame rather than a filled block, so the thumbnail stays readable. */
-.forge-tile.is-active,
-.forge-tile.is-active:hover {
-    background-color: var(--forge-accent-soft);
-    border-color: var(--forge-accent);
-    color: var(--forge-text);
-}
-
-.forge-tile__thumb {
-    width: 56px;
-    height: 56px;
-    justify-content: center;
-    align-items: center;
-    background-color: rgba(255, 255, 255, 0.04);
-    border-radius: 4px;
-}
-
-.forge-tile__thumb .forge-icon {
-    width: 24px;
-    height: 24px;
-    -unity-background-image-tint-color: var(--forge-text-dim);
-}
-
-.forge-tile.is-active .forge-tile__thumb .forge-icon {
-    -unity-background-image-tint-color: var(--forge-accent);
-}
-
-.forge-tile__name {
-    width: 70px;
-    margin-top: 5px;
-    padding: 0;
-    font-size: var(--forge-font-size-xs);
-    color: var(--forge-text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    -unity-text-align: upper-center;
-}
-
-.forge-tile.is-active .forge-tile__name {
-    color: var(--forge-text);
-}
-
-.forge-tile__key {
-    position: absolute;
-    top: 3px;
-    left: 4px;
-    padding: 0 4px;
-    font-size: 9px;
-    -unity-font-definition: url("Fonts/Inter-Medium.ttf");
-    color: var(--forge-text-muted);
-    background-color: rgba(0, 0, 0, 0.55);
-    border-radius: 3px;
 }
 
 /* ---- Collapsed: the header only --------------------------------------------------------------------------- */

@@ -24,6 +24,10 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
   the old flattened theme (the new sheet's rules silently don't apply, even across play restarts).
   Force-reimport the `.tss` (`AssetDatabase.ImportAsset(..., ForceUpdate)`) and request a script
   reload (`EditorUtility.RequestScriptReload()`), then play again. Sheets attached in UXML don't need this.
+- A UXML that uses new `[UxmlElement]` classes may import before they compile ("missing a
+  UxmlElementAttribute"); reimport the `.uxml` after the compile and the message is gone.
+- Unity's default theme sizes slider parts per orientation (`.unity-base-slider--horizontal .…__dragger`), so
+  overrides need that specificity. A USS type selector (`Button`) names the C# type: subclasses don't match.
 - SVG icons import as UI Toolkit `VectorImage` through the built-in vector graphics module; the
   `com.unity.vectorgraphics` package is not needed and 2.0.0-preview.24 does not compile here.
 - **Play-mode script reload:** with "Recompile And Continue Playing", Unity reloads the

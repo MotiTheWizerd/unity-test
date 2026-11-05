@@ -583,8 +583,19 @@ slopes), so results are exact and every edit goes through the edit session.
   `ForgeRuntimeTheme.tss` imports Unity's default, then those three. Layout and Forge's own elements are in
   `UI/EditorPanel.uss` and `UI/AssetsBrowser.uss`, which only read tokens. The font is Inter (`UI/Fonts`, OFL):
   Regular by default, Medium for small caps headers, SemiBold for titles, as real cuts, never synthesized bold.
-  Runtime UI Toolkit shows no tooltips, so `TooltipLayer` draws its own: one label at the root, shown beside the
-  hovered element after a short rest (`Attach(element, text)`, rich text allowed).
+  **Components** (`EditorApp/UI/Controls`, one C# `[UxmlElement]` class and one USS sheet each, used from UXML as
+  `<forge:…>`): `ForgePanel` (the glass card, optional title bar), `ForgeSection` (small-caps header over content,
+  collapsible with a chevron), the fields `ForgeTextInput`, `ForgeTextArea`, `ForgeNumberField` and
+  `ForgeIntegerField` (delayed commit), `ForgeSlider` (number box on), `ForgeCheckbox`, `ForgeDropdown` (thin
+  subclasses of Unity's controls that add the field chrome and a `unit` label, `FieldChrome`), `ForgeButton`
+  (`icon`, `variant` default / primary / ghost; the icon is the button's background image, because a button with a
+  child is no longer measured by its text), `TabBar`, `AssetTile`, and `Icons.Make(name)`. The theme imports
+  every component sheet, so they work in any panel. Runtime UI Toolkit shows no tooltips, so `TooltipLayer` at a
+  panel's root draws its own: any element's `tooltip` (UXML or code) shows beside it after a short rest, rich text
+  allowed. **The UI gallery** (Forge → UI Gallery, `Scenes/UiGallery.unity`, `UI/Gallery/UiGallery.uxml`,
+  `UiGallery` MonoBehaviour) shows every component in every state; judge the look there, not by hunting for a
+  slider in the live editor. USS type selectors name the C# type, so rules meant for every button use
+  `.unity-button`, not `Button`.
   `EditorPanel` (MonoBehaviour) only composes **one presenter per section**
   (`IPanelSection`: World, Space (with the worldspace's **Sea level**: a toggle, new seas start 2 m below the base
   land, and a number field; each change is one undo step), ToolStrip, ToolOptionsBar, Selection, Placement, Sculpt, AssetsBrowser, History,

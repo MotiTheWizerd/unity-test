@@ -1,0 +1,26 @@
+/* ForgePanel: a card of dark glass with an optional title bar. Tokens from Theme/ForgeTokens.uss. */
+
+.forge-panel {
+    background-color: var(--forge-panel-bg);
+    border-width: 1px;
+    border-color: var(--forge-panel-border);
+    border-radius: var(--forge-panel-radius);
+    padding: var(--forge-space-3);
+}
+
+.forge-panel__body {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.forge-panel__title-bar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--forge-space-2);
+}
+
+.forge-panel__title {
+    font-size: var(--forge-font-size-title);
+    -unity-font-definition: url("../Fonts/Inter-SemiBold.ttf");
+}

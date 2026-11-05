@@ -1,18 +1,19 @@
 using System;
 using Forge.EditorApp.Diagnostics;
+using Forge.EditorApp.UI.Controls;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Forge.EditorApp.UI
 {
-    /// <summary>Live streaming, frame and edit timings; only refreshed while the foldout is open, a few times a second.</summary>
+    /// <summary>Live streaming, frame and edit timings; only refreshed while the section is open, a few times a second.</summary>
     public sealed class PerformanceSection : IPanelSection
     {
         const float RefreshInterval = 0.25f;
 
         readonly EditorContext _context;
         readonly EditorDiagnostics _diagnostics;
-        readonly Foldout _foldout;
+        readonly ForgeSection _section;
         readonly Label _text;
         float _nextRefresh;
 
@@ -20,13 +21,13 @@ namespace Forge.EditorApp.UI
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
-            _foldout = PanelElements.Required<Foldout>(root, "performance");
+            _section = PanelElements.Required<ForgeSection>(root, "performance");
             _text = PanelElements.Required<Label>(root, "performance-text");
         }
 
         public void Refresh()
         {
-            if (!_foldout.value || Time.unscaledTime < _nextRefresh)
+            if (_section.collapsed || Time.unscaledTime < _nextRefresh)
                 return;
             _nextRefresh = Time.unscaledTime + RefreshInterval;
 

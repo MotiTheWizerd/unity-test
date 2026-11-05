@@ -1,0 +1,46 @@
+/* The UI gallery page: one panel, two columns of sections. Everything inside is the components as they are. */
+
+.gallery-root {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+.gallery-panel {
+    width: 860px;
+    height: 90%;
+}
+
+.gallery-scroll {
+    flex-grow: 1;
+    margin-top: var(--forge-space-2);
+}
+
+.gallery-columns {
+    flex-direction: row;
+}
+
+.gallery-column {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-right: var(--forge-space-4);
+}
+
+.gallery-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 2px 0;
+}
+
+.gallery-dim {
+    color: var(--forge-text-dim);
+}
+
+.gallery-accent {
+    color: var(--forge-accent);
+}
+
+.gallery-danger {
+    color: var(--forge-danger);
+}

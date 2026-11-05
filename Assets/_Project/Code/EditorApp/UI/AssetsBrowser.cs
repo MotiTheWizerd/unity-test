@@ -4,6 +4,7 @@ using System.Linq;
 using Forge.Data;
 using Forge.Data.Records;
 using Forge.EditorApp.Tools;
+using Forge.EditorApp.UI.Controls;
 using Forge.Editing.Palette;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -28,14 +29,13 @@ namespace Forge.EditorApp.UI
         const int ShortcutCount = 9;
 
         readonly EditorContext _context;
-        readonly TooltipLayer _tooltips;
         readonly VisualElement _panel;
         readonly VisualElement _resize;
         readonly TabBar _tabs;
         readonly TextField _search;
         readonly Label _count;
         readonly ScrollView _grid;
-        readonly VisualElement _collapseIcon;
+        readonly ForgeButton _collapse;
         readonly Dictionary<RecordId, AssetTile> _tiles = new Dictionary<RecordId, AssetTile>();
 
         ObjectPalette _source;
@@ -47,10 +47,9 @@ namespace Forge.EditorApp.UI
         float _dragStartY;
         float _dragStartHeight;
 
-        public AssetsBrowser(VisualElement root, EditorContext context, TooltipLayer tooltips)
+        public AssetsBrowser(VisualElement root, EditorContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
-            _tooltips = tooltips ?? throw new ArgumentNullException(nameof(tooltips));
             _panel = PanelElements.Required<VisualElement>(root, "assets");
             _resize = PanelElements.Required<VisualElement>(root, "assets-resize");
             _search = PanelElements.Required<TextField>(root, "assets-search");
@@ -60,11 +59,9 @@ namespace Forge.EditorApp.UI
             _tabs = new TabBar();
             PanelElements.Required<VisualElement>(root, "assets-tabs").Add(_tabs);
 
-            var collapse = PanelElements.Required<Button>(root, "assets-collapse");
-            _collapseIcon = PanelElements.Icon(CollapseIconOpen);
-            collapse.Add(_collapseIcon);
-            collapse.clicked += () => SetCollapsed(!_collapsed);
-            _tooltips.Attach(collapse, "Collapse / expand");
+            _collapse = PanelElements.Required<ForgeButton>(root, "assets-collapse");
+            _collapse.icon = CollapseIconOpen;
+            _collapse.clicked += () => SetCollapsed(!_collapsed);
 
             _search.RegisterValueChangedCallback(e => _query = e.newValue ?? string.Empty);
             // Esc clears the search (EditorPanel also releases the focus on Esc).
@@ -145,8 +142,7 @@ namespace Forge.EditorApp.UI
             // The number is the 1-9 shortcut, which follows the unfiltered palette.
             var index = _source.IndexOf(id);
             var shortcut = index >= 0 && index < ShortcutCount ? index + 1 : 0;
-            var tile = new AssetTile(record, shortcut, () => _context.SelectPlacement(id));
-            _tooltips.Attach(tile, Tooltip(record, shortcut));
+            var tile = new AssetTile(record, shortcut, () => _context.SelectPlacement(id)) { tooltip = Tooltip(record, shortcut) };
             _tiles.Add(id, tile);
             return tile;
         }
@@ -175,8 +171,7 @@ namespace Forge.EditorApp.UI
                 return;
             _collapsed = collapsed;
             _panel.EnableInClassList(CollapsedClass, collapsed);
-            _collapseIcon.EnableInClassList($"{PanelElements.IconClass}--{CollapseIconOpen}", !collapsed);
-            _collapseIcon.EnableInClassList($"{PanelElements.IconClass}--{CollapseIconClosed}", collapsed);
+            _collapse.icon = collapsed ? CollapseIconClosed : CollapseIconOpen;
 
             // The dragged height is inline, so it is lifted while collapsed and restored after.
             if (collapsed)

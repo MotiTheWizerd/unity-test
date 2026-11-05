@@ -1,0 +1,33 @@
+/*
+ * Forge's fields: text input, text area, number fields, slider, checkbox, dropdown. The controls themselves are
+ * Unity's, themed in Theme/ForgeControls.uss; this adds what the wrappers bring: the unit label and each field's
+ * own shape.
+ */
+
+.forge-field {
+    margin: 2px 0;
+}
+
+.forge-field__unit {
+    margin-left: 6px;
+    padding: 0;
+    color: var(--forge-text-muted);
+    font-size: var(--forge-font-size-sm);
+    -unity-text-align: middle-left;
+}
+
+/* A text area grows with its text, between a minimum and a maximum height. */
+.forge-text-area {
+    min-height: 64px;
+    max-height: 160px;
+}
+
+.forge-text-area > .unity-base-text-field__input {
+    -unity-text-align: upper-left;
+    white-space: normal;
+}
+
+/* Number boxes are narrow by nature. */
+.forge-number-field > .unity-base-text-field__input {
+    min-width: 56px;
+}

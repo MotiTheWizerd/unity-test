@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Forge.EditorApp.Tools;
+using Forge.EditorApp.UI.Controls;
 using UnityEngine.UIElements;
 
 namespace Forge.EditorApp.UI
@@ -16,12 +17,11 @@ namespace Forge.EditorApp.UI
         const string GapClass = "forge-tool-strip__gap";
 
         readonly EditorContext _context;
-        readonly Dictionary<ToolKind, Button> _buttons = new Dictionary<ToolKind, Button>();
+        readonly Dictionary<ToolKind, ForgeButton> _buttons = new Dictionary<ToolKind, ForgeButton>();
 
-        public ToolStrip(VisualElement root, EditorContext context, TooltipLayer tooltips)
+        public ToolStrip(VisualElement root, EditorContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
-            if (tooltips == null) throw new ArgumentNullException(nameof(tooltips));
             var strip = PanelElements.Required<VisualElement>(root, "tool-strip");
             strip.Clear();
 
@@ -32,7 +32,6 @@ namespace Forge.EditorApp.UI
                     strip.Add(Gap());
                 group = tool.Group;
                 var button = CreateButton(tool);
-                tooltips.Attach(button, Tooltip(tool));
                 strip.Add(button);
                 _buttons.Add(tool.Kind, button);
             }
@@ -51,16 +50,18 @@ namespace Forge.EditorApp.UI
             }
         }
 
-        Button CreateButton(ToolDefinition tool)
+        ForgeButton CreateButton(ToolDefinition tool)
         {
             var kind = tool.Kind;
-            var button = new Button(() => _context.SelectTool(kind));
+            var button = new ForgeButton(() => _context.SelectTool(kind))
+            {
+                icon = tool.Icon,
+                variant = ForgeButtonVariant.Ghost,
+                tooltip = $"{tool.Name}  <color=#9EA4AE>{tool.KeyLabel}</color>",
+            };
             button.AddToClassList(ToolClass);
-            button.Add(PanelElements.Icon(tool.Icon));
             return button;
         }
-
-        static string Tooltip(ToolDefinition tool) => $"{tool.Name}  <color=#9EA4AE>{tool.KeyLabel}</color>";
 
         static VisualElement Gap()
         {

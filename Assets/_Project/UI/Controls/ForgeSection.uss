@@ -1,0 +1,51 @@
+/* ForgeSection: a small-caps header over content, a rule underneath; collapsible ones show a chevron. */
+
+.forge-section {
+    margin-bottom: var(--forge-space-3);
+    padding-bottom: var(--forge-space-2);
+    border-bottom-width: 1px;
+    border-color: var(--forge-divider);
+}
+
+.forge-section__header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--forge-space-1);
+}
+
+.forge-section__title {
+    padding: 0 2px;
+    font-size: var(--forge-font-size-xs);
+    -unity-font-definition: url("../Fonts/Inter-Medium.ttf");
+    letter-spacing: 1.5px;
+    color: var(--forge-text-muted);
+}
+
+.forge-section__chevron {
+    width: 14px;
+    height: 14px;
+    -unity-background-image-tint-color: var(--forge-text-dim);
+    transition-property: rotate, -unity-background-image-tint-color;
+    transition-duration: var(--forge-motion);
+}
+
+.forge-section.is-collapsible .forge-section__header:hover .forge-section__title {
+    color: var(--forge-text);
+}
+
+.forge-section.is-collapsible .forge-section__header:hover .forge-section__chevron {
+    -unity-background-image-tint-color: var(--forge-text);
+}
+
+.forge-section.is-collapsed .forge-section__chevron {
+    rotate: -90deg;
+}
+
+.forge-section.is-collapsed {
+    padding-bottom: var(--forge-space-1);
+}
+
+.forge-section.is-collapsed .forge-section__header {
+    margin-bottom: 0;
+}

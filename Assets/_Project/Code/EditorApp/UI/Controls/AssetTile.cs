@@ -3,7 +3,7 @@ using Forge.Data;
 using Forge.Data.Records;
 using UnityEngine.UIElements;
 
-namespace Forge.EditorApp.UI
+namespace Forge.EditorApp.UI.Controls
 {
     /// <summary>
     /// One asset in the assets browser: a thumbnail, the name under it and, for the first nine objects, the number
@@ -25,7 +25,7 @@ namespace Forge.EditorApp.UI
 
             var thumb = new VisualElement { pickingMode = PickingMode.Ignore };
             thumb.AddToClassList(ThumbClass);
-            thumb.Add(PanelElements.Icon(PlaceholderIcon));
+            thumb.Add(Icons.Make(PlaceholderIcon));
             Add(thumb);
 
             var name = new Label(record.DisplayName) { pickingMode = PickingMode.Ignore };
