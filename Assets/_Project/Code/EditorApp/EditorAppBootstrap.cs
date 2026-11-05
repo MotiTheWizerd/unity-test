@@ -91,8 +91,10 @@ namespace Forge.EditorApp
             {
                 var clock = Stopwatch.StartNew();
                 var serializer = new JsonPluginSerializer(RecordTypeRegistry.CreateDefault());
-                var userStore = new PluginFileStore(Path.Combine(Application.persistentDataPath, UserPluginFolder), serializer);
-                var masters = LoadMasters(serializer);
+                // One budget for the heights of every plugin the world opens.
+                var heights = new HeightCache();
+                var userStore = new PluginFileStore(Path.Combine(Application.persistentDataPath, UserPluginFolder), serializer, heights);
+                var masters = LoadMasters(serializer, heights);
                 var active = LoadOrCreateActive(userStore, masters);
                 var loadMs = Lap(clock);
 
@@ -220,7 +222,7 @@ namespace Forge.EditorApp
             return new WaterView(transform, _water, 2f * reach);
         }
 
-        IReadOnlyList<Plugin> LoadMasters(IPluginSerializer serializer)
+        IReadOnlyList<Plugin> LoadMasters(IPluginSerializer serializer, HeightCache heights)
         {
             var masters = new List<Plugin>();
             foreach (var folder in _profile.BaseFolders)
@@ -230,7 +232,7 @@ namespace Forge.EditorApp
                 // plugin created for it would lack masters it needs later.
                 if (!Directory.Exists(directory))
                     throw new DirectoryNotFoundException($"World '{_profile.name}' needs the plugin folder '{folder}' under StreamingAssets, which does not exist.");
-                masters.AddRange(new PluginFileStore(directory, serializer).LoadAll());
+                masters.AddRange(new PluginFileStore(directory, serializer, heights).LoadAll());
             }
 
             return masters;

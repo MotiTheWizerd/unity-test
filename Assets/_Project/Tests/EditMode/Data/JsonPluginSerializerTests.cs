@@ -15,15 +15,20 @@ namespace Forge.Tests.Data
     public class JsonPluginSerializerTests
     {
         JsonPluginSerializer _serializer;
+        MemoryTerrain _terrain;
 
         [SetUp]
-        public void SetUp() => _serializer = new JsonPluginSerializer(RecordTypeRegistry.CreateDefault());
+        public void SetUp()
+        {
+            _serializer = new JsonPluginSerializer(RecordTypeRegistry.CreateDefault());
+            _terrain = new MemoryTerrain();
+        }
 
         string Write(Plugin plugin)
         {
             using (var writer = new StringWriter())
             {
-                _serializer.Write(plugin, writer);
+                _serializer.Write(plugin, writer, MemoryTerrain.For(plugin, _terrain));
                 return writer.ToString();
             }
         }
@@ -31,7 +36,7 @@ namespace Forge.Tests.Data
         Plugin Read(string json)
         {
             using (var reader = new StringReader(json))
-                return _serializer.Read(reader);
+                return _serializer.Read(reader, name => name == MemoryTerrain.FileName ? _terrain : throw new DataValidationException(new[] { $"No terrain file {name}." }));
         }
 
         static Plugin SamplePlugin() =>
@@ -84,7 +89,7 @@ namespace Forge.Tests.Data
             var json = Write(SamplePlugin());
 
             Assert.That(Write(Read(json)), Is.EqualTo(json));
-            StringAssert.Contains("\"format\": 1", json);
+            StringAssert.Contains("\"format\": 2", json);
             StringAssert.Contains("\"type\": \"base_object\"", json);
             StringAssert.Contains("\"id\": \"core:tree_oak\"", json);
             StringAssert.Contains("\"baseId\": \"core:tree_oak\"", json);
@@ -268,10 +273,58 @@ namespace Forge.Tests.Data
         [Test]
         public void Read_UnsupportedFormatVersion_IsRejected()
         {
-            var json = Write(SamplePlugin()).Replace("\"format\": 1", "\"format\": 99");
+            var json = Write(SamplePlugin()).Replace("\"format\": 2", "\"format\": 99");
 
             var ex = Assert.Throws<DataValidationException>(() => Read(json));
             StringAssert.Contains("Unsupported plugin format", ex.Message);
+        }
+
+        [Test]
+        public void Read_Format1_ExplainsThatTerrainMovedOut()
+        {
+            var json = Write(SamplePlugin()).Replace("\"format\": 2", "\"format\": 1");
+
+            var ex = Assert.Throws<DataValidationException>(() => Read(json));
+            StringAssert.Contains("terrain file", ex.Message);
+        }
+
+        [Test]
+        public void RoundTrip_ChunkHeights_AreABlockOfTheNamedTerrainFile_SharedBlocksOnce()
+        {
+            var flat = HeightField.Flat(10f, 17);
+            var hill = HeightField.FromFunction((x, z) => x + z, 17);
+            var plugin = Plugin("core",
+                new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(0, 0)), Space, new ChunkCoord(0, 0), flat),
+                new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(1, 0)), Space, new ChunkCoord(1, 0), flat),
+                new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(2, 0)), Space, new ChunkCoord(2, 0), hill));
+
+            var json = Write(plugin);
+            var chunks = Read(json).Records.OfType<TerrainChunkRecord>().ToDictionary(c => c.Coord.X);
+
+            StringAssert.Contains($"\"terrain\": \"{MemoryTerrain.FileName}\"", json);
+            Assert.That(Regex.Matches(json, "\"block\": 0").Count, Is.EqualTo(2), "The two flat chunks share a block.");
+            Assert.That(_terrain.BlockCount, Is.EqualTo(2));
+            Assert.That(chunks[2].Heights.Load()[3, 4], Is.EqualTo(7f));
+            Assert.That(chunks[0].Heights.Resolution, Is.EqualTo(17));
+            Assert.That(Write(Read(json)), Is.EqualTo(json));
+        }
+
+        [Test]
+        public void Read_ChunksWithoutATerrainFile_AreRejected()
+        {
+            var plugin = Plugin("core", new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(0, 0)), Space, new ChunkCoord(0, 0), HeightField.Flat(1f, 17)));
+            var json = Regex.Replace(Write(plugin), @"\s*""terrain"": ""[^""]+"",", string.Empty);
+
+            var ex = Assert.Throws<DataValidationException>(() => Read(json));
+            StringAssert.Contains("names no terrain file", ex.Message);
+        }
+
+        [Test]
+        public void Write_ChunksWithoutATerrainFile_IsRefused()
+        {
+            var plugin = Plugin("core", new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(0, 0)), Space, new ChunkCoord(0, 0), HeightField.Flat(1f, 17)));
+
+            Assert.Throws<System.ArgumentException>(() => _serializer.Write(plugin, new StringWriter(), null));
         }
 
         [Test]
@@ -295,8 +348,8 @@ namespace Forge.Tests.Data
 
         [TestCase("")]
         [TestCase("{ not json")]
-        [TestCase("{\"format\": 1}")]
-        [TestCase("{\"format\": 1, \"manifest\": {\"id\": \"x\", \"version\": \"1\"}, \"unexpected\": true}")]
+        [TestCase("{\"format\": 2}")]
+        [TestCase("{\"format\": 2, \"manifest\": {\"id\": \"x\", \"version\": \"1\"}, \"unexpected\": true}")]
         public void Read_MalformedInput_IsRejected(string json)
         {
             Assert.Throws<DataValidationException>(() => Read(json));

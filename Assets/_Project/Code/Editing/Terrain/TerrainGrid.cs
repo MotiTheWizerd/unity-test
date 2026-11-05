@@ -13,11 +13,13 @@ namespace Forge.Editing.Terrain
     /// <summary>
     /// A worldspace's terrain as one grid of height samples across all its chunks, read from the terrain records.
     /// Neighbouring chunks share their edge samples, so each global sample (gx, gz) has one height. Engine-free:
-    /// it answers for any position, whether or not the scene has that chunk loaded.
+    /// it answers for any position, whether or not the scene has that chunk loaded. A chunk's heights are read the
+    /// first time a sample of it is asked for, then held for the life of the grid (which lasts one world version).
     /// </summary>
     public sealed class TerrainGrid
     {
         readonly Dictionary<ChunkCoord, TerrainChunkRecord> _chunks = new Dictionary<ChunkCoord, TerrainChunkRecord>();
+        readonly Dictionary<ChunkCoord, HeightField> _loaded = new Dictionary<ChunkCoord, HeightField>();
 
         /// <param name="space">The worldspace whose land this is; other spaces' chunks are left out.</param>
         public TerrainGrid(IRecordStore store, RecordId space)
@@ -55,6 +57,19 @@ namespace Forge.Editing.Terrain
 
         public bool TryGetChunk(ChunkCoord coord, out TerrainChunkRecord chunk) => _chunks.TryGetValue(coord, out chunk);
 
+        /// <summary>The heights of the chunk at <paramref name="coord"/>, read once per grid; null where there is none.</summary>
+        public HeightField HeightsOf(ChunkCoord coord)
+        {
+            if (_loaded.TryGetValue(coord, out var heights))
+                return heights;
+            if (!_chunks.TryGetValue(coord, out var chunk))
+                return null;
+
+            heights = chunk.Heights.Load();
+            _loaded.Add(coord, heights);
+            return heights;
+        }
+
         /// <summary>The chunk that holds global sample (gx, gz), and the sample's index inside it.</summary>
         public (ChunkCoord Coord, int X, int Z) Locate(int gx, int gz)
         {
@@ -66,7 +81,7 @@ namespace Forge.Editing.Terrain
         public float? SampleHeight(int gx, int gz)
         {
             var (coord, x, z) = Locate(gx, gz);
-            return _chunks.TryGetValue(coord, out var chunk) ? chunk.Heights[x, z] : (float?)null;
+            return HeightsOf(coord) is HeightField heights ? heights[x, z] : (float?)null;
         }
 
         /// <summary>Height at a ground position (x, z), bilinear between samples; null outside the terrain.</summary>

@@ -1,9 +1,6 @@
 using System;
-using System.IO;
 using System.Linq;
 using Forge.Data;
-using Forge.Data.Json;
-using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Data.Terrain;
 using NUnit.Framework;
@@ -121,36 +118,6 @@ namespace Forge.Tests.Data
 
             Assert.That(chunk.Space, Is.EqualTo(TestRecords.OtherSpace));
             Assert.That(chunk.WithHeights(HeightField.Flat(5f, 17)).Space, Is.EqualTo(TestRecords.OtherSpace));
-        }
-
-        [Test]
-        public void ChunkRecord_RoundTripsThroughJson()
-        {
-            var coord = new ChunkCoord(-2, 3);
-            var heights = HeightField.FromFunction((x, z) => (x * 7 + z * 13) % 150 + 0.25f, 33);
-            var plugin = new Plugin(
-                new PluginManifest("core", "1.0.0"),
-                new[] { new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", TestRecords.OtherSpace, coord), TestRecords.OtherSpace, coord, heights) });
-            var serializer = new JsonPluginSerializer(RecordTypeRegistry.CreateDefault());
-
-            string json;
-            using (var writer = new StringWriter())
-            {
-                serializer.Write(plugin, writer);
-                json = writer.ToString();
-            }
-
-            Plugin copy;
-            using (var reader = new StringReader(json))
-                copy = serializer.Read(reader);
-
-            var chunk = (TerrainChunkRecord)copy.Records.Single();
-            Assert.That(chunk.Space, Is.EqualTo(TestRecords.OtherSpace));
-            Assert.That(chunk.Coord, Is.EqualTo(coord));
-            Assert.That(chunk.Heights.Resolution, Is.EqualTo(33));
-            Assert.That(chunk.Heights.ToArray(), Is.EqualTo(heights.ToArray()));
-            StringAssert.Contains("\"type\": \"terrain_chunk\"", json);
-            StringAssert.Contains("\"space\": \"core:space/other\"", json);
         }
     }
 }

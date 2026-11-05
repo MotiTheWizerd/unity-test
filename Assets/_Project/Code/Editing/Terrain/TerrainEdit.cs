@@ -54,7 +54,7 @@ namespace Forge.Editing.Terrain
 
         /// <summary>Current working heights of a chunk (original heights if untouched).</summary>
         public HeightField HeightsOf(ChunkCoord coord) =>
-            _working.TryGetValue(coord, out var heights) ? new HeightField(Terrain.Resolution, heights) : Original(coord).Heights;
+            _working.TryGetValue(coord, out var heights) ? new HeightField(Terrain.Resolution, heights) : OriginalHeights(coord);
 
         /// <summary>Records for every chunk this edit changed, ready to commit.</summary>
         public IReadOnlyList<TerrainChunkRecord> ChangedRecords() =>
@@ -64,9 +64,9 @@ namespace Forge.Editing.Terrain
         protected float? GlobalHeight(int gx, int gz, bool original = false)
         {
             var (coord, x, z) = Terrain.Locate(gx, gz);
-            if (!Terrain.TryGetChunk(coord, out var chunk))
-                return null;
-            return !original && _working.TryGetValue(coord, out var heights) ? heights[z * Terrain.Resolution + x] : chunk.Heights[x, z];
+            if (!original && _working.TryGetValue(coord, out var heights))
+                return heights[z * Terrain.Resolution + x];
+            return Terrain.HeightsOf(coord) is HeightField stored ? stored[x, z] : (float?)null;
         }
 
         /// <summary>
@@ -98,6 +98,9 @@ namespace Forge.Editing.Terrain
         TerrainChunkRecord Original(ChunkCoord coord) =>
             Terrain.TryGetChunk(coord, out var chunk) ? chunk : throw new KeyNotFoundException($"No terrain chunk at {coord}.");
 
+        HeightField OriginalHeights(ChunkCoord coord) =>
+            Terrain.HeightsOf(coord) ?? throw new KeyNotFoundException($"No terrain chunk at {coord}.");
+
         // A global sample on a chunk edge or corner belongs to up to four chunks.
         IEnumerable<(ChunkCoord coord, int index)> Owners(int gx, int gz)
         {
@@ -121,7 +124,7 @@ namespace Forge.Editing.Terrain
         float[] WorkingFor(ChunkCoord coord)
         {
             if (!_working.TryGetValue(coord, out var heights))
-                _working[coord] = heights = Original(coord).Heights.ToArray();
+                _working[coord] = heights = OriginalHeights(coord).ToArray();
             return heights;
         }
     }

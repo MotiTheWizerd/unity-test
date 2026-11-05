@@ -107,7 +107,7 @@ namespace Forge.World
             foreach (var coord in coords ?? Enumerable.Empty<ChunkCoord>())
             {
                 if (TryGetPresentedTerrain(coord, out var presented))
-                    TerrainChunkBuilder.ApplyHeights(presented.GameObject, ((TerrainChunkRecord)presented.Record).Heights);
+                    TerrainChunkBuilder.ApplyHeights(presented.GameObject, ((TerrainChunkRecord)presented.Record).Heights.Load());
             }
         }
 
@@ -211,7 +211,7 @@ namespace Forge.World
             {
                 Present(chunk, null,
                     () => TerrainChunkBuilder.Build(chunk, _root),
-                    go => TerrainChunkBuilder.ApplyHeights(go, chunk.Heights));
+                    go => TerrainChunkBuilder.ApplyHeights(go, chunk.Heights.Load()));
                 count++;
             }
 

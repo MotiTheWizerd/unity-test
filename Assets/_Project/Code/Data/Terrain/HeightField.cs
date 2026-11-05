@@ -3,16 +3,15 @@ using System;
 namespace Forge.Data.Terrain
 {
     /// <summary>
-    /// Immutable square grid of terrain heights in meters, row-major by Z then X.
+    /// Immutable square grid of terrain heights in meters, row-major by Z then X: a chunk's heights held in memory.
     /// </summary>
-    public sealed class HeightField
+    public sealed class HeightField : ChunkHeights
     {
         readonly float[] _heights;
 
         public HeightField(int resolution, float[] heights)
+            : base(resolution)
         {
-            if (!WorldGrid.IsValidHeightmapResolution(resolution))
-                throw new ArgumentOutOfRangeException(nameof(resolution), resolution, "Resolution must be 2^n + 1 within the supported range.");
             if (heights == null)
                 throw new ArgumentNullException(nameof(heights));
             if (heights.Length != resolution * resolution)
@@ -25,13 +24,19 @@ namespace Forge.Data.Terrain
                     throw new ArgumentOutOfRangeException(nameof(heights), h, $"Height at index {i} must be within [0, {WorldGrid.MaxTerrainHeight}].");
             }
 
-            Resolution = resolution;
             _heights = (float[])heights.Clone();
         }
 
-        public int Resolution { get; }
+        // Takes ownership of samples already known to be valid (decoded from a terrain file), without a copy.
+        HeightField(float[] heights, int resolution)
+            : base(resolution)
+        {
+            _heights = heights;
+        }
 
         public float this[int x, int z] => _heights[z * Resolution + x];
+
+        public override HeightField Load() => this;
 
         public static HeightField Flat(float height, int resolution = WorldGrid.DefaultHeightmapResolution)
         {
@@ -56,5 +61,8 @@ namespace Forge.Data.Terrain
 
         /// <summary>Copy of the samples, row-major by Z then X.</summary>
         public float[] ToArray() => (float[])_heights.Clone();
+
+        /// <summary>Wraps decoded samples, which the caller guarantees are in range, without copying or checking them.</summary>
+        internal static HeightField Trusted(int resolution, float[] heights) => new HeightField(heights, resolution);
     }
 }

@@ -13,6 +13,9 @@
 *.inputactions text eol=lf
 *.cs         text eol=lf diff=csharp
 
+# Forge terrain heights (plugin side files): binary, never line-ending converted
+*.terrain binary
+
 # Binary art via Git LFS
 *.png  filter=lfs diff=lfs merge=lfs -text
 *.jpg  filter=lfs diff=lfs merge=lfs -text

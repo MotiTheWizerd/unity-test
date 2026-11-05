@@ -10,7 +10,7 @@ namespace Forge.World
         public static GameObject Build(TerrainChunkRecord chunk, Transform parent)
         {
             var data = new TerrainData { name = chunk.Id.ToString() };
-            ApplyHeights(data, chunk.Heights);
+            ApplyHeights(data, chunk.Heights.Load());
 
             var go = Terrain.CreateTerrainGameObject(data);
             go.name = chunk.Id.ToString();

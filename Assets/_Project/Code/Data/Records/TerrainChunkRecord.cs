@@ -6,11 +6,13 @@ namespace Forge.Data.Records
     /// <summary>
     /// Heights for one chunk of a worldspace's grid. The record name is derived from the space and the coordinate,
     /// so a mod changes terrain by overriding the master's chunk record rather than adding a competing one, and
-    /// adds land to any space by defining a chunk at a new coordinate in its own namespace.
+    /// adds land to any space by defining a chunk at a new coordinate in its own namespace. The heights live in the
+    /// plugin's terrain file and are read when first needed (<see cref="ChunkHeights"/>), so a record is small.
     /// </summary>
     public sealed class TerrainChunkRecord : Record
     {
-        public TerrainChunkRecord(RecordId id, RecordId space, ChunkCoord coord, HeightField heights)
+        /// <param name="heights">In memory (a <see cref="HeightField"/>) or stored in a terrain file.</param>
+        public TerrainChunkRecord(RecordId id, RecordId space, ChunkCoord coord, ChunkHeights heights)
             : base(id)
         {
             if (space.IsDefault)
@@ -30,9 +32,10 @@ namespace Forge.Data.Records
 
         public ChunkCoord Coord { get; }
 
-        public HeightField Heights { get; }
+        /// <summary>The chunk's heights; <see cref="ChunkHeights.Load"/> reads them (from disk the first time).</summary>
+        public ChunkHeights Heights { get; }
 
-        public TerrainChunkRecord WithHeights(HeightField heights) => new TerrainChunkRecord(Id, Space, Coord, heights);
+        public TerrainChunkRecord WithHeights(ChunkHeights heights) => new TerrainChunkRecord(Id, Space, Coord, heights);
 
         public static RecordId IdFor(string ns, RecordId space, ChunkCoord coord) => new RecordId(ns, NameFor(space, coord));
 

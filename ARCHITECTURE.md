@@ -35,7 +35,7 @@ Assets/_Project/
   Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview), Water.shader (sea and lakes), Sky.shader (the skybox)
   Materials/     GizmoOverlay.mat, PlacementGhost.mat, Water.mat, Sky.mat
   Settings/      URP, input and volume assets; Worlds/ holds the WorldProfile assets; Agent/ the agent's settings and instructions; Sky/ the SkyProfile assets
-Assets/StreamingAssets/Plugins/   shipped base plugins (forge.core.json = our "Skyrim.esm")
+Assets/StreamingAssets/Plugins/   shipped base plugins (forge.core.json = our "Skyrim.esm", its heights in forge.core.<hash>.terrain)
 Assets/StreamingAssets/StressWorld/  generated stress-test world (git-ignored, Forge/Generate Stress World)
 <persistentDataPath>/Plugins/     user plugins; the active plugin (forge.user) is saved here
 ```
@@ -120,10 +120,14 @@ one in the active plugin.
 - `RecordStore.OfType<T>` is cached per type (the store is immutable), so typed scans of
   the masters (e.g. the palette) are paid once.
 
-**File format** (`JsonPluginSerializer`, format version 1):
+**File format** (`JsonPluginSerializer`, format version 2):
 - Deterministic output (records and deletions sorted) for clean diffs.
 - Record types go through the closed registry only. `TypeNameHandling` is
   never used, `$type` metadata is rejected, and unknown fields are errors. Plugin files are untrusted input.
+- Read in one streaming pass over the fields in written order: `format` first (format 1, which kept heights in the
+  JSON, is refused by name), then `manifest`, `terrain`, `records`, `deletions`.
+- **Terrain heights are not in the JSON.** A plugin with terrain names its terrain file (`"terrain"`), and each
+  chunk's `heights` is only `{"resolution", "block"}`, a block of that file. See *Terrain storage*.
 
 **Spaces** (`SpaceRecord`, `space/<name>`), like Bethesda worldspaces and interior cells: the world is made of
 separate spaces, each with its own coordinates. A *worldspace* is open land; an *interior* (a house, a cave) has
@@ -171,10 +175,33 @@ the season and climate, today's sunrise and sunset, whether the sun is up, and e
 phase.
 
 **Terrain**: a worldspace is a grid of `WorldGrid.ChunkSize` (64 m) chunks. A
-`TerrainChunkRecord` holds a `HeightField` (2^n+1 samples per edge, meters in
+`TerrainChunkRecord` holds `ChunkHeights` (2^n+1 samples per edge, meters in
 [0, `MaxTerrainHeight`]; new land starts at `WorldGrid.DefaultLandHeight`, 50 m). Its record name is derived
 from its space and coordinate (`terrain/{space ns}/{space name}/c{x}_{z}`), so mods reshape terrain by
 *overriding* the master's chunk.
+
+**Terrain storage** (`Forge.Data.Serialization`, engine-free): a record's `ChunkHeights` are either in memory (a
+`HeightField`: new or edited land) or stored in its plugin's terrain file and read on first `Load()`; `Resolution` is
+known without loading. Every reader loads once per use, not per sample (`TerrainGrid.HeightsOf` holds a chunk's heights
+for the grid's life; the world view loads a chunk when it is shown). So a world opens by reading its JSON and the
+terrain files' block tables only, and only land in use is in memory.
+- **The file** (`TerrainFile`, `{plugin}.{16 hex of SHA-256}.terrain` next to the plugin): a 24-byte header ("FTRN",
+  version, meters per step, block count, table offset), the blocks, then the block table (offset, length,
+  resolution, codec). Opening reads the header and table; the file is not held open.
+- **The codec** (`HeightCodec`): heights as 16-bit steps of 1/256 m (under 4 mm; round heights such as 50 m stay exact;
+  65,535 steps reach past 200 m), each stored as its difference from left + above − above-left, zigzagged, split into
+  low- and high-byte planes, Deflated. Flat land is ~40 bytes a chunk, rolling hills ~3 KB (vs ~22 KB of base64 floats
+  before); decoding takes ~0.2 ms a chunk.
+- **The cache** (`HeightCache`): decoded heights of stored chunks up to a byte budget (64 MB default, ~3,900 chunks),
+  least recently used let go first. One cache is shared by all of a world's stores (`EditorAppBootstrap`).
+- **Saving** (`PluginFileStore.Save`): the terrain file is written first (`TerrainFileWriter`: one block per distinct
+  heights instance, so a new worldspace's flat chunks share one; stored blocks are copied packed, without decoding),
+  flushed, and named by its content's hash (same content, same file). Then the JSON, which names it, replaces the old
+  one atomically: the commit point, so a crash at any step leaves a matching pair. Then the plugin's other terrain files
+  go, except the one it was loaded with, whose blocks the open world still reads. Measured on 1,024 rolling-hill chunks:
+  3 MB terrain + 267 KB JSON, saved in 0.2 s, re-saved unchanged in 0.1 s, opened in 24 ms, every chunk decoded in 0.17 s.
+- Untrusted input: a plugin may only name a `.terrain` file of its own next to it (no paths); damaged files and blocks
+  are `DataValidationException`s naming the file.
 
 **Known v1 limits** (deliberate, revisit when needed):
 - No field-level merge between conflicting overrides.
@@ -185,8 +212,9 @@ from its space and coordinate (`terrain/{space ns}/{space name}/c{x}_{z}`), so m
   by its height change under their pivot; slope objects (fences, rocks) are also re-tilted.
 - The edge of the streamed area is hidden by fog, thick at the load radius; there is no distant LOD or impostors yet, so
   nothing beyond it shows.
-  Plugins load whole into memory at startup, so only the *scene* streams, not the *data*. A
-  30 MB JSON plugin takes ~1.3 s to load.
+  Terrain heights load on demand, but the other records (placed objects) still load whole at startup: the 2 km stress
+  world (25k records, 9.7 MB JSON) opens in ~1.1 s, almost all of it its 24k objects.
+- Chunks edited in a session keep their heights in memory until it ends, even after saving.
 - The sea is one level for the whole worldspace, so any hollow below it fills, inland or not. Picks go through water
   to the ground beneath, and placing under water is allowed.
 - A lake whose shore is dug away (so its water would run off) **spills** and shows no water until the shore is rebuilt
@@ -621,6 +649,5 @@ and the condition for removing it, and is listed here.
 | Where | What | Why | Remove when |
 |-------|------|-----|-------------|
 | `Packages/manifest.json` | MCP for Unity tracks the git default branch, not a release tag | Fast setup. The exact commit is locked in `packages-lock.json` | Pin to a release tag on the next package update |
-| `Data.Json/Converters.cs` `HeightFieldConverter` | Terrain heights embedded in plugin JSON as base64 | Keeps a plugin a single file for the walking skeleton | Plugins become packages (folder/zip) with binary side files for heightmaps and assets |
 | `World/Assets/PrefabCatalog.cs` | Catalog entries reference prefabs directly, so all content loads with the catalog at startup | A dozen placeholder prefabs fit in memory easily | Content outgrows memory → load prefabs by asset key through Addressables, streamed with the chunks |
 | `EditorApp/EditorController.cs`, `Tools/ToolDefinition.cs` | Input read by polling devices, not an Input Actions asset; tool keys are fixed `Key`s in `ToolCatalog` | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset, labels read from it |

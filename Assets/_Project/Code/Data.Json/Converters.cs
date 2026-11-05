@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Numerics;
 using Forge.Data.Records;
+using Forge.Data.Serialization;
 using Forge.Data.Terrain;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -156,57 +158,58 @@ namespace Forge.Data.Json
     }
 
     /// <summary>
-    /// Writes a height field as its resolution plus base64-encoded little-endian
-    /// float32 samples.
+    /// Writes a chunk's heights as where they are in the plugin's terrain file: <c>{"resolution": 65, "block": 3}</c>.
+    /// Reading gives heights that load from that block when first needed.
     /// </summary>
-    /// <remarks>
-    /// SHORTCUT: heights are embedded in the plugin JSON. Remove when plugins
-    /// become packages with binary side files (see ARCHITECTURE.md).
-    /// </remarks>
-    sealed class HeightFieldConverter : JsonConverter<HeightField>
+    sealed class ChunkHeightsConverter : JsonConverter
     {
         const string ResolutionProperty = "resolution";
-        const string DataProperty = "data";
+        const string BlockProperty = "block";
 
-        public override void WriteJson(JsonWriter writer, HeightField value, JsonSerializer serializer)
+        readonly ITerrainBlockWriter _written;
+        readonly ITerrainBlockReader _stored;
+
+        /// <param name="written">Writing: where each chunk's heights went; null when the plugin has no terrain.</param>
+        public ChunkHeightsConverter(ITerrainBlockWriter written)
         {
-            var samples = value.ToArray();
-            var bytes = new byte[samples.Length * sizeof(float)];
-            Buffer.BlockCopy(samples, 0, bytes, 0, bytes.Length);
-            if (!BitConverter.IsLittleEndian)
-                ReverseEachFloat(bytes);
+            _written = written;
+        }
+
+        /// <param name="stored">Reading: the terrain file the plugin names; null when it names none.</param>
+        public ChunkHeightsConverter(ITerrainBlockReader stored)
+        {
+            _stored = stored;
+        }
+
+        public override bool CanConvert(Type objectType) => typeof(ChunkHeights).IsAssignableFrom(objectType);
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            var heights = (ChunkHeights)value;
+            if (_written == null)
+                throw new JsonSerializationException("Chunk heights can only be written alongside a terrain file.");
 
             writer.WriteStartObject();
             writer.WritePropertyName(ResolutionProperty);
-            writer.WriteValue(value.Resolution);
-            writer.WritePropertyName(DataProperty);
-            writer.WriteValue(Convert.ToBase64String(bytes));
+            writer.WriteValue(heights.Resolution);
+            writer.WritePropertyName(BlockProperty);
+            writer.WriteValue(_written.BlockOf(heights));
             writer.WriteEndObject();
         }
 
-        public override HeightField ReadJson(JsonReader reader, Type objectType, HeightField existingValue, bool hasExistingValue, JsonSerializer serializer)
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             var json = JObject.Load(reader);
+            if (json.Properties().Any(p => p.Name != ResolutionProperty && p.Name != BlockProperty))
+                throw new JsonSerializationException($"Chunk heights at {json.Path} hold only '{ResolutionProperty}' and '{BlockProperty}'.");
             var resolution = json.Value<int?>(ResolutionProperty)
                 ?? throw new JsonSerializationException($"Missing '{ResolutionProperty}' at {json.Path}.");
-            var data = json.Value<string>(DataProperty)
-                ?? throw new JsonSerializationException($"Missing '{DataProperty}' at {json.Path}.");
+            var block = json.Value<int?>(BlockProperty)
+                ?? throw new JsonSerializationException($"Missing '{BlockProperty}' at {json.Path}.");
+            if (_stored == null)
+                throw new JsonSerializationException($"The chunk at {json.Path} refers to terrain block {block}, but the plugin names no terrain file.");
 
-            var bytes = Convert.FromBase64String(data);
-            if (bytes.Length % sizeof(float) != 0)
-                throw new JsonSerializationException($"Height data at {json.Path} is not a whole number of floats.");
-            if (!BitConverter.IsLittleEndian)
-                ReverseEachFloat(bytes);
-
-            var samples = new float[bytes.Length / sizeof(float)];
-            Buffer.BlockCopy(bytes, 0, samples, 0, bytes.Length);
-            return new HeightField(resolution, samples);
-        }
-
-        static void ReverseEachFloat(byte[] bytes)
-        {
-            for (var i = 0; i < bytes.Length; i += sizeof(float))
-                Array.Reverse(bytes, i, sizeof(float));
+            return _stored.Block(block, resolution);
         }
     }
 

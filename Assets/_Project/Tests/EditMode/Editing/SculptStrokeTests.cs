@@ -157,7 +157,7 @@ namespace Forge.Tests.Editing
 
             Assert.That(session.CanUndo, Is.False);
             var chunk = session.World.Records.Get<TerrainChunkRecord>(TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(0, 0)));
-            Assert.That(chunk.Heights[5, 5], Is.EqualTo(10f));
+            Assert.That(chunk.Heights.Load()[5, 5], Is.EqualTo(10f));
         }
 
         [Test]
@@ -174,10 +174,10 @@ namespace Forge.Tests.Editing
             Assert.That(session.UndoDescription, Is.EqualTo("Sculpt (Raise)"));
             var id = TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(0, 0));
             Assert.That(session.World.Records.GetSource(id), Is.EqualTo("user"));
-            Assert.That(session.World.Records.Get<TerrainChunkRecord>(id).Heights[0, 0], Is.GreaterThan(10f));
+            Assert.That(session.World.Records.Get<TerrainChunkRecord>(id).Heights.Load()[0, 0], Is.GreaterThan(10f));
 
             session.Undo();
-            Assert.That(session.World.Records.Get<TerrainChunkRecord>(id).Heights[0, 0], Is.EqualTo(10f));
+            Assert.That(session.World.Records.Get<TerrainChunkRecord>(id).Heights.Load()[0, 0], Is.EqualTo(10f));
             Assert.That(session.World.Records.GetSource(id), Is.EqualTo("core"));
         }
 
@@ -213,7 +213,7 @@ namespace Forge.Tests.Editing
 
             var other = TerrainChunkRecord.IdFor("core", OtherSpace, new ChunkCoord(0, 0));
             Assert.That(session.World.Records.GetSource(other), Is.EqualTo("core"), "the other space's chunk isn't overridden");
-            Assert.That(session.World.Records.Get<TerrainChunkRecord>(other).Heights[5, 5], Is.EqualTo(50f));
+            Assert.That(session.World.Records.Get<TerrainChunkRecord>(other).Heights.Load()[5, 5], Is.EqualTo(50f));
             Assert.That(session.World.Records.GetSource(TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(0, 0))), Is.EqualTo("user"));
         }
     }

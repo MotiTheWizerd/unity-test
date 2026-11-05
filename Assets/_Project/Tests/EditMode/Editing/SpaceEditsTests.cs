@@ -30,7 +30,7 @@ namespace Forge.Tests.Editing
             var chunks = session.World.Records.OfType<TerrainChunkRecord>().Where(c => c.Space == id).ToList();
             Assert.That(chunks.Select(c => c.Coord), Is.EquivalentTo(
                 from z in new[] { -1, 0, 1 } from x in new[] { -1, 0, 1 } select new ChunkCoord(x, z)));
-            Assert.That(chunks.All(c => c.Heights.ToArray().All(h => h == 40f)), Is.True);
+            Assert.That(chunks.All(c => c.Heights.Load().ToArray().All(h => h == 40f)), Is.True);
 
             Assert.That(session.UndoDescription, Is.EqualTo("New worldspace Whiterun"));
             session.Undo();

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Data.Serialization;
+using Forge.Data.Terrain;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
@@ -13,51 +15,33 @@ namespace Forge.Data.Json
 {
     /// <summary>
     /// Human-readable plugin format. Output is deterministic (records and
-    /// deletions sorted by id) so plugin files diff and merge cleanly.
+    /// deletions sorted by id) so plugin files diff and merge cleanly. Terrain chunks carry only their resolution
+    /// and a block number in the terrain file the plugin names (<c>"terrain"</c>); the heights live there.
     /// </summary>
     public sealed class JsonPluginSerializer : IPluginSerializer
     {
-        public const int FormatVersion = 1;
+        /// <summary>2: terrain heights moved out of the JSON into a terrain file.</summary>
+        public const int FormatVersion = 2;
 
-        readonly JsonSerializer _serializer;
+        const int MaxDepth = 32;
+
+        readonly RecordTypeRegistry _registry;
 
         public JsonPluginSerializer(RecordTypeRegistry registry)
         {
-            if (registry == null)
-                throw new ArgumentNullException(nameof(registry));
-
-            _serializer = JsonSerializer.Create(new JsonSerializerSettings
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                Converters =
-                {
-                    new RecordConverter(registry),
-                    new RecordIdConverter(),
-                    new Vector3Converter(),
-                    new QuaternionConverter(),
-                    new ChunkCoordConverter(),
-                    new HeightFieldConverter(),
-                    // Enums by name ("worldspace"), so files stay readable and survive reordering the enum.
-                    new StringEnumConverter(new CamelCaseNamingStrategy(), allowIntegerValues: false),
-                },
-                Formatting = Formatting.Indented,
-                TypeNameHandling = TypeNameHandling.None,
-                MetadataPropertyHandling = MetadataPropertyHandling.Ignore,
-                MissingMemberHandling = MissingMemberHandling.Error,
-                // Optional fields (e.g. a base object's placement rules) are left out instead of written as null.
-                NullValueHandling = NullValueHandling.Ignore,
-                MaxDepth = 32,
-            });
+            _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         }
 
         public string FileExtension => ".json";
 
-        public void Write(Plugin plugin, TextWriter writer)
+        public void Write(Plugin plugin, TextWriter writer, TerrainLink terrain)
         {
             if (plugin == null)
                 throw new ArgumentNullException(nameof(plugin));
             if (writer == null)
                 throw new ArgumentNullException(nameof(writer));
+            if (terrain == null && plugin.Records.OfType<TerrainChunkRecord>().Any())
+                throw new ArgumentException($"Plugin '{plugin.Id}' has terrain chunks but no terrain file to name.", nameof(terrain));
 
             var document = new PluginDocument
             {
@@ -68,22 +52,25 @@ namespace Forge.Data.Json
                     Version = plugin.Manifest.Version,
                     Masters = new List<string>(plugin.Manifest.Masters),
                 },
+                Terrain = terrain?.FileName,
                 Records = new List<Record>(plugin.Records),
                 Deletions = new List<RecordId>(plugin.Deletions),
             };
 
-            _serializer.Serialize(writer, document);
+            CreateSerializer(new ChunkHeightsConverter(terrain?.Blocks)).Serialize(writer, document);
         }
 
-        public Plugin Read(TextReader reader)
+        public Plugin Read(TextReader reader, Func<string, ITerrainBlockReader> openTerrain)
         {
             if (reader == null)
                 throw new ArgumentNullException(nameof(reader));
+            if (openTerrain == null)
+                throw new ArgumentNullException(nameof(openTerrain));
 
             PluginDocument document;
             try
             {
-                document = (PluginDocument)_serializer.Deserialize(reader, typeof(PluginDocument));
+                document = ReadDocument(new JsonTextReader(reader) { DateParseHandling = DateParseHandling.None, MaxDepth = MaxDepth }, openTerrain);
             }
             catch (Exception ex) when (
                 ex is JsonException || ex is ArgumentException || ex is FormatException ||
@@ -92,16 +79,97 @@ namespace Forge.Data.Json
                 throw new DataValidationException(new[] { $"Malformed plugin file: {Unwrap(ex).Message}" }, ex);
             }
 
-            if (document == null)
-                throw new DataValidationException(new[] { "Plugin file is empty." });
-            if (document.Format != FormatVersion)
-                throw new DataValidationException(new[] { $"Unsupported plugin format {document.Format}; expected {FormatVersion}." });
             if (document.Manifest == null)
                 throw new DataValidationException(new[] { "Plugin file has no manifest." });
 
             var manifest = new PluginManifest(document.Manifest.Id, document.Manifest.Version, document.Manifest.Masters);
             return new Plugin(manifest, document.Records, document.Deletions);
         }
+
+        // One streaming pass over the document's fields, in the order they are written: "format" first (so an old
+        // file is named as such before its records fail to read), and "terrain" before "records", so the chunks can
+        // refer into the terrain file as they are read. The terrain file is opened at the first chunk.
+        PluginDocument ReadDocument(JsonReader json, Func<string, ITerrainBlockReader> openTerrain)
+        {
+            if (!json.Read())
+                throw new DataValidationException(new[] { "Plugin file is empty." });
+            if (json.TokenType != JsonToken.StartObject)
+                throw new JsonSerializationException("A plugin file is a JSON object.");
+
+            var document = new PluginDocument();
+            var terrain = new TerrainBinding(openTerrain);
+            var serializer = CreateSerializer(new ChunkHeightsConverter(terrain));
+            var formatSeen = false;
+            while (json.Read() && json.TokenType == JsonToken.PropertyName)
+            {
+                var field = (string)json.Value;
+                if (!json.Read())
+                    throw new JsonSerializationException($"Field '{field}' has no value.");
+                if (!formatSeen && field != "format")
+                    throw new JsonSerializationException("A plugin file starts with its \"format\".");
+
+                switch (field)
+                {
+                    case "format":
+                        document.Format = serializer.Deserialize<int>(json);
+                        CheckFormat(document.Format);
+                        formatSeen = true;
+                        break;
+                    case "manifest":
+                        document.Manifest = serializer.Deserialize<ManifestDocument>(json);
+                        break;
+                    case "terrain":
+                        terrain.Name = serializer.Deserialize<string>(json);
+                        break;
+                    case "records":
+                        document.Records = serializer.Deserialize<List<Record>>(json);
+                        break;
+                    case "deletions":
+                        document.Deletions = serializer.Deserialize<List<RecordId>>(json);
+                        break;
+                    default:
+                        throw new JsonSerializationException($"Unknown field '{field}' in the plugin file.");
+                }
+            }
+
+            if (!formatSeen)
+                throw new DataValidationException(new[] { "Plugin file has no format." });
+            return document;
+        }
+
+        static void CheckFormat(int format)
+        {
+            if (format == FormatVersion)
+                return;
+
+            throw new DataValidationException(new[] { format == 1
+                ? $"Plugin format 1 kept terrain heights inside the JSON; this Forge reads format {FormatVersion}, which keeps them in a terrain file. Regenerate the plugin."
+                : $"Unsupported plugin format {format}; expected {FormatVersion}." });
+        }
+
+        // A serializer per read or write: the terrain blocks differ per plugin, and converters hold no shared state.
+        JsonSerializer CreateSerializer(ChunkHeightsConverter heights) => JsonSerializer.Create(new JsonSerializerSettings
+        {
+            ContractResolver = new CamelCasePropertyNamesContractResolver(),
+            Converters =
+            {
+                new RecordConverter(_registry),
+                new RecordIdConverter(),
+                new Vector3Converter(),
+                new QuaternionConverter(),
+                new ChunkCoordConverter(),
+                heights,
+                // Enums by name ("worldspace"), so files stay readable and survive reordering the enum.
+                new StringEnumConverter(new CamelCaseNamingStrategy(), allowIntegerValues: false),
+            },
+            Formatting = Formatting.Indented,
+            TypeNameHandling = TypeNameHandling.None,
+            MetadataPropertyHandling = MetadataPropertyHandling.Ignore,
+            MissingMemberHandling = MissingMemberHandling.Error,
+            // Optional fields (e.g. a base object's placement rules) are left out instead of written as null.
+            NullValueHandling = NullValueHandling.Ignore,
+            MaxDepth = MaxDepth,
+        });
 
         // Record constructors validate their arguments; Newtonsoft wraps those
         // failures, so surface the innermost message to the modder.
@@ -112,6 +180,27 @@ namespace Forge.Data.Json
             return ex;
         }
 
+        // The terrain file a plugin names, opened when its first chunk is read: a plugin without terrain opens none.
+        sealed class TerrainBinding : ITerrainBlockReader
+        {
+            readonly Func<string, ITerrainBlockReader> _open;
+            ITerrainBlockReader _file;
+
+            public TerrainBinding(Func<string, ITerrainBlockReader> open)
+            {
+                _open = open;
+            }
+
+            public string Name { get; set; }
+
+            public ChunkHeights Block(int index, int resolution)
+            {
+                if (Name == null)
+                    throw new JsonSerializationException($"A terrain chunk refers to block {index}, but the plugin names no terrain file before its records.");
+                return (_file ?? (_file = _open(Name))).Block(index, resolution);
+            }
+        }
+
         // File-format shape. Kept separate from the domain types so the format
         // can evolve (FormatVersion) without touching the data model.
         sealed class PluginDocument
@@ -119,6 +208,9 @@ namespace Forge.Data.Json
             public int Format { get; set; }
 
             public ManifestDocument Manifest { get; set; }
+
+            /// <summary>The plugin's terrain file, next to it; absent when it has no terrain chunks.</summary>
+            public string Terrain { get; set; }
 
             public List<Record> Records { get; set; }
 
