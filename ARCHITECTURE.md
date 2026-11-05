@@ -462,8 +462,13 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
   mesh per tile with no collider (`ScenePicker` never hits far land). Tiles cover the near land too, 2 m below it, so
   the real chunks draw over them and there is no seam to stitch at the load radius. `WorldStreamer` gives the far
   land whatever budget the chunks left in the frame (one tile anyway when no chunk loaded, so it never stalls);
-  tiles rebuild when `WorldView.TerrainChanged` names a chunk of theirs (a sculpt commit, extend land, undo), edge
-  neighbours included. A tile reads its 16 chunks through the height cache, ~2.5 ms worst case here.
+  tiles rebuild when `WorldView.TerrainChanged` names a chunk of theirs (a sculpt commit, a paint stroke, extend land,
+  undo), edge neighbours included. A tile reads its 16 chunks through the terrain cache, ~2.5 ms worst case here.
+  Each far sample also records the ground showing most at the paint texel under it (`FarTile.GroundAt`, null where
+  unpainted), and the mesh carries it as a vertex color: the layer's map color (`GroundLooks.MapColorOf`, the
+  average of its color texture, linear, stored in the catalog by the build tool). `Shaders/FarTerrain.shader`
+  (`Forge/FarTerrain`, on `Materials/FarTerrain.mat`) lights those colors with the sun and the sky's ambient and
+  fogs them like the near land, with a depth pass so the water reads its depth next to far shores.
 - Measured on the stress world (25,394 records: 1,024 chunks = 2 × 2 km, ~24k objects,
   30 MB JSON), with Unity unfocused, so this is CPU work only and excludes render and destroy cost:
   - startup: load plugins 1,312 ms, resolve 9 ms, first view 211 ms (113 chunks, 2,615 objects)
@@ -657,7 +662,11 @@ slopes), so results are exact and every edit goes through the edit session.
     the other layers giving up their share in proportion, across chunk edges, on land only; previewed with
     `WorldView.PreviewPaint`, committed with `TerrainEdits.Commit(session, PaintStroke)` (heights untouched).
     Unpainted ground counts as the ground layer with the catalog's base look (`EditorContext.UnpaintedGround`) once
-    painted beside another. Painting that layer is how ground is cleaned up.
+    painted beside another. Painting that layer is how ground is cleaned up. **Auto** (`EditorCommands.AutoPaintSpace`
+    → `AutoPaint`, engine-free) repaints the whole space by its shape, one undo step: each texel's height and slope come
+    from its chunk's own samples (fast: 729 chunks in 0.7 s), and `AutoPaintRules` give steep ground (from 34°) rock,
+    slopes (from 20°) dirt, ground under the sea or up to 1.5 m above it sand, and the rest unpainted ground's layer,
+    every change blended. Lakes don't make a shore yet.
   - `WaterTool` (L), a paint bucket for lakes: a press in a hollow surveys it and previews a full lake; dragging up
     or down sets the level (50 px per meter, Ctrl half meters), clamped between just above the ground and the brim,
     so it can't spill; release places it (`WaterEdits`, one undo step). A press on a lake (`WaterMap.LakeAt`, or near
@@ -813,5 +822,6 @@ and the condition for removing it, and is listed here.
 | Where | What | Why | Remove when |
 |-------|------|-----|-------------|
 | `Packages/manifest.json` | MCP for Unity tracks the git default branch, not a release tag | Fast setup. The exact commit is locked in `packages-lock.json` | Pin to a release tag on the next package update |
+| `EditorApp/EditorCommands.cs` (`AutoPaintSpace`) | Auto paint's roles (slope, steep, shore) are the base game's ground looks by asset key (`ground/dirt`, `ground/rock`, `ground/sand`) | The base game's four layers are the only ground | Worlds need their own ground → the rules become data (a climate's or worldspace's `AutoPaintRules`) |
 | `World/Assets/KeyedAssetCatalog.cs` | Catalog entries (prefabs, terrain layers) reference assets directly, so all content loads with the catalog at startup | A dozen placeholder prefabs and four ground layers fit in memory easily | Content outgrows memory → load prefabs by asset key through Addressables, streamed with the chunks |
 | `EditorApp/EditorController.cs`, `Tools/ToolDefinition.cs` | Input read by polling devices, not an Input Actions asset; tool keys are fixed `Key`s in `ToolCatalog` | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset, labels read from it |

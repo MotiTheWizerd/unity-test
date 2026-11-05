@@ -114,6 +114,32 @@ namespace Forge.Tests.Streaming
         }
 
         [Test]
+        public void Sample_RecordsTheGroundShowingMost_UnpaintedIsNull()
+        {
+            var grass = Forge.Data.Records.GroundLayerRecord.IdFor("core", "grass");
+            var rock = Forge.Data.Records.GroundLayerRecord.IdFor("core", "rock");
+            // Chunk (0, 0) is rock on its east half, grass on its west; the others are unpainted.
+            var weights = new float[2 * GroundPaint.TexelCount];
+            for (var t = 0; t < GroundPaint.TexelCount; t++)
+            {
+                var east = t % GroundPaint.Resolution >= 32;
+                weights[t] = east ? 0f : 1f;
+                weights[GroundPaint.TexelCount + t] = east ? 1f : 0f;
+            }
+
+            var paint = GroundPaint.FromWeights(new[] { grass, rock }, weights);
+            var tile = FarTiles.Sample(new ChunkCoord(0, 0), ChunksPerTile, Step, coord => Plane(coord, 65),
+                coord => coord == new ChunkCoord(0, 0) ? paint : null);
+
+            Assert.That(tile.GroundAt(1, 3), Is.EqualTo(grass), "8 m in: the west half.");
+            Assert.That(tile.GroundAt(5, 3), Is.EqualTo(rock), "40 m in: the east half.");
+            Assert.That(tile.GroundAt(9, 3), Is.Null, "72 m in: chunk (1, 0), unpainted.");
+            Assert.That(tile.GroundAt(8, 3), Is.EqualTo(rock), "On the edge the two chunks share, the painted one's ground shows.");
+            Assert.That(FarTiles.Sample(new ChunkCoord(0, 0), ChunksPerTile, Step, coord => Plane(coord, 65)).GroundAt(5, 3), Is.Null,
+                "Without paint, nothing is recorded.");
+        }
+
+        [Test]
         public void Sample_RejectsStepsThatDontFitTheSamples()
         {
             Func<ChunkCoord, ChunkHeights> land = coord => Plane(coord, 33);

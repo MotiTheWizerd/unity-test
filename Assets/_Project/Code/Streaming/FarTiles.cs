@@ -1,4 +1,5 @@
 using System;
+using Forge.Data;
 using Forge.Data.Terrain;
 
 namespace Forge.Streaming
@@ -22,8 +23,11 @@ namespace Forge.Streaming
         /// tile's east or north edge (their samples are the tile's last row and column where the tile's own chunk is
         /// missing). <paramref name="step"/> must divide the chunk evenly and be a whole multiple of every chunk's
         /// own sample spacing, so each far sample is one of the chunk's samples, never an interpolation.
+        /// <paramref name="paintAt"/>, when given, answers a chunk's paint (null where unpainted): each sample then
+        /// records the ground showing most at the paint texel under it (<see cref="FarTile.GroundAt"/>).
         /// </summary>
-        public static FarTile Sample(ChunkCoord tile, int chunksPerTile, float step, Func<ChunkCoord, ChunkHeights> terrainAt)
+        public static FarTile Sample(ChunkCoord tile, int chunksPerTile, float step, Func<ChunkCoord, ChunkHeights> terrainAt,
+            Func<ChunkCoord, ChunkPaint> paintAt = null)
         {
             RequireChunksPerTile(chunksPerTile);
             if (terrainAt == null)
@@ -35,6 +39,7 @@ namespace Forge.Streaming
             var cells = (int)Math.Round(cellsPerChunk);
             var resolution = chunksPerTile * cells + 1;
             var heights = new float[resolution * resolution];
+            var ground = new RecordId?[resolution * resolution];
             var present = new bool[chunksPerTile * chunksPerTile];
             var first = new ChunkCoord(tile.X * chunksPerTile, tile.Z * chunksPerTile);
 
@@ -54,6 +59,7 @@ namespace Forge.Streaming
 
                 var stride = Stride(field, step);
                 var samples = field.Load();
+                var paint = paintAt?.Invoke(new ChunkCoord(first.X + cx, first.Z + cz))?.Load();
                 // The samples of this chunk that fall inside the tile's grid: all of them for an inside chunk, only
                 // the west column / south row for a neighbour beyond the tile's edge.
                 var countX = insideX ? cells + 1 : 1;
@@ -66,11 +72,17 @@ namespace Forge.Streaming
                     if (gx > resolution - 1 || gz > resolution - 1)
                         continue;
                     heights[gz * resolution + gx] = samples[sx * stride, sz * stride];
+                    if (paint != null)
+                        ground[gz * resolution + gx] = paint.DominantAt(TexelAt(sx * step), TexelAt(sz * step));
                 }
             }
 
-            return new FarTile(tile, chunksPerTile, step, heights, present);
+            return new FarTile(tile, chunksPerTile, step, heights, present, ground);
         }
+
+        // The paint texel under a point `meters` into its chunk; the east and north edges belong to the last texel.
+        static int TexelAt(float meters) =>
+            Math.Min(GroundPaint.Resolution - 1, (int)Math.Floor(meters / (WorldGrid.ChunkSize / GroundPaint.Resolution)));
 
         static int Stride(ChunkHeights field, float step)
         {

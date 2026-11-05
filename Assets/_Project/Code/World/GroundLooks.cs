@@ -42,6 +42,22 @@ namespace Forge.World
                 : Fallback(ground.AssetKey, $"the ground layer catalog has nothing for '{ground.AssetKey}' ({layer})");
         }
 
+        /// <summary>
+        /// What ground layer <paramref name="layer"/> looks like from afar (linear): its look's map color; null, or a
+        /// layer without one, gets the base layer's; without that, a neutral earth tone.
+        /// </summary>
+        public Color MapColorOf(RecordId? layer)
+        {
+            var key = layer is RecordId id && _records != null && _records.TryGet(id, out var record) && record is GroundLayerRecord ground
+                ? ground.AssetKey
+                : _catalog.BaseKey;
+            if (_catalog.TryGetMapColor(key, out var color) || _catalog.TryGetMapColor(_catalog.BaseKey, out color))
+                return color;
+            return NeutralGround;
+        }
+
+        static readonly Color NeutralGround = new Color(0.18f, 0.17f, 0.12f);
+
         TerrainLayer Fallback(string what, string problem)
         {
             if (_warned.Add(what))

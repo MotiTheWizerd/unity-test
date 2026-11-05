@@ -115,6 +115,7 @@
                 <ui:VisualElement name="paint-layers" class="forge-row forge-choices" tooltip="The ground to paint" />
                 <forge:ForgeSlider name="paint-radius" label="Radius" unit="m" class="forge-options__slider" />
                 <forge:ForgeSlider name="paint-strength" label="Strength" class="forge-options__slider" />
+                <forge:ForgeButton name="paint-auto" text="Auto" icon="sparkles" tooltip="Paint this whole space by its shape: rock on steep ground, dirt on slopes, sand at the shore, grass elsewhere. Replaces its paint; one undo step." />
             </ui:VisualElement>
             <ui:VisualElement name="options-water" class="forge-options__group">
                 <ui:Label name="water-lake" />

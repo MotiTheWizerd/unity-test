@@ -1,4 +1,5 @@
 using System;
+using Forge.Data;
 using Forge.Data.Terrain;
 
 namespace Forge.Streaming
@@ -13,9 +14,11 @@ namespace Forge.Streaming
     {
         readonly float[] _heights;
         readonly bool[] _chunks;
+        readonly RecordId?[] _ground;
 
-        internal FarTile(ChunkCoord coord, int chunksPerTile, float step, float[] heights, bool[] chunks)
+        internal FarTile(ChunkCoord coord, int chunksPerTile, float step, float[] heights, bool[] chunks, RecordId?[] ground = null)
         {
+            _ground = ground ?? new RecordId?[heights.Length];
             Coord = coord;
             ChunksPerTile = chunksPerTile;
             Step = step;
@@ -50,6 +53,9 @@ namespace Forge.Streaming
 
         /// <summary>Height in meters at sample (x, z); 0 where no chunk holds the sample.</summary>
         public float this[int x, int z] => _heights[z * Resolution + x];
+
+        /// <summary>The ground layer showing most at sample (x, z); null where the ground is unpainted (or wasn't sampled).</summary>
+        public RecordId? GroundAt(int x, int z) => _ground[z * Resolution + x];
 
         /// <summary>Whether the chunk at local index (x, z), 0 ≤ x, z &lt; ChunksPerTile, exists.</summary>
         public bool HasChunk(int x, int z) => _chunks[z * ChunksPerTile + x];

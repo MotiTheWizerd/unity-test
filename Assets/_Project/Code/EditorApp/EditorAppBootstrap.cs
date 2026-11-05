@@ -125,8 +125,10 @@ namespace Forge.EditorApp
                 // This object is the world root: the world is built under it at world coordinates, and the frame moves it.
                 _frame = new WorldFrame(transform, _rebaseDistance);
                 _frame.Shifted += OnSceneShifted;
-                _view = new WorldView(transform, assets, _terrainMaterial, CreateGroundLooks());
-                _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs, CreateFarTerrain());
+                // One look-up of the ground's looks, for the near land and the far.
+                var ground = CreateGroundLooks();
+                _view = new WorldView(transform, assets, _terrainMaterial, ground);
+                _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs, CreateFarTerrain(ground));
                 _view.Sync(_context.Session.World);
                 _interiorFloor = InteriorFloor.Create(transform, _interiorFloorMaterial);
                 _waterView = CreateWaterView();
@@ -278,7 +280,7 @@ namespace Forge.EditorApp
         }
 
         // Coarse land beyond the loaded chunks, under the world root like everything else that stands in the world.
-        FarTerrainView CreateFarTerrain()
+        FarTerrainView CreateFarTerrain(GroundLooks ground)
         {
             if (_farTerrainMaterial == null)
             {
@@ -286,7 +288,7 @@ namespace Forge.EditorApp
                 return null;
             }
 
-            return new FarTerrainView(transform, _farTerrainMaterial, _farRadius);
+            return new FarTerrainView(transform, _farTerrainMaterial, _farRadius, ground);
         }
 
         // The sea is as large as the camera can see in every direction, so it reaches the horizon.

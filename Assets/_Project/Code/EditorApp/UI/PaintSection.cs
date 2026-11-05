@@ -8,7 +8,7 @@ using UnityEngine.UIElements;
 
 namespace Forge.EditorApp.UI
 {
-    /// <summary>The paint tool's options: which ground layer to paint, and the brush's radius and strength.</summary>
+    /// <summary>The paint tool's options: which ground layer to paint, the brush's radius and strength, and Auto (paint the space by its shape).</summary>
     public sealed class PaintSection : IPanelSection
     {
         readonly EditorContext _context;
@@ -18,12 +18,15 @@ namespace Forge.EditorApp.UI
         IReadOnlyList<GroundLayerRecord> _shownLayers;
         ChoiceRow<RecordId> _layers;
 
-        public PaintSection(VisualElement root, EditorContext context)
+        public PaintSection(VisualElement root, EditorContext context, EditorCommands commands)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            if (commands == null)
+                throw new ArgumentNullException(nameof(commands));
             _group = PanelElements.Required<VisualElement>(root, "options-paint");
             _layersRow = PanelElements.Required<VisualElement>(root, "paint-layers");
             _brush = new BrushSliders(root, context, "paint-radius", "paint-strength");
+            PanelElements.Required<Button>(root, "paint-auto").clicked += commands.AutoPaintSpace;
         }
 
         public void Refresh()

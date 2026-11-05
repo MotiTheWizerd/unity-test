@@ -11,7 +11,8 @@ namespace Forge.UnityEditor.Content
     /// catalog under "ground/{folder name, lower case}". A folder holds {Name}_Color, {Name}_NormalGL and, optionally,
     /// {Name}_AmbientOcclusion, {Name}_Displacement and {Name}_Roughness (ambientCG's naming); the last three are packed
     /// into the mask map Unity's terrain reads ({Name}_Mask.png: metallic 0, occlusion, height, smoothness =
-    /// 1 − roughness). Existing assets are updated in place, so their GUIDs survive a rebuild.
+    /// 1 − roughness). It also records each layer's map color, the color texture's average, for the far land.
+    /// Existing assets are updated in place, so their GUIDs survive a rebuild.
     /// </summary>
     static class GroundLayerBuilder
     {
@@ -38,7 +39,9 @@ namespace Forge.UnityEditor.Content
                 var layer = BuildLayer(folder, name);
                 if (layer == null)
                     continue;
-                catalog.Set("ground/" + name.ToLowerInvariant(), layer);
+                var key = "ground/" + name.ToLowerInvariant();
+                catalog.Set(key, layer);
+                catalog.SetMapColor(key, AverageColor($"{folder}/{name}_Color.jpg"));
                 built++;
             }
 
@@ -113,6 +116,25 @@ namespace Forge.UnityEditor.Content
 
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
             return path;
+        }
+
+        // The color texture's average, linear: what the ground looks like from afar.
+        static Color AverageColor(string path)
+        {
+            var texture = Load(path);
+            var pixels = texture.GetPixels32();
+            Object.DestroyImmediate(texture);
+
+            double r = 0, g = 0, b = 0;
+            foreach (var pixel in pixels)
+            {
+                // Averaged as light (linear), not as sRGB numbers, so the result is the color the eye blends to.
+                r += Mathf.GammaToLinearSpace(pixel.r / 255f);
+                g += Mathf.GammaToLinearSpace(pixel.g / 255f);
+                b += Mathf.GammaToLinearSpace(pixel.b / 255f);
+            }
+
+            return new Color((float)(r / pixels.Length), (float)(g / pixels.Length), (float)(b / pixels.Length), 1f);
         }
 
         // Decodes an image file straight from disk (readable, unlike an imported texture); null when there is none.

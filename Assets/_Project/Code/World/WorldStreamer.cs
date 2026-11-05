@@ -51,7 +51,9 @@ namespace Forge.World
         public void ShowSpace(Forge.Data.RecordId space, Vector3 focus)
         {
             _view.ShowSpace(space);
-            _far?.ShowSpace(coord => _view.TryGetTerrain(coord, out var chunk) ? chunk.Heights : null);
+            _far?.ShowSpace(
+                coord => _view.TryGetTerrain(coord, out var chunk) ? chunk.Heights : null,
+                coord => _view.TryGetTerrain(coord, out var chunk) ? chunk.Paint : null);
             _lastFocus = null;
             LoadAll(focus);
         }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Forge.Data;
 using Forge.Data.Terrain;
 using Forge.Streaming;
 using UnityEngine;
@@ -31,14 +32,18 @@ namespace Forge.World
         // Tiles shown, by tile coordinate; null for a tile with no land (nothing to draw, but nothing to rebuild either).
         readonly Dictionary<ChunkCoord, GameObject> _tiles = new Dictionary<ChunkCoord, GameObject>();
         readonly HashSet<ChunkCoord> _dirty = new HashSet<ChunkCoord>();
+        readonly Func<RecordId?, Color> _colorOf;
         Func<ChunkCoord, ChunkHeights> _terrainAt = coord => null;
+        Func<ChunkCoord, ChunkPaint> _paintAt = coord => null;
         ChunkCoord? _lastFocus;
 
         /// <param name="radiusChunks">How far from the focus, in chunks, far land is shown; rounded up to whole tiles.</param>
-        public FarTerrainView(Transform root, Material material, int radiusChunks)
+        /// <param name="ground">How ground layers look from afar; null draws all far land in one neutral color.</param>
+        public FarTerrainView(Transform root, Material material, int radiusChunks, GroundLooks ground = null)
         {
             _root = root != null ? root : throw new ArgumentNullException(nameof(root));
             _material = material != null ? material : throw new ArgumentNullException(nameof(material));
+            _colorOf = ground != null ? ground.MapColorOf : (Func<RecordId?, Color>)(layer => Color.gray);
             if (radiusChunks < 0)
                 throw new ArgumentOutOfRangeException(nameof(radiusChunks), radiusChunks, "Radius must not be negative.");
 
@@ -60,10 +65,14 @@ namespace Forge.World
 
         public int TileCount => _tiles.Count;
 
-        /// <summary>Shows the land <paramref name="terrainAt"/> answers for (null where a chunk has none) instead of the current one.</summary>
-        public void ShowSpace(Func<ChunkCoord, ChunkHeights> terrainAt)
+        /// <summary>
+        /// Shows the land <paramref name="terrainAt"/> answers for (null where a chunk has none), painted as
+        /// <paramref name="paintAt"/> says (null where unpainted), instead of the current one.
+        /// </summary>
+        public void ShowSpace(Func<ChunkCoord, ChunkHeights> terrainAt, Func<ChunkCoord, ChunkPaint> paintAt)
         {
             _terrainAt = terrainAt ?? throw new ArgumentNullException(nameof(terrainAt));
+            _paintAt = paintAt ?? throw new ArgumentNullException(nameof(paintAt));
             RemoveAll();
             _lastFocus = null;
         }
@@ -128,8 +137,8 @@ namespace Forge.World
         {
             Remove(coord);
             _dirty.Remove(coord);
-            var tile = FarTiles.Sample(coord, ChunksPerTile, Step, _terrainAt);
-            _tiles.Add(coord, tile.IsEmpty ? null : FarTerrainMesh.Build(tile, _root, _material, Drop));
+            var tile = FarTiles.Sample(coord, ChunksPerTile, Step, _terrainAt, _paintAt);
+            _tiles.Add(coord, tile.IsEmpty ? null : FarTerrainMesh.Build(tile, _root, _material, Drop, _colorOf));
         }
 
         void Remove(ChunkCoord coord)
