@@ -31,7 +31,6 @@ Material:
     - _SunGlowPower: 600
     - _SunSize: 0.7
     m_Colors:
-    - _GroundColor: {r: 0.35999998, g: 0.37999994, b: 0.39999998, a: 1}
     - _HorizonColor: {r: 0.7, g: 0.82, b: 0.95, a: 1}
     - _SunColor: {r: 1, g: 0.96, b: 0.9, a: 1}
     - _SunDirection: {r: 0, g: 0.77, b: -0.64, a: 0}

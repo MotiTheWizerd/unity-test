@@ -500,8 +500,8 @@ slopes), so results are exact and every edit goes through the edit session.
   level, plus a preview surface the Water tool shows in place of a lake while its level is set. The land hides water
   where it stands higher; there are no colliders.
   And the **`SkyView`** (`World/Sky`, from `_sky`, a `SkyProfile` in `Settings/Sky`, driving the scene's directional light
-  `_sun`): `Show(SkyState)` sets a runtime copy of the `Forge/Sky` skybox (horizon-to-zenith gradient, ground below
-  the horizon, sun disk, glow and horizon haze; up to `SkyView.MaxMoons` (4) moons, each face lit from the sun's real
+  `_sun`): `Show(SkyState)` sets a runtime copy of the `Forge/Sky` skybox (horizon-to-zenith gradient, the horizon (fog)
+  color below the horizon so no band shows past the land's far edge from high up, sun disk, glow and horizon haze; up to `SkyView.MaxMoons` (4) moons, each face lit from the sun's real
   direction so its crescent faces the sun, with grey markings, a faint dark side that hides the stars and a halo as
   strong as its lit share, dimmed by day; two layers of procedural stars on a grid turned by the stars' turn, fading in
   as the sun sinks from 3° to 12° below the horizon), the sky's light, exponential-squared fog in the horizon color

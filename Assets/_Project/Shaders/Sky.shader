@@ -1,16 +1,16 @@
-// Forge's sky, drawn as the skybox: a gradient from the horizon up to the zenith (and down to the ground below the
-// horizon), the sun's disk, a soft glow around it and a warm haze along the horizon on the sun's side; by night the
-// stars (turning around the pole star) and up to four moons, each face lit from the sun's direction so its phase
-// shows as it truly falls. Every color, the sun, the moons and the stars' turn are set by Forge.World.SkyView from the
-// SkyProfile and the SkyState, so the same shader draws dawn, noon, dusk and night. The horizon color is also the fog
-// color, so fogged land and sea melt into the sky.
+// Forge's sky, drawn as the skybox: a gradient from the horizon up to the zenith, the sun's disk, a soft glow around
+// it and a warm haze along the horizon on the sun's side; by night the stars (turning around the pole star) and up to
+// four moons, each face lit from the sun's direction so its phase shows as it truly falls. Every color, the sun, the
+// moons and the stars' turn are set by Forge.World.SkyView from the SkyProfile and the SkyState, so the same shader
+// draws dawn, noon, dusk and night. The horizon color is also the fog color, so fogged land and sea melt into the sky;
+// below the horizon the sky is that color too, so looking down past the land's far edge (from high up) shows only
+// haze, never a band where the land stops.
 Shader "Forge/Sky"
 {
     Properties
     {
         _ZenithColor ("Zenith", Color) = (0.18, 0.42, 0.85, 1)
         _HorizonColor ("Horizon", Color) = (0.70, 0.82, 0.95, 1)
-        _GroundColor ("Ground (below the horizon)", Color) = (0.36, 0.38, 0.40, 1)
         _GradientPower ("Horizon band (lower = thinner)", Range(0.1, 2)) = 0.45
         _SunDirection ("Direction to the sun", Vector) = (0, 0.77, -0.64, 0)
         _SunColor ("Sun", Color) = (1, 0.96, 0.9, 1)
@@ -46,7 +46,6 @@ Shader "Forge/Sky"
             CBUFFER_START(UnityPerMaterial)
                 half4 _ZenithColor;
                 half4 _HorizonColor;
-                half4 _GroundColor;
                 float _GradientPower;
                 float4 _SunDirection;
                 half4 _SunColor;
@@ -168,9 +167,8 @@ Shader "Forge/Sky"
                 float up = direction.y;
                 float pixel = max(length(fwidth(direction)), 1e-5);
 
-                half3 sky = lerp(_HorizonColor.rgb, _ZenithColor.rgb, pow(saturate(up), _GradientPower));
-                half3 ground = lerp(_HorizonColor.rgb, _GroundColor.rgb, saturate(-up * 6));
-                half3 color = up >= 0 ? sky : ground;
+                // Below the horizon the gradient stays at the horizon (fog) color.
+                half3 color = lerp(_HorizonColor.rgb, _ZenithColor.rgb, pow(saturate(up), _GradientPower));
 
                 float3 toSun = normalize(_SunDirection.xyz);
                 float toward = dot(direction, toSun);

@@ -27,9 +27,6 @@ namespace Forge.World.Sky
         [SerializeField] Gradient _horizon = Over(
             (-10f, new Color(0.06f, 0.07f, 0.12f)), (0f, new Color(0.95f, 0.56f, 0.34f)), (10f, new Color(0.86f, 0.80f, 0.74f)), (25f, new Color(0.72f, 0.82f, 0.93f)), (90f, new Color(0.68f, 0.81f, 0.95f)));
 
-        [SerializeField] Gradient _ground = Over(
-            (-10f, new Color(0.03f, 0.03f, 0.04f)), (0f, new Color(0.30f, 0.24f, 0.22f)), (20f, new Color(0.38f, 0.39f, 0.40f)), (90f, new Color(0.40f, 0.41f, 0.42f)));
-
         [SerializeField] Gradient _sunLight = Over(
             (-10f, new Color(1f, 0.45f, 0.25f)), (0f, new Color(1f, 0.55f, 0.30f)), (12f, new Color(1f, 0.85f, 0.68f)), (35f, new Color(1f, 0.96f, 0.90f)), (90f, new Color(1f, 0.98f, 0.95f)));
 
@@ -74,7 +71,7 @@ namespace Forge.World.Sky
         public SkyColors ColorsAt(float sunHeight)
         {
             var t = Mathf.InverseLerp(LowestSun, HighestSun, sunHeight);
-            return new SkyColors(_zenith.Evaluate(t), _horizon.Evaluate(t), _ground.Evaluate(t), _sunLight.Evaluate(t),
+            return new SkyColors(_zenith.Evaluate(t), _horizon.Evaluate(t), _sunLight.Evaluate(t),
                 Mathf.Max(0f, _sunIntensity.Evaluate(sunHeight)));
         }
 

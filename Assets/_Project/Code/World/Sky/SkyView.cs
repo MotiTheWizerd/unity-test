@@ -74,7 +74,6 @@ namespace Forge.World.Sky
 
             _material.SetColor("_ZenithColor", colors.Zenith);
             _material.SetColor("_HorizonColor", colors.Horizon);
-            _material.SetColor("_GroundColor", colors.Ground);
             // The disk, its glow and the horizon haze linger through twilight, then fade out under the horizon.
             _material.SetColor("_SunColor", colors.SunLight * Mathf.Clamp01((sun.Height + TwilightDepth) / TwilightDepth));
             _material.SetVector("_SunDirection", toSun);
