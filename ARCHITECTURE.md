@@ -575,7 +575,7 @@ slopes), so results are exact and every edit goes through the edit session.
   materials are never touched).
 - **UI** (`EditorApp/UI`, UI Toolkit): the layout lives in `UI/EditorPanel.uxml`, rendered by a `UIDocument` with
   `ForgePanelSettings`. **The look is decided in one place**: `UI/Theme/ForgeTokens.uss` holds the design tokens
-  (USS variables: panel glass `rgba(0,0,0,0.6)`, the warm accent, text tones, radii, spacing, type scale, motion);
+  (USS variables: panel glass `rgba(0,0,0,0.8)`, the warm accent, text tones, radii, spacing, type scale, motion);
   `UI/Theme/ForgeControls.uss` restyles Unity's built-in controls (buttons, fields, sliders, toggles, dropdowns and
   their menus, foldouts, scrollers, tabs) with those tokens; `UI/Theme/ForgeIcons.uss` maps icon names to the
   Lucide SVGs in `UI/Icons` (imported as `VectorImage` by the built-in vector graphics module, stroked white so

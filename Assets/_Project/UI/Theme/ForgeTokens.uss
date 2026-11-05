@@ -1,12 +1,12 @@
 /*
  * Forge design tokens: the one place the editor's look is decided.
  * Every other style sheet reads these through var(); change a value here and the whole UI follows.
- * Delicate dark glass: black panels at 60% opacity, thin light borders, one warm accent.
+ * Delicate dark glass: black panels at 80% opacity, thin light borders, one warm accent.
  */
 
 :root {
     /* Surfaces */
-    --forge-panel-bg: rgba(0, 0, 0, 0.6);
+    --forge-panel-bg: rgba(0, 0, 0, 0.8);
     --forge-panel-border: rgba(255, 255, 255, 0.08);
     --forge-panel-radius: 8px;
 
