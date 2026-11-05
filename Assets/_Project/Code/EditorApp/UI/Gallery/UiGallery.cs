@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Forge.Data;
-using Forge.Data.Records;
 using Forge.EditorApp.UI.Controls;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -39,13 +37,11 @@ namespace Forge.EditorApp.UI.Gallery
             var tiles = root.Q("tiles");
             if (tiles != null)
             {
-                var pine = new BaseObjectRecord(RecordId.Parse("gallery:pine"), "Pine Tree", "primitive/cube", "Nature/Trees");
-                var house = new BaseObjectRecord(RecordId.Parse("gallery:house"), "A House With A Long Name", "primitive/cube", "Architecture");
-                tiles.Add(new AssetTile(pine, 1, () => { }) { tooltip = "Pine Tree  <color=#9EA4AE>1 · Nature / Trees</color>" });
-                var chosen = new AssetTile(house, 2, () => { }) { tooltip = "The chosen one" };
+                tiles.Add(new AssetTile("Pine Tree", 1, () => { }) { tooltip = "Pine Tree  <color=#9EA4AE>1 · Nature / Trees</color>" });
+                var chosen = new AssetTile("A House With A Long Name", 2, () => { }) { tooltip = "The chosen one" };
                 chosen.AddToClassList(PanelElements.ActiveClass);
                 tiles.Add(chosen);
-                tiles.Add(new AssetTile(new BaseObjectRecord(RecordId.Parse("gallery:rock"), "Rock", "primitive/cube"), 0, () => { }));
+                tiles.Add(new AssetTile("Rock", 0, () => { }));
             }
         }
     }

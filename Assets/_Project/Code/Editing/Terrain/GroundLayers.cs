@@ -4,6 +4,7 @@ using System.Linq;
 using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
+using Forge.Editing.Palette;
 
 namespace Forge.Editing.Terrain
 {
@@ -20,6 +21,21 @@ namespace Forge.Editing.Terrain
                 .OrderBy(layer => layer.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(layer => layer.Id)
                 .ToList();
+        }
+
+        /// <summary>
+        /// The layers matching every term of <paramref name="query"/> in their display name or id, in their order
+        /// (<see cref="SearchQuery"/>, as the object palette searches). A blank query returns them all.
+        /// </summary>
+        public static IReadOnlyList<GroundLayerRecord> Filter(IReadOnlyList<GroundLayerRecord> layers, string query)
+        {
+            if (layers == null)
+                throw new ArgumentNullException(nameof(layers));
+
+            var terms = SearchQuery.Terms(query);
+            return terms.Length == 0
+                ? layers
+                : layers.Where(layer => SearchQuery.Matches(terms, layer.DisplayName, layer.Id.ToString())).ToList();
         }
 
         /// <summary>

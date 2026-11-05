@@ -1,14 +1,13 @@
 using System;
-using Forge.Data;
-using Forge.Data.Records;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Forge.EditorApp.UI.Controls
 {
     /// <summary>
-    /// One asset in the assets browser: a thumbnail, the name under it and, for the first nine objects, the number
-    /// key that places it. The thumbnail shows a placeholder icon until <see cref="SetThumbnail"/> gives it a picture.
+    /// One entry in the assets browser (an object to place, a ground to paint): a thumbnail, the name under it and,
+    /// optionally, the number key that picks it. The thumbnail shows a placeholder icon until <see cref="SetThumbnail"/>
+    /// gives it a picture.
     /// </summary>
     public sealed class AssetTile : Button
     {
@@ -22,11 +21,9 @@ namespace Forge.EditorApp.UI.Controls
         readonly VisualElement _thumb;
         readonly VisualElement _placeholder;
 
-        public AssetTile(BaseObjectRecord record, int shortcut, Action onPick) : base(onPick)
+        /// <param name="shortcut">The number key shown in the corner; 0 for none.</param>
+        public AssetTile(string displayName, int shortcut, Action onPick) : base(onPick)
         {
-            if (record == null) throw new ArgumentNullException(nameof(record));
-            Id = record.Id;
-            AssetKey = record.AssetKey;
             AddToClassList(Class);
 
             _thumb = new VisualElement { pickingMode = PickingMode.Ignore };
@@ -35,7 +32,7 @@ namespace Forge.EditorApp.UI.Controls
             _thumb.Add(_placeholder);
             Add(_thumb);
 
-            var name = new Label(record.DisplayName) { pickingMode = PickingMode.Ignore };
+            var name = new Label(displayName ?? string.Empty) { pickingMode = PickingMode.Ignore };
             name.AddToClassList(NameClass);
             Add(name);
 
@@ -47,12 +44,7 @@ namespace Forge.EditorApp.UI.Controls
             }
         }
 
-        public RecordId Id { get; }
-
-        /// <summary>The asset key the record presents with; what a thumbnail is rendered from.</summary>
-        public string AssetKey { get; }
-
-        /// <summary>Shows a rendered picture in place of the placeholder icon; null brings the placeholder back.</summary>
+        /// <summary>Shows a picture in place of the placeholder icon; null brings the placeholder back.</summary>
         public void SetThumbnail(Texture2D picture)
         {
             var hasPicture = picture != null;

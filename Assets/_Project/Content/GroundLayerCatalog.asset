@@ -24,7 +24,7 @@ MonoBehaviour:
   _baseKey: ground/grass
   _mapColors:
   - _key: ground/dirt
-    _color: {r: 0.10478569, g: 0.056288548, b: 0.0377544, a: 1}
+    _color: {r: 0.0754457, g: 0.04503084, b: 0.033223875, a: 1}
   - _key: ground/grass
     _color: {r: 0.1268864, g: 0.16117324, b: 0.034309037, a: 1}
   - _key: ground/rock

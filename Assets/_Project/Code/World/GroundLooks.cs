@@ -42,6 +42,13 @@ namespace Forge.World
                 : Fallback(ground.AssetKey, $"the ground layer catalog has nothing for '{ground.AssetKey}' ({layer})");
         }
 
+        /// <summary>A picture of ground layer <paramref name="layer"/> for pickers: its look's color texture (the base layer's when it can't be found), or null.</summary>
+        public Texture2D PictureOf(RecordId layer)
+        {
+            var look = Of(layer);
+            return look != null ? look.diffuseTexture : null;
+        }
+
         /// <summary>
         /// What ground layer <paramref name="layer"/> looks like from afar (linear): its look's map color; null, or a
         /// layer without one, gets the base layer's; without that, a neutral earth tone.

@@ -658,7 +658,7 @@ slopes), so results are exact and every edit goes through the edit session.
     whose `ToolDefinition.UsesBrush`. `BrushCursor` draws a ring that follows the ground.
   - `SculptTool` (B): `SculptStroke` into a working copy of the heights; the ring is colored by mode.
   - `PaintTool` (T, gold ring): `PaintStroke` (engine-free) moves each texel under the brush toward the chosen ground
-    layer (`EditorContext.PaintLayer`, the options bar's row of the world's `GroundLayers`) by the brush's weight,
+    layer (`EditorContext.PaintLayer`, picked on the assets browser's Ground tab, named in the options bar) by the brush's weight,
     the other layers giving up their share in proportion, across chunk edges, on land only; previewed with
     `WorldView.PreviewPaint`, committed with `TerrainEdits.Commit(session, PaintStroke)` (heights untouched).
     Unpainted ground counts as the ground layer with the catalog's base look (`EditorContext.UnpaintedGround`) once
@@ -737,7 +737,10 @@ slopes), so results are exact and every edit goes through the edit session.
   one tab per top-level category (`PaletteTabs` folds `ObjectPalette.Groups` by `CategoryPath.Head`), one flowing
   grid of `AssetTile`s for the current tab in display order (the sub-category is in the tooltip), a search that spans
   every tab (tabs dim, matches show with full paths, Esc clears), the 1–9 key on the first nine tiles, a collapse
-  button and a drag handle on the top edge for its height. Each tile's picture comes from `ThumbnailRenderer`
+  button and a drag handle on the top edge for its height. After the categories comes a **Ground** tab (key
+  `/ground`, which no category head can be): one tile per `GroundLayerRecord`, its picture the layer's color texture
+  (`GroundLooks.PictureOf`); picking one calls `EditorContext.SelectPaintLayer` (paint tool, that ground). Every list
+  is searched alike through `SearchQuery` (all terms, any field, ignoring case). Each object tile's picture comes from `ThumbnailRenderer`
   (`World/Assets`, behind `IAssetThumbnails`): on first request it instantiates the asset key through the same
   `IAssetCatalog` the world uses, frames it whole with `ThumbnailFraming` (orthographic three-quarter view, pure
   math, tested), renders it with a private camera on the `ForgePreview` layer into a 128 px texture with a

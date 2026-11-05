@@ -17,7 +17,6 @@ namespace Forge.Editing.Palette
     public sealed class ObjectPalette
     {
         static readonly StringComparer NameOrder = StringComparer.OrdinalIgnoreCase;
-        static readonly char[] TermSeparators = { ' ', '\t' };
 
         readonly Dictionary<RecordId, int> _indexById;
 
@@ -65,21 +64,15 @@ namespace Forge.Editing.Palette
 
         /// <summary>
         /// Objects matching every whitespace-separated term of <paramref name="query"/>, case-insensitively,
-        /// in their display name, category or id. A blank query returns this palette.
+        /// in their display name, category or id (<see cref="SearchQuery"/>). A blank query returns this palette.
         /// </summary>
         public ObjectPalette Filter(string query)
         {
-            var terms = (query ?? string.Empty).Split(TermSeparators, StringSplitOptions.RemoveEmptyEntries);
+            var terms = SearchQuery.Terms(query);
             if (terms.Length == 0)
                 return this;
 
-            return new ObjectPalette(Objects.Where(r => terms.All(term => Matches(r, term))).ToArray());
+            return new ObjectPalette(Objects.Where(r => SearchQuery.Matches(terms, r.DisplayName, r.Category, r.Id.ToString())).ToArray());
         }
-
-        static bool Matches(BaseObjectRecord record, string term) =>
-            Contains(record.DisplayName, term) || Contains(record.Category, term) || Contains(record.Id.ToString(), term);
-
-        static bool Contains(string text, string term) =>
-            text.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0;
     }
 }

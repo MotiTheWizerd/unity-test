@@ -157,7 +157,7 @@ namespace Forge.EditorApp
                 // Not under the world root: the root moves far from zero, and the pictures would jitter with it.
                 _thumbnails = new ThumbnailRenderer(assets, null);
                 _controller.Initialize(_context, _frame, _view, _waterView, _panel, assets, _agent);
-                _panel.Initialize(_context, _controller.Commands, diagnostics, _thumbnails, _controller.Agent?.Conversation);
+                _panel.Initialize(_context, _controller.Commands, diagnostics, _thumbnails, ground, _controller.Agent?.Conversation);
             }
             catch (Exception ex) when (ex is DataValidationException || ex is IOException)
             {

@@ -146,5 +146,17 @@ namespace Forge.Tests.Editing
             Assert.That(GroundLayers.WithLook(store, "ground/rock"), Is.EqualTo(Rock));
             Assert.That(GroundLayers.WithLook(store, "ground/lava"), Is.Null);
         }
+
+        [Test]
+        public void GroundLayers_AreSearchedByNameOrId_LikeThePalette()
+        {
+            var layers = GroundLayers.Of(NewSession().World.Records);
+
+            Assert.That(GroundLayers.Filter(layers, "  "), Is.SameAs(layers));
+            Assert.That(GroundLayers.Filter(layers, "ROCK").Select(l => l.Id), Is.EqualTo(new[] { Rock }));
+            Assert.That(GroundLayers.Filter(layers, "s").Select(l => l.DisplayName), Is.EqualTo(new[] { "Grass", "Sand" }));
+            Assert.That(GroundLayers.Filter(layers, "core sand").Select(l => l.DisplayName), Is.EqualTo(new[] { "Sand" }), "Every term must match, the id's plugin included.");
+            Assert.That(GroundLayers.Filter(layers, "lava"), Is.Empty);
+        }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Forge.Agent;
 using Forge.EditorApp.Diagnostics;
 using Forge.EditorApp.UI.Controls;
+using Forge.World;
 using Forge.World.Assets;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -31,9 +32,10 @@ namespace Forge.EditorApp.UI
 
         void Awake() => _document = GetComponent<UIDocument>();
 
-        /// <param name="thumbnails">Pictures for the assets browser's tiles; null leaves the placeholder icons.</param>
+        /// <param name="thumbnails">Pictures for the assets browser's object tiles; null leaves the placeholder icons.</param>
+        /// <param name="groundLooks">Pictures for the assets browser's ground tiles; null leaves the placeholder icons.</param>
         /// <param name="agent">The world-building agent's conversation; null hides the agent dock.</param>
-        public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics, IAssetThumbnails thumbnails, AgentConversation agent)
+        public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics, IAssetThumbnails thumbnails, GroundLooks groundLooks, AgentConversation agent)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             // The document root covers the whole screen; only real panel elements may catch the pointer.
@@ -55,7 +57,7 @@ namespace Forge.EditorApp.UI
                 new SculptSection(Root, context),
                 new PaintSection(Root, context, commands),
                 new WaterSection(Root, context, commands),
-                new AssetsBrowser(Root, context, thumbnails),
+                new AssetsBrowser(Root, context, thumbnails, groundLooks),
                 new HistorySection(Root, context),
                 new FlySpeedSection(Root, context),
                 new PerformanceSection(Root, context, diagnostics),

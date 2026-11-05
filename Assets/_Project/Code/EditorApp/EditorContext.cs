@@ -364,6 +364,14 @@ namespace Forge.EditorApp
             set => _paintLayer = value;
         }
 
+        /// <summary>Chooses <paramref name="layer"/> to paint (the assets browser's ground tiles) and picks the paint tool.</summary>
+        public void SelectPaintLayer(RecordId layer)
+        {
+            PaintLayer = layer;
+            if (ActiveTool != ToolKind.Paint)
+                SelectTool(ToolKind.Paint);
+        }
+
         void RefreshGround()
         {
             if (ReferenceEquals(_groundWorld, Session.World))

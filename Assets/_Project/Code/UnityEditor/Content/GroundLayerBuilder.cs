@@ -11,8 +11,8 @@ namespace Forge.UnityEditor.Content
     /// catalog under "ground/{folder name, lower case}". A folder holds {Name}_Color, {Name}_NormalGL and, optionally,
     /// {Name}_AmbientOcclusion, {Name}_Displacement and {Name}_Roughness (ambientCG's naming); the last three are packed
     /// into the mask map Unity's terrain reads ({Name}_Mask.png: metallic 0, occlusion, height, smoothness =
-    /// 1 − roughness). It also records each layer's map color, the color texture's average, for the far land.
-    /// Existing assets are updated in place, so their GUIDs survive a rebuild.
+    /// 1 − roughness). It also records each layer's map color, the color texture's average times the layer's tint, for
+    /// the far land. Existing assets are updated in place, so their GUIDs and hand-set tints survive a rebuild.
     /// </summary>
     static class GroundLayerBuilder
     {
@@ -41,7 +41,8 @@ namespace Forge.UnityEditor.Content
                     continue;
                 var key = "ground/" + name.ToLowerInvariant();
                 catalog.Set(key, layer);
-                catalog.SetMapColor(key, AverageColor($"{folder}/{name}_Color.jpg"));
+                // The layer's tint (its diffuse remap, set by hand on the asset) colors the far land too.
+                catalog.SetMapColor(key, AverageColor($"{folder}/{name}_Color.jpg") * (Color)layer.diffuseRemapMax);
                 built++;
             }
 
