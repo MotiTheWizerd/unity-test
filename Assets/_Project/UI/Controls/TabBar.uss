@@ -21,14 +21,24 @@
     color: var(--forge-text-muted);
 }
 
-.forge-tab:hover {
-    background-color: var(--forge-control-bg-hover);
+/*
+ * Hover and focus only change the text. Unity's theme fills a hovered button and rings a focused one with rules
+ * that carry an extra :enabled state, so these restate the look at that specificity.
+ */
+.forge-tab:hover:enabled {
+    background-color: transparent;
+    border-color: transparent;
     color: var(--forge-text);
+}
+
+.forge-tab:focus:enabled {
+    border-color: transparent;
 }
 
 /* The chosen tab is an accent outline: no fill, accent border and text. */
 .forge-tab.is-active,
-.forge-tab.is-active:hover {
+.forge-tab.is-active:hover:enabled,
+.forge-tab.is-active:focus:enabled {
     background-color: transparent;
     border-width: 1px;
     border-color: var(--forge-accent);

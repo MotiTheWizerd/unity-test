@@ -52,15 +52,17 @@
     transition-duration: var(--forge-motion-fast);
 }
 
-.unity-button:hover {
+/* Unity's theme styles hover and focus with an extra :enabled state; these sit at that specificity. */
+.unity-button:hover:enabled {
     background-color: var(--forge-control-bg-hover);
+    border-color: var(--forge-control-border);
 }
 
 .unity-button:active {
     background-color: var(--forge-control-bg-pressed);
 }
 
-.unity-button:focus {
+.unity-button:focus:enabled {
     border-color: var(--forge-control-border);
 }
 
@@ -73,7 +75,8 @@
 
 /* The chosen one: the current tool, the selected object, the chosen mode. */
 .unity-button.is-active,
-.unity-button.is-active:hover {
+.unity-button.is-active:hover:enabled,
+.unity-button.is-active:focus:enabled {
     background-color: var(--forge-accent);
     border-color: var(--forge-accent);
     color: var(--forge-text-on-accent);

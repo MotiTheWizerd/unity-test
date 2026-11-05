@@ -57,10 +57,15 @@
     -unity-background-image-tint-color: var(--forge-accent);
 }
 
-.forge-button--default:hover {
+.forge-button--default:hover:enabled {
     background-color: var(--forge-accent-soft);
+    border-color: var(--forge-accent);
     color: var(--forge-accent-hover);
     -unity-background-image-tint-color: var(--forge-accent-hover);
+}
+
+.forge-button--default:focus:enabled {
+    border-color: var(--forge-accent);
 }
 
 .forge-button--default:active {
@@ -75,14 +80,15 @@
 
 /* Primary: the one action of a form. */
 .forge-button--primary,
-.forge-button--primary:hover {
+.forge-button--primary:hover:enabled,
+.forge-button--primary:focus:enabled {
     background-color: var(--forge-accent);
     border-color: var(--forge-accent);
     color: var(--forge-text-on-accent);
     -unity-background-image-tint-color: var(--forge-text-on-accent);
 }
 
-.forge-button--primary:hover {
+.forge-button--primary:hover:enabled {
     background-color: var(--forge-accent-hover);
 }
 
@@ -92,8 +98,13 @@
     border-color: transparent;
 }
 
-.forge-button--ghost:hover {
+.forge-button--ghost:hover:enabled {
     background-color: var(--forge-control-bg-hover);
+    border-color: transparent;
+}
+
+.forge-button--ghost:focus:enabled {
+    border-color: transparent;
 }
 
 .forge-button--ghost:disabled {
@@ -103,7 +114,8 @@
 
 /* This sheet sits above the theme, so the chosen ghost button restates the accent. */
 .forge-button--ghost.is-active,
-.forge-button--ghost.is-active:hover {
+.forge-button--ghost.is-active:hover:enabled,
+.forge-button--ghost.is-active:focus:enabled {
     background-color: var(--forge-accent);
     border-color: var(--forge-accent);
 }

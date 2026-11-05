@@ -13,14 +13,20 @@
     border-radius: 6px;
 }
 
-.forge-tile:hover {
+/* Hover and focus sit at the :enabled specificity of Unity's theme rules, which would otherwise ring the tile. */
+.forge-tile:hover:enabled {
     background-color: var(--forge-control-bg-hover);
     border-color: var(--forge-control-border);
 }
 
+.forge-tile:focus:enabled {
+    border-color: transparent;
+}
+
 /* The chosen object: an accent frame rather than a filled block, so the thumbnail stays readable. */
 .forge-tile.is-active,
-.forge-tile.is-active:hover {
+.forge-tile.is-active:hover:enabled,
+.forge-tile.is-active:focus:enabled {
     background-color: var(--forge-accent-soft);
     border-color: var(--forge-accent);
     color: var(--forge-text);
