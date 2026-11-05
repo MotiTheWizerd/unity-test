@@ -201,7 +201,6 @@
 }
 
 .unity-base-slider__text-field {
-    width: 48px;
     margin-left: 6px;
 }
 

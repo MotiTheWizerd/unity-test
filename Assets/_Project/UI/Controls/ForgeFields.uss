@@ -27,7 +27,34 @@
     white-space: normal;
 }
 
-/* Number boxes are narrow by nature. */
+/* Number boxes: bare digits, centred, four digits wide, no fill; a line appears under them on hover and focus.
+   Sliders' number boxes carry the same class (ForgeSlider), so all numbers look alike. */
+.forge-number-field {
+    flex-grow: 0;
+}
+
 .forge-number-field > .unity-base-text-field__input {
-    min-width: 56px;
+    width: 44px;
+    min-width: 44px;
+    flex-grow: 0;
+    padding: 3px 2px;
+    background-color: transparent;
+    border-color: transparent;
+    border-radius: 0;
+    border-bottom-color: var(--forge-divider);
+    -unity-text-align: middle-center;
+}
+
+.forge-number-field > .unity-base-text-field__input:hover {
+    background-color: transparent;
+    border-bottom-color: var(--forge-text-dim);
+}
+
+.forge-number-field > .unity-base-text-field__input:focus {
+    background-color: transparent;
+    border-bottom-color: var(--forge-accent);
+}
+
+.forge-number-field > .unity-base-text-field__input .unity-text-element {
+    -unity-text-align: middle-center;
 }

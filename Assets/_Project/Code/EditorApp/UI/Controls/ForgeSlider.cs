@@ -16,6 +16,8 @@ namespace Forge.EditorApp.UI.Controls
             FieldChrome.Apply(this);
             AddToClassList(Class);
             showInputField = true;
+            // The number box takes the number fields' look (ForgeFields.uss), so every number in the UI matches.
+            this.Q(className: textFieldClassName)?.AddToClassList(ForgeNumberField.Class);
         }
 
         [UxmlAttribute]

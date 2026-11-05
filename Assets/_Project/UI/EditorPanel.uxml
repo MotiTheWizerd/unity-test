@@ -16,7 +16,7 @@
                     </ui:VisualElement>
                     <ui:VisualElement name="space-sea" class="forge-row">
                         <forge:ForgeCheckbox name="space-sea-on" label="Sea level" />
-                        <forge:ForgeNumberField name="space-sea-level" unit="m" class="forge-grow" />
+                        <forge:ForgeNumberField name="space-sea-level" unit="m" />
                     </ui:VisualElement>
                     <forge:ForgeDropdown name="space-climate" label="Climate" />
                     <ui:VisualElement name="space-new-form" class="forge-indented">
@@ -96,7 +96,7 @@
             </ui:VisualElement>
             <ui:VisualElement name="options-water" class="forge-options__group">
                 <ui:Label name="water-lake" />
-                <forge:ForgeNumberField name="water-level" label="Level" unit="m" class="forge-options__number" />
+                <forge:ForgeNumberField name="water-level" label="Level" unit="m" />
                 <forge:ForgeButton name="water-remove" text="Remove" icon="x" tooltip="Del" />
             </ui:VisualElement>
             <ui:Label name="tool-options-hint" class="forge-muted forge-options__hint" />
