@@ -58,7 +58,7 @@ namespace Forge.EditorApp.UI
         float _dragStartHeight;
 
         /// <param name="thumbnails">Pictures for the object tiles; null leaves the placeholder icons.</param>
-        /// <param name="groundLooks">Pictures for the ground tiles; null leaves the placeholder icons.</param>
+        /// <param name="groundLooks">What the ground tiles' material balls wear; null (or no thumbnails) leaves the placeholder icons.</param>
         public AssetsBrowser(VisualElement root, EditorContext context, IAssetThumbnails thumbnails, GroundLooks groundLooks)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -196,8 +196,9 @@ namespace Forge.EditorApp.UI
             {
                 tooltip = $"{layer.DisplayName}  <color=#9EA4AE>· {GroundTitle}</color>",
             };
-            if (_groundLooks != null)
-                tile.SetThumbnail(_groundLooks.PictureOf(id));
+            // A material ball, keyed by the look, so layers sharing a look share a picture.
+            if (_thumbnails != null && _groundLooks != null)
+                tile.SetThumbnail(_thumbnails.GetBall(layer.AssetKey, () => _groundLooks.CreatePreviewMaterial(id)));
             _groundTiles.Add(id, tile);
             return tile;
         }

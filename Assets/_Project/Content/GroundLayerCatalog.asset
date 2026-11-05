@@ -31,3 +31,4 @@ MonoBehaviour:
     _color: {r: 0.084009126, g: 0.078426406, b: 0.06562846, a: 1}
   - _key: ground/sand
     _color: {r: 0.33308125, g: 0.2587604, b: 0.15623695, a: 1}
+  _previewMaterial: {fileID: 2100000, guid: af952e0d2d66f9a4a8ffcc75ef088999, type: 2}

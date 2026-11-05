@@ -18,6 +18,7 @@ namespace Forge.UnityEditor.Content
     {
         const string GroundFolder = "Assets/_Project/Content/Ground";
         public const string CatalogPath = "Assets/_Project/Content/GroundLayerCatalog.asset";
+        const string PreviewMaterialPath = GroundFolder + "/GroundPreview.mat";
 
         /// <summary>Meters one repeat of a ground texture covers: the scans are of about a meter or two of ground.</summary>
         const float TileSize = 3f;
@@ -46,6 +47,7 @@ namespace Forge.UnityEditor.Content
                 built++;
             }
 
+            catalog.PreviewMaterial = BuildPreviewMaterial();
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
             Debug.Log($"[Forge] Built {built} ground layers; {CatalogPath} has {catalog.Count} entries.");
@@ -84,6 +86,25 @@ namespace Forge.UnityEditor.Content
             layer.metallic = 0f;
             EditorUtility.SetDirty(layer);
             return layer;
+        }
+
+        // The template ground material balls are copied from: URP Lit with the maps a layer fills switched on. As an
+        // asset the catalog points at, its shader variants are kept in a build.
+        static Material BuildPreviewMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(PreviewMaterialPath);
+            if (material == null)
+            {
+                material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                AssetDatabase.CreateAsset(material, PreviewMaterialPath);
+            }
+
+            material.EnableKeyword("_NORMALMAP");
+            material.EnableKeyword("_METALLICSPECGLOSSMAP");
+            material.EnableKeyword("_OCCLUSIONMAP");
+            material.SetFloat("_Smoothness", 1f); // scales the mask map's smoothness, which is the real value
+            EditorUtility.SetDirty(material);
+            return material;
         }
 
         // Metallic 0, occlusion, height and smoothness in R, G, B, A; a missing map gives its neutral value.

@@ -738,8 +738,9 @@ slopes), so results are exact and every edit goes through the edit session.
   grid of `AssetTile`s for the current tab in display order (the sub-category is in the tooltip), a search that spans
   every tab (tabs dim, matches show with full paths, Esc clears), the 1–9 key on the first nine tiles, a collapse
   button and a drag handle on the top edge for its height. After the categories comes a **Ground** tab (key
-  `/ground`, which no category head can be): one tile per `GroundLayerRecord`, its picture the layer's color texture
-  (`GroundLooks.PictureOf`); picking one calls `EditorContext.SelectPaintLayer` (paint tool, that ground). Every list
+  `/ground`, which no category head can be): one tile per `GroundLayerRecord`, its picture a material ball (`ThumbnailRenderer.GetBall`:
+  a lit sphere wearing `GroundLooks.CreatePreviewMaterial`, a URP Lit stand-in built by `TerrainLayerPreview` from
+  the layer's color, normal and mask maps and tint, destroyed once the picture is taken); picking one calls `EditorContext.SelectPaintLayer` (paint tool, that ground). Every list
   is searched alike through `SearchQuery` (all terms, any field, ignoring case). Each object tile's picture comes from `ThumbnailRenderer`
   (`World/Assets`, behind `IAssetThumbnails`): on first request it instantiates the asset key through the same
   `IAssetCatalog` the world uses, frames it whole with `ThumbnailFraming` (orthographic three-quarter view, pure

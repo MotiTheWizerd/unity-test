@@ -75,18 +75,68 @@ namespace Forge.World.Assets
         public Texture2D Get(string assetKey)
         {
             if (string.IsNullOrEmpty(assetKey)) throw new ArgumentException("Asset key is required.", nameof(assetKey));
-            if (!_cache.TryGetValue(assetKey, out var texture))
+            return Cached(assetKey, () => _assets.Instantiate(assetKey, _stage));
+        }
+
+        /// <summary>
+        /// A material ball: a sphere wearing the material <paramref name="createMaterial"/> makes, rendered on first
+        /// request for <paramref name="key"/>. The material is made only then, and destroyed once the picture is taken.
+        /// </summary>
+        public Texture2D GetBall(string key, Func<Material> createMaterial)
+        {
+            if (string.IsNullOrEmpty(key)) throw new ArgumentException("Key is required.", nameof(key));
+            if (createMaterial == null) throw new ArgumentNullException(nameof(createMaterial));
+
+            Material material = null;
+            try
             {
-                texture = Render(assetKey);
-                _cache.Add(assetKey, texture);
+                return Cached(BallPrefix + key, () =>
+                {
+                    material = createMaterial();
+                    return Ball(material);
+                });
+            }
+            finally
+            {
+                if (material != null)
+                    UnityEngine.Object.DestroyImmediate(material);
+            }
+        }
+
+        // Balls share the cache with assets; the prefix keeps a ball and an asset of the same key apart.
+        const string BallPrefix = "ball:";
+
+        /// <summary>Texture repeats around and over the ball, so a ground texture shows at about its real scale.</summary>
+        static readonly Vector2 BallTiling = new Vector2(2f, 1f);
+
+        GameObject Ball(Material material)
+        {
+            var ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            UnityEngine.Object.DestroyImmediate(ball.GetComponent<Collider>());
+            ball.transform.SetParent(_stage, false);
+            if (material != null)
+            {
+                material.mainTextureScale = BallTiling;
+                ball.GetComponent<Renderer>().sharedMaterial = material;
+            }
+
+            return ball;
+        }
+
+        Texture2D Cached(string key, Func<GameObject> stage)
+        {
+            if (!_cache.TryGetValue(key, out var texture))
+            {
+                texture = Render(key, stage);
+                _cache.Add(key, texture);
             }
 
             return texture;
         }
 
-        Texture2D Render(string assetKey)
+        Texture2D Render(string key, Func<GameObject> stage)
         {
-            var instance = _assets.Instantiate(assetKey, _stage);
+            var instance = stage();
             try
             {
                 SetLayerRecursively(instance.transform, _layer);
@@ -97,9 +147,10 @@ namespace Forge.World.Assets
                 _camera.farClipPlane = far;
 
                 using (new PreviewLighting(_light, Ambient))
+                using (SyncShaderCompilation.Begin())
                     _camera.Render();
 
-                return ReadBack(assetKey);
+                return ReadBack(key);
             }
             finally
             {
@@ -108,11 +159,11 @@ namespace Forge.World.Assets
             }
         }
 
-        Texture2D ReadBack(string assetKey)
+        Texture2D ReadBack(string key)
         {
             var previous = RenderTexture.active;
             RenderTexture.active = _target;
-            var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, false) { name = $"Thumbnail {assetKey}" };
+            var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, false) { name = $"Thumbnail {key}" };
             texture.ReadPixels(new Rect(0, 0, Size, Size), 0, 0);
             texture.Apply(false, true);
             RenderTexture.active = previous;
@@ -149,6 +200,33 @@ namespace Forge.World.Assets
             UnityEngine.Object.Destroy(_target);
             if (_rig != null)
                 UnityEngine.Object.Destroy(_rig);
+        }
+
+        /// <summary>
+        /// For one render, in the Unity editor: shaders compile before drawing instead of in the background. A picture
+        /// is taken once and kept, so drawing with the editor's cyan stand-in for a still-compiling shader would keep
+        /// that for the session. Builds compile shaders ahead, so this does nothing there.
+        /// </summary>
+        readonly struct SyncShaderCompilation : IDisposable
+        {
+#if UNITY_EDITOR
+            readonly bool _wasAsync;
+
+            SyncShaderCompilation(bool wasAsync) => _wasAsync = wasAsync;
+
+            public static SyncShaderCompilation Begin()
+            {
+                var scope = new SyncShaderCompilation(UnityEditor.ShaderUtil.allowAsyncCompilation);
+                UnityEditor.ShaderUtil.allowAsyncCompilation = false;
+                return scope;
+            }
+
+            public void Dispose() => UnityEditor.ShaderUtil.allowAsyncCompilation = _wasAsync;
+#else
+            public static SyncShaderCompilation Begin() => default;
+
+            public void Dispose() { }
+#endif
         }
 
         /// <summary>

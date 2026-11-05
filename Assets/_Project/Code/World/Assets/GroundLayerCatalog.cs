@@ -19,8 +19,18 @@ namespace Forge.World.Assets
         [SerializeField, Tooltip("Each layer's average color, linear, for the far land; set by the builder.")]
         List<MapColor> _mapColors = new List<MapColor>();
 
+        [SerializeField, Tooltip("What a layer's material ball is made from (URP Lit with normal, metallic and occlusion maps on); set by the builder. Being an asset keeps those shader variants in a build.")]
+        Material _previewMaterial;
+
         /// <summary>Asset key of the layer unpainted ground shows.</summary>
         public string BaseKey => _baseKey;
+
+        /// <summary>The template a layer's preview material is copied from (<see cref="TerrainLayerPreview"/>); null when unset.</summary>
+        public Material PreviewMaterial
+        {
+            get => _previewMaterial;
+            set => _previewMaterial = value;
+        }
 
         /// <summary>The layer unpainted ground shows; null when the catalog has none for <see cref="BaseKey"/>.</summary>
         public TerrainLayer Base => TryGet(_baseKey, out var layer) ? layer : null;

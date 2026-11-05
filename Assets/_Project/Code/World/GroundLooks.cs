@@ -42,12 +42,11 @@ namespace Forge.World
                 : Fallback(ground.AssetKey, $"the ground layer catalog has nothing for '{ground.AssetKey}' ({layer})");
         }
 
-        /// <summary>A picture of ground layer <paramref name="layer"/> for pickers: its look's color texture (the base layer's when it can't be found), or null.</summary>
-        public Texture2D PictureOf(RecordId layer)
-        {
-            var look = Of(layer);
-            return look != null ? look.diffuseTexture : null;
-        }
+        /// <summary>
+        /// A new preview material for ground layer <paramref name="layer"/> (<see cref="TerrainLayerPreview"/>; the caller
+        /// destroys it): what its material ball wears. Null when there is no look or the catalog has no preview template.
+        /// </summary>
+        public Material CreatePreviewMaterial(RecordId layer) => TerrainLayerPreview.Create(Of(layer), _catalog.PreviewMaterial);
 
         /// <summary>
         /// What ground layer <paramref name="layer"/> looks like from afar (linear): its look's map color; null, or a

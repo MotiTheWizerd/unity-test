@@ -43,5 +43,28 @@ namespace Forge.Tests.World
                 Assert.That((layer.diffuseTexture != null, layer.normalMapTexture != null, layer.maskMapTexture != null), Is.EqualTo((true, true, true)), key);
             }
         }
+
+        // The material balls copy this template; its maps must be on, or a build would lack the shader variants.
+        [Test]
+        public void Catalog_HasAPreviewTemplate_WithTheLayerMapsOn()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<GroundLayerCatalog>(CatalogPath);
+            var template = catalog.PreviewMaterial;
+
+            Assert.That(template, Is.Not.Null, "Run Forge → Ground → Build Ground Layers.");
+            Assert.That(template.shaderKeywords, Is.SupersetOf(new[] { "_NORMALMAP", "_METALLICSPECGLOSSMAP", "_OCCLUSIONMAP" }));
+
+            catalog.TryGet("ground/rock", out var rock);
+            var preview = TerrainLayerPreview.Create(rock, template);
+            try
+            {
+                Assert.That(preview.GetTexture("_BaseMap"), Is.SameAs(rock.diffuseTexture));
+                Assert.That(preview.GetTexture("_OcclusionMap"), Is.SameAs(rock.maskMapTexture));
+            }
+            finally
+            {
+                Object.DestroyImmediate(preview);
+            }
+        }
     }
 }
