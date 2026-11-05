@@ -18,6 +18,7 @@ namespace Forge.EditorApp.UI.Controls
         public ForgeIntegerField()
         {
             FieldChrome.Apply(this);
+            FieldChrome.ApplyTextColours(this);
             AddToClassList(Class);
             isDelayed = true;
             FieldChrome.SetDigits(this, _digits);

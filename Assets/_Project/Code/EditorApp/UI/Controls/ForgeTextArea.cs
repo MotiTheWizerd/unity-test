@@ -11,6 +11,7 @@ namespace Forge.EditorApp.UI.Controls
         public ForgeTextArea()
         {
             FieldChrome.Apply(this);
+            FieldChrome.ApplyTextColours(this);
             AddToClassList(Class);
             multiline = true;
         }

@@ -14,6 +14,7 @@ namespace Forge.EditorApp.UI.Controls
         public ForgeTextInput()
         {
             FieldChrome.Apply(this);
+            FieldChrome.ApplyTextColours(this);
             AddToClassList(Class);
         }
 

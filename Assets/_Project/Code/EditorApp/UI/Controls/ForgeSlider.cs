@@ -24,6 +24,7 @@ namespace Forge.EditorApp.UI.Controls
             // The number box takes the number fields' look (ForgeFields.uss), so every number in the UI matches.
             _box = this.Q<TextField>(className: textFieldClassName);
             _box.AddToClassList(ForgeNumberField.Class);
+            FieldChrome.ApplyTextColours(_box);
             FieldChrome.SetDigits(_box, _digits);
         }
 

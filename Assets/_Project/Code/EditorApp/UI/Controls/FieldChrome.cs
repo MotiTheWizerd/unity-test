@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Forge.EditorApp.UI.Controls
@@ -18,7 +19,37 @@ namespace Forge.EditorApp.UI.Controls
         const float DigitWidth = 9f;
         const float DigitPadding = 8f;
 
+        // SHORTCUT: the accent gold repeated from ForgeTokens.uss. Unity reads a text input's selection and caret
+        // colours from the element, not from USS (its --unity-selection-color route never resolved here), so they
+        // are set in code. Change --forge-accent and these two together.
+        static readonly Color Selection = new Color(212f / 255f, 175f / 255f, 55f / 255f, 0.35f);
+        static readonly Color Caret = new Color(212f / 255f, 175f / 255f, 55f / 255f, 1f);
+
         public static void Apply(VisualElement field) => field.AddToClassList(Class);
+
+        /// <summary>Colours a text input's selected text and caret in the accent, instead of Unity's blue.</summary>
+        public static void ApplyTextColours<T>(TextInputBaseField<T> box)
+        {
+            if (box == null) throw new ArgumentNullException(nameof(box));
+            // The one that paints is the text element inside the input (not the field's label, which Q<TextElement>
+            // on the field would find first). Unity resets its colours to blue every time its style resolves, after
+            // any callback of that event, so they are set again one tick later.
+            var text = box.Q(className: TextInputBaseField<T>.inputUssClassName)?.Q<TextElement>();
+            if (text == null)
+                return;
+            Colour(text);
+            text.RegisterCallback<CustomStyleResolvedEvent>(_ => text.schedule.Execute(() => Colour(text)));
+            box.RegisterCallback<AttachToPanelEvent>(_ => text.schedule.Execute(() => Colour(text)));
+            // Taking focus resets them too (the selection is only ever seen while focused).
+            box.RegisterCallback<FocusInEvent>(_ => text.schedule.Execute(() => Colour(text)));
+            text.RegisterCallback<FocusEvent>(_ => text.schedule.Execute(() => Colour(text)));
+        }
+
+        static void Colour(TextElement text)
+        {
+            text.selection.selectionColor = Selection;
+            text.selection.cursorColor = Caret;
+        }
 
         /// <summary>
         /// Sizes a number box to <paramref name="digits"/> characters and refuses more (a sign or a decimal point

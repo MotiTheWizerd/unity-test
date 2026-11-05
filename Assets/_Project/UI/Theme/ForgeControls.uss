@@ -26,6 +26,16 @@
     padding: 1px 2px;
 }
 
+/*
+ * Unity's runtime theme (Default.tss) colours focus with hard blues at ":focus:enabled" specificity:
+ * labels of focused fields, focused dropdowns, hovered menu items. Each is restated here at that specificity.
+ */
+.unity-label:focus:enabled,
+.unity-base-field:focus:enabled > .unity-base-field__label,
+.unity-foldout__toggle > .unity-toggle__input:focus:enabled > .unity-label {
+    color: var(--forge-text);
+}
+
 /* ---- Buttons --------------------------------------------------------------------------------------------- */
 
 .unity-button {
@@ -105,12 +115,9 @@
     background-color: var(--forge-input-bg-hover);
 }
 
-/* Every form Unity uses for the focus ring, at its specificity, so its blue never shows. */
-.unity-base-text-field__input:focus,
+/* Unity paints the focus ring at ":focus:enabled" specificity (Default.tss); matched here. */
 .unity-base-text-field__input:focus:enabled,
-.unity-base-text-field:focus > .unity-base-text-field__input,
-.unity-base-text-field:focus:enabled > .unity-base-text-field__input,
-.unity-base-field:focus:enabled > .unity-base-text-field__input {
+.unity-base-text-field:focus:enabled > .unity-base-text-field__input {
     border-color: var(--forge-input-border-focus);
 }
 
@@ -227,7 +234,7 @@
     border-color: var(--forge-text-dim);
 }
 
-.unity-base-popup-field:focus .unity-base-popup-field__input {
+.unity-base-popup-field:focus:enabled > .unity-base-popup-field__input {
     border-color: var(--forge-input-border-focus);
 }
 
@@ -260,15 +267,18 @@
     transition-duration: var(--forge-motion-fast);
 }
 
-.unity-base-dropdown__item:hover {
+.unity-base-dropdown__item:hover,
+.unity-base-dropdown__item:hover:enabled {
     background-color: var(--forge-control-bg-hover);
 }
 
-.unity-base-dropdown__item:checked {
+.unity-base-dropdown__item:checked,
+.unity-base-dropdown__item:checked:hover:enabled {
     background-color: var(--forge-accent-soft);
 }
 
-.unity-base-dropdown__label {
+.unity-base-dropdown__label,
+.unity-base-dropdown__item:hover:enabled > .unity-base-dropdown__item-content > .unity-base-dropdown__label {
     color: var(--forge-text);
 }
 

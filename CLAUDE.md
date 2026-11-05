@@ -28,9 +28,12 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
   UxmlElementAttribute"); reimport the `.uxml` after the compile and the message is gone.
 - Unity's default theme sizes slider parts per orientation (`.unity-base-slider--horizontal .…__dragger`), so
   overrides need that specificity. A USS type selector (`Button`) names the C# type: subclasses don't match.
-- Unity's runtime theme colours focus rings and text selection through its own variables
-  (`--unity-colors-input_field-border-focus`, `--unity-selection-color`, `--unity-cursor-color`,
-  `--unity-colors-highlight-*`); override them in `ForgeTokens.uss`, selectors alone don't reach them.
+- Unity's runtime theme (`Default.tss`) paints focus and hover with hard blues at `:focus:enabled` /
+  `:hover:enabled` specificity (labels of focused fields, text and popup inputs, dropdown menu items);
+  overrides must carry `:enabled` too. Text selection and caret colours never resolved from USS here
+  (`--unity-selection-color` on `:root`, `.unity-text-element` or the input); they are set in code through
+  `textSelection` (`FieldChrome.ApplyTextColours`). To see the real rules, read the loaded sheets'
+  `m_Rules` via reflection in `execute_code` (they are not loose files).
   A text input ignores an inline `width`; set `min-width` and `max-width` instead (`FieldChrome.SetDigits`).
 - SVG icons import as UI Toolkit `VectorImage` through the built-in vector graphics module; the
   `com.unity.vectorgraphics` package is not needed and 2.0.0-preview.24 does not compile here.

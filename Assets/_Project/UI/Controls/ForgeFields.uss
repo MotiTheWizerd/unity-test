@@ -48,9 +48,7 @@
     border-bottom-color: var(--forge-text-dim);
 }
 
-.forge-number-field > .unity-base-text-field__input:focus,
 .forge-number-field > .unity-base-text-field__input:focus:enabled,
-.forge-number-field:focus > .unity-base-text-field__input,
 .forge-number-field:focus:enabled > .unity-base-text-field__input {
     background-color: transparent;
     border-color: transparent;
