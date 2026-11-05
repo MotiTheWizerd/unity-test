@@ -44,8 +44,10 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
 - `Transform.Find` treats `/` as a path separator, and record ids contain `/`, so look
   objects up via `RecordLink`, not by name.
 - Regenerate the base plugin with the menu item `Forge/Generate Core Plugin`
-  (`execute_menu_item`). It is deterministic.
-- Stress world: `Forge/Generate Stress World` (git-ignored output, ~30 MB), then point
+  (`execute_menu_item`). It is deterministic. After a plugin format change, regenerate it and the
+  stress world, and set Moti's saved `forge.user.json` (under `AppData/LocalLow/MotiTheWizerd/Forge/Plugins`)
+  aside as `.bak-format{N}`: older formats are refused by name, and he doesn't keep saves.
+- Stress world: `Forge/Generate Stress World` (git-ignored output, ~2 MB: 282 KB JSON plus side files), then point
   `EditorAppBootstrap._profile` at `Settings/Worlds/StressWorld.asset`. Commit the scene with
   `DefaultWorld` only. Streaming can be measured headless by moving `_focus` and calling
   `WorldStreamer.Tick` via `execute_code`; real frame times need Moti flying with the window focused.

@@ -1,5 +1,5 @@
 {
-  "format": 2,
+  "format": 3,
   "manifest": {
     "id": "forge.core",
     "version": "0.1.0",
@@ -230,7 +230,9 @@
       "displayName": "Main World",
       "kind": "worldspace",
       "baseHeight": 50.0,
-      "climate": "forge.core:climate/temperate"
+      "climate": "forge.core:climate/temperate",
+      "heightmapResolution": 65,
+      "sampleSpacing": 1.0
     },
     {
       "type": "terrain_chunk",

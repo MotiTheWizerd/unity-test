@@ -5,10 +5,8 @@ using Forge.Data.Plugins;
 namespace Forge.Data.Serialization
 {
     /// <summary>
-    /// Reads and writes plugins in a specific file format. Implementations live in
-    /// their own assemblies (e.g. Forge.Data.Json) so the data model stays
-    /// independent of any serialization library. Terrain heights are not part of the format: they go to the plugin's
-    /// terrain file (<see cref="TerrainFile"/>), which the plugin names and refers to by block.
+    /// Reads and writes plugins in some file format. The format carries the manifest, the records and the deletions;
+    /// terrain heights and placed objects go to side files the plugin names (a terrain file and an objects file).
     /// </summary>
     public interface IPluginSerializer
     {
@@ -16,10 +14,12 @@ namespace Forge.Data.Serialization
         string FileExtension { get; }
 
         /// <param name="terrain">Where the plugin's chunk heights were written; null when it has no terrain chunks.</param>
-        void Write(Plugin plugin, TextWriter writer, TerrainLink terrain);
+        /// <param name="objects">Where the plugin's placed objects were written; null when it has none.</param>
+        void Write(Plugin plugin, TextWriter writer, TerrainLink terrain, ObjectsLink objects);
 
         /// <param name="openTerrain">Opens the terrain file the plugin names (a file name, no folder).</param>
+        /// <param name="openObjects">Opens the objects file the plugin names (a file name, no folder), for the plugin's manifest.</param>
         /// <exception cref="DataValidationException">The content is malformed or violates plugin rules.</exception>
-        Plugin Read(TextReader reader, Func<string, ITerrainBlockReader> openTerrain);
+        Plugin Read(TextReader reader, Func<string, ITerrainBlockReader> openTerrain, Func<string, PluginManifest, IObjectBlocks> openObjects);
     }
 }

@@ -16,12 +16,13 @@ namespace Forge.Data.Json
     /// <summary>
     /// Human-readable plugin format. Output is deterministic (records and
     /// deletions sorted by id) so plugin files diff and merge cleanly. Terrain chunks carry only their resolution
-    /// and a block number in the terrain file the plugin names (<c>"terrain"</c>); the heights live there.
+    /// and a block number in the terrain file the plugin names (<c>"terrain"</c>); the heights live there. Placed
+    /// objects are not in the JSON at all: they live in the objects file the plugin names (<c>"objects"</c>).
     /// </summary>
     public sealed class JsonPluginSerializer : IPluginSerializer
     {
-        /// <summary>2: terrain heights moved out of the JSON into a terrain file.</summary>
-        public const int FormatVersion = 2;
+        /// <summary>3: placed objects moved out of the JSON into an objects file (2: terrain heights into a terrain file).</summary>
+        public const int FormatVersion = 3;
 
         const int MaxDepth = 32;
 
@@ -34,7 +35,7 @@ namespace Forge.Data.Json
 
         public string FileExtension => ".json";
 
-        public void Write(Plugin plugin, TextWriter writer, TerrainLink terrain)
+        public void Write(Plugin plugin, TextWriter writer, TerrainLink terrain, ObjectsLink objects)
         {
             if (plugin == null)
                 throw new ArgumentNullException(nameof(plugin));
@@ -42,6 +43,8 @@ namespace Forge.Data.Json
                 throw new ArgumentNullException(nameof(writer));
             if (terrain == null && plugin.Records.OfType<TerrainChunkRecord>().Any())
                 throw new ArgumentException($"Plugin '{plugin.Id}' has terrain chunks but no terrain file to name.", nameof(terrain));
+            if (objects == null && plugin.Objects.TotalCount > 0)
+                throw new ArgumentException($"Plugin '{plugin.Id}' has placed objects but no objects file to name.", nameof(objects));
 
             var document = new PluginDocument
             {
@@ -53,25 +56,27 @@ namespace Forge.Data.Json
                     Masters = new List<string>(plugin.Manifest.Masters),
                 },
                 Terrain = terrain?.FileName,
-                // Objects still travel in the JSON here; an objects file of their own comes next.
-                Records = plugin.Records.Concat(plugin.Objects.Keys.SelectMany(plugin.Objects.Read)).OrderBy(r => r.Id).ToList(),
+                Objects = objects?.FileName,
+                Records = new List<Record>(plugin.Records),
                 Deletions = new List<RecordId>(plugin.Deletions),
             };
 
             CreateSerializer(new ChunkHeightsConverter(terrain?.Blocks)).Serialize(writer, document);
         }
 
-        public Plugin Read(TextReader reader, Func<string, ITerrainBlockReader> openTerrain)
+        public Plugin Read(TextReader reader, Func<string, ITerrainBlockReader> openTerrain, Func<string, PluginManifest, IObjectBlocks> openObjects)
         {
             if (reader == null)
                 throw new ArgumentNullException(nameof(reader));
             if (openTerrain == null)
                 throw new ArgumentNullException(nameof(openTerrain));
+            if (openObjects == null)
+                throw new ArgumentNullException(nameof(openObjects));
 
             PluginDocument document;
             try
             {
-                document = ReadDocument(new JsonTextReader(reader) { DateParseHandling = DateParseHandling.None, MaxDepth = MaxDepth }, openTerrain);
+                document = ReadDocument(new JsonTextReader(reader) { DateParseHandling = DateParseHandling.None, MaxDepth = MaxDepth }, openTerrain, openObjects);
             }
             catch (Exception ex) when (
                 ex is JsonException || ex is ArgumentException || ex is FormatException ||
@@ -83,14 +88,16 @@ namespace Forge.Data.Json
             if (document.Manifest == null)
                 throw new DataValidationException(new[] { "Plugin file has no manifest." });
 
-            var manifest = new PluginManifest(document.Manifest.Id, document.Manifest.Version, document.Manifest.Masters);
-            return new Plugin(manifest, document.Records, document.Deletions);
+            var manifest = document.ManifestRead;
+            // The strict constructor: objects among the records are an error, they belong in the objects file.
+            return new Plugin(manifest, document.Records, document.Deletions, document.ObjectBlocks ?? InMemoryObjectBlocks.Empty(manifest.Id));
         }
 
         // One streaming pass over the document's fields, in the order they are written: "format" first (so an old
-        // file is named as such before its records fail to read), and "terrain" before "records", so the chunks can
-        // refer into the terrain file as they are read. The terrain file is opened at the first chunk.
-        PluginDocument ReadDocument(JsonReader json, Func<string, ITerrainBlockReader> openTerrain)
+        // file is named as such before its records fail to read), "manifest" before "objects" (the objects file is
+        // checked against it), and "terrain" before "records", so the chunks can refer into the terrain file as they
+        // are read. The terrain file is opened at the first chunk; the objects file when named.
+        PluginDocument ReadDocument(JsonReader json, Func<string, ITerrainBlockReader> openTerrain, Func<string, PluginManifest, IObjectBlocks> openObjects)
         {
             if (!json.Read())
                 throw new DataValidationException(new[] { "Plugin file is empty." });
@@ -118,9 +125,16 @@ namespace Forge.Data.Json
                         break;
                     case "manifest":
                         document.Manifest = serializer.Deserialize<ManifestDocument>(json);
+                        document.ManifestRead = new PluginManifest(document.Manifest.Id, document.Manifest.Version, document.Manifest.Masters);
                         break;
                     case "terrain":
                         terrain.Name = serializer.Deserialize<string>(json);
+                        break;
+                    case "objects":
+                        document.Objects = serializer.Deserialize<string>(json);
+                        if (document.ManifestRead == null)
+                            throw new JsonSerializationException("A plugin file names its \"objects\" after its \"manifest\".");
+                        document.ObjectBlocks = openObjects(document.Objects, document.ManifestRead);
                         break;
                     case "records":
                         document.Records = serializer.Deserialize<List<Record>>(json);
@@ -143,8 +157,8 @@ namespace Forge.Data.Json
             if (format == FormatVersion)
                 return;
 
-            throw new DataValidationException(new[] { format == 1
-                ? $"Plugin format 1 kept terrain heights inside the JSON; this Forge reads format {FormatVersion}, which keeps them in a terrain file. Regenerate the plugin."
+            throw new DataValidationException(new[] { format == 1 || format == 2
+                ? $"Plugin format {format} kept {(format == 1 ? "terrain heights and placed objects" : "placed objects")} inside the JSON; this Forge reads format {FormatVersion}, which keeps them in side files. Regenerate the plugin."
                 : $"Unsupported plugin format {format}; expected {FormatVersion}." });
         }
 
@@ -213,9 +227,19 @@ namespace Forge.Data.Json
             /// <summary>The plugin's terrain file, next to it; absent when it has no terrain chunks.</summary>
             public string Terrain { get; set; }
 
+            /// <summary>The plugin's objects file, next to it; absent when it has no placed objects.</summary>
+            public string Objects { get; set; }
+
             public List<Record> Records { get; set; }
 
             public List<RecordId> Deletions { get; set; }
+
+            // Reading only: the manifest as parsed, and the objects file as opened. Not written.
+            [JsonIgnore]
+            public PluginManifest ManifestRead { get; set; }
+
+            [JsonIgnore]
+            public IObjectBlocks ObjectBlocks { get; set; }
         }
 
         sealed class ManifestDocument

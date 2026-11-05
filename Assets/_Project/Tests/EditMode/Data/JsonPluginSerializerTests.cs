@@ -16,19 +16,21 @@ namespace Forge.Tests.Data
     {
         JsonPluginSerializer _serializer;
         MemoryTerrain _terrain;
+        MemoryObjects _objects;
 
         [SetUp]
         public void SetUp()
         {
             _serializer = new JsonPluginSerializer(RecordTypeRegistry.CreateDefault());
             _terrain = new MemoryTerrain();
+            _objects = new MemoryObjects();
         }
 
         string Write(Plugin plugin)
         {
             using (var writer = new StringWriter())
             {
-                _serializer.Write(plugin, writer, MemoryTerrain.For(plugin, _terrain));
+                _serializer.Write(plugin, writer, MemoryTerrain.For(plugin, _terrain), _objects.For(plugin));
                 return writer.ToString();
             }
         }
@@ -36,7 +38,7 @@ namespace Forge.Tests.Data
         Plugin Read(string json)
         {
             using (var reader = new StringReader(json))
-                return _serializer.Read(reader, name => name == MemoryTerrain.FileName ? _terrain : throw new DataValidationException(new[] { $"No terrain file {name}." }));
+                return _serializer.Read(reader, name => name == MemoryTerrain.FileName ? _terrain : throw new DataValidationException(new[] { $"No terrain file {name}." }), _objects.Open);
         }
 
         static Plugin SamplePlugin() =>
@@ -89,13 +91,38 @@ namespace Forge.Tests.Data
             var json = Write(SamplePlugin());
 
             Assert.That(Write(Read(json)), Is.EqualTo(json));
-            StringAssert.Contains("\"format\": 2", json);
+            StringAssert.Contains("\"format\": 3", json);
             StringAssert.Contains("\"type\": \"base_object\"", json);
             StringAssert.Contains("\"id\": \"core:tree_oak\"", json);
-            StringAssert.Contains("\"baseId\": \"core:tree_oak\"", json);
-            StringAssert.Contains("\"space\": \"core:space/main\"", json);
-            Assert.That(json.IndexOf("core:tree_oak\""), Is.LessThan(json.IndexOf("mymod:ref/oak_1")),
-                "Records are written sorted by id.");
+            StringAssert.Contains($"\"objects\": \"{MemoryObjects.FileName}\"", json);
+            StringAssert.DoesNotContain("mymod:ref/oak_1", json, "Placed objects live in the objects file, not the JSON.");
+        }
+
+        [Test]
+        public void Write_ObjectsWithoutAnObjectsFile_IsRefused()
+        {
+            Assert.Throws<System.ArgumentException>(() => _serializer.Write(SamplePlugin(), new StringWriter(), null, null));
+        }
+
+        [Test]
+        public void Read_PlacedObjectAmongTheRecords_IsRejected()
+        {
+            var placed = "{\"type\": \"placed_object\", \"id\": \"core:ref/x\", \"baseId\": \"core:rock\", \"space\": \"core:space/main\", \"position\": [0.0, 0.0, 0.0], \"rotation\": [0.0, 0.0, 0.0, 1.0], \"scale\": 1.0}, ";
+            var json = Write(Plugin("core", Base("core:rock"))).Replace("\"records\": [", "\"records\": [" + placed);
+
+            var ex = Assert.Throws<DataValidationException>(() => Read(json));
+            StringAssert.Contains("belong in its object blocks", ex.Message);
+        }
+
+        [Test]
+        public void Read_ObjectsNamedBeforeTheManifest_IsRejected()
+        {
+            var json = Write(SamplePlugin());
+            var objects = $"\"objects\": \"{MemoryObjects.FileName}\",";
+            Assume.That(json, Does.Contain(objects));
+            json = json.Replace(objects, string.Empty).Replace("\"format\": 3,", "\"format\": 3, " + objects);
+
+            Assert.Throws<DataValidationException>(() => Read(json));
         }
 
         [Test]
@@ -225,15 +252,6 @@ namespace Forge.Tests.Data
         }
 
         [Test]
-        public void Read_PlacedObjectWithoutSpace_IsRejected()
-        {
-            var json = Regex.Replace(Write(SamplePlugin()), @",\s*""space"": ""core:space/main""", string.Empty);
-            StringAssert.DoesNotContain("\"space\"", json);
-
-            Assert.Throws<DataValidationException>(() => Read(json));
-        }
-
-        [Test]
         public void Read_BaseObjectWithoutCategory_IsUncategorized()
         {
             // Plugins written before categories existed have no "category" field.
@@ -298,19 +316,21 @@ namespace Forge.Tests.Data
         [Test]
         public void Read_UnsupportedFormatVersion_IsRejected()
         {
-            var json = Write(SamplePlugin()).Replace("\"format\": 2", "\"format\": 99");
+            var json = Write(SamplePlugin()).Replace("\"format\": 3", "\"format\": 99");
 
             var ex = Assert.Throws<DataValidationException>(() => Read(json));
             StringAssert.Contains("Unsupported plugin format", ex.Message);
         }
 
-        [Test]
-        public void Read_Format1_ExplainsThatTerrainMovedOut()
+        [TestCase(1, "terrain heights and placed objects")]
+        [TestCase(2, "placed objects")]
+        public void Read_OlderFormats_ExplainWhatMovedOut(int format, string what)
         {
-            var json = Write(SamplePlugin()).Replace("\"format\": 2", "\"format\": 1");
+            var json = Write(SamplePlugin()).Replace("\"format\": 3", $"\"format\": {format}");
 
             var ex = Assert.Throws<DataValidationException>(() => Read(json));
-            StringAssert.Contains("terrain file", ex.Message);
+            StringAssert.Contains(what, ex.Message);
+            StringAssert.Contains("Regenerate", ex.Message);
         }
 
         [Test]
@@ -349,32 +369,32 @@ namespace Forge.Tests.Data
         {
             var plugin = Plugin("core", new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", Space, new ChunkCoord(0, 0)), Space, new ChunkCoord(0, 0), HeightField.Flat(1f, 17)));
 
-            Assert.Throws<System.ArgumentException>(() => _serializer.Write(plugin, new StringWriter(), null));
+            Assert.Throws<System.ArgumentException>(() => _serializer.Write(plugin, new StringWriter(), null, null));
         }
 
         [Test]
         public void Read_InvalidRecordData_SurfacesTheModelError()
         {
-            var json = Write(SamplePlugin()).Replace("\"scale\": 2.0", "\"scale\": -1.0");
+            var json = Write(Plugin("core", new SpaceRecord(Space, "Tamriel", SpaceKind.Worldspace, 50f))).Replace("\"baseHeight\": 50.0", "\"baseHeight\": -1.0");
 
             var ex = Assert.Throws<DataValidationException>(() => Read(json));
-            StringAssert.Contains("Scale must be", ex.Message);
+            StringAssert.Contains("Base height must be", ex.Message);
         }
 
         [Test]
         public void Read_PluginRuleViolation_IsRejected()
         {
-            // Renaming the plugin leaves its "mymod:" records in a namespace it no longer owns.
-            var json = Write(SamplePlugin()).Replace("\"id\": \"mymod\"", "\"id\": \"othermod\"");
+            // Dropping the master leaves the override of "core:tree_oak" in a namespace the plugin may not touch.
+            var json = Regex.Replace(Write(SamplePlugin()), @"""masters"":\s*\[\s*""core""\s*\]", "\"masters\": [\"other\"]");
 
             var ex = Assert.Throws<DataValidationException>(() => Read(json));
-            StringAssert.Contains("mymod:ref/oak_1", ex.Message);
+            StringAssert.Contains("core:tree_oak", ex.Message);
         }
 
         [TestCase("")]
         [TestCase("{ not json")]
-        [TestCase("{\"format\": 2}")]
-        [TestCase("{\"format\": 2, \"manifest\": {\"id\": \"x\", \"version\": \"1\"}, \"unexpected\": true}")]
+        [TestCase("{\"format\": 3}")]
+        [TestCase("{\"format\": 3, \"manifest\": {\"id\": \"x\", \"version\": \"1\"}, \"unexpected\": true}")]
         public void Read_MalformedInput_IsRejected(string json)
         {
             Assert.Throws<DataValidationException>(() => Read(json));

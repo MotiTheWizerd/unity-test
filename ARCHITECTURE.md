@@ -121,16 +121,35 @@ one in the active plugin.
   shares the master store. It costs time in proportion to the top plugin. `MasterLayerTests`
   checks it against full resolution on random top plugins: records, sources, conflicts and warnings.
 - `RecordStore.OfType<T>` is cached per type (the store is immutable), so typed scans of
-  the masters (e.g. the palette) are paid once.
+  the masters (e.g. the palette) are paid once. Placed objects are the exception: they are resolved a block at a
+  time (`MasterObjects`), when `IRecordStore.ObjectsIn(space, chunk)` first asks for a chunk, and kept; the fold
+  per block is the same last-toucher-wins rule, with an id a later plugin writes left to that plugin's block
+  (which may be another chunk) and one a later plugin deletes left out. The resolved count, the warnings and the
+  conflicts come from each plugin's `Overrides` and deletions through `TryLocate`, so resolving reads no block.
+  `TryGet` of an object finds its block through the last writer's locator. `ObjectChunks(space)` lists the chunks
+  with objects. `All` and `OfType<PlacedObjectRecord>` read every block; the chunk-scoped members are the hot path
+  (`ChunkIndex`, `TerrainFollower`, `BuildContext.PlacedObjects`). `LayeredRecordStore` merges the top plugin's
+  objects into each block it is asked for.
 
-**File format** (`JsonPluginSerializer`, format version 2):
+**File format** (`JsonPluginSerializer`, format version 3):
 - Deterministic output (records and deletions sorted) for clean diffs.
 - Record types go through the closed registry only. `TypeNameHandling` is
   never used, `$type` metadata is rejected, and unknown fields are errors. Plugin files are untrusted input.
-- Read in one streaming pass over the fields in written order: `format` first (format 1, which kept heights in the
-  JSON, is refused by name), then `manifest`, `terrain`, `records`, `deletions`.
+- Read in one streaming pass over the fields in written order: `format` first (formats 1 and 2, which kept heights
+  and then objects in the JSON, are refused by name), then `manifest`, `terrain`, `objects`, `records`, `deletions`.
 - **Terrain heights are not in the JSON.** A plugin with terrain names its terrain file (`"terrain"`), and each
   chunk's `heights` is only `{"resolution", "block"}`, a block of that file. See *Terrain storage*.
+- **Placed objects are not in the JSON at all.** A plugin with objects names its objects file (`"objects"`); a
+  placed object among the `records` is an error. See *Objects storage*. Regenerate `forge.core` and the stress world
+  after a format change (`Forge/Generate Core Plugin`, `Forge/Generate Stress World`); older user plugins don't load.
+
+**Placed objects by chunk** (`IObjectBlocks`, `ObjectBlockKey` = space + chunk): a plugin keeps its placed objects
+apart from its records, a block per chunk, so a loaded plugin's objects stay on disk until their chunk is needed.
+`Plugin.Records` never holds them; `Plugin.Objects` does: `InMemoryObjectBlocks` for a plugin being edited, built or
+tested (the in-memory constructor sorts placed objects out of the records it is given), an `ObjectsFile` for a loaded
+one. What any block source knows without reading a block: its keys and counts, which block an id is in
+(`TryLocate`), and its `Overrides` (object ids in other plugins' namespaces). The editor's active plugin is held
+whole, objects included; it is the one plugin being written.
 
 **Spaces** (`SpaceRecord`, `space/<name>`), like Bethesda worldspaces and interior cells: the world is made of
 separate spaces, each with its own coordinates. A *worldspace* is open land; an *interior* (a house, a cave) has
@@ -142,9 +161,10 @@ afterwards with `SpaceEdits.ExtendLand`: a strip of chunks along one side (`Land
 (`LandBounds`), at the base height, each new chunk ramping from the existing edge so the join is seamless; one undo
 step. The SPACE section shows the reach with N / S / E / W buttons, and the agent has `extend_land`. The only
 cap is a sanity bound of 320 chunks per axis (`MaxExtent`, ≈ 20 km). What still limits big maps, in the order to
-fix them: placed objects load whole at startup (only terrain streams its data); 1 m sample spacing everywhere
-(per-worldspace spacing would quarter the data on open land); 32-bit float positions jitter past ~5–10 km from
-the origin (origin shifting); and no distant terrain level of detail past the load radius. The editor shows and edits one space at a time (`EditorContext.ActiveSpace`); the chunk index, terrain grid, terrain edits,
+fix them: 32-bit float positions jitter past ~5–10 km from
+the origin (origin shifting); and no distant terrain level of detail past the load radius. Placed objects already
+load a chunk at a time (*Objects storage*), and the stress world's 24k objects cost 94 ms and 2 MB to open. The
+editor shows and edits one space at a time (`EditorContext.ActiveSpace`); the chunk index, terrain grid, terrain edits,
 terrain followers and the agent's commands are all per space.
 A worldspace may have a **sea**: `SpaceRecord.WaterLevel` (meters, optional, omitted from the JSON when there is
 none; interiors never have one). All ground below it is under water, coasts and hollows alike; beyond the land the sea
@@ -217,6 +237,26 @@ terrain files' block tables only, and only land in use is in memory.
 - Untrusted input: a plugin may only name a `.terrain` file of its own next to it (no paths); damaged files and blocks
   are `DataValidationException`s naming the file.
 
+**Objects storage** (`Forge.Data.Serialization`, engine-free): a loaded plugin's placed objects are an `ObjectsFile`
+(`{plugin}.{16 hex of SHA-256}.objects` next to the plugin), a block per chunk, read when `IObjectBlocks.Read` first
+asks for the block and kept in the shared `ObjectCache` (64 MB default, ~130,000 objects at 512 B each, least recently
+used let go first; the same `BudgetCache<T>` as `HeightCache`).
+- **The file**: a 20-byte header ("FOBJ", version, block count, table offset), the blocks, then the table: the space
+  ids as a string table; per block its space, chunk, offset, length, object count, codec, and the 64-bit FNV-1a hash
+  of each object's id; then the override ids. Opening reads the header and table (a few bytes per object), which is
+  what answers `Keys`, `CountOf`, `TryLocate` (by hash; two ids with one hash is a vanishingly rare thing, and the
+  first block to name it keeps it) and `Overrides` without reading a block. Blocks are sorted by key.
+- **The codec** (`ObjectCodec`): per block a string table of namespaces and base ids, then per object its namespace
+  index, name, base id indices, position, rotation and scale as plain floats: ~64 bytes an object. Decoding checks
+  that every object stands in the block's chunk and space, belongs to the plugin or a master, and that ids are sorted
+  and unique; so a block that breaks the plugin's rules fails when first read, not at load.
+- **Saving** (`PluginFileStore.Save`): the objects file is written like the terrain file (blocks still stored in another
+  objects file are copied packed with their hashes), named by its content, then the JSON names it; older objects files
+  go after the commit, except the one the plugin was loaded with.
+- Measured on the stress world (1,024 chunks, 24,576 objects): opening its plugins now reads 282 KB of JSON and the
+  side files' tables in **94 ms (was ~1,100 ms)** and adds **2.3 MB (was 14 MB)**; resolving 4 ms, indexing the space
+  3 ms, and reading the 13 × 13 chunk window around the camera (3,840 objects in 160 blocks) 44 ms.
+
 **Known v1 limits** (deliberate, revisit when needed):
 - No field-level merge between conflicting overrides.
 - Conflict awareness only checks *direct* masters, not transitive ones.
@@ -226,8 +266,12 @@ terrain files' block tables only, and only land in use is in memory.
   by its height change under their pivot; slope objects (fences, rocks) are also re-tilted.
 - The edge of the streamed area is hidden by fog, thick at the load radius; there is no distant LOD or impostors yet, so
   nothing beyond it shows.
-  Terrain heights load on demand, but the other records (placed objects) still load whole at startup: the 2 km stress
-  world (25k records, 9.7 MB JSON) opens in ~1.1 s, almost all of it its 24k objects.
+  Terrain heights and placed objects both load a chunk at a time; the records in between (base objects, spaces,
+  climates, lakes, the small terrain chunk records) load whole, which is fine until there are hundreds of thousands.
+- An object's old chunk is only refreshed in the scene when that chunk has been shown: `ChunkIndex` learns where an
+  object is as it serves chunks, so a change to an object in a chunk nobody has shown dirties only its new chunk.
+- Conflicts between masters' placed objects are judged by id through the block locators (hashes), so an override of
+  an object only a damaged block would reveal is judged as if it existed.
 - Chunks edited in a session keep their heights in memory until it ends, even after saving.
 - The sea is one level for the whole worldspace, so any hollow below it fills, inland or not. Picks go through water
   to the ground beneath, and placing under water is allowed.
@@ -361,8 +405,9 @@ terrain files' block tables only, and only land in use is in memory.
 ## Streaming (Forge.Streaming + Forge.World)
 
 - `ChunkIndex` (engine-free) groups the presentable records by chunk: a terrain record per
-  coordinate (lowest id wins on duplicates) and placed objects by the chunk under their
-  position (`WorldGrid.ChunkOf`).
+  coordinate (lowest id wins on duplicates), indexed up front, and placed objects by the chunk under their
+  position (`WorldGrid.ChunkOf`), which are the store's and read a chunk at a time when a chunk is shown
+  (`IRecordStore.ObjectsIn`), so building the index reads no objects.
 - `ChunkWindow` (engine-free) plans loads and unloads around a focus chunk: load within
   `LoadRadius`, unload beyond `UnloadRadius` (the gap is hysteresis), loads nearest first.
 - `WorldView` presents **only loaded chunks**. `LoadChunk` / `UnloadChunk` add or remove a
