@@ -52,6 +52,9 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
 - While the Editor window is unfocused, play mode doesn't advance frames (`Time.frameCount`
   stays put), so `Object.Destroy` stays pending and child counts look too high. Check
   `WorldView.PresentedCount` instead of counting scene children.
+- Rendering several things in one frame from the same spot (the asset thumbnails): `Object.Destroy`
+  is deferred to the end of the frame, so the earlier instances are still there for the next
+  `Camera.Render()` and every picture piles up. Use `DestroyImmediate` for such throwaway instances.
 - Play mode is fair game: stop it yourself (`manage_editor stop`) whenever you need to compile,
   test or verify. Moti doesn't save `forge.user` from it; he only forgets to stop it.
 - Verify the running editor: `manage_editor play`, then `execute_code` (reflection on

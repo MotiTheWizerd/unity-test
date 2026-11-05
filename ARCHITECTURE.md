@@ -603,11 +603,17 @@ slopes), so results are exact and every edit goes through the edit session.
   Performance, StatusBar, Agent). The **tool strip** (down the left edge) is an icon button per tool from
   `ToolCatalog` (`ToolDefinition.Icon`), grouped, the current tool on the accent, name and key as the tooltip.
   The **assets browser** (along the bottom, `AssetsBrowser`) is where placeable content lives: a `TabBar` with
-  one tab per top-level category (`PaletteTabs` folds `ObjectPalette.Groups` by `CategoryPath.Head`), a grid of
-  `AssetTile`s for the current tab with a small header per sub-category (`CategoryPath.Tail`), a search that spans
+  one tab per top-level category (`PaletteTabs` folds `ObjectPalette.Groups` by `CategoryPath.Head`), one flowing
+  grid of `AssetTile`s for the current tab in display order (the sub-category is in the tooltip), a search that spans
   every tab (tabs dim, matches show with full paths, Esc clears), the 1–9 key on the first nine tiles, a collapse
-  button and a drag handle on the top edge for its height. Tiles show a placeholder icon until prefab thumbnails
-  are rendered. Tabs for materials and textures will sit in the same bar. The **tool options bar** (across the top of the view) shows the current
+  button and a drag handle on the top edge for its height. Each tile's picture comes from `ThumbnailRenderer`
+  (`World/Assets`, behind `IAssetThumbnails`): on first request it instantiates the asset key through the same
+  `IAssetCatalog` the world uses, frames it whole with `ThumbnailFraming` (orthographic three-quarter view, pure
+  math, tested), renders it with a private camera on the `ForgePreview` layer into a 128 px texture with a
+  transparent background, and keeps it for the session. The rig brings its own light and a flat ambient and
+  silences the scene's lights for that one render, so pictures look the same at any time of day; the instance is
+  destroyed immediately after, because the next picture may be rendered in the same frame. Tabs for materials and
+  textures will sit in the same bar. The **tool options bar** (across the top of the view) shows the current
   tool's name and hint, and each tool's settings are their own section inside it, shown while that tool is
   current: `SelectionSection` (count, Frame, Drop) for Select/Move/Rotate/Scale, `RectangleSection` (whole pieces)
   for Outline and Fill, `PlacementSection` (turn, random turn & size, align to slope, gaps) for Place, Outline and Fill, `SculptSection` (brush) for Sculpt, `WaterSection` (the current lake's level, Remove) for Water. Each presenter

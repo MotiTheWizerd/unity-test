@@ -41,6 +41,11 @@
     border-radius: 4px;
 }
 
+/* A rendered picture (transparent background) fills the box; the placeholder icon is hidden then. */
+.forge-tile__thumb--picture {
+    -unity-background-scale-mode: scale-to-fit;
+}
+
 .forge-tile__thumb .forge-icon {
     width: 24px;
     height: 24px;

@@ -6,6 +6,7 @@ using Forge.Data.Records;
 using Forge.EditorApp.Tools;
 using Forge.EditorApp.UI.Controls;
 using Forge.Editing.Palette;
+using Forge.World.Assets;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -28,6 +29,7 @@ namespace Forge.EditorApp.UI
         const int ShortcutCount = 9;
 
         readonly EditorContext _context;
+        readonly IAssetThumbnails _thumbnails;
         readonly VisualElement _panel;
         readonly VisualElement _resize;
         readonly TabBar _tabs;
@@ -46,9 +48,11 @@ namespace Forge.EditorApp.UI
         float _dragStartY;
         float _dragStartHeight;
 
-        public AssetsBrowser(VisualElement root, EditorContext context)
+        /// <param name="thumbnails">Pictures for the tiles; null leaves the placeholder icons.</param>
+        public AssetsBrowser(VisualElement root, EditorContext context, IAssetThumbnails thumbnails)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _thumbnails = thumbnails;
             _panel = PanelElements.Required<VisualElement>(root, "assets");
             _resize = PanelElements.Required<VisualElement>(root, "assets-resize");
             _search = PanelElements.Required<TextField>(root, "assets-search");
@@ -136,6 +140,8 @@ namespace Forge.EditorApp.UI
             var index = _source.IndexOf(id);
             var shortcut = index >= 0 && index < ShortcutCount ? index + 1 : 0;
             var tile = new AssetTile(record, shortcut, () => _context.SelectPlacement(id)) { tooltip = Tooltip(record, shortcut) };
+            if (_thumbnails != null)
+                tile.SetThumbnail(_thumbnails.Get(record.AssetKey));
             _tiles.Add(id, tile);
             return tile;
         }

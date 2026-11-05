@@ -81,6 +81,7 @@ namespace Forge.EditorApp
         [NonSerialized] SkyView _skyView;
         [NonSerialized] SkyDirector _skyDirector;
         [NonSerialized] SpaceCameras _spaceCameras;
+        [NonSerialized] ThumbnailRenderer _thumbnails;
         [NonSerialized] RecordId _shownSpace;
 
         void Start()
@@ -134,8 +135,9 @@ namespace Forge.EditorApp
                 _context.Session.WorldChanged += OnWorldChanged;
                 _context.Selection.Changed += _highlighter.Refresh;
 
+                _thumbnails = new ThumbnailRenderer(assets, transform);
                 _controller.Initialize(_context, _view, _waterView, _panel, assets, _agent);
-                _panel.Initialize(_context, _controller.Commands, diagnostics, _controller.Agent?.Conversation);
+                _panel.Initialize(_context, _controller.Commands, diagnostics, _thumbnails, _controller.Agent?.Conversation);
             }
             catch (Exception ex) when (ex is DataValidationException || ex is IOException)
             {
@@ -169,6 +171,7 @@ namespace Forge.EditorApp
             _view?.Dispose();
             _waterView?.Dispose();
             _skyView?.Dispose();
+            _thumbnails?.Dispose();
         }
 
         // The camera moves to where it last was in the new space (the scene's own view for the first one), then the

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Forge.Agent;
 using Forge.EditorApp.Diagnostics;
 using Forge.EditorApp.UI.Controls;
+using Forge.World.Assets;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
@@ -30,8 +31,9 @@ namespace Forge.EditorApp.UI
 
         void Awake() => _document = GetComponent<UIDocument>();
 
+        /// <param name="thumbnails">Pictures for the assets browser's tiles; null leaves the placeholder icons.</param>
         /// <param name="agent">The world-building agent's conversation; null hides the agent dock.</param>
-        public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics, AgentConversation agent)
+        public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics, IAssetThumbnails thumbnails, AgentConversation agent)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             // The document root covers the whole screen; only real panel elements may catch the pointer.
@@ -52,7 +54,7 @@ namespace Forge.EditorApp.UI
                 new PlacementSection(Root, context),
                 new SculptSection(Root, context),
                 new WaterSection(Root, context, commands),
-                new AssetsBrowser(Root, context),
+                new AssetsBrowser(Root, context, thumbnails),
                 new HistorySection(Root, context),
                 new PerformanceSection(Root, context, diagnostics),
                 new StatusBar(Root, context),
