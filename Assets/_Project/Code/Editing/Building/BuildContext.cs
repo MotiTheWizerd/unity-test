@@ -121,9 +121,13 @@ namespace Forge.Editing.Building
             throw new CommandException($"There is no lake '{id}' here. inspect_area lists the lakes in an area.");
         }
 
-        /// <summary>Placed objects in the space the commands build in.</summary>
-        public IEnumerable<PlacedObjectRecord> PlacedObjects() =>
-            Session.World.Records.OfType<PlacedObjectRecord>().Where(p => p.Space == Space);
+        /// <summary>Placed objects in the space the commands build in. Reads every chunk of the space.</summary>
+        public IEnumerable<PlacedObjectRecord> PlacedObjects()
+        {
+            var records = Session.World.Records;
+            var space = Space;
+            return records.ObjectChunks(space).SelectMany(coord => records.ObjectsIn(space, coord));
+        }
 
         /// <summary>The display name of base object <paramref name="baseId"/>, or its id if it is missing.</summary>
         public string NameOf(RecordId baseId) =>

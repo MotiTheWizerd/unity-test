@@ -111,6 +111,7 @@ namespace Forge.Tests.Streaming
             var before = TestRecords.Plugin("core", TestRecords.Base("core:rock"), PlacedAt("core:ref/a", 10f, 10f));
             var after = TestRecords.Plugin("core", TestRecords.Base("core:rock"), PlacedAt("core:ref/a", 10f, 10f, TestRecords.OtherSpace));
             var index = Build(Store(before));
+            index.ObjectsIn(new ChunkCoord(0, 0)); // shown, so the index knows where the object was
 
             var dirty = index.Update(Store(after), new[] { RecordId.Parse("core:ref/a") });
 
@@ -125,6 +126,7 @@ namespace Forge.Tests.Streaming
             var before = TestRecords.Plugin("core", TestRecords.Base("core:rock"), PlacedAt("core:ref/a", 10f, 10f), PlacedAt("core:ref/b", 20f, 10f));
             var after = TestRecords.Plugin("core", TestRecords.Base("core:rock"), PlacedAt("core:ref/a", 100f, 10f), PlacedAt("core:ref/b", 20f, 10f));
             var index = Build(Store(before));
+            index.ObjectsIn(new ChunkCoord(0, 0)); // shown, so the index knows where the object was
 
             var dirty = index.Update(Store(after), new[] { RecordId.Parse("core:ref/a") });
 
@@ -132,6 +134,20 @@ namespace Forge.Tests.Streaming
             Assert.That(Names(index.ObjectsIn(new ChunkCoord(0, 0))), Is.EqualTo(new[] { "ref/b" }));
             Assert.That(Names(index.ObjectsIn(new ChunkCoord(1, 0))), Is.EqualTo(new[] { "ref/a" }));
             Assert.That(index.ObjectCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Update_AnObjectInAChunkNeverShown_ReportsOnlyWhereItWent()
+        {
+            var before = TestRecords.Plugin("core", TestRecords.Base("core:rock"), PlacedAt("core:ref/a", 10f, 10f));
+            var after = TestRecords.Plugin("core", TestRecords.Base("core:rock"), PlacedAt("core:ref/a", 100f, 10f));
+            var index = Build(Store(before));
+
+            var dirty = index.Update(Store(after), new[] { RecordId.Parse("core:ref/a") });
+
+            Assert.That(dirty, Is.EquivalentTo(new[] { new ChunkCoord(1, 0) }), "Nothing was shown in (0, 0), so there is nothing there to refresh.");
+            Assert.That(index.ObjectsIn(new ChunkCoord(0, 0)), Is.Empty);
+            Assert.That(index.TryLocate(RecordId.Parse("core:ref/a"), out var coord) && coord == new ChunkCoord(1, 0), Is.True);
         }
 
         [Test]

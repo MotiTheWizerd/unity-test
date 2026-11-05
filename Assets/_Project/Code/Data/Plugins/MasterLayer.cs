@@ -9,17 +9,20 @@ namespace Forge.Data.Plugins
     /// A load order resolved once, onto which a changing top plugin (the editor's
     /// active plugin) is layered. Masters don't change while editing, so each
     /// <see cref="Overlay"/> costs time proportional to the top plugin, not the world.
+    /// Placed objects are resolved a chunk at a time (<see cref="MasterObjects"/>), when first asked for.
     /// </summary>
     public sealed class MasterLayer
     {
         readonly IReadOnlyList<Plugin> _plugins;
         readonly RecordStore _store;
+        readonly MasterObjects _objects;
         readonly IReadOnlyDictionary<RecordId, string> _lastToucher;
 
-        MasterLayer(IReadOnlyList<Plugin> plugins, RecordStore store, IReadOnlyDictionary<RecordId, string> lastToucher, ResolvedWorld world)
+        MasterLayer(IReadOnlyList<Plugin> plugins, RecordStore store, MasterObjects objects, IReadOnlyDictionary<RecordId, string> lastToucher, ResolvedWorld world)
         {
             _plugins = plugins;
             _store = store;
+            _objects = objects;
             _lastToucher = lastToucher;
             World = world;
         }
@@ -49,6 +52,9 @@ namespace Forge.Data.Plugins
 
                 foreach (var deletion in plugin.Deletions)
                 {
+                    // Deletions of objects are judged by the objects' own fold below.
+                    if (!lastToucher.ContainsKey(deletion) && !IsRecordId(loadOrder, deletion, plugin))
+                        continue;
                     lastToucher.TryGetValue(deletion, out var previous);
                     ResolutionRules.Delete(plugin, deletion, entries.ContainsKey(deletion), previous, conflicts, warnings);
                     lastToucher[deletion] = plugin.Id;
@@ -56,9 +62,25 @@ namespace Forge.Data.Plugins
                 }
             }
 
-            var store = new RecordStore(entries);
+            var objects = new MasterObjects(loadOrder, conflicts, warnings);
+            var store = new RecordStore(entries, objects);
             var world = new ResolvedWorld(loadOrder.Select(p => p.Id).ToArray(), store, conflicts, warnings);
-            return new MasterLayer(loadOrder.ToArray(), store, lastToucher, world);
+            return new MasterLayer(loadOrder.ToArray(), store, objects, lastToucher, world);
+        }
+
+        // A deletion names an object when some plugin before it keeps the id in a block; otherwise it is judged
+        // here with the other records (including the warning for deleting what doesn't exist).
+        static bool IsRecordId(IReadOnlyList<Plugin> loadOrder, RecordId id, Plugin upTo)
+        {
+            foreach (var plugin in loadOrder)
+            {
+                if (ReferenceEquals(plugin, upTo))
+                    break;
+                if (plugin.Objects.TryLocate(id, out _))
+                    return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -74,18 +96,31 @@ namespace Forge.Data.Plugins
             var conflicts = new List<RecordConflict>(World.Conflicts);
             var warnings = new List<string>(World.Warnings);
 
-            var written = new Dictionary<RecordId, Record>(top.Records.Count);
+            var written = new Dictionary<RecordId, Record>(top.Records.Count + top.Objects.TotalCount);
             foreach (var record in top.Records)
             {
                 ResolutionRules.Write(top, record.Id, _store.Contains(record.Id), PreviousToucher(record.Id), conflicts, warnings);
                 written.Add(record.Id, record);
             }
 
-            var deleted = new HashSet<RecordId>();
-            foreach (var deletion in top.Deletions)
-            {
+            // The same order as a full fold: the records and their deletions, then the objects and theirs.
+            var deleted = new HashSet<RecordId>(top.Deletions);
+            foreach (var deletion in top.Deletions.Where(d => !_objects.IsObject(d)))
                 ResolutionRules.Delete(top, deletion, _store.Contains(deletion), PreviousToucher(deletion), conflicts, warnings);
-                deleted.Add(deletion);
+
+            foreach (var key in top.Objects.Keys)
+            foreach (var placed in top.Objects.Read(key))
+                written.Add(placed.Id, placed);
+            foreach (var id in top.Objects.Overrides)
+            {
+                var previous = _objects.LastToucherBefore(id, _plugins.Count);
+                ResolutionRules.Write(top, id, previous.IsWriter, previous.PluginId, conflicts, warnings);
+            }
+
+            foreach (var deletion in top.Deletions.Where(_objects.IsObject))
+            {
+                var previous = _objects.LastToucherBefore(deletion, _plugins.Count);
+                ResolutionRules.Delete(top, deletion, previous.IsWriter, previous.PluginId, conflicts, warnings);
             }
 
             var loadOrder = World.LoadOrder.Append(top.Id).ToArray();

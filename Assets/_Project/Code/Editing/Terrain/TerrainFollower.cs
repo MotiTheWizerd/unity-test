@@ -22,8 +22,8 @@ namespace Forge.Editing.Terrain
     {
         static readonly IReadOnlyList<PlacedObjectRecord> None = Array.Empty<PlacedObjectRecord>();
 
-        // Grouped once per stroke, so each dab only looks at objects on the chunks it changed.
-        readonly Dictionary<ChunkCoord, List<PlacedObjectRecord>> _byChunk = new Dictionary<ChunkCoord, List<PlacedObjectRecord>>();
+        readonly IRecordStore _world;
+        readonly RecordId _space;
         readonly Func<PlacedObjectRecord, PlacementShape?> _slopeShapeOf;
 
         /// <param name="world">The world as it was when the edit began.</param>
@@ -37,14 +37,9 @@ namespace Forge.Editing.Terrain
             if (world == null)
                 throw new ArgumentNullException(nameof(world));
 
+            _world = world;
+            _space = space;
             _slopeShapeOf = slopeShapeOf ?? (_ => null);
-            foreach (var placed in world.OfType<PlacedObjectRecord>().Where(p => p.Space == space))
-            {
-                var coord = WorldGrid.ChunkOf(placed.Position.X, placed.Position.Z);
-                if (!_byChunk.TryGetValue(coord, out var list))
-                    _byChunk.Add(coord, list = new List<PlacedObjectRecord>());
-                list.Add(placed);
-            }
         }
 
         /// <summary>
@@ -62,10 +57,8 @@ namespace Forge.Editing.Terrain
             var result = new List<PlacedObjectRecord>();
             foreach (var coord in edit.TouchedChunks)
             {
-                if (!_byChunk.TryGetValue(coord, out var objects))
-                    continue;
-
-                foreach (var placed in objects)
+                // The world keeps a chunk's objects once read, so each dab costs only the lookup.
+                foreach (var placed in _world.ObjectsIn(_space, coord))
                 {
                     var shape = _slopeShapeOf(placed);
                     result.Add(shape.HasValue && TryRefit(placed, shape.Value, edit, out var refitted)

@@ -42,8 +42,12 @@ namespace Forge.Editing
             _masters = MasterLayer.Build(LoadOrderSorter.Sort(masters ?? Enumerable.Empty<Plugin>()));
             _activeManifest = active.Manifest;
             _history = new UndoHistory(historyCapacity);
+            // The active plugin is held whole, objects included: it is the one plugin being written.
             foreach (var record in active.Records)
                 _records.Add(record.Id, record);
+            foreach (var key in active.Objects.Keys)
+            foreach (var placed in active.Objects.Read(key))
+                _records.Add(placed.Id, placed);
             foreach (var deletion in active.Deletions)
                 _deletions.Add(deletion);
 

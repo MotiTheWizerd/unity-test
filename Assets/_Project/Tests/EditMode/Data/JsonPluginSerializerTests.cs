@@ -73,8 +73,8 @@ namespace Forge.Tests.Data
             Assert.That(baseObject.AssetKey, Is.EqualTo("trees/oak_giant"));
             Assert.That(baseObject.Category, Is.EqualTo("Nature/Trees"));
 
-            var expected = (PlacedObjectRecord)original.Records.Single(r => r is PlacedObjectRecord);
-            var placed = (PlacedObjectRecord)copy.Records.Single(r => r is PlacedObjectRecord);
+            var expected = original.Objects.Keys.SelectMany(original.Objects.Read).Single();
+            var placed = copy.Objects.Keys.SelectMany(copy.Objects.Read).Single();
             Assert.That(placed.Id, Is.EqualTo(expected.Id));
             Assert.That(placed.BaseId, Is.EqualTo(expected.BaseId));
             Assert.That(placed.Space, Is.EqualTo(expected.Space));
@@ -215,11 +215,12 @@ namespace Forge.Tests.Data
                 new PlacedObjectRecord(RecordId.Parse("core:ref/b"), RecordId.Parse("core:rock"), OtherSpace, Vector3.Zero, Quaternion.Identity, 1f),
                 new TerrainChunkRecord(chunkId, OtherSpace, coord, HeightField.Flat(10f, 17)));
 
-            var copy = Read(Write(plugin)).Records.ToDictionary(r => r.Id.ToString());
+            var read = Read(Write(plugin));
+            var objects = read.Objects.Keys.SelectMany(read.Objects.Read).ToDictionary(o => o.Id.ToString());
 
-            Assert.That(((PlacedObjectRecord)copy["core:ref/a"]).Space, Is.EqualTo(Space));
-            Assert.That(((PlacedObjectRecord)copy["core:ref/b"]).Space, Is.EqualTo(OtherSpace));
-            var chunk = (TerrainChunkRecord)copy[chunkId.ToString()];
+            Assert.That(objects["core:ref/a"].Space, Is.EqualTo(Space));
+            Assert.That(objects["core:ref/b"].Space, Is.EqualTo(OtherSpace));
+            var chunk = (TerrainChunkRecord)read.Records.Single(r => r.Id == chunkId);
             Assert.That((chunk.Space, chunk.Coord), Is.EqualTo((OtherSpace, coord)));
         }
 

@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Forge.Data.Records;
+using Forge.Data.Terrain;
 
 namespace Forge.Data.Plugins
 {
@@ -11,10 +13,16 @@ namespace Forge.Data.Plugins
     /// </summary>
     sealed class LayeredRecordStore : IRecordStore
     {
+        static readonly IReadOnlyList<PlacedObjectRecord> None = Array.Empty<PlacedObjectRecord>();
+
         readonly RecordStore _base;
         readonly string _topPluginId;
         readonly IReadOnlyDictionary<RecordId, Record> _written;
         readonly HashSet<RecordId> _deleted;
+
+        // The top plugin's objects by block, and each block as seen through the layer, both built on first use.
+        Dictionary<ObjectBlockKey, List<PlacedObjectRecord>> _writtenObjects;
+        readonly Dictionary<ObjectBlockKey, IReadOnlyList<PlacedObjectRecord>> _layered = new Dictionary<ObjectBlockKey, IReadOnlyList<PlacedObjectRecord>>();
 
         public LayeredRecordStore(RecordStore baseStore, string topPluginId, IReadOnlyDictionary<RecordId, Record> written, HashSet<RecordId> deleted)
         {
@@ -60,6 +68,32 @@ namespace Forge.Data.Plugins
             return _base.GetSource(id);
         }
 
+        public IReadOnlyList<ChunkCoord> ObjectChunks(RecordId space)
+        {
+            var chunks = _base.ObjectChunks(space);
+            var written = WrittenObjects().Keys.Where(k => k.Space == space).Select(k => k.Coord);
+            return written.Any() ? chunks.Union(written).ToArray() : chunks;
+        }
+
+        public IReadOnlyList<PlacedObjectRecord> ObjectsIn(RecordId space, ChunkCoord coord)
+        {
+            var key = new ObjectBlockKey(space, coord);
+            if (_layered.TryGetValue(key, out var objects))
+                return objects;
+
+            var below = _base.ObjectsIn(space, coord);
+            WrittenObjects().TryGetValue(key, out var written);
+            if (written == null && !below.Any(p => IsShadowed(p.Id)))
+                objects = below;
+            else
+                objects = below.Where(p => !IsShadowed(p.Id)).Concat(written ?? Enumerable.Empty<PlacedObjectRecord>()).OrderBy(p => p.Id).ToArray();
+            if (objects.Count == 0)
+                objects = None;
+
+            _layered.Add(key, objects);
+            return objects;
+        }
+
         /// <summary>
         /// Ids whose record differs from <paramref name="earlier"/>, when both layer
         /// over the same master store; null when they don't and the difference is unknown.
@@ -90,6 +124,23 @@ namespace Forge.Data.Plugins
                 if (!b._deleted.Contains(id))
                     changed.Add(id);
             }
+        }
+
+        Dictionary<ObjectBlockKey, List<PlacedObjectRecord>> WrittenObjects()
+        {
+            if (_writtenObjects != null)
+                return _writtenObjects;
+
+            var grouped = new Dictionary<ObjectBlockKey, List<PlacedObjectRecord>>();
+            foreach (var placed in _written.Values.OfType<PlacedObjectRecord>())
+            {
+                var key = ObjectBlockKey.Of(placed);
+                if (!grouped.TryGetValue(key, out var list))
+                    grouped.Add(key, list = new List<PlacedObjectRecord>());
+                list.Add(placed);
+            }
+
+            return _writtenObjects = grouped;
         }
 
         bool IsShadowed(RecordId id) => _written.ContainsKey(id) || _deleted.Contains(id);

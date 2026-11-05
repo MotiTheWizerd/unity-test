@@ -53,7 +53,8 @@ namespace Forge.Data.Json
                     Masters = new List<string>(plugin.Manifest.Masters),
                 },
                 Terrain = terrain?.FileName,
-                Records = new List<Record>(plugin.Records),
+                // Objects still travel in the JSON here; an objects file of their own comes next.
+                Records = plugin.Records.Concat(plugin.Objects.Keys.SelectMany(plugin.Objects.Read)).OrderBy(r => r.Id).ToList(),
                 Deletions = new List<RecordId>(plugin.Deletions),
             };
 

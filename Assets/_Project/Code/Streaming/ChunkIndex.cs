@@ -9,10 +9,11 @@ using Forge.Data.Terrain;
 namespace Forge.Streaming
 {
     /// <summary>
-    /// The presentable records of one space grouped by terrain chunk, so the space
-    /// can be loaded and unloaded chunk by chunk. A placed object belongs to the
-    /// chunk under its position. Records of other spaces are left out. Build it once, then
-    /// <see cref="Update"/> it with the ids that changed; the cost of an update follows the change, not the world.
+    /// The presentable records of one space by terrain chunk, so the space can be loaded and unloaded chunk by
+    /// chunk. Terrain records are indexed up front (one per chunk, small); placed objects are the store's, read a
+    /// chunk at a time when a chunk is asked for (<see cref="IRecordStore.ObjectsIn"/>), so building the index reads
+    /// no objects. Records of other spaces are left out. Build it once, then <see cref="Update"/> it with the ids
+    /// that changed; the cost of an update follows the change, not the world.
     /// </summary>
     public sealed class ChunkIndex
     {
@@ -22,8 +23,10 @@ namespace Forge.Streaming
 
         // All terrain records per coordinate, sorted by id; the first one wins.
         readonly Dictionary<ChunkCoord, List<TerrainChunkRecord>> _terrain = new Dictionary<ChunkCoord, List<TerrainChunkRecord>>();
-        readonly Dictionary<ChunkCoord, List<PlacedObjectRecord>> _objects = new Dictionary<ChunkCoord, List<PlacedObjectRecord>>();
+
+        // Where each terrain record is, and where each object served so far was last seen.
         readonly Dictionary<RecordId, ChunkCoord> _location = new Dictionary<RecordId, ChunkCoord>();
+        IRecordStore _store;
 
         /// <param name="space">The space indexed; default for an empty index that shows nothing.</param>
         public ChunkIndex(RecordId space = default)
@@ -36,7 +39,9 @@ namespace Forge.Streaming
 
         public int TerrainCount => _terrain.Count;
 
-        public int ObjectCount { get; private set; }
+        /// <summary>How many objects the space holds. Reads every chunk of the space.</summary>
+        public int ObjectCount =>
+            _store == null || Space.IsDefault ? 0 : _store.ObjectChunks(Space).Sum(coord => ObjectsIn(coord).Count);
 
         /// <summary>
         /// Terrain records hidden because another namespace defines the same
@@ -50,16 +55,15 @@ namespace Forge.Streaming
             if (store == null)
                 throw new ArgumentNullException(nameof(store));
 
-            var index = new ChunkIndex(space);
+            var index = new ChunkIndex(space) { _store = store };
             foreach (var chunk in store.OfType<TerrainChunkRecord>())
-                index.Add(chunk, sorted: false);
-            foreach (var placed in store.OfType<PlacedObjectRecord>())
-                index.Add(placed, sorted: false);
+            {
+                if (chunk.Space == space)
+                    index.AddTerrain(chunk, sorted: false);
+            }
 
             // Store enumeration order is unspecified; sort once so presentation is deterministic.
             foreach (var list in index._terrain.Values)
-                list.Sort(ById);
-            foreach (var list in index._objects.Values)
                 list.Sort(ById);
             return index;
         }
@@ -68,9 +72,10 @@ namespace Forge.Streaming
             WorldGrid.ChunkOf(placed.Position.X, placed.Position.Z);
 
         /// <summary>
-        /// Re-indexes <paramref name="changed"/> against the new <paramref name="store"/>
-        /// and returns every chunk whose content changed (old and new location of each record).
-        /// Ids of other record types or other spaces are ignored.
+        /// Moves the index to the new <paramref name="store"/>, re-indexes <paramref name="changed"/>
+        /// and returns every chunk whose content changed: the new location of each record, and the old one when
+        /// the index has served that chunk (an object's old chunk is unknown until <see cref="ObjectsIn"/> read it;
+        /// a chunk nobody asked for has nothing shown to refresh). Ids of other record types or other spaces are ignored.
         /// </summary>
         public IReadOnlyCollection<ChunkCoord> Update(IRecordStore store, IEnumerable<RecordId> changed)
         {
@@ -79,6 +84,7 @@ namespace Forge.Streaming
             if (changed == null)
                 throw new ArgumentNullException(nameof(changed));
 
+            _store = store;
             var dirty = new HashSet<ChunkCoord>();
             foreach (var id in changed)
             {
@@ -88,7 +94,7 @@ namespace Forge.Streaming
                     dirty.Add(oldCoord);
                 }
 
-                if (store.TryGet(id, out var record) && Add(record, sorted: true) is ChunkCoord newCoord)
+                if (store.TryGet(id, out var record) && Add(record) is ChunkCoord newCoord)
                     dirty.Add(newCoord);
             }
 
@@ -106,34 +112,46 @@ namespace Forge.Streaming
         public IReadOnlyList<TerrainChunkRecord> ShadowedAt(ChunkCoord coord) =>
             _terrain.TryGetValue(coord, out var list) && list.Count > 1 ? list.GetRange(1, list.Count - 1) : NoTerrain;
 
-        /// <summary>Placed objects in the chunk, sorted by id; empty if there are none.</summary>
-        public IReadOnlyList<PlacedObjectRecord> ObjectsIn(ChunkCoord coord) =>
-            _objects.TryGetValue(coord, out var list) ? list : NoObjects;
-
-        /// <summary>The chunk a record is shown in; false if it isn't indexed or is shadowed terrain.</summary>
-        public bool TryLocate(RecordId id, out ChunkCoord coord)
+        /// <summary>Placed objects in the chunk, sorted by id; empty if there are none. Reads the chunk on first use.</summary>
+        public IReadOnlyList<PlacedObjectRecord> ObjectsIn(ChunkCoord coord)
         {
-            if (!_location.TryGetValue(id, out coord))
-                return false;
+            if (_store == null || Space.IsDefault)
+                return NoObjects;
 
-            // Of the terrain records at a coordinate, only the winner is shown.
-            return !_terrain.TryGetValue(coord, out var terrain) || terrain[0].Id == id || !terrain.Exists(c => c.Id == id);
+            var objects = _store.ObjectsIn(Space, coord);
+            foreach (var placed in objects)
+                _location[placed.Id] = coord;
+            return objects;
         }
 
-        ChunkCoord? Add(Record record, bool sorted)
+        /// <summary>The chunk a record is shown in; false if it isn't in this space or is shadowed terrain.</summary>
+        public bool TryLocate(RecordId id, out ChunkCoord coord)
+        {
+            if (_location.TryGetValue(id, out coord))
+                return !_terrain.TryGetValue(coord, out var terrain) || terrain[0].Id == id || !terrain.Exists(c => c.Id == id);
+
+            // An object in a chunk nobody asked for yet.
+            if (_store != null && _store.TryGet(id, out var record) && record is PlacedObjectRecord placed && placed.Space == Space)
+            {
+                coord = ChunkOf(placed);
+                return true;
+            }
+
+            return false;
+        }
+
+        ChunkCoord? Add(Record record)
         {
             switch (record)
             {
                 case TerrainChunkRecord chunk when chunk.Space == Space:
-                    Insert(_terrain, chunk.Coord, chunk, sorted);
-                    _location[chunk.Id] = chunk.Coord;
+                    AddTerrain(chunk, sorted: true);
                     return chunk.Coord;
 
                 case PlacedObjectRecord placed when placed.Space == Space:
+                    // The store already holds it in its chunk; only its location is noted here.
                     var coord = ChunkOf(placed);
-                    Insert(_objects, coord, placed, sorted);
                     _location[placed.Id] = coord;
-                    ObjectCount++;
                     return coord;
 
                 default:
@@ -141,43 +159,36 @@ namespace Forge.Streaming
             }
         }
 
+        void AddTerrain(TerrainChunkRecord chunk, bool sorted)
+        {
+            if (!_terrain.TryGetValue(chunk.Coord, out var list))
+                _terrain.Add(chunk.Coord, list = new List<TerrainChunkRecord>());
+
+            if (sorted)
+            {
+                var at = list.BinarySearch(chunk, ById);
+                list.Insert(at < 0 ? ~at : at, chunk);
+            }
+            else
+            {
+                list.Add(chunk);
+            }
+
+            _location[chunk.Id] = chunk.Coord;
+        }
+
         void Remove(RecordId id, ChunkCoord coord)
         {
             _location.Remove(id);
-            if (RemoveFrom(_terrain, coord, id))
+            if (!_terrain.TryGetValue(coord, out var list))
                 return;
-            if (RemoveFrom(_objects, coord, id))
-                ObjectCount--;
-        }
 
-        static void Insert<T>(Dictionary<ChunkCoord, List<T>> map, ChunkCoord coord, T record, bool sorted) where T : Record
-        {
-            if (!map.TryGetValue(coord, out var list))
-                map.Add(coord, list = new List<T>());
-
-            if (!sorted)
-            {
-                list.Add(record);
-                return;
-            }
-
-            var at = list.BinarySearch(record, ById);
-            list.Insert(at < 0 ? ~at : at, record);
-        }
-
-        static bool RemoveFrom<T>(Dictionary<ChunkCoord, List<T>> map, ChunkCoord coord, RecordId id) where T : Record
-        {
-            if (!map.TryGetValue(coord, out var list))
-                return false;
-
-            var at = list.FindIndex(r => r.Id == id);
+            var at = list.FindIndex(c => c.Id == id);
             if (at < 0)
-                return false;
-
+                return;
             list.RemoveAt(at);
             if (list.Count == 0)
-                map.Remove(coord);
-            return true;
+                _terrain.Remove(coord);
         }
     }
 }
