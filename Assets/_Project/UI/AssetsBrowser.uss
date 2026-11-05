@@ -29,6 +29,7 @@
 
 .forge-assets__title {
     margin: 0 var(--forge-space-3) 0 0;
+    color: var(--forge-accent);
 }
 
 .forge-assets__tabs {
