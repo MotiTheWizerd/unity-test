@@ -159,7 +159,9 @@ added as chunks, and a mod adds land to its master's worldspace with chunks in i
 worldspace starts as flat land of 3 to 64 chunks per edge (`SpaceEdits.Sizes`, `MaxSize`; 64 ≈ 4 km), and grows
 afterwards with `SpaceEdits.ExtendLand`: a strip of chunks along one side (`LandSide`), the full reach of the land
 (`LandBounds`), at the base height, each new chunk ramping from the existing edge so the join is seamless; one undo
-step. The SPACE section shows the reach with N / S / E / W buttons, and the agent has `extend_land`. The only
+step. Several sides extend in one step too (`LandSides.All`): north, south, east, west in turn, each strip along the
+land as grown so far, so the corners fill in, ramping from the strips beside them. The SPACE section shows the
+reach with N / S / E / W / All buttons, and the agent has `extend_land` (side `all` for every side). The only
 cap is a sanity bound of 320 chunks per axis (`MaxExtent`, ≈ 20 km). Far from the world's origin the scene is
 rebased under the camera (*origin shifting*, see Streaming), so 32-bit float jitter never shows, and the land past
 the loaded chunks is drawn as coarse *far tiles* out to a kilometre (see Streaming). Placed objects already

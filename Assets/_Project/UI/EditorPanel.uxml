@@ -24,6 +24,7 @@
                             <forge:ForgeButton name="space-land-south" text="S" tooltip="Extend the land south (−Z)" />
                             <forge:ForgeButton name="space-land-east" text="E" tooltip="Extend the land east (+X)" />
                             <forge:ForgeButton name="space-land-west" text="W" tooltip="Extend the land west (−X)" />
+                            <forge:ForgeButton name="space-land-all" text="All" tooltip="Extend the land on every side at once, corners included (one undo step)" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                     <ui:VisualElement name="space-new-form" class="forge-indented">

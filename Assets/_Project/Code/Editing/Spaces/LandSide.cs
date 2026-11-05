@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Forge.Data.Terrain;
 
 namespace Forge.Editing.Spaces
@@ -14,6 +15,26 @@ namespace Forge.Editing.Spaces
 
     public static class LandSides
     {
+        /// <summary>Every side, north, south, east, west.</summary>
+        public static readonly IReadOnlyList<LandSide> All = new[] { LandSide.North, LandSide.South, LandSide.East, LandSide.West };
+
+        /// <summary>
+        /// Parses one side ("north" / "n" and the like) or every side ("all"), any case; false for anything else.
+        /// </summary>
+        public static bool TryParseSides(string text, out IReadOnlyList<LandSide> sides)
+        {
+            switch ((text ?? string.Empty).Trim().ToLowerInvariant())
+            {
+                case "all": case "every": case "all sides":
+                    sides = All;
+                    return true;
+            }
+
+            var parsed = TryParse(text, out var side);
+            sides = parsed ? new[] { side } : null;
+            return parsed;
+        }
+
         /// <summary>The chunk step outward across <paramref name="side"/>.</summary>
         public static ChunkCoord Outward(this LandSide side)
         {

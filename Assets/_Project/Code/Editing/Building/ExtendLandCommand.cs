@@ -13,8 +13,9 @@ namespace Forge.Editing.Building
 
         public ExtendLandCommand(BuildContext context)
             : base("extend_land",
-                "Adds land to the worldspace beyond one of its sides: a strip of terrain chunks (each 64 m across) " +
-                "along the whole side, at the world's base height, joining the existing land smoothly. Use it when " +
+                "Adds land to the worldspace beyond one of its sides, or all four at once: a strip of terrain chunks " +
+                "(each 64 m across) along the whole side, at the world's base height, joining the existing land " +
+                "smoothly (with all sides, the corners are filled too). Use it when " +
                 "a build needs more room than the terrain has (the <editor> note says how far it reaches). It " +
                 "changes the shape of the whole world, so only when the user asks for more land or the build won't " +
                 "fit. Interiors have no land.")
@@ -24,7 +25,7 @@ namespace Forge.Editing.Building
 
         public sealed class Arguments
         {
-            [Param("Which side to grow: \"north\" (+z), \"south\" (-z), \"east\" (+x) or \"west\" (-x).")]
+            [Param("Which side to grow: \"north\" (+z), \"south\" (-z), \"east\" (+x), \"west\" (-x), or \"all\" for every side at once.")]
             public string Side { get; set; }
 
             [Param("How many rows of chunks to add on that side; each chunk is 64 m.", Minimum = 1, Maximum = SpaceEdits.MaxExtendBy)]
@@ -56,13 +57,13 @@ namespace Forge.Editing.Building
                 throw new CommandException("No space is open.");
             if (space.Kind != SpaceKind.Worldspace)
                 throw new CommandException($"{space.DisplayName} is an interior, which has no land; only worldspaces do.");
-            if (!LandSides.TryParse(arguments.Side, out var side))
-                throw new CommandException($"'{arguments.Side}' is not a side; use north, south, east or west.");
+            if (!LandSides.TryParseSides(arguments.Side, out var sides))
+                throw new CommandException($"'{arguments.Side}' is not a side; use north, south, east, west or all.");
 
             int added;
             try
             {
-                added = SpaceEdits.ExtendLand(_context.Session, space.Id, side, arguments.Chunks);
+                added = SpaceEdits.ExtendLand(_context.Session, space.Id, sides, arguments.Chunks);
             }
             catch (ArgumentException ex)
             {
@@ -71,9 +72,10 @@ namespace Forge.Editing.Building
 
             var reach = LandBounds.Of(_context.Session.World.Records, space.Id)?.ToString() ?? "no land";
             var meters = arguments.Chunks * WorldGrid.ChunkSize;
+            var where = sides.Count == 1 ? sides[0].Word() : "on every side";
             var summary = added == 0
                 ? $"{space.DisplayName} already has that land. It is {reach}."
-                : FormattableString.Invariant($"Extended {space.DisplayName} {meters:0} m {side.Word()} ({added} chunk{(added == 1 ? "" : "s")}). The land is now {reach}.");
+                : FormattableString.Invariant($"Extended {space.DisplayName} {meters:0} m {where} ({added} chunk{(added == 1 ? "" : "s")}). The land is now {reach}.");
             return new Result(summary, added, reach);
         }
     }

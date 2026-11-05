@@ -57,50 +57,85 @@ namespace Forge.Editing.Spaces
         /// seamless. Gaps inside the land's reach are left as they are. Returns how many chunks were added (chunks
         /// already there are kept).
         /// </summary>
-        public static int ExtendLand(EditSession session, RecordId space, LandSide side, int chunks)
+        public static int ExtendLand(EditSession session, RecordId space, LandSide side, int chunks) =>
+            ExtendLand(session, space, new[] { side }, chunks);
+
+        /// <summary>
+        /// Grows the land beyond each of <paramref name="sides"/> by <paramref name="chunks"/> rows, as one undo step:
+        /// the sides are extended north, south, east, west in turn, each along the land's reach so far, so with
+        /// adjoining sides the corners between the new strips are filled too (flat, or ramping from the strip beside
+        /// them). See the single-side overload for the rest. Returns how many chunks were added.
+        /// </summary>
+        public static int ExtendLand(EditSession session, RecordId space, IEnumerable<LandSide> sides, int chunks)
         {
             var spaceRecord = Worldspace(session, space, "have land");
+            if (sides == null)
+                throw new ArgumentNullException(nameof(sides));
+            var ordered = sides.Distinct().OrderBy(s => s).ToList();
+            if (ordered.Count == 0)
+                throw new ArgumentException("Name at least one side to extend.", nameof(sides));
             if (!(chunks >= 1 && chunks <= MaxExtendBy))
                 throw new ArgumentOutOfRangeException(nameof(chunks), chunks, $"Extend by 1 to {MaxExtendBy} chunks at a time.");
 
-            var existing = session.World.Records.OfType<TerrainChunkRecord>().Where(c => c.Space == space).ToDictionary(c => c.Coord);
-            var bounds = LandBounds.Of(existing.Keys)
+            var land = session.World.Records.OfType<TerrainChunkRecord>().Where(c => c.Space == space).ToDictionary(c => c.Coord);
+            var bounds = LandBounds.Of(land.Keys)
                          ?? throw new ArgumentException($"{spaceRecord.DisplayName} has no land to extend; create some first.", nameof(space));
-            var reach = Math.Max(bounds.Width, bounds.Depth) + chunks;
+            var width = bounds.Width + chunks * ordered.Count(s => s == LandSide.East || s == LandSide.West);
+            var depth = bounds.Depth + chunks * ordered.Count(s => s == LandSide.North || s == LandSide.South);
+            var reach = Math.Max(width, depth);
             if (reach > MaxExtent)
                 throw new ArgumentOutOfRangeException(nameof(chunks), chunks, $"The land would reach {reach} chunks across; at most {MaxExtent} ({MaxExtent * WorldGrid.ChunkSize / 1000f:0.#} km) is supported.");
 
-            var outward = side.Outward();
-            var resolution = spaceRecord.HeightmapResolution;
-            var flat = HeightField.Flat(spaceRecord.BaseHeight, resolution);
             var added = new List<TerrainChunkRecord>();
-            foreach (var edge in EdgeChunks(bounds, side))
+            foreach (var side in ordered)
             {
-                // The ramp starts from the land actually at the edge (it may stop short of the rectangle's corner).
-                // A neighbour at another resolution (a mod's chunk) can't be ramped from; the new land is flat there.
-                existing.TryGetValue(edge, out var neighbour);
-                var rampFrom = neighbour != null && neighbour.Heights.Resolution == resolution ? neighbour : null;
-                for (var k = 1; k <= chunks; k++)
+                // Each strip spans the land as it is after the strips before it, and sees their chunks as land.
+                foreach (var record in Strip(session, spaceRecord, land, LandBounds.Of(land.Keys).Value, side, chunks))
                 {
-                    var coord = new ChunkCoord(edge.X + outward.X * k, edge.Z + outward.Z * k);
-                    if (existing.ContainsKey(coord))
-                        continue;
-                    var heights = k == 1 && rampFrom != null
-                        ? Ramp(rampFrom.Heights.Load(), side, spaceRecord.BaseHeight)
-                        : flat;
-                    added.Add(new TerrainChunkRecord(TerrainChunkRecord.IdFor(session.ActivePluginId, space, coord), space, coord, heights));
+                    land.Add(record.Coord, record);
+                    added.Add(record);
                 }
             }
 
             if (added.Count == 0)
                 return 0;
 
-            session.Batch($"Extend {spaceRecord.DisplayName} {chunks} chunk{(chunks == 1 ? "" : "s")} {side.Word()}", () =>
+            var where = ordered.Count == 4 ? "on every side" : string.Join(", ", ordered.Select(s => s.Word()));
+            session.Batch($"Extend {spaceRecord.DisplayName} {chunks} chunk{(chunks == 1 ? "" : "s")} {where}", () =>
             {
                 foreach (var record in added)
                     session.Put(record);
             });
             return added.Count;
+        }
+
+        // The new chunks of one strip `chunks` rows deep beyond `side` of `bounds`, skipping coordinates already in `land`.
+        static IEnumerable<TerrainChunkRecord> Strip(EditSession session, SpaceRecord space, IReadOnlyDictionary<ChunkCoord, TerrainChunkRecord> land,
+            LandBounds bounds, LandSide side, int chunks)
+        {
+            var outward = side.Outward();
+            var resolution = space.HeightmapResolution;
+            var flat = HeightField.Flat(space.BaseHeight, resolution);
+            var strip = new List<TerrainChunkRecord>();
+            foreach (var edge in EdgeChunks(bounds, side))
+            {
+                // The ramp starts from the land actually at the edge (it may stop short of the rectangle's corner).
+                // A neighbour at another resolution (a mod's chunk) can't be ramped from; the new land is flat there.
+                land.TryGetValue(edge, out var neighbour);
+                var rampFrom = neighbour != null && neighbour.Heights.Resolution == resolution ? neighbour : null;
+                for (var k = 1; k <= chunks; k++)
+                {
+                    var coord = new ChunkCoord(edge.X + outward.X * k, edge.Z + outward.Z * k);
+                    if (land.ContainsKey(coord))
+                        continue;
+                    var heights = k == 1 && rampFrom != null
+                        ? Ramp(rampFrom.Heights.Load(), side, space.BaseHeight)
+                        : flat;
+                    strip.Add(new TerrainChunkRecord(TerrainChunkRecord.IdFor(session.ActivePluginId, space.Id, coord), space.Id, coord, heights));
+                }
+            }
+
+            return strip;
         }
 
         // The chunk coordinates along the land's edge on that side, one per column (or row) of the land's reach.

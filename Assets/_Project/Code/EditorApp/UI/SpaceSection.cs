@@ -11,7 +11,7 @@ namespace Forge.EditorApp.UI
 {
     /// <summary>
     /// The space being shown and edited (a picker of every worldspace and interior), a worldspace's sea level,
-    /// climate and land (its reach, and N / S / E / W to extend it by a number of chunks), and New… to create a
+    /// climate and land (its reach, and N / S / E / W / All to extend it by a number of chunks), and New… to create a
     /// space: a worldspace of a chosen size of flat land, or an empty interior. Creating one switches to it.
     /// </summary>
     public sealed class SpaceSection : IPanelSection
@@ -62,8 +62,9 @@ namespace Forge.EditorApp.UI
             _landSize = PanelElements.Required<Label>(root, "space-land-size");
             _landBy = PanelElements.Required<IntegerField>(root, "space-land-by");
             _landBy.RegisterValueChangedCallback(change => _landBy.SetValueWithoutNotify(Math.Max(1, Math.Min(SpaceEdits.MaxExtendBy, change.newValue))));
-            foreach (var side in new[] { LandSide.North, LandSide.South, LandSide.East, LandSide.West })
-                PanelElements.Required<Button>(root, $"space-land-{side.Word()}").clicked += () => ExtendLand(side);
+            foreach (var side in LandSides.All)
+                PanelElements.Required<Button>(root, $"space-land-{side.Word()}").clicked += () => ExtendLand(new[] { side });
+            PanelElements.Required<Button>(root, "space-land-all").clicked += () => ExtendLand(LandSides.All);
             _new = PanelElements.Required<Button>(root, "space-new");
             _new.clicked += () => SetFormOpen(!IsFormOpen);
 
@@ -183,10 +184,10 @@ namespace Forge.EditorApp.UI
             PanelElements.SetText(_landSize, FormattableString.Invariant($"{reach} · {space.SampleSpacing:0.#} m samples"));
         }
 
-        void ExtendLand(LandSide side)
+        void ExtendLand(IReadOnlyList<LandSide> sides)
         {
             var added = 0;
-            if (_context.TryEdit("Extend land", () => added = SpaceEdits.ExtendLand(_context.Session, _context.ActiveSpace, side, _landBy.value)))
+            if (_context.TryEdit("Extend land", () => added = SpaceEdits.ExtendLand(_context.Session, _context.ActiveSpace, sides, _landBy.value)))
                 _context.Report(added > 0 ? _context.Session.UndoDescription : "That land is already there.");
         }
 

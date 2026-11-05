@@ -31,13 +31,26 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void ExtendLand_All_GrowsEverySide()
+        {
+            var world = World();
+
+            var result = Extend(world, "all", 1);
+
+            // 2×2 grows to 4×4.
+            Assert.That(result.ChunksAdded, Is.EqualTo(12));
+            Assert.That(result.LandReach, Is.EqualTo("4×4 chunks (256 m)"));
+            Assert.That(result.Summary, Is.EqualTo("Extended Main 64 m on every side (12 chunks). The land is now 4×4 chunks (256 m)."));
+        }
+
+        [Test]
         public void ExtendLand_RefusesInteriors_UnknownSides_AndBadCounts()
         {
             var interior = BuildingFixture.Create(new SpaceRecord(BuildingFixture.Space, "Cellar", SpaceKind.Interior));
             Assert.That(() => Extend(interior, "north", 1), Throws.TypeOf<CommandException>().With.Message.Contains("interior"));
 
             var world = World();
-            Assert.That(() => Extend(world, "up", 1), Throws.TypeOf<CommandException>().With.Message.Contains("north, south, east or west"));
+            Assert.That(() => Extend(world, "up", 1), Throws.TypeOf<CommandException>().With.Message.Contains("north, south, east, west or all"));
             Assert.That(() => Extend(world, "north", 0), Throws.TypeOf<CommandException>());
         }
     }
