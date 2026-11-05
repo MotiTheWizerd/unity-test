@@ -1,9 +1,11 @@
 using System;
 using System.Linq;
+using Forge.Data;
 using Forge.Data.Records;
 using Forge.Data.Terrain;
 using Forge.Editing;
 using Forge.Editing.Spaces;
+using Forge.Tests.Data;
 using NUnit.Framework;
 using static Forge.Tests.Data.TestRecords;
 
@@ -129,6 +131,35 @@ namespace Forge.Tests.Editing
 
             Assert.Throws<ArgumentException>(() => SpaceEdits.SetWaterLevel(session, interior, 1f));
             Assert.Throws<ArgumentException>(() => SpaceEdits.SetWaterLevel(session, OtherSpace, 1f));
+        }
+
+        [Test]
+        public void SetClimate_OnAMastersSpace_OverridesIt_AsOneUndoStep_KeepingTheSea()
+        {
+            var climate = ClimateTests.Northern();
+            var session = new EditSession(
+                new[] { Plugin("core", climate, new SpaceRecord(Space, "Tamriel", SpaceKind.Worldspace, 50f, 45f)) },
+                Plugin("user", new[] { "core" }));
+
+            Assert.That(SpaceEdits.SetClimate(session, Space, climate.Id), Is.True);
+            var space = session.World.Records.Get<SpaceRecord>(Space);
+            Assert.That((space.Climate, space.WaterLevel), Is.EqualTo(((RecordId?)climate.Id, (float?)45f)));
+            Assert.That(session.UndoDescription, Is.EqualTo("Climate of Tamriel: Northern"));
+            Assert.That(SpaceEdits.SetClimate(session, Space, climate.Id), Is.False, "Already so.");
+
+            session.Undo();
+            Assert.That(session.World.Records.Get<SpaceRecord>(Space).Climate, Is.Null);
+        }
+
+        [Test]
+        public void SetClimate_IsRefusedForInteriors_AndClimatesThatDoNotExist()
+        {
+            var session = NewSession();
+            var interior = SpaceEdits.CreateInterior(session, "Cellar");
+            var land = SpaceEdits.CreateWorldspace(session, "Land", 3, 50f);
+
+            Assert.Throws<ArgumentException>(() => SpaceEdits.SetClimate(session, interior, null));
+            Assert.Throws<ArgumentException>(() => SpaceEdits.SetClimate(session, land, ClimateRecord.IdFor("core", "nowhere")));
         }
 
         [Test]

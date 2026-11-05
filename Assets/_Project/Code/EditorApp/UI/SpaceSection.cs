@@ -10,19 +10,23 @@ using UnityEngine.UIElements;
 namespace Forge.EditorApp.UI
 {
     /// <summary>
-    /// The space being shown and edited (a picker of every worldspace and interior), a worldspace's sea level, and
-    /// New… to create a space: a worldspace of a chosen size of flat land, or an empty interior. Creating one switches to it.
+    /// The space being shown and edited (a picker of every worldspace and interior), a worldspace's sea level and
+    /// climate, and New… to create a space: a worldspace of a chosen size of flat land, or an empty interior. Creating one switches to it.
     /// </summary>
     public sealed class SpaceSection : IPanelSection
     {
         /// <summary>How far below the land a sea starts when it is switched on, so turning it on floods nothing.</summary>
         const float NewSeaBelowLand = 2f;
 
+        /// <summary>The climate picker's first choice: no climate, the same day all year.</summary>
+        const string NoClimate = "None (same day all year)";
+
         readonly EditorContext _context;
         readonly DropdownField _picker;
         readonly VisualElement _seaRow;
         readonly Toggle _seaOn;
         readonly FloatField _seaLevel;
+        readonly DropdownField _climate;
         readonly Button _new;
         readonly VisualElement _form;
         readonly TextField _name;
@@ -30,6 +34,7 @@ namespace Forge.EditorApp.UI
         readonly VisualElement _sizeRow;
         readonly Dictionary<int, Button> _sizes = new Dictionary<int, Button>();
         List<SpaceRecord> _spaces = new List<SpaceRecord>();
+        List<ClimateRecord> _climates = new List<ClimateRecord>();
         object _shownWorld;
         SpaceKind _kind = SpaceKind.Worldspace;
         int _size = SpaceEdits.Sizes[0];
@@ -44,7 +49,9 @@ namespace Forge.EditorApp.UI
             _seaOn.RegisterValueChangedCallback(change => SetSea(change.newValue ? NewSeaLevel() : (float?)null));
             _seaLevel = PanelElements.Required<FloatField>(root, "space-sea-level");
             _seaLevel.RegisterValueChangedCallback(change => SetSea(change.newValue));
-            _new = PanelElements.Required<Button>(root, "space-new");
+            _climate = PanelElements.Required<DropdownField>(root, "space-climate");
+            _climate.RegisterValueChangedCallback(_ => SetClimate());
+            _new =PanelElements.Required<Button>(root, "space-new");
             _new.clicked += () => SetFormOpen(!IsFormOpen);
 
             _form = PanelElements.Required<VisualElement>(root, "space-new-form");
@@ -68,6 +75,7 @@ namespace Forge.EditorApp.UI
         {
             RefreshPicker();
             RefreshSea();
+            RefreshClimate();
             if (!IsFormOpen)
                 return;
 
@@ -100,6 +108,11 @@ namespace Forge.EditorApp.UI
                     .ThenBy(s => s.Id)
                     .ToList();
                 _picker.choices = _spaces.Select(Label).ToList();
+                _climates = world.Records.OfType<ClimateRecord>()
+                    .OrderBy(c => c.DisplayName, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(c => c.Id)
+                    .ToList();
+                _climate.choices = new[] { NoClimate }.Concat(_climates.Select(c => c.DisplayName)).ToList();
             }
 
             var active = _spaces.FindIndex(s => s.Id == _context.ActiveSpace);
@@ -122,6 +135,34 @@ namespace Forge.EditorApp.UI
             _seaLevel.SetEnabled(level.HasValue);
             if (level.HasValue && _seaLevel.value != level.Value)
                 _seaLevel.SetValueWithoutNotify(level.Value);
+        }
+
+        // Mirrors the space's climate, which undo and the agent change too; one the loaded plugins lack shows as missing.
+        void RefreshClimate()
+        {
+            var space = _context.ActiveSpaceRecord;
+            var worldspace = space != null && space.Kind == SpaceKind.Worldspace;
+            PanelElements.SetVisible(_climate, worldspace);
+            if (!worldspace)
+                return;
+
+            var shown = space.Climate is RecordId id
+                ? _climates.FirstOrDefault(c => c.Id == id)?.DisplayName ?? $"Missing: {id}"
+                : NoClimate;
+            if (_climate.value != shown)
+                _climate.SetValueWithoutNotify(shown);
+        }
+
+        void SetClimate()
+        {
+            var index = _climate.index;
+            if (index < 0)
+                return;
+
+            var climate = index == 0 ? (RecordId?)null : _climates[index - 1].Id;
+            var changed = false;
+            if (_context.TryEdit("Climate", () => changed = SpaceEdits.SetClimate(_context.Session, _context.ActiveSpace, climate)) && changed)
+                _context.Report(_context.Session.UndoDescription);
         }
 
         float NewSeaLevel() => Math.Max(0f, (_context.ActiveSpaceRecord?.BaseHeight ?? 0f) - NewSeaBelowLand);

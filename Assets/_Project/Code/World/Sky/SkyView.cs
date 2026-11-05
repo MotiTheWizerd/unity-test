@@ -17,9 +17,6 @@ namespace Forge.World.Sky
     /// </summary>
     public sealed class SkyView : IDisposable
     {
-        /// <summary>The most moons the sky shader draws.</summary>
-        public const int MaxMoons = 4;
-
         // Exponential squared fog lets through exp(-(d·density)²); 1.73 leaves 5% at the reach.
         const float FogAtReach = 1.73f;
 
@@ -44,8 +41,8 @@ namespace Forge.World.Sky
         readonly Material _material;
         readonly ReflectionProbe _reflection;
         readonly float _fogDensity;
-        readonly Vector4[] _moonDirections = new Vector4[MaxMoons];
-        readonly Vector4[] _moonShapes = new Vector4[MaxMoons];
+        readonly Vector4[] _moonDirections = new Vector4[Moon.MaxPerSky];
+        readonly Vector4[] _moonShapes = new Vector4[Moon.MaxPerSky];
 
         /// <param name="light">The scene's directional light, which becomes the sun's (and by night the moon's) light.</param>
         /// <param name="fogReach">Distance in meters at which the fog hides everything: the edge of the streamed land.</param>
@@ -68,8 +65,8 @@ namespace Forge.World.Sky
         {
             if (sky == null)
                 throw new ArgumentNullException(nameof(sky));
-            if (sky.Moons.Count > MaxMoons)
-                throw new ArgumentException($"The sky draws at most {MaxMoons} moons, not {sky.Moons.Count}.", nameof(sky));
+            if (sky.Moons.Count > Moon.MaxPerSky)
+                throw new ArgumentException($"The sky draws at most {Moon.MaxPerSky} moons, not {sky.Moons.Count}.", nameof(sky));
 
             var sun = sky.Sun;
             var toSun = Direction(sun);
@@ -118,7 +115,7 @@ namespace Forge.World.Sky
         // Each moon's direction and its size, lit share and a seed for its markings; the shader lights its face from the sun.
         void ShowMoons(IReadOnlyList<MoonState> moons, float sunHeight)
         {
-            for (var i = 0; i < MaxMoons; i++)
+            for (var i = 0; i < Moon.MaxPerSky; i++)
             {
                 var shown = i < moons.Count;
                 _moonDirections[i] = shown ? (Vector4)Direction(moons[i].Position) : Vector4.zero;

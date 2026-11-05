@@ -32,13 +32,18 @@ namespace Forge.EditorApp.Agent
             return string.Join("\n", lines.Where(line => line != null));
         }
 
-        // The editor's time of day and the moons, so "at night" or "by moonlight" in a request can be checked against what the user sees.
+        // The editor's time, season and moons, so "at night", "in winter" or "by moonlight" in a request can be checked
+        // against what the user sees.
         string Time()
         {
             var clock = _context.Clock;
+            var climate = _context.ActiveClimate;
             var sky = _context.Sky;
+            var season = climate != null ? $" ({climate.SeasonOn(clock.Day).Describe()} in the {climate.DisplayName} climate)" : string.Empty;
+            var sun = sky.Sun.IsUp ? "day: the sun is up" : "night: the sun is down";
             var moons = sky.Moons.Select(moon => $"the {moon.Moon.Name} is {(moon.Position.IsUp ? "up" : "down")} ({moon.PhaseName})");
-            return $"It is {WorldClock.Format(clock.Hour)} on day {clock.Day} in the editor, {(sky.Sun.IsUp ? "day: the sun is up" : "night: the sun is down")}"
+            return $"It is {WorldClock.Format(clock.Hour)} on day {clock.Day}{season} in the editor, {sun}; "
+                   + $"today it rises at {WorldClock.Format(sky.Cycle.Sunrise)} and sets at {WorldClock.Format(sky.Cycle.Sunset)}"
                    + (sky.Moons.Count > 0 ? $"; {string.Join(", ", moons)}." : ".");
         }
 

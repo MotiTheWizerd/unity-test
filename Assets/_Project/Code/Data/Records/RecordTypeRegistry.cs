@@ -23,6 +23,7 @@ namespace Forge.Data.Records
             registry.Register<TerrainChunkRecord>("terrain_chunk");
             registry.Register<SpaceRecord>("space");
             registry.Register<LakeRecord>("lake");
+            registry.Register<ClimateRecord>("climate");
             return registry;
         }
 

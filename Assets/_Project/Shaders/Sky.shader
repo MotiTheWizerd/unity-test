@@ -40,7 +40,7 @@ Shader "Forge/Sky"
             #pragma fragment Frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
-            // Matches Forge.World.Sky.SkyView.MaxMoons.
+            // Matches Forge.Data.Sky.Moon.MaxPerSky.
             #define MAX_MOONS 4
 
             CBUFFER_START(UnityPerMaterial)

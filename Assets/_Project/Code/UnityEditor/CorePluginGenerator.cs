@@ -47,8 +47,10 @@ namespace Forge.UnityEditor
             };
             records.AddRange(PlaceholderContent.All.Select(c => BaseObject(c.Name, c.DisplayName, c.AssetKey, c.Category, c.Placement)));
 
+            records.AddRange(CoreClimates.All(PluginId));
+
             // Bare land: the base world ships the objects to build with, and nothing placed.
-            records.Add(new SpaceRecord(MainSpace, "Main World", SpaceKind.Worldspace, ProceduralTerrain.BaseHeight));
+            records.Add(new SpaceRecord(MainSpace, "Main World", SpaceKind.Worldspace, ProceduralTerrain.BaseHeight, climate: CoreClimates.Temperate(PluginId)));
             for (var cz = -ChunkRadius; cz <= ChunkRadius; cz++)
             for (var cx = -ChunkRadius; cx <= ChunkRadius; cx++)
                 records.Add(ProceduralTerrain.Chunk(PluginId, MainSpace, new ChunkCoord(cx, cz)));

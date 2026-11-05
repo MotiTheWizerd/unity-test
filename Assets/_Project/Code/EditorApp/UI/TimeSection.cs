@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Forge.Data.Records;
 using Forge.Data.Sky;
 using UnityEngine.UIElements;
 
@@ -7,7 +8,8 @@ namespace Forge.EditorApp.UI
 {
     /// <summary>
     /// The time the editor shows: a slider over the 24 hours, the clock as HH:MM, Run to let time pass, and the day,
-    /// which sets the moons' phases (shown below it).
+    /// which sets the season (under the space's climate) and the moons' phases, both shown below it with today's
+    /// sunrise and sunset.
     /// </summary>
     public sealed class TimeSection : IPanelSection
     {
@@ -19,8 +21,9 @@ namespace Forge.EditorApp.UI
         readonly Label _readout;
         readonly Toggle _run;
         readonly IntegerField _day;
+        readonly Label _date;
         readonly Label _moons;
-        int _moonsShownAt = -1;
+        (int Hour, ClimateRecord Climate)? _calendarShown;
 
         public TimeSection(VisualElement root, EditorContext context)
         {
@@ -35,6 +38,7 @@ namespace Forge.EditorApp.UI
             _run.RegisterValueChangedCallback(change => _context.Clock.Running = change.newValue);
             _day = PanelElements.Required<IntegerField>(root, "time-day");
             _day.RegisterValueChangedCallback(change => _context.Clock.Day = Math.Max(0, change.newValue));
+            _date = PanelElements.Required<Label>(root, "time-date");
             _moons = PanelElements.Required<Label>(root, "time-moons");
         }
 
@@ -49,18 +53,28 @@ namespace Forge.EditorApp.UI
             // Not while it is being typed in, or a running clock would overwrite the typing.
             if (_day.value != clock.Day && _day.focusController?.focusedElement != _day)
                 _day.SetValueWithoutNotify(clock.Day);
-            ShowMoons(clock);
+            ShowCalendar(clock);
         }
 
-        // A phase lasts days, so the names are worked out again once per game hour, not every frame.
-        void ShowMoons(WorldClock clock)
+        // Seasons and phases last days, so they are worked out again once per game hour (or when the climate
+        // changes), not every frame.
+        void ShowCalendar(WorldClock clock)
         {
             var hourOfTheWorld = clock.Day * (int)WorldClock.HoursPerDay + (int)clock.Hour;
-            if (hourOfTheWorld == _moonsShownAt)
+            var climate = _context.ActiveClimate;
+            if (_calendarShown is (int hour, var shownClimate) && hour == hourOfTheWorld && ReferenceEquals(shownClimate, climate))
                 return;
 
-            _moonsShownAt = hourOfTheWorld;
-            PanelElements.SetText(_moons, string.Join("\n", _context.Sky.Moons.Select(moon => $"{moon.Moon.Name}: {moon.PhaseName}")));
+            _calendarShown = (hourOfTheWorld, climate);
+            var sky = _context.Sky;
+            var sun = $"Sun {WorldClock.Format(sky.Cycle.Sunrise)}–{WorldClock.Format(sky.Cycle.Sunset)}";
+            var season = climate?.SeasonOn(clock.Day);
+            PanelElements.SetText(_date, season is SeasonTime time
+                ? $"{Capitalized(time.Describe())}, year {time.Year}. {sun}"
+                : $"No climate: the same day all year. {sun}");
+            PanelElements.SetText(_moons, string.Join("\n", sky.Moons.Select(moon => $"{moon.Moon.Name}: {moon.PhaseName}")));
         }
+
+        static string Capitalized(string text) => text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text.Substring(1);
     }
 }

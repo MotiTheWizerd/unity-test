@@ -145,18 +145,30 @@ join the same `WaterMap`.
 and the hour, running at `Scale` game seconds per real second (20, as in Skyrim) while `Running`; in the editor it is a
 view setting (`EditorContext.Clock`, the TIME OF DAY slider, Run toggle and Day field, never saved), the game will
 save it.
-`DayCycle` is the shape of a day (sunrise, sunset, noon height; `DayCycle.Default` = 6:00, 20:00, 60°, for every
-worldspace until climate records exist). `SunPath.At(day, hour)` is a stylized arc (`SunPath.Arc`): rising east,
+`DayCycle` is the shape of a day (sunrise, sunset, noon height; `DayCycle.Default` = 6:00, 20:00, 60°, every day of
+a worldspace without a climate; `DayCycle.Between` blends two). `SunPath.At(day, hour)` is a stylized arc (`SunPath.Arc`): rising east,
 highest south midway, setting west, then under the horizon through the north, `NightDepth` (40°) down at the middle of
 the night, continuous at sunrise and sunset; it returns a `SkyPosition` (height, bearing), as the moons do.
 **Moons**: a `Moon` is a name, a cycle in days (`Period`), its phase on day 0, its size and the top of its arc
-(`Moon.Defaults`: a Greater Moon, 24 days, nearly full on day 0, and a Lesser Moon, 10 days; for every worldspace
-until climate records exist). `MoonPath.At(moon, cycle, day, hour)` gives a `MoonState`: the phase from the clock's day
+(`Moon.Defaults`: a Greater Moon, 24 days, nearly full on day 0, and a Lesser Moon, 10 days, for a worldspace without
+a climate; at most `Moon.MaxPerSky`, 4, in one sky). `MoonPath.At(moon, cycle, day, hour)` gives a `MoonState`: the phase from the clock's day
 and hour, the lit share, and a position on the sun's arc at the moon's own height, running behind the sun by
 phase × 24 hours, so a new moon travels with the sun, a full moon rises at sunset and stands highest at night, and a
-moon rises later each day. `SkyState.At(cycle, moons, day, hour)` is the whole sky at a moment: the sun, every moon
-and the stars' turn (once around the pole star a day). The agent's briefing names the time, the day, whether the sun
-is up, and each moon's place (up or down) and phase.
+moon rises later each day. `SkyState.At(cycle, moons, day, hour)` is the whole sky at a moment: the day's shape, the
+sun, every moon and the stars' turn (once around the pole star a day).
+**Climates** (`ClimateRecord`, `climate/<name>`, like Bethesda's): a year length in days, a midsummer and a midwinter
+`DayCycle`, and the moons. A worldspace names one in `SpaceRecord.Climate` (optional, omitted from the JSON when
+there is none; interiors never have one), so one climate serves many worldspaces and a mod restyles them all by
+overriding it. `Seasons` is the year, the astronomers' way: day 0 is the first day of spring, four equal seasons
+(`SeasonTime`: year, day of the year, season, early/mid/late third), summer begins on the longest day and winter on the
+shortest, and `ClimateRecord.DayOn(day)` blends the two days by a sine over the year (½ at the equinoxes). Without a
+climate (or with one no loaded plugin has) a worldspace has `DayCycle.Default` and `Moon.Defaults` every day.
+`forge.core` ships Temperate (the main world's), Northern (20-hour summer days, 5-hour winter ones) and Desert
+(`CoreClimates`), all 120-day years. Weather will join the climate record. `EditorContext.ActiveClimate` and
+`EditorContext.Sky` give the space on show's climate and sky; the SPACE section's Climate picker sets it (one undo
+step, `SpaceEdits.SetClimate`) and the agent's `set_climate` does too. The agent's briefing names the time, the day,
+the season and climate, today's sunrise and sunset, whether the sun is up, and each moon's place (up or down) and
+phase.
 
 **Terrain**: a worldspace is a grid of `WorldGrid.ChunkSize` (64 m) chunks. A
 `TerrainChunkRecord` holds a `HeightField` (2^n+1 samples per edge, meters in
@@ -282,6 +294,8 @@ from its space and coordinate (`terrain/{space ns}/{space name}/c{x}_{z}`), so m
     loaded scene, and a skipped spot says whether its terrain is missing or just not loaded.
   - `set_sea_level`: sets or removes the worldspace's sea (refused in interiors) and reports how many objects now
     stand below it. The instructions tell the agent to use it only when the user asks.
+  - `set_climate`: gives the worldspace a climate by name or id, or removes it (refused in interiors; an unknown one
+    is refused with the list of climates), and reports the year and the daylight at midsummer and midwinter.
   - `add_lake` (x, z, optional level, default the hollow's full level), `set_lake_level`, `remove_lake`: lakes through
     `WaterEdits`; refusals say how high the water can go, or to dig a hollow first (`flatten_area` lower).
   - `flatten_area`: levels a rectangle (`AreaFlattening`) to a height, by default the average ground height
@@ -387,9 +401,10 @@ slopes), so results are exact and every edit goes through the edit session.
   table; the disk, glow and haze fade out over the 8° of twilight below the horizon; the moon's color, its daytime
   dimming, the moonlight and the stars' brightness are the profile's Night settings. **`SkyDirector`** (EditorApp)
   keeps it on the clock: each frame it advances `EditorContext.Clock` (if running) and re-renders
-  `EditorContext.Sky` only once half a game minute has passed or the day changed (every few seconds at 20×, live while
-  the time slider is dragged or the day is typed; the TIME OF DAY section shows each moon's phase under the day).
-  Interiors show the same sky until they get lighting templates.
+  `EditorContext.Sky` only once half a game minute has passed, the day changed or the active climate did (another
+  space, a climate picked, undone or overridden; every few seconds at 20×, live while the time slider is dragged or
+  the day is typed). The TIME OF DAY section shows the season, the year and today's sunrise and sunset, and each
+  moon's phase, under the day. Interiors show the default sky until they get lighting templates.
   `Water.shader` (URP, transparent) colors by the water's depth from the camera depth texture, ripples the normals
   with four scrolling sine waves, reflects the sky by fresnel, adds the sun's glint and a foam line at the shore.
 - **Assets**: records store engine-agnostic asset keys; `IAssetCatalog` turns a key into a scene object.

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -141,14 +140,23 @@ namespace Forge.EditorApp
         /// <summary>The time of day the editor shows (the sky follows it). Editor state: never saved or undone.</summary>
         public WorldClock Clock { get; } = new WorldClock(10f);
 
-        /// <summary>The shape of the day the sky follows: one for every worldspace until climates per worldspace exist.</summary>
-        public DayCycle DayCycle => DayCycle.Default;
+        /// <summary>
+        /// The climate of the space on show, or null: an interior, a worldspace without one, or one naming a climate no
+        /// loaded plugin has (then the sky keeps the default day and moons, as without one).
+        /// </summary>
+        public ClimateRecord ActiveClimate =>
+            ActiveSpaceRecord?.Climate is RecordId climate && Session.World.Records.TryGet(climate, out var record) ? record as ClimateRecord : null;
 
-        /// <summary>The moons in the sky: the same for every worldspace until climates per worldspace exist.</summary>
-        public IReadOnlyList<Moon> Moons => Moon.Defaults;
-
-        /// <summary>The sky the editor shows now, from <see cref="Clock"/>.</summary>
-        public SkyState Sky => SkyState.At(DayCycle, Moons, Clock.Day, Clock.Hour);
+        /// <summary>The sky the editor shows now: the active climate's day and moons (or the defaults) at <see cref="Clock"/>.</summary>
+        public SkyState Sky
+        {
+            get
+            {
+                var climate = ActiveClimate;
+                var day = climate?.DayOn(Clock.Day) ?? DayCycle.Default;
+                return SkyState.At(day, climate?.Moons ?? Moon.Defaults, Clock.Day, Clock.Hour);
+            }
+        }
 
         /// <summary>The lake the Water tool last made or clicked, whose level its options show; null for none.</summary>
         public RecordId? CurrentLake { get; set; }

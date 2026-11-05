@@ -24,7 +24,8 @@ namespace Forge.Data.Records
 
         /// <param name="baseHeight">Height of new land in a worldspace, in meters; ignored for interiors.</param>
         /// <param name="waterLevel">Height of the sea's surface in a worldspace, in meters, or null for no sea; ignored for interiors.</param>
-        public SpaceRecord(RecordId id, string displayName, SpaceKind kind, float baseHeight = 0f, float? waterLevel = null)
+        /// <param name="climate">The <see cref="ClimateRecord"/> a worldspace's sky follows, or null for none; ignored for interiors.</param>
+        public SpaceRecord(RecordId id, string displayName, SpaceKind kind, float baseHeight = 0f, float? waterLevel = null, RecordId? climate = null)
             : base(id)
         {
             if (!id.Name.StartsWith(NamePrefix, StringComparison.Ordinal))
@@ -37,11 +38,14 @@ namespace Forge.Data.Records
                 throw new ArgumentOutOfRangeException(nameof(baseHeight), baseHeight, $"Base height must be within [0, {WorldGrid.MaxTerrainHeight}] m.");
             if (waterLevel.HasValue && !IsTerrainHeight(waterLevel.Value))
                 throw new ArgumentOutOfRangeException(nameof(waterLevel), waterLevel, $"Water level must be within [0, {WorldGrid.MaxTerrainHeight}] m.");
+            if (climate.HasValue && climate.Value.IsDefault)
+                throw new ArgumentException("A climate id must be set; leave it out for none.", nameof(climate));
 
             DisplayName = displayName;
             Kind = kind;
             BaseHeight = kind == SpaceKind.Worldspace ? baseHeight : 0f;
             WaterLevel = kind == SpaceKind.Worldspace ? waterLevel : null;
+            Climate = kind == SpaceKind.Worldspace ? climate : null;
         }
 
         public string DisplayName { get; }
@@ -57,7 +61,16 @@ namespace Forge.Data.Records
         /// </summary>
         public float? WaterLevel { get; }
 
-        public SpaceRecord WithWaterLevel(float? waterLevel) => new SpaceRecord(Id, DisplayName, Kind, BaseHeight, waterLevel);
+        /// <summary>
+        /// The <see cref="ClimateRecord"/> the sky follows here (day length through the seasons, the moons), or null
+        /// for none: then every day is <see cref="Sky.DayCycle.Default"/> under the default moons. Always null for
+        /// interiors, which have no sky of their own.
+        /// </summary>
+        public RecordId? Climate { get; }
+
+        public SpaceRecord WithWaterLevel(float? waterLevel) => new SpaceRecord(Id, DisplayName, Kind, BaseHeight, waterLevel, Climate);
+
+        public SpaceRecord WithClimate(RecordId? climate) => new SpaceRecord(Id, DisplayName, Kind, BaseHeight, WaterLevel, climate);
 
         public static RecordId IdFor(string ns, string name) => new RecordId(ns, NamePrefix + name);
 

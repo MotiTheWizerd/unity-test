@@ -45,12 +45,7 @@ namespace Forge.Editing.Spaces
         /// </summary>
         public static bool SetWaterLevel(EditSession session, RecordId space, float? level)
         {
-            if (session == null)
-                throw new ArgumentNullException(nameof(session));
-            if (!(session.World.Records.TryGet(space, out var record) && record is SpaceRecord spaceRecord))
-                throw new ArgumentException($"There is no space '{space}'.", nameof(space));
-            if (spaceRecord.Kind != SpaceKind.Worldspace)
-                throw new ArgumentException($"{spaceRecord.DisplayName} is an interior; only worldspaces have a sea.", nameof(space));
+            var spaceRecord = Worldspace(session, space, "have a sea");
             if (spaceRecord.WaterLevel == level)
                 return false;
 
@@ -60,6 +55,39 @@ namespace Forge.Editing.Spaces
                 : $"Remove the sea of {spaceRecord.DisplayName}";
             session.Batch(description, () => session.Put(changed));
             return true;
+        }
+
+        /// <summary>
+        /// Sets the climate of worldspace <paramref name="space"/> to <paramref name="climate"/>, or removes it (null),
+        /// as one undo step; a master's space is overridden in the active plugin. Returns false when it already is.
+        /// </summary>
+        public static bool SetClimate(EditSession session, RecordId space, RecordId? climate)
+        {
+            var spaceRecord = Worldspace(session, space, "have a climate");
+            var climateRecord = default(ClimateRecord);
+            if (climate.HasValue && !(session.World.Records.TryGet(climate.Value, out var record) && (climateRecord = record as ClimateRecord) != null))
+                throw new ArgumentException($"There is no climate '{climate.Value}'.", nameof(climate));
+            if (spaceRecord.Climate == climate)
+                return false;
+
+            var changed = spaceRecord.WithClimate(climate);
+            var description = climateRecord != null
+                ? $"Climate of {spaceRecord.DisplayName}: {climateRecord.DisplayName}"
+                : $"Remove the climate of {spaceRecord.DisplayName}";
+            session.Batch(description, () => session.Put(changed));
+            return true;
+        }
+
+        // The worldspace with that id; an interior is refused, since only worldspaces have what is being set.
+        static SpaceRecord Worldspace(EditSession session, RecordId space, string what)
+        {
+            if (session == null)
+                throw new ArgumentNullException(nameof(session));
+            if (!(session.World.Records.TryGet(space, out var record) && record is SpaceRecord spaceRecord))
+                throw new ArgumentException($"There is no space '{space}'.", nameof(space));
+            if (spaceRecord.Kind != SpaceKind.Worldspace)
+                throw new ArgumentException($"{spaceRecord.DisplayName} is an interior; only worldspaces {what}.", nameof(space));
+            return spaceRecord;
         }
 
         static RecordId Create(EditSession session, string displayName, SpaceKind kind, float baseHeight, Func<RecordId, IEnumerable<Record>> content)

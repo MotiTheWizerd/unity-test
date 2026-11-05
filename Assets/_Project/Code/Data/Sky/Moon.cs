@@ -6,11 +6,14 @@ namespace Forge.Data.Sky
     /// <summary>
     /// A moon in the sky: how many days it takes to go from new to full and back (<see cref="Period"/>), where in that
     /// cycle it is on day 0 (<see cref="PhaseAtStart"/>), how big it looks and how high it climbs. Where it stands and
-    /// how much of it is lit come from <see cref="MoonPath"/>. <see cref="Defaults"/> serve every worldspace until
-    /// climate records per worldspace carry their own.
+    /// how much of it is lit come from <see cref="MoonPath"/>. A climate lists its own; a worldspace without one has
+    /// <see cref="Defaults"/>.
     /// </summary>
-    public readonly struct Moon
+    public sealed class Moon
     {
+        /// <summary>The most moons one sky holds (the sky shader draws this many).</summary>
+        public const int MaxPerSky = 4;
+
         /// <summary>Two moons: a large one on a 24-day cycle, nearly full on day 0, and a small, quicker one.</summary>
         public static readonly IReadOnlyList<Moon> Defaults = new[]
         {

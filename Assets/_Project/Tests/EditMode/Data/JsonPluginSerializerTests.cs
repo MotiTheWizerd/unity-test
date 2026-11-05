@@ -130,6 +130,31 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesClimates_AndTheClimateOfASpace()
+        {
+            var climate = ClimateTests.Northern();
+            var plugin = Plugin("core",
+                climate,
+                new SpaceRecord(Space, "Tamriel", SpaceKind.Worldspace, 50f, climate: climate.Id),
+                new SpaceRecord(OtherSpace, "Plain", SpaceKind.Worldspace, 50f));
+
+            var json = Write(plugin);
+            var copy = Read(json);
+            var climateCopy = copy.Records.OfType<ClimateRecord>().Single();
+            var spaces = copy.Records.OfType<SpaceRecord>().ToDictionary(r => r.Id);
+
+            Assert.That((climateCopy.DisplayName, climateCopy.YearLength), Is.EqualTo(("Northern", 120)));
+            Assert.That((climateCopy.Summer.Sunrise, climateCopy.Summer.Sunset, climateCopy.Winter.NoonHeight), Is.EqualTo((4f, 22f, 20f)));
+            Assert.That(climateCopy.Moons.Select(m => (m.Name, m.Period, m.PhaseAtStart, m.Size, m.Highest)),
+                Is.EqualTo(climate.Moons.Select(m => (m.Name, m.Period, m.PhaseAtStart, m.Size, m.Highest))));
+            Assert.That(spaces[Space].Climate, Is.EqualTo(climate.Id));
+            Assert.That(spaces[OtherSpace].Climate, Is.Null);
+            StringAssert.Contains("\"climate\": \"core:climate/northern\"", json);
+            Assert.That(Regex.Matches(json, "\"climate\": ").Count, Is.EqualTo(1), "No climate is no field, not null.");
+            Assert.That(Write(Read(json)), Is.EqualTo(json));
+        }
+
+        [Test]
         public void RoundTrip_PreservesLakes()
         {
             var lake = new LakeRecord(RecordId.Parse("core:lake/000001"), Space, 12.5f, -40f, 47.25f);

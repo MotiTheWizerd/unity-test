@@ -60,6 +60,102 @@
       }
     },
     {
+      "type": "climate",
+      "id": "forge.core:climate/desert",
+      "displayName": "Desert",
+      "yearLength": 120,
+      "summer": {
+        "sunrise": 5.5,
+        "sunset": 20.0,
+        "noonHeight": 80.0
+      },
+      "winter": {
+        "sunrise": 7.0,
+        "sunset": 18.0,
+        "noonHeight": 50.0
+      },
+      "moons": [
+        {
+          "name": "Greater Moon",
+          "period": 24.0,
+          "phaseAtStart": 0.45,
+          "size": 4.5,
+          "highest": 50.0
+        },
+        {
+          "name": "Lesser Moon",
+          "period": 10.0,
+          "phaseAtStart": 0.3,
+          "size": 1.8,
+          "highest": 65.0
+        }
+      ]
+    },
+    {
+      "type": "climate",
+      "id": "forge.core:climate/northern",
+      "displayName": "Northern",
+      "yearLength": 120,
+      "summer": {
+        "sunrise": 3.0,
+        "sunset": 23.0,
+        "noonHeight": 50.0
+      },
+      "winter": {
+        "sunrise": 10.0,
+        "sunset": 15.0,
+        "noonHeight": 8.0
+      },
+      "moons": [
+        {
+          "name": "Greater Moon",
+          "period": 24.0,
+          "phaseAtStart": 0.45,
+          "size": 4.5,
+          "highest": 50.0
+        },
+        {
+          "name": "Lesser Moon",
+          "period": 10.0,
+          "phaseAtStart": 0.3,
+          "size": 1.8,
+          "highest": 65.0
+        }
+      ]
+    },
+    {
+      "type": "climate",
+      "id": "forge.core:climate/temperate",
+      "displayName": "Temperate",
+      "yearLength": 120,
+      "summer": {
+        "sunrise": 5.0,
+        "sunset": 21.0,
+        "noonHeight": 62.0
+      },
+      "winter": {
+        "sunrise": 8.0,
+        "sunset": 17.0,
+        "noonHeight": 25.0
+      },
+      "moons": [
+        {
+          "name": "Greater Moon",
+          "period": 24.0,
+          "phaseAtStart": 0.45,
+          "size": 4.5,
+          "highest": 50.0
+        },
+        {
+          "name": "Lesser Moon",
+          "period": 10.0,
+          "phaseAtStart": 0.3,
+          "size": 1.8,
+          "highest": 65.0
+        }
+      ]
+    },
+    {
       "type": "base_object",
       "id": "forge.core:crate",
       "displayName": "Crate",
@@ -132,7 +228,8 @@
       "id": "forge.core:space/main",
       "displayName": "Main World",
       "kind": "worldspace",
-      "baseHeight": 50.0
+      "baseHeight": 50.0,
+      "climate": "forge.core:climate/temperate"
     },
     {
       "type": "terrain_chunk",

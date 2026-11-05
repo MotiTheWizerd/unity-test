@@ -7,14 +7,27 @@ using Newtonsoft.Json.Linq;
 
 namespace Forge.Data.Json
 {
-    /// <summary>Writes <see cref="RecordId"/> as its canonical "namespace:name" string.</summary>
-    sealed class RecordIdConverter : JsonConverter<RecordId>
+    /// <summary>
+    /// Writes <see cref="RecordId"/> as its canonical "namespace:name" string; an optional id (a space's climate) is
+    /// the same string, or null.
+    /// </summary>
+    sealed class RecordIdConverter : JsonConverter
     {
-        public override void WriteJson(JsonWriter writer, RecordId value, JsonSerializer serializer) =>
-            writer.WriteValue(value.ToString());
+        public override bool CanConvert(Type objectType) => objectType == typeof(RecordId) || objectType == typeof(RecordId?);
 
-        public override RecordId ReadJson(JsonReader reader, Type objectType, RecordId existingValue, bool hasExistingValue, JsonSerializer serializer)
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
+            if (value is RecordId id)
+                writer.WriteValue(id.ToString());
+            else
+                writer.WriteNull();
+        }
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            if (reader.TokenType == JsonToken.Null && objectType == typeof(RecordId?))
+                return null;
+
             var text = reader.Value as string;
             if (reader.TokenType != JsonToken.String || !RecordId.TryParse(text, out var id))
                 throw new JsonSerializationException($"Invalid record id '{reader.Value}' at {reader.Path}.");

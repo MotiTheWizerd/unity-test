@@ -18,6 +18,7 @@
                         <ui:FloatField name="space-sea-level" is-delayed="true" class="forge-grow" />
                         <ui:Label text="m" class="forge-muted" />
                     </ui:VisualElement>
+                    <ui:DropdownField name="space-climate" label="Climate" />
                     <ui:VisualElement name="space-new-form" class="forge-indented">
                         <ui:TextField name="space-new-name" placeholder-text="Name, e.g. Whiterun or Bannered Mare" />
                         <ui:VisualElement name="space-new-kinds" class="forge-row forge-choices" />
@@ -37,6 +38,7 @@
                     </ui:VisualElement>
                     <ui:Toggle name="time-run" label="Run (20×)" />
                     <ui:IntegerField name="time-day" label="Day" />
+                    <ui:Label name="time-date" class="forge-muted" />
                     <ui:Label name="time-moons" class="forge-muted" />
                 </ui:VisualElement>
 
