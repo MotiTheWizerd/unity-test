@@ -713,9 +713,15 @@ slopes), so results are exact and every edit goes through the edit session.
   change; fine for hundreds of objects, and a virtualized `ListView` is the next step for thousands.
 - Controls: the tool keys above (Q / W / E / R / H / P / O / G / B / L / M) or the tool strip; hold Space → hand; 1–9 or the
   palette → Place tool (`[` / `]` rotate, hold + drag paints a row, + Shift a straight one); Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
-  (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly; wheel
-  dollies towards the point under the cursor; hold middle mouse to pan (the grabbed point stays under
-  the cursor); F frames the selection.
+  (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly (the wheel then steps the
+  fly speed); otherwise the wheel dollies towards the point under the cursor; hold middle mouse to pan (the grabbed
+  point stays under the cursor); F frames the selection.
+- **Fly speed.** `FlySpeed` (engine-free, `Forge.Editing.Geometry`, owned by `EditorContext`) is a multiplier on the
+  camera's base speed, one of `Steps` (×0.25 … ×20). The wheel steps it while flying; the top bar's SPEED row offers
+  `Presets` ×1 ×2 ×3 ×5 (a speed between them shows as its own label), and Shift still multiplies on top. "By height"
+  (`FollowsHeight`, off by default) scales it with the camera's height above the ground (`HeightFactor`: none up to
+  25 m, then in proportion, at most ×12); the camera measures that height with the same depth probe straight down,
+  and keeps the last ground height where none is below (past the land, or over far land, which has no collider).
 - `FlyCamera` (implements `ICameraRig`; its `BeginPan` / `Pan` serve the middle button and the hand tool alike) gets the UI blocker and a depth probe (`ScenePicker.TryPickWorld`)
   from the controller: wheel and pan never start over the panel, and both scale with the depth under the
   cursor. `EditorCommands.FrameSelection` fits the selection's combined renderer bounds through

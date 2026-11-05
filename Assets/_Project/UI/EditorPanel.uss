@@ -181,6 +181,13 @@
     flex-basis: auto;
 }
 
+/* A value in the bar that isn't one of its buttons (the fly speed picked with the wheel), lit like the active one. */
+.forge-options__accent {
+    margin: 0 var(--forge-space-2);
+    color: var(--forge-accent);
+    -unity-font-definition: url("Fonts/Inter-Medium.ttf");
+}
+
 .forge-options__readout {
     min-width: 150px;
 }

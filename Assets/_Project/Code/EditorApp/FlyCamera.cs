@@ -7,7 +7,8 @@ namespace Forge.EditorApp
 {
     /// <summary>
     /// Editor-style camera, like Unity's and Unreal's scene views:
-    /// hold right mouse to look and fly with WASD/QE (Shift = fast); mouse wheel dollies
+    /// hold right mouse to look and fly with WASD/QE (Shift = fast), at the shared <see cref="FlySpeed"/>, which the
+    /// mouse wheel steps while flying; otherwise the wheel dollies
     /// towards the point under the cursor; hold middle mouse to pan, with the world staying
     /// under the cursor (<see cref="BeginPan"/> / <see cref="Pan"/>, which the hand tool uses too);
     /// <see cref="Frame"/> glides to fit a selection.
@@ -40,6 +41,8 @@ namespace Forge.EditorApp
         [NonSerialized] Camera _camera;
         [NonSerialized] IInputBlocker _ui;
         [NonSerialized] Func<Ray, float?> _depthUnder;
+        [NonSerialized] FlySpeed _speed = new FlySpeed();
+        [NonSerialized] float? _groundY;
         [NonSerialized] float _yaw;
         [NonSerialized] float _pitch;
         [NonSerialized] float _panDepth;
@@ -48,11 +51,13 @@ namespace Forge.EditorApp
         [NonSerialized] Vector3 _glideVelocity;
 
         /// <param name="ui">Wheel and pan gestures don't start over this UI.</param>
-        /// <param name="depthUnder">Distance along a ray to the first world surface, or null; used to scale zoom and pan.</param>
-        public void Initialize(IInputBlocker ui, Func<Ray, float?> depthUnder)
+        /// <param name="depthUnder">Distance along a ray to the first world surface, or null; used to scale zoom and pan, and to measure the height above the ground.</param>
+        /// <param name="speed">How fast to fly; shared with the UI that shows and picks it.</param>
+        public void Initialize(IInputBlocker ui, Func<Ray, float?> depthUnder, FlySpeed speed)
         {
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
             _depthUnder = depthUnder ?? throw new ArgumentNullException(nameof(depthUnder));
+            _speed = speed ?? throw new ArgumentNullException(nameof(speed));
         }
 
         public void Frame(Vector3 center, float radius)
@@ -100,7 +105,9 @@ namespace Forge.EditorApp
 
             var pointer = mouse.position.ReadValue();
             var fast = keyboard.shiftKey.isPressed ? _fastMultiplier : 1f;
-            var manual = Look(keyboard, mouse, fast) | Zoom(mouse, pointer, fast) | PanWithMiddleButton(mouse, pointer);
+            // While flying, the wheel picks the fly speed instead of zooming (as in Unity's and Unreal's scene views).
+            var flying = mouse.rightButton.isPressed;
+            var manual = Look(keyboard, mouse, fast) | (flying ? StepSpeed(mouse) : Zoom(mouse, pointer, fast)) | PanWithMiddleButton(mouse, pointer);
 
             // Any manual movement takes over from a Frame glide.
             if (manual)
@@ -129,9 +136,37 @@ namespace Forge.EditorApp
             if (keyboard.eKey.isPressed) move += Vector3.up;
             if (keyboard.qKey.isPressed) move += Vector3.down;
 
-            transform.Translate(move.normalized * _moveSpeed * fast * Time.unscaledDeltaTime, Space.Self);
+            if (move != Vector3.zero)
+                transform.Translate(move.normalized * _moveSpeed * _speed.FactorAt(HeightAboveGround()) * fast * Time.unscaledDeltaTime, Space.Self);
             return true;
         }
+
+        // One wheel notch is one speed step; a fast wheel's several notches in a frame step several at once.
+        bool StepSpeed(Mouse mouse)
+        {
+            var notches = mouse.scroll.ReadValue().y / ScrollPerNotch;
+            if (Mathf.Approximately(notches, 0f))
+                return false;
+
+            _speed.Step(notches > 0f ? Mathf.Max(1, Mathf.RoundToInt(notches)) : Mathf.Min(-1, Mathf.RoundToInt(notches)));
+            return true;
+        }
+
+        // Meters from the camera down to the ground, measured only when the speed follows the height. Where no ground
+        // is under the camera (past the land's edge, or over far land, which has no collider), the last ground
+        // height seen stands in, so the speed doesn't jump when the ground below runs out.
+        float? HeightAboveGround()
+        {
+            if (!_speed.FollowsHeight)
+                return null;
+
+            var position = transform.position;
+            if (DepthBelow(position) is float depth)
+                _groundY = position.y - depth;
+            return _groundY.HasValue ? Mathf.Max(0f, position.y - _groundY.Value) : (float?)null;
+        }
+
+        float? DepthBelow(Vector3 position) => _depthUnder?.Invoke(new Ray(position, Vector3.down));
 
         // Dolly along the cursor ray by a fraction of the distance to what's under it,
         // so zooming is fast from far away and precise up close.

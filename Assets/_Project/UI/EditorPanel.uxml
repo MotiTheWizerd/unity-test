@@ -60,7 +60,7 @@
                 </forge:ForgeSection>
 
                 <forge:ForgeSection title="CONTROLS" collapsible="true" collapsed="true">
-                    <ui:Label class="forge-muted" text="Tools: Q select · W move · E rotate · R scale · H hand&#10;P place · O outline · G fill · B sculpt · L water · M mark · Esc: back to select&#10;Outline / Fill: drag a rectangle · Shift square · [ ] turn it&#10;Click / Shift+click: select · Ctrl snaps&#10;Drag on empty space: box select (Shift adds)&#10;Move: drag objects over the ground, or the arrows&#10;Hold Space: hand in any tool&#10;Del: delete · End: drop to ground · F: frame&#10;Sculpt: hold left mouse · [ ]: brush size&#10;Water: click a hollow, drag up/down for the level · Del removes the lake&#10;1-9: place object · [ ]: rotate it (Shift: 90°)&#10;Hold + drag: paint a row · + Shift: straight line&#10;Type in Search to filter, Esc clears&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
+                    <ui:Label class="forge-muted" text="Tools: Q select · W move · E rotate · R scale · H hand&#10;P place · O outline · G fill · B sculpt · L water · M mark · Esc: back to select&#10;Outline / Fill: drag a rectangle · Shift square · [ ] turn it&#10;Click / Shift+click: select · Ctrl snaps&#10;Drag on empty space: box select (Shift adds)&#10;Move: drag objects over the ground, or the arrows&#10;Hold Space: hand in any tool&#10;Del: delete · End: drop to ground · F: frame&#10;Sculpt: hold left mouse · [ ]: brush size&#10;Water: click a hollow, drag up/down for the level · Del removes the lake&#10;1-9: place object · [ ]: rotate it (Shift: 90°)&#10;Hold + drag: paint a row · + Shift: straight line&#10;Type in Search to filter, Esc clears&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;  + wheel: fly speed (also SPEED in the top bar)&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
                 </forge:ForgeSection>
             </ui:ScrollView>
         </forge:ForgePanel>
@@ -79,6 +79,11 @@
                 <forge:ForgeButton name="redo" icon="redo-2" small="true" tooltip="Redo (Ctrl+Y)" />
                 <forge:ForgeSeparator vertical="true" />
                 <forge:ForgeButton name="save" icon="save" small="true" tooltip="Save (Ctrl+S)" />
+                <forge:ForgeSeparator vertical="true" />
+                <ui:Label class="forge-options__name" text="SPEED" tooltip="How fast the camera flies. While flying (right mouse held), the mouse wheel steps it." />
+                <ui:VisualElement name="fly-speed-presets" class="forge-row forge-choices" />
+                <ui:Label name="fly-speed-other" class="forge-options__accent" tooltip="Picked with the wheel while flying" />
+                <forge:ForgeCheckbox name="fly-speed-height" label="By height" tooltip="Fly faster the higher you are above the ground" />
             </ui:VisualElement>
             <forge:ForgeSeparator class="forge-options__divider" />
             <ui:VisualElement class="forge-options__row">

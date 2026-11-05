@@ -65,6 +65,9 @@ namespace Forge.EditorApp
 
         public Selection Selection { get; } = new Selection();
 
+        /// <summary>How fast the camera flies; the camera steps it with the wheel, the top bar shows and picks it.</summary>
+        public FlySpeed FlySpeed { get; } = new FlySpeed();
+
         /// <summary>The tool the user picked (<see cref="SelectTool"/>).</summary>
         public ToolKind ActiveTool { get; private set; } = ToolKind.Select;
 

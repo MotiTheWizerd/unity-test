@@ -56,6 +56,7 @@ namespace Forge.EditorApp.UI
                 new WaterSection(Root, context, commands),
                 new AssetsBrowser(Root, context, thumbnails),
                 new HistorySection(Root, context),
+                new FlySpeedSection(Root, context),
                 new PerformanceSection(Root, context, diagnostics),
                 new StatusBar(Root, context),
             };

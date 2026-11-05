@@ -60,7 +60,7 @@ namespace Forge.EditorApp
             var slopes = new SlopeAlignment(context, shapes);
             var seating = new ObjectSeating(picker.TerrainHeightAt, slopes.ShapeToAlign, shapes.ShapeOf);
             // The camera's rays are the scene's; the distance along one is the same in either frame.
-            _flyCamera.Initialize(ui, ray => picker.TryPickWorld(frame.ToWorld(ray), out var hit) ? hit.Distance : (float?)null);
+            _flyCamera.Initialize(ui, ray => picker.TryPickWorld(frame.ToWorld(ray), out var hit) ? hit.Distance : (float?)null, context.FlySpeed);
             Commands = new EditorCommands(context, view, picker, _flyCamera, slopes);
             var root = frame.Root;
             _tools = new Dictionary<ToolKind, IEditorTool>
