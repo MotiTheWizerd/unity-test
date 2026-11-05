@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Forge.EditorApp.UI.Controls;
 using UnityEngine.UIElements;
 
 namespace Forge.EditorApp.UI
 {
     /// <summary>
-    /// A row of buttons, one per value, with the current value highlighted (a segmented control). Give it an enum
+    /// A row of <see cref="ForgeButton"/>s, one per value, with the current value highlighted (a segmented control). Give it an enum
     /// and it offers every value, or any list of values (sizes, spacings) with a label each.
     /// </summary>
     public sealed class ChoiceRow<T> where T : struct
@@ -30,7 +31,8 @@ namespace Forge.EditorApp.UI
             container.Clear();
             foreach (var value in values)
             {
-                var button = new Button(() => select(value)) { text = label(value) };
+                // Forge's own button, so every segmented row has its look: an accent outline, filled when chosen.
+                var button = new ForgeButton(() => select(value)) { text = label(value) };
                 container.Add(button);
                 _buttons.Add(value, button);
             }
