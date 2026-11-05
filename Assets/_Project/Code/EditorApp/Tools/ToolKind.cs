@@ -30,6 +30,9 @@ namespace Forge.EditorApp.Tools
         /// <summary>Paint on the terrain to raise, lower, flatten or smooth it.</summary>
         Sculpt,
 
+        /// <summary>Paint the terrain with a ground layer (grass, dirt, rock, sand).</summary>
+        Paint,
+
         /// <summary>Click a hollow to fill it with water (a lake); drag up or down to set its level.</summary>
         Water,
 

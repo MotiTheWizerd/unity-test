@@ -74,6 +74,7 @@ namespace Forge.EditorApp
                 { ToolKind.Outline, new RectangleTool(RectPattern.Outline, context, picker, new PlacementGhost(assets, shapes, _ghostMaterial, root), seating) },
                 { ToolKind.Fill, new RectangleTool(RectPattern.Fill, context, picker, new PlacementGhost(assets, shapes, _ghostMaterial, root), seating) },
                 { ToolKind.Sculpt, new SculptTool(context, view, picker, slopes, root) },
+                { ToolKind.Paint, new PaintTool(context, view, picker, root) },
                 { ToolKind.Water, new WaterTool(context, picker, Commands, water) },
                 { ToolKind.Mark, new MarkTool(context, picker) },
             };
@@ -186,9 +187,9 @@ namespace Forge.EditorApp
             if (keyboard.endKey.wasPressedThisFrame)
                 Commands.DropSelectionToGround();
 
-            // [ ] adjust the current tool: brush size while sculpting, the turn of what the place and outline tools lay.
+            // [ ] adjust the current tool: brush size while sculpting or painting, the turn of what the place and outline tools lay.
             var bracket = (keyboard.rightBracketKey.wasPressedThisFrame ? 1 : 0) - (keyboard.leftBracketKey.wasPressedThisFrame ? 1 : 0);
-            if (bracket != 0 && _context.CurrentTool == ToolKind.Sculpt)
+            if (bracket != 0 && ToolCatalog.Of(_context.CurrentTool).UsesBrush)
                 _context.BrushRadius *= Mathf.Pow(1.25f, bracket);
             else if (bracket != 0 && ToolCatalog.Of(_context.CurrentTool).LaysPaletteObject)
                 _context.RotatePlacement(bracket * (keyboard.shiftKey.isPressed ? EditorContext.PlacementCoarseStep : EditorContext.PlacementStep));

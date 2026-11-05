@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Forge.EditorApp.Gizmos
 {
     /// <summary>
-    /// Ring drawn on the terrain showing the brush footprint, colored by mode.
+    /// Ring drawn on the terrain showing the brush footprint, colored by what the brush does.
     /// Each point is dropped onto the surface so the ring hugs hills.
     /// </summary>
     public sealed class BrushCursor : IDisposable
@@ -24,7 +24,7 @@ namespace Forge.EditorApp.Gizmos
         }
 
         /// <param name="center">World coordinates.</param>
-        public void Show(Vector3 center, float radius, BrushMode mode)
+        public void Show(Vector3 center, float radius, Color color)
         {
             for (var i = 0; i < Segments; i++)
             {
@@ -32,14 +32,15 @@ namespace Forge.EditorApp.Gizmos
                 _points[i] = _surface.Drop(center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius);
             }
 
-            _line.Show(_points, Mathf.Max(0.1f, radius * 0.03f), ColorFor(mode));
+            _line.Show(_points, Mathf.Max(0.1f, radius * 0.03f), color);
         }
 
         public void Hide() => _line.Hide();
 
         public void Dispose() => _line.Dispose();
 
-        static Color ColorFor(BrushMode mode)
+        /// <summary>The ring's color for a sculpt mode: green raises, red lowers, blue flattens, white smooths.</summary>
+        public static Color ColorFor(BrushMode mode)
         {
             switch (mode)
             {

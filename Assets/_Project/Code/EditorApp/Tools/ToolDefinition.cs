@@ -9,8 +9,9 @@ namespace Forge.EditorApp.Tools
     /// </summary>
     public sealed class ToolDefinition
     {
-        public ToolDefinition(ToolKind kind, string name, string icon, Key key, int group, bool editsWorld, string hint, bool laysPaletteObject = false)
+        public ToolDefinition(ToolKind kind, string name, string icon, Key key, int group, bool editsWorld, string hint, bool laysPaletteObject = false, bool usesBrush = false)
         {
+            UsesBrush = usesBrush;
             Kind = kind;
             Name = name ?? throw new ArgumentNullException(nameof(name));
             Icon = icon ?? throw new ArgumentNullException(nameof(icon));
@@ -54,5 +55,8 @@ namespace Forge.EditorApp.Tools
         /// the palette keeps it instead of switching to the place tool.
         /// </summary>
         public bool LaysPaletteObject { get; }
+
+        /// <summary>Whether the tool strokes the terrain with the shared brush (sculpt, paint): [ ] resize it.</summary>
+        public bool UsesBrush { get; }
     }
 }

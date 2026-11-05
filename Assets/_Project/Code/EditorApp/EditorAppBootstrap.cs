@@ -118,7 +118,7 @@ namespace Forge.EditorApp
                 var active = LoadOrCreateActive(userStore, masters);
                 var loadMs = Lap(clock);
 
-                _context = new EditorContext(new EditSession(masters, active), userStore);
+                _context = new EditorContext(new EditSession(masters, active), userStore) { BaseGroundLook = _groundLayers != null ? _groundLayers.BaseKey : null };
                 var resolveMs = Lap(clock);
 
                 var assets = new PrefabAssetCatalog(_prefabs, new PrimitiveAssetCatalog());

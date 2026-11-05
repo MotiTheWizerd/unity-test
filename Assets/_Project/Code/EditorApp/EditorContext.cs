@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -28,6 +29,11 @@ namespace Forge.EditorApp
         float _brushStrength = 0.5f;
         ResolvedWorld _paletteWorld;
         ObjectPalette _palette;
+        ResolvedWorld _groundWorld;
+        IReadOnlyList<GroundLayerRecord> _groundLayers;
+        RecordId? _unpaintedGround;
+        RecordId? _paintLayer;
+        string _baseGroundLook;
 
         public EditorContext(EditSession session, PluginFileStore activeStore)
         {
@@ -306,6 +312,66 @@ namespace Forge.EditorApp
         }
 
         public BrushSettings CurrentBrush() => new BrushSettings(BrushMode, BrushRadius, BrushStrength);
+
+        /// <summary>
+        /// The look (asset key) unpainted ground shows, from the ground layer catalog; null when the world is drawn
+        /// unpainted. Painting names it in the data as the ground layer with that look (<see cref="UnpaintedGround"/>).
+        /// </summary>
+        public string BaseGroundLook
+        {
+            get => _baseGroundLook;
+            set
+            {
+                _baseGroundLook = value;
+                _groundWorld = null;
+            }
+        }
+
+        /// <summary>The world's ground layers, by name. Cached per world version.</summary>
+        public IReadOnlyList<GroundLayerRecord> GroundLayers
+        {
+            get
+            {
+                RefreshGround();
+                return _groundLayers;
+            }
+        }
+
+        /// <summary>The ground layer unpainted ground counts as once painted beside another; null when there is none.</summary>
+        public RecordId? UnpaintedGround
+        {
+            get
+            {
+                RefreshGround();
+                return _unpaintedGround;
+            }
+        }
+
+        /// <summary>
+        /// The ground layer the paint tool lays: the one picked, while the world has it, else the first that isn't
+        /// unpainted ground (painting that is how ground is cleaned up, so it comes second), else none.
+        /// </summary>
+        public RecordId? PaintLayer
+        {
+            get
+            {
+                var layers = GroundLayers;
+                if (_paintLayer is RecordId picked && layers.Any(layer => layer.Id == picked))
+                    return picked;
+                var first = layers.FirstOrDefault(layer => layer.Id != UnpaintedGround) ?? layers.FirstOrDefault();
+                return first?.Id;
+            }
+            set => _paintLayer = value;
+        }
+
+        void RefreshGround()
+        {
+            if (ReferenceEquals(_groundWorld, Session.World))
+                return;
+            _groundWorld = Session.World;
+            _groundLayers = Forge.Editing.Terrain.GroundLayers.Of(_groundWorld.Records);
+            _unpaintedGround = BaseGroundLook == null ? null : Forge.Editing.Terrain.GroundLayers.WithLook(_groundWorld.Records, BaseGroundLook);
+        }
 
         public string Status { get; private set; }
 

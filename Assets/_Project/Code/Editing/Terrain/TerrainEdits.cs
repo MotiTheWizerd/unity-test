@@ -44,6 +44,26 @@ namespace Forge.Editing.Terrain
             return chunks.Count;
         }
 
+        /// <summary>Writes every chunk the paint stroke changed as one undo step. Returns the number of chunks written.</summary>
+        public static int Commit(EditSession session, PaintStroke stroke)
+        {
+            if (session == null)
+                throw new ArgumentNullException(nameof(session));
+            if (stroke == null)
+                throw new ArgumentNullException(nameof(stroke));
+
+            var chunks = stroke.ChangedRecords();
+            if (chunks.Count == 0)
+                return 0;
+
+            session.Batch(stroke.Description, () =>
+            {
+                foreach (var chunk in chunks)
+                    session.Put(chunk);
+            });
+            return chunks.Count;
+        }
+
         // Only objects that still exist and actually change position are written.
         static bool IsMove(EditSession session, PlacedObjectRecord placed) =>
             session.World.Records.TryGet(placed.Id, out var current)

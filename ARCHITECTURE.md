@@ -646,9 +646,18 @@ slopes), so results are exact and every edit goes through the edit session.
   - **Panel keyboard navigation is off** (`EditorPanel.DisableKeyboardNavigation`): UI Toolkit maps arrows/WASD to
     navigation and Space/Enter to submit, so holding D walked focus from a clicked button into the search field and
     typed into it. Navigation events are swallowed at the root, and holding right mouse keeps UI focus released.
-  - `SculptTool` (B): hold left mouse on the terrain. Dabs fire at a fixed 30/s (independent of
-    frame rate, capped per frame) and preview live, and the stroke commits on release. `[` / `]`
-    change the radius. `BrushCursor` draws a ring that follows the ground, colored by mode.
+  - **Terrain brushes** share `BrushStrokeTool`: hold left mouse on the terrain; dabs fire at a fixed 30/s
+    (independent of frame rate, capped per frame) and preview live, the stroke commits on release as one undo step,
+    Esc cancels it. One brush (`BrushShape`: radius, strength, smooth falloff; `EditorContext.BrushRadius` /
+    `BrushStrength`, the same sliders through `BrushSliders`) serves both; `[` / `]` change the radius in any tool
+    whose `ToolDefinition.UsesBrush`. `BrushCursor` draws a ring that follows the ground.
+  - `SculptTool` (B): `SculptStroke` into a working copy of the heights; the ring is colored by mode.
+  - `PaintTool` (T, gold ring): `PaintStroke` (engine-free) moves each texel under the brush toward the chosen ground
+    layer (`EditorContext.PaintLayer`, the options bar's row of the world's `GroundLayers`) by the brush's weight,
+    the other layers giving up their share in proportion, across chunk edges, on land only; previewed with
+    `WorldView.PreviewPaint`, committed with `TerrainEdits.Commit(session, PaintStroke)` (heights untouched).
+    Unpainted ground counts as the ground layer with the catalog's base look (`EditorContext.UnpaintedGround`) once
+    painted beside another. Painting that layer is how ground is cleaned up.
   - `WaterTool` (L), a paint bucket for lakes: a press in a hollow surveys it and previews a full lake; dragging up
     or down sets the level (50 px per meter, Ctrl half meters), clamped between just above the ground and the brim,
     so it can't spill; release places it (`WaterEdits`, one undo step). A press on a lake (`WaterMap.LakeAt`, or near
@@ -741,7 +750,7 @@ slopes), so results are exact and every edit goes through the edit session.
   Esc releases UI focus; after dragging a brush slider, shortcuts resume on the next world click or Esc.
   The assets browser's tiles are plain elements, rebuilt only when the shown objects, the query or the tab
   change; fine for hundreds of objects, and a virtualized `ListView` is the next step for thousands.
-- Controls: the tool keys above (Q / W / E / R / H / P / O / G / B / L / M) or the tool strip; hold Space → hand; 1–9 or the
+- Controls: the tool keys above (Q / W / E / R / H / P / O / G / B / T / L / M) or the tool strip; hold Space → hand; 1–9 or the
   palette → Place tool (`[` / `]` rotate, hold + drag paints a row, + Shift a straight one); Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
   (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly (the wheel then steps the
   fly speed); otherwise the wheel dollies towards the point under the cursor; hold middle mouse to pan (the grabbed

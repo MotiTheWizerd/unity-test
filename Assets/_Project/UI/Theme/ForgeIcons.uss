@@ -29,6 +29,7 @@
 .forge-icon--square-dashed { background-image: url("../Icons/square-dashed.svg"); }
 .forge-icon--grid-2x2 { background-image: url("../Icons/grid-2x2.svg"); }
 .forge-icon--mountain { background-image: url("../Icons/mountain.svg"); }
+.forge-icon--paintbrush { background-image: url("../Icons/paintbrush.svg"); }
 .forge-icon--droplets { background-image: url("../Icons/droplets.svg"); }
 .forge-icon--map-pin { background-image: url("../Icons/map-pin.svg"); }
 
