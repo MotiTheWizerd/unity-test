@@ -9,10 +9,11 @@ namespace Forge.EditorApp.Tools
     /// </summary>
     public sealed class ToolDefinition
     {
-        public ToolDefinition(ToolKind kind, string name, Key key, int group, bool editsWorld, string hint, bool laysPaletteObject = false)
+        public ToolDefinition(ToolKind kind, string name, string icon, Key key, int group, bool editsWorld, string hint, bool laysPaletteObject = false)
         {
             Kind = kind;
             Name = name ?? throw new ArgumentNullException(nameof(name));
+            Icon = icon ?? throw new ArgumentNullException(nameof(icon));
             Key = key;
             Group = group;
             EditsWorld = editsWorld;
@@ -24,6 +25,9 @@ namespace Forge.EditorApp.Tools
 
         /// <summary>Short name for the tool strip and the options bar, e.g. "Move".</summary>
         public string Name { get; }
+
+        /// <summary>The icon's name in the icon set (UI/Icons, styled by Theme/ForgeIcons.uss), e.g. "move".</summary>
+        public string Icon { get; }
 
         /// <summary>The key that picks the tool.</summary>
         // SHORTCUT: a fixed key, not an Input Actions binding; both move to the Input Actions asset when

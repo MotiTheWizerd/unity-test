@@ -1,7 +1,8 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
     <Style src="EditorPanel.uss" />
+    <Style src="AssetsBrowser.uss" />
     <ui:VisualElement name="root" class="forge-root" picking-mode="Ignore">
-        <ui:VisualElement name="dock" class="forge-dock">
+        <ui:VisualElement name="dock" class="forge-panel forge-dock">
             <ui:VisualElement class="forge-title-bar">
                 <ui:Label name="title" class="forge-title" text="Forge Editor" />
                 <ui:Label name="plugin" class="forge-plugin" />
@@ -43,13 +44,6 @@
                 </ui:VisualElement>
 
                 <ui:VisualElement class="forge-section">
-                    <ui:Label class="forge-section__header" text="PALETTE  (1-9)" />
-                    <ui:TextField name="palette-search" placeholder-text="Search objects…" class="forge-search" />
-                    <ui:Label name="palette-count" class="forge-muted" />
-                    <ui:VisualElement name="palette" />
-                </ui:VisualElement>
-
-                <ui:VisualElement class="forge-section">
                     <ui:Label class="forge-section__header" text="HISTORY" />
                     <ui:VisualElement class="forge-row forge-choices">
                         <ui:Button name="undo" text="Undo (Ctrl+Z)" />
@@ -77,9 +71,9 @@
 
         <ui:VisualElement name="selection-box" class="forge-selection-box forge-hidden" picking-mode="Ignore" />
 
-        <ui:VisualElement name="tool-strip" class="forge-tool-strip" />
+        <ui:VisualElement name="tool-strip" class="forge-panel forge-tool-strip" />
 
-        <ui:VisualElement name="tool-options" class="forge-options">
+        <ui:VisualElement name="tool-options" class="forge-panel forge-options">
             <ui:Label name="tool-options-name" class="forge-options__name" />
             <ui:VisualElement name="options-selection" class="forge-options__group">
                 <ui:Label name="selection-count" />
@@ -112,7 +106,19 @@
             <ui:Label name="tool-options-hint" class="forge-muted forge-options__hint" />
         </ui:VisualElement>
 
-        <ui:VisualElement name="agent-dock" class="forge-dock forge-dock--right">
+        <ui:VisualElement name="assets" class="forge-panel forge-assets">
+            <ui:VisualElement name="assets-resize" class="forge-assets__resize" />
+            <ui:VisualElement class="forge-assets__header">
+                <ui:Label class="forge-section__header forge-assets__title" text="ASSETS" />
+                <ui:VisualElement name="assets-tabs" class="forge-grow" />
+                <ui:Label name="assets-count" class="forge-muted forge-assets__count" />
+                <ui:TextField name="assets-search" placeholder-text="Search…" class="forge-assets__search" />
+                <ui:Button name="assets-collapse" class="forge-icon-button" />
+            </ui:VisualElement>
+            <ui:ScrollView name="assets-grid" class="forge-assets__grid" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="agent-dock" class="forge-panel forge-dock forge-dock--right">
             <ui:VisualElement class="forge-title-bar">
                 <ui:Label class="forge-title" text="Agent" />
                 <ui:Button name="agent-new" text="New chat" />
@@ -139,7 +145,7 @@
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <ui:Label name="status" class="forge-status" />
+        <ui:Label name="status" class="forge-panel forge-status" />
 
         <ui:VisualElement name="fatal" class="forge-fatal forge-hidden">
             <ui:Label class="forge-title" text="Forge failed to start" />

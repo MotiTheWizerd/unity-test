@@ -9,8 +9,8 @@ using UnityEngine.UIElements;
 namespace Forge.EditorApp.UI
 {
     /// <summary>
-    /// The editor's UI Toolkit panel: the editing dock on the left, the tool strip beside it, the tool options bar
-    /// across the top, the agent dock on the right and a status bar,
+    /// The editor's UI Toolkit panel: the tool strip down the left edge, the editing dock beside it, the tool options
+    /// bar across the top, the assets browser along the bottom, the agent dock on the right and a status bar,
     /// laid out in EditorPanel.uxml and styled by EditorPanel.uss. A thin adapter: each section is its own
     /// presenter (<see cref="IPanelSection"/>), and this component only composes them, refreshes them every frame
     /// and answers whether the UI owns the input.
@@ -36,20 +36,21 @@ namespace Forge.EditorApp.UI
             Root.pickingMode = PickingMode.Ignore;
             DisableKeyboardNavigation();
             _editing = PanelElements.Required<VisualElement>(Root, "editing");
+            var tooltips = new TooltipLayer(Root);
             _sections = new List<IPanelSection>
             {
                 new WorldSection(Root, context),
                 new SpaceSection(Root, context),
                 new TimeSection(Root, context),
                 new SelectionBoxView(Root, context),
-                new ToolStrip(Root, context),
+                new ToolStrip(Root, context, tooltips),
                 new ToolOptionsBar(Root, context),
                 new SelectionSection(Root, context, commands),
                 new RectangleSection(Root, context),
                 new PlacementSection(Root, context),
                 new SculptSection(Root, context),
                 new WaterSection(Root, context, commands),
-                new PaletteSection(Root, context),
+                new AssetsBrowser(Root, context, tooltips),
                 new HistorySection(Root, context),
                 new PerformanceSection(Root, context, diagnostics),
                 new StatusBar(Root, context),
@@ -85,6 +86,7 @@ namespace Forge.EditorApp.UI
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "dock"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "tool-strip"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "tool-options"), false);
+            PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "assets"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "agent-dock"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "status"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "fatal"), true);

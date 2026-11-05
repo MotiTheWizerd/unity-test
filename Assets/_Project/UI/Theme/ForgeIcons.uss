@@ -1,0 +1,47 @@
+/*
+ * Forge's icons: Lucide (ISC licence, see Icons/Lucide-LICENSE.txt), imported from SVG as vector images.
+ * An element with .forge-icon and one .forge-icon--{name} class draws that icon, tinted by the current text colour;
+ * the SVGs are stroked white so the tint shows. Add a line here for every new icon file.
+ */
+
+.forge-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: var(--forge-text);
+    transition-property: -unity-background-image-tint-color;
+    transition-duration: var(--forge-motion-fast);
+}
+
+.forge-icon--sm {
+    width: 14px;
+    height: 14px;
+}
+
+/* Tools */
+.forge-icon--mouse-pointer-2 { background-image: url("../Icons/mouse-pointer-2.svg"); }
+.forge-icon--move { background-image: url("../Icons/move.svg"); }
+.forge-icon--rotate-3d { background-image: url("../Icons/rotate-3d.svg"); }
+.forge-icon--scaling { background-image: url("../Icons/scaling.svg"); }
+.forge-icon--hand { background-image: url("../Icons/hand.svg"); }
+.forge-icon--box { background-image: url("../Icons/box.svg"); }
+.forge-icon--square-dashed { background-image: url("../Icons/square-dashed.svg"); }
+.forge-icon--grid-2x2 { background-image: url("../Icons/grid-2x2.svg"); }
+.forge-icon--mountain { background-image: url("../Icons/mountain.svg"); }
+.forge-icon--droplets { background-image: url("../Icons/droplets.svg"); }
+.forge-icon--map-pin { background-image: url("../Icons/map-pin.svg"); }
+
+/* Panel chrome */
+.forge-icon--search { background-image: url("../Icons/search.svg"); }
+.forge-icon--chevron-down { background-image: url("../Icons/chevron-down.svg"); }
+.forge-icon--chevron-up { background-image: url("../Icons/chevron-up.svg"); }
+.forge-icon--x { background-image: url("../Icons/x.svg"); }
+.forge-icon--undo-2 { background-image: url("../Icons/undo-2.svg"); }
+.forge-icon--redo-2 { background-image: url("../Icons/redo-2.svg"); }
+.forge-icon--save { background-image: url("../Icons/save.svg"); }
+.forge-icon--sparkles { background-image: url("../Icons/sparkles.svg"); }
+.forge-icon--plus { background-image: url("../Icons/plus.svg"); }
+.forge-icon--layers { background-image: url("../Icons/layers.svg"); }
+.forge-icon--paint-bucket { background-image: url("../Icons/paint-bucket.svg"); }
+.forge-icon--circle-question-mark { background-image: url("../Icons/circle-question-mark.svg"); }

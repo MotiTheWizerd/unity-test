@@ -26,5 +26,23 @@ namespace Forge.Data.Records
 
             return string.Join(Separator.ToString(), segments);
         }
+
+        /// <summary>The first segment: "Nature" of "Nature/Trees". Empty for the empty path.</summary>
+        public static string Head(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return string.Empty;
+            var cut = path.IndexOf(Separator);
+            return cut < 0 ? path : path.Substring(0, cut);
+        }
+
+        /// <summary>Everything after the first segment: "Trees" of "Nature/Trees". Empty when there is none.</summary>
+        public static string Tail(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return string.Empty;
+            var cut = path.IndexOf(Separator);
+            return cut < 0 ? string.Empty : path.Substring(cut + 1);
+        }
     }
 }

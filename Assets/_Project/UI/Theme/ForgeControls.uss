@@ -1,0 +1,415 @@
+/*
+ * Forge's look for Unity's built-in controls: buttons, text and number fields, sliders, toggles, dropdowns,
+ * foldouts, scrollers, tabs. Applies to the whole panel (including dropdown menus, which open outside our root),
+ * so it is imported by the theme, after Unity's default. Colours and sizes come from ForgeTokens.uss.
+ */
+
+/* ---- Typography ---------------------------------------------------------------------------------------- */
+
+:root {
+    -unity-font-definition: url("../Fonts/Inter-Regular.ttf");
+    font-size: var(--forge-font-size);
+    color: var(--forge-text);
+}
+
+/* Weights are real Inter cuts, not synthesized bold. */
+.forge-medium {
+    -unity-font-definition: url("../Fonts/Inter-Medium.ttf");
+}
+
+.forge-semibold {
+    -unity-font-definition: url("../Fonts/Inter-SemiBold.ttf");
+}
+
+.unity-label {
+    color: var(--forge-text);
+    padding: 1px 2px;
+}
+
+/* ---- Buttons --------------------------------------------------------------------------------------------- */
+
+.unity-button {
+    margin: 2px;
+    padding: 4px 10px;
+    background-color: var(--forge-control-bg);
+    background-image: none;
+    border-width: 1px;
+    border-color: var(--forge-control-border);
+    border-radius: var(--forge-control-radius);
+    color: var(--forge-text);
+    -unity-text-align: middle-center;
+    transition-property: background-color, border-color, color;
+    transition-duration: var(--forge-motion-fast);
+}
+
+.unity-button:hover {
+    background-color: var(--forge-control-bg-hover);
+}
+
+.unity-button:active {
+    background-color: var(--forge-control-bg-pressed);
+}
+
+.unity-button:focus {
+    border-color: var(--forge-control-border);
+}
+
+.unity-button:disabled {
+    opacity: 0.35;
+}
+
+/* The chosen one: the current tool, the selected object, the chosen mode. */
+.unity-button.is-active,
+.unity-button.is-active:hover {
+    background-color: var(--forge-accent);
+    border-color: var(--forge-accent);
+    color: var(--forge-text-on-accent);
+}
+
+.unity-button.is-active .unity-label {
+    color: var(--forge-text-on-accent);
+}
+
+/* ---- Fields: the label column and the input box ---------------------------------------------------------- */
+
+.unity-base-field {
+    margin: 2px 0;
+    min-height: 24px;
+}
+
+.unity-base-field__label {
+    min-width: 72px;
+    padding: 0 var(--forge-space-2) 0 2px;
+    color: var(--forge-text-muted);
+    -unity-text-align: middle-left;
+}
+
+.unity-base-field:hover > .unity-base-field__label,
+.unity-base-field:focus > .unity-base-field__label {
+    color: var(--forge-text);
+}
+
+.unity-base-text-field__input {
+    padding: 3px 7px;
+    background-color: var(--forge-input-bg);
+    background-image: none;
+    border-width: 1px;
+    border-color: var(--forge-input-border);
+    border-radius: var(--forge-control-radius);
+    color: var(--forge-text);
+    transition-property: background-color, border-color;
+    transition-duration: var(--forge-motion-fast);
+}
+
+.unity-base-text-field__input:hover {
+    background-color: var(--forge-input-bg-hover);
+}
+
+.unity-base-text-field__input:focus {
+    border-color: var(--forge-input-border-focus);
+}
+
+.unity-base-text-field__input .unity-text-element {
+    color: var(--forge-text);
+}
+
+.unity-base-text-field__input--placeholder {
+    color: var(--forge-text-dim);
+}
+
+.unity-base-text-field__input:disabled {
+    opacity: 0.4;
+}
+
+/* ---- Toggles: a small rounded box that fills with the accent ---------------------------------------------- */
+
+.unity-toggle {
+    margin: 2px 0;
+}
+
+.unity-toggle > .unity-toggle__input {
+    flex-direction: row;
+    align-items: center;
+}
+
+.unity-toggle__checkmark {
+    width: 15px;
+    height: 15px;
+    margin-right: 6px;
+    background-color: var(--forge-input-bg);
+    border-width: 1px;
+    border-color: var(--forge-control-border);
+    border-radius: 4px;
+    -unity-background-image-tint-color: var(--forge-text-on-accent);
+    transition-property: background-color, border-color;
+    transition-duration: var(--forge-motion-fast);
+}
+
+.unity-toggle:hover .unity-toggle__checkmark {
+    border-color: var(--forge-text-muted);
+}
+
+/* The check mark image itself is Unity's; only its box and tint change. */
+.unity-toggle:checked .unity-toggle__checkmark {
+    background-color: var(--forge-accent);
+    border-color: var(--forge-accent);
+}
+
+.unity-toggle__text {
+    margin-left: 2px;
+    color: var(--forge-text);
+}
+
+/* ---- Sliders: a thin track, a round accent knob --------------------------------------------------------- */
+
+.unity-base-slider--horizontal {
+    min-height: 24px;
+}
+
+.unity-base-slider--horizontal .unity-base-slider__input {
+    align-items: center;
+}
+
+.unity-base-slider__tracker {
+    height: 3px;
+    margin-top: 0;
+    background-color: var(--forge-track);
+    border-width: 0;
+    border-radius: 2px;
+}
+
+.unity-base-slider--horizontal .unity-base-slider__tracker {
+    top: 50%;
+    margin-top: -1px;
+}
+
+.unity-base-slider__dragger {
+    width: 13px;
+    height: 13px;
+    margin-top: -5px;
+    background-color: var(--forge-text);
+    border-width: 0;
+    border-radius: 7px;
+    transition-property: background-color, scale;
+    transition-duration: var(--forge-motion-fast);
+}
+
+.unity-base-slider:hover .unity-base-slider__dragger,
+.unity-base-slider:focus .unity-base-slider__dragger {
+    background-color: var(--forge-accent);
+}
+
+.unity-base-slider__dragger-border {
+    display: none;
+}
+
+.unity-base-slider__text-field {
+    width: 48px;
+    margin-left: 6px;
+}
+
+/* ---- Dropdowns: the closed field and the open menu --------------------------------------------------------- */
+
+.unity-base-popup-field__input {
+    padding: 3px 7px;
+    background-color: var(--forge-input-bg);
+    background-image: none;
+    border-width: 1px;
+    border-color: var(--forge-input-border);
+    border-radius: var(--forge-control-radius);
+    transition-property: background-color, border-color;
+    transition-duration: var(--forge-motion-fast);
+}
+
+.unity-base-popup-field__input:hover {
+    background-color: var(--forge-input-bg-hover);
+    border-color: var(--forge-text-dim);
+}
+
+.unity-base-popup-field:focus .unity-base-popup-field__input {
+    border-color: var(--forge-input-border-focus);
+}
+
+.unity-base-popup-field__text {
+    color: var(--forge-text);
+}
+
+.unity-base-popup-field__arrow {
+    -unity-background-image-tint-color: var(--forge-text-muted);
+}
+
+/* The open menu lives at the panel root, outside our panels. */
+.unity-base-dropdown__container-outer {
+    background-color: rgba(14, 14, 16, 0.96);
+    border-width: 1px;
+    border-color: var(--forge-panel-border);
+    border-radius: var(--forge-control-radius);
+}
+
+.unity-base-dropdown__container-inner {
+    background-color: transparent;
+    border-width: 0;
+    padding: 4px;
+}
+
+.unity-base-dropdown__item {
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition-property: background-color;
+    transition-duration: var(--forge-motion-fast);
+}
+
+.unity-base-dropdown__item:hover {
+    background-color: var(--forge-control-bg-hover);
+}
+
+.unity-base-dropdown__item:checked {
+    background-color: var(--forge-accent-soft);
+}
+
+.unity-base-dropdown__label {
+    color: var(--forge-text);
+}
+
+.unity-base-dropdown__checkmark {
+    -unity-background-image-tint-color: var(--forge-accent);
+}
+
+/* ---- Foldouts: a small chevron and a muted title -------------------------------------------------------- */
+
+.unity-foldout__toggle {
+    margin: 0;
+}
+
+.unity-foldout__toggle > .unity-toggle__input {
+    padding: 3px 0;
+}
+
+.unity-foldout__checkmark {
+    width: 12px;
+    height: 12px;
+    margin-right: 4px;
+    background-color: transparent;
+    border-width: 0;
+    -unity-background-image-tint-color: var(--forge-text-muted);
+}
+
+.unity-foldout__toggle:checked .unity-foldout__checkmark {
+    background-color: transparent;
+    border-width: 0;
+}
+
+.unity-foldout__text {
+    color: var(--forge-text-muted);
+}
+
+.unity-foldout__toggle:hover .unity-foldout__text {
+    color: var(--forge-text);
+}
+
+.unity-foldout__content {
+    margin-left: 12px;
+}
+
+/* ---- Scroll views: a thin bar that only shows its thumb -------------------------------------------------- */
+
+.unity-scroller--vertical {
+    width: 8px;
+    margin-left: 4px;
+}
+
+.unity-scroller--horizontal {
+    height: 8px;
+    margin-top: 4px;
+}
+
+.unity-scroller__low-button,
+.unity-scroller__high-button {
+    display: none;
+}
+
+.unity-scroller__slider {
+    margin: 0;
+    min-width: 0;
+    min-height: 0;
+}
+
+.unity-scroller--vertical .unity-scroller__slider {
+    width: 8px;
+}
+
+.unity-scroller--horizontal .unity-scroller__slider {
+    height: 8px;
+}
+
+.unity-scroller .unity-base-slider__tracker {
+    background-color: transparent;
+}
+
+.unity-scroller .unity-base-slider__dragger {
+    width: 6px;
+    height: auto;
+    min-height: 24px;
+    margin: 0 1px;
+    background-color: rgba(255, 255, 255, 0.18);
+    border-radius: 3px;
+}
+
+.unity-scroller--horizontal .unity-base-slider__dragger {
+    width: auto;
+    height: 6px;
+    min-width: 24px;
+    margin: 1px 0;
+}
+
+.unity-scroller:hover .unity-base-slider__dragger {
+    background-color: rgba(255, 255, 255, 0.32);
+}
+
+/* ---- Tabs: an underline under the chosen tab ---------------------------------------------------------------- */
+
+.unity-tab-view__header-container {
+    flex-direction: row;
+    border-bottom-width: 1px;
+    border-color: var(--forge-divider);
+    margin-bottom: var(--forge-space-2);
+}
+
+.unity-tab__header {
+    padding: 4px 10px 6px 10px;
+    margin-right: 2px;
+    background-color: transparent;
+    border-width: 0;
+    transition-property: color;
+    transition-duration: var(--forge-motion-fast);
+}
+
+.unity-tab__header-label {
+    color: var(--forge-text-muted);
+    padding: 0;
+}
+
+.unity-tab__header:hover .unity-tab__header-label {
+    color: var(--forge-text);
+}
+
+.unity-tab__header:checked .unity-tab__header-label {
+    color: var(--forge-text);
+}
+
+.unity-tab__header-underline {
+    height: 2px;
+    margin-top: 4px;
+    background-color: transparent;
+    border-radius: 1px;
+    transition-property: background-color;
+    transition-duration: var(--forge-motion-fast);
+}
+
+.unity-tab__header:checked .unity-tab__header-underline {
+    background-color: var(--forge-accent);
+}
+
+.unity-tab__content-container {
+    padding: 0;
+}

@@ -11,6 +11,18 @@ namespace Forge.EditorApp.UI
 
         public const string HiddenClass = "forge-hidden";
 
+        public const string IconClass = "forge-icon";
+
+        /// <summary>An icon from the set in UI/Icons, by name (styled by Theme/ForgeIcons.uss), e.g. "move".</summary>
+        public static VisualElement Icon(string name)
+        {
+            if (string.IsNullOrEmpty(name)) throw new ArgumentException("An icon needs a name.", nameof(name));
+            var icon = new VisualElement { pickingMode = PickingMode.Ignore };
+            icon.AddToClassList(IconClass);
+            icon.AddToClassList($"{IconClass}--{name}");
+            return icon;
+        }
+
         /// <summary>
         /// The element named <paramref name="name"/>. Throws if it is missing, so a
         /// mismatch between UXML and code fails loudly at startup instead of silently.

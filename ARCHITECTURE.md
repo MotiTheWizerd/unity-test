@@ -573,13 +573,29 @@ slopes), so results are exact and every edit goes through the edit session.
   `GizmoOverlay` material (`Shaders/GizmoOverlay.shader`, ZTest Always, unlit), so terrain never hides
   a handle. The material is assigned on `EditorController`. `SelectionHighlighter` tints selected objects (property blocks, so shared
   materials are never touched).
-- **UI** (`EditorApp/UI`, UI Toolkit): the layout lives in `UI/EditorPanel.uxml` and the style in
-  `UI/EditorPanel.uss`, rendered by a `UIDocument` with `ForgePanelSettings`.
+- **UI** (`EditorApp/UI`, UI Toolkit): the layout lives in `UI/EditorPanel.uxml`, rendered by a `UIDocument` with
+  `ForgePanelSettings`. **The look is decided in one place**: `UI/Theme/ForgeTokens.uss` holds the design tokens
+  (USS variables: panel glass `rgba(0,0,0,0.6)`, the warm accent, text tones, radii, spacing, type scale, motion);
+  `UI/Theme/ForgeControls.uss` restyles Unity's built-in controls (buttons, fields, sliders, toggles, dropdowns and
+  their menus, foldouts, scrollers, tabs) with those tokens; `UI/Theme/ForgeIcons.uss` maps icon names to the
+  Lucide SVGs in `UI/Icons` (imported as `VectorImage` by the built-in vector graphics module, stroked white so
+  `-unity-background-image-tint-color` colours them; `PanelElements.Icon(name)` makes one). The theme
+  `ForgeRuntimeTheme.tss` imports Unity's default, then those three. Layout and Forge's own elements are in
+  `UI/EditorPanel.uss` and `UI/AssetsBrowser.uss`, which only read tokens. The font is Inter (`UI/Fonts`, OFL):
+  Regular by default, Medium for small caps headers, SemiBold for titles, as real cuts, never synthesized bold.
+  Runtime UI Toolkit shows no tooltips, so `TooltipLayer` draws its own: one label at the root, shown beside the
+  hovered element after a short rest (`Attach(element, text)`, rich text allowed).
   `EditorPanel` (MonoBehaviour) only composes **one presenter per section**
   (`IPanelSection`: World, Space (with the worldspace's **Sea level**: a toggle, new seas start 2 m below the base
-  land, and a number field; each change is one undo step), ToolStrip, ToolOptionsBar, Selection, Placement, Sculpt, Palette, History,
-  Performance, StatusBar, Agent). The **tool strip** (right of the dock) is built from `ToolCatalog`, grouped,
-  with the current tool highlighted. The **tool options bar** (across the top of the view) shows the current
+  land, and a number field; each change is one undo step), ToolStrip, ToolOptionsBar, Selection, Placement, Sculpt, AssetsBrowser, History,
+  Performance, StatusBar, Agent). The **tool strip** (down the left edge) is an icon button per tool from
+  `ToolCatalog` (`ToolDefinition.Icon`), grouped, the current tool on the accent, name and key as the tooltip.
+  The **assets browser** (along the bottom, `AssetsBrowser`) is where placeable content lives: a `TabBar` with
+  one tab per top-level category (`PaletteTabs` folds `ObjectPalette.Groups` by `CategoryPath.Head`), a grid of
+  `AssetTile`s for the current tab with a small header per sub-category (`CategoryPath.Tail`), a search that spans
+  every tab (tabs dim, matches show with full paths, Esc clears), the 1–9 key on the first nine tiles, a collapse
+  button and a drag handle on the top edge for its height. Tiles show a placeholder icon until prefab thumbnails
+  are rendered. Tabs for materials and textures will sit in the same bar. The **tool options bar** (across the top of the view) shows the current
   tool's name and hint, and each tool's settings are their own section inside it, shown while that tool is
   current: `SelectionSection` (count, Frame, Drop) for Select/Move/Rotate/Scale, `RectangleSection` (whole pieces)
   for Outline and Fill, `PlacementSection` (turn, random turn & size, align to slope, gaps) for Place, Outline and Fill, `SculptSection` (brush) for Sculpt, `WaterSection` (the current lake's level, Remove) for Water. Each presenter
@@ -592,9 +608,8 @@ slopes), so results are exact and every edit goes through the edit session.
   `IsKeyboardCaptured` is true while a text input has focus (or the field hosting one: a Slider
   with a number box keeps focus itself), so typing never fires shortcuts. A click in the world or
   Esc releases UI focus; after dragging a brush slider, shortcuts resume on the next world click or Esc.
-  `PaletteSection`: a search field (Esc clears) over one foldout per category; folded categories
-  stay folded across rebuilds, and a search opens every group with a match. Buttons are plain
-  elements, fine for hundreds of objects; a virtualized `ListView` is the next step for thousands.
+  The assets browser's tiles are plain elements, rebuilt only when the shown objects, the query or the tab
+  change; fine for hundreds of objects, and a virtualized `ListView` is the next step for thousands.
 - Controls: the tool keys above (Q / W / E / R / H / P / O / G / B / L / M) or the tool strip; hold Space → hand; 1–9 or the
   palette → Place tool (`[` / `]` rotate, hold + drag paints a row, + Shift a straight one); Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
   (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; hold right mouse to look, with WASD/QE to fly; wheel

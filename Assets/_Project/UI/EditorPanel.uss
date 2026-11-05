@@ -1,64 +1,71 @@
-/* Forge runtime editor: a dark side dock plus a status bar. */
+/*
+ * Forge runtime editor layout: the editing dock on the left, the tool strip, the options bar across the top,
+ * the agent dock on the right and a status bar. Colours, radii, sizes and motion come from Theme/ForgeTokens.uss;
+ * the built-in controls are styled in Theme/ForgeControls.uss. This file only lays panels out and styles Forge's
+ * own elements.
+ */
 
 .forge-root {
     flex-grow: 1;
-    font-size: 13px;
 }
 
-.forge-root Label {
-    color: rgb(222, 224, 228);
+/* ---- Panels: dark glass ------------------------------------------------------------------------------------ */
+
+.forge-panel {
+    background-color: var(--forge-panel-bg);
+    border-width: 1px;
+    border-color: var(--forge-panel-border);
+    border-radius: var(--forge-panel-radius);
 }
 
 .forge-dock {
     position: absolute;
-    left: 10px;
+    left: 62px;
     top: 10px;
     bottom: 46px;
     width: 300px;
-    padding: 10px;
-    background-color: rgba(24, 26, 31, 0.93);
-    border-radius: 6px;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.08);
+    padding: var(--forge-space-3);
 }
 
 .forge-title-bar {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
+    margin-bottom: var(--forge-space-2);
 }
 
 .forge-title {
-    font-size: 15px;
-    -unity-font-style: bold;
+    font-size: var(--forge-font-size-title);
+    -unity-font-definition: url("Fonts/Inter-SemiBold.ttf");
 }
 
 .forge-plugin {
-    color: rgb(150, 156, 168);
+    color: var(--forge-text-muted);
 }
 
 .forge-plugin.is-dirty {
-    color: rgb(232, 176, 70);
+    color: var(--forge-accent);
 }
 
 .forge-scroll {
     flex-grow: 1;
 }
 
+/* ---- Sections ------------------------------------------------------------------------------------------- */
+
 .forge-section {
-    margin-bottom: 12px;
+    margin-bottom: var(--forge-space-3);
+    padding-bottom: var(--forge-space-2);
+    border-bottom-width: 1px;
+    border-color: var(--forge-divider);
 }
 
 .forge-section__header {
-    font-size: 10px;
-    -unity-font-style: bold;
-    letter-spacing: 1px;
-    margin-bottom: 4px;
-}
-
-.forge-root .forge-section__header {
-    color: rgb(128, 138, 156);
+    font-size: var(--forge-font-size-xs);
+    -unity-font-definition: url("Fonts/Inter-Medium.ttf");
+    letter-spacing: 1.5px;
+    margin-bottom: var(--forge-space-1);
+    color: var(--forge-text-muted);
 }
 
 .forge-row {
@@ -67,7 +74,7 @@
 }
 
 .forge-spaced {
-    margin-top: 4px;
+    margin-top: var(--forge-space-1);
 }
 
 .forge-grow {
@@ -78,15 +85,17 @@
     min-width: 44px;
     margin-left: 6px;
     -unity-text-align: middle-right;
+    color: var(--forge-text-muted);
 }
 
 .forge-indented {
-    margin-top: 4px;
-    padding-left: 6px;
+    margin-top: var(--forge-space-1);
+    padding-left: var(--forge-space-2);
     border-left-width: 2px;
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--forge-accent-border);
 }
 
+/* Segmented choices: equal buttons sharing the row. */
 .forge-choices > Button {
     flex-grow: 1;
     flex-basis: 0;
@@ -94,44 +103,10 @@
     margin-right: 1px;
 }
 
-.forge-palette {
-    flex-direction: row;
-    flex-wrap: wrap;
-}
-
-.forge-palette > Button {
-    width: 48%;
-    margin: 1px;
-}
-
-.forge-search {
-    margin-left: 0;
-    margin-right: 0;
-}
-
-/* One foldout per palette category; the toggle reads as a small sub-header. */
-.forge-palette-group {
-    margin-top: 2px;
-}
-
-.forge-palette-group > .unity-foldout__content {
-    margin-left: 4px;
-}
-
-/* Active choice: the selected tool, mode or palette entry. */
-.forge-root Button.is-active {
-    background-color: rgb(205, 145, 40);
-    color: rgb(20, 20, 20);
-    -unity-font-style: bold;
-}
-
 .forge-muted {
-    font-size: 11px;
+    font-size: var(--forge-font-size-sm);
     white-space: normal;
-}
-
-.forge-root .forge-muted {
-    color: rgb(156, 162, 174);
+    color: var(--forge-text-muted);
 }
 
 .forge-wrap {
@@ -142,88 +117,98 @@
     margin-top: 2px;
 }
 
-.forge-root .unity-base-field__label {
-    min-width: 72px;
-    width: 72px;
-}
-
-.forge-root .unity-base-slider__input-field {
-    width: 48px;
-}
-
-/* Active choice inside a button made of labels (the tool strip). */
-.forge-root Button.is-active Label {
-    color: rgb(20, 20, 20);
-}
-
 /* The box a drag on empty space draws to select what is inside it. */
 .forge-selection-box {
     position: absolute;
     border-width: 1px;
-    border-color: rgb(205, 145, 40);
-    background-color: rgba(205, 145, 40, 0.12);
+    border-color: var(--forge-accent);
+    background-color: var(--forge-accent-soft);
 }
 
-/* The tool strip: one button per tool, right of the dock, groups split by a gap. */
+/* ---- The tool strip: an icon per tool down the left edge, groups split by a thin line ---------------------- */
+
 .forge-tool-strip {
     position: absolute;
-    left: 320px;
+    left: 10px;
     top: 10px;
-    width: 96px;
-    padding: 4px;
-    background-color: rgba(24, 26, 31, 0.93);
-    border-radius: 6px;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.08);
+    width: 44px;
+    padding: var(--forge-space-1);
+    align-items: center;
 }
 
 .forge-tool {
-    flex-direction: row;
-    justify-content: space-between;
+    width: 34px;
+    height: 34px;
     margin: 1px 0;
-    padding: 4px 6px;
+    padding: 0;
+    justify-content: center;
+    align-items: center;
+    background-color: transparent;
+    border-color: transparent;
+    border-radius: 6px;
 }
 
-/* The labels sit on the light button face, so they take the button's dark text, not the panel's light one. */
-.forge-root .forge-tool Label {
-    color: rgb(24, 26, 31);
+.forge-tool:hover {
+    background-color: var(--forge-control-bg-hover);
 }
 
-.forge-root .forge-tool .forge-tool__key {
-    color: rgb(96, 104, 118);
-    -unity-font-style: bold;
+/* This sheet sits above the theme, so the chosen tool's accent is restated here. */
+.forge-tool.is-active,
+.forge-tool.is-active:hover {
+    background-color: var(--forge-accent);
+    border-color: var(--forge-accent);
 }
 
-/* A tool resting while the agent's build is open reads as disabled. */
-.forge-root .forge-tool:disabled Label {
-    color: rgb(140, 146, 158);
+.forge-tool .forge-icon {
+    -unity-background-image-tint-color: var(--forge-text-muted);
+}
+
+.forge-tool:hover .forge-icon {
+    -unity-background-image-tint-color: var(--forge-text);
+}
+
+.forge-tool.is-active .forge-icon,
+.forge-tool.is-active:hover .forge-icon {
+    -unity-background-image-tint-color: var(--forge-text-on-accent);
 }
 
 .forge-tool-strip__gap {
-    height: 8px;
+    width: 20px;
+    height: 1px;
+    margin: 5px 0;
+    background-color: var(--forge-divider);
 }
 
-/* The tool options bar: the current tool's name, settings and hint, across the top of the view. */
+/* The tooltip: one label at the root, placed beside the hovered element by TooltipLayer. */
+.forge-tooltip {
+    padding: 4px 9px;
+    background-color: rgba(12, 12, 14, 0.96);
+    border-width: 1px;
+    border-color: var(--forge-panel-border);
+    border-radius: var(--forge-control-radius);
+    font-size: var(--forge-font-size-sm);
+    white-space: nowrap;
+}
+
+/* ---- The tool options bar: the current tool's name, settings and hint, across the top of the view ------- */
+
 .forge-options {
     position: absolute;
-    left: 426px;
+    left: 372px;
     right: 360px;
     top: 10px;
-    padding: 4px 10px;
+    padding: var(--forge-space-1) var(--forge-space-3);
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    background-color: rgba(24, 26, 31, 0.93);
-    border-radius: 6px;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.08);
 }
 
 .forge-options__name {
-    margin-right: 12px;
-    font-size: 11px;
-    -unity-font-style: bold;
-    letter-spacing: 1px;
+    margin-right: var(--forge-space-3);
+    font-size: var(--forge-font-size-xs);
+    -unity-font-definition: url("Fonts/Inter-Medium.ttf");
+    letter-spacing: 1.5px;
+    color: var(--forge-accent);
 }
 
 .forge-options__group {
@@ -233,7 +218,7 @@
 }
 
 .forge-options__group > * {
-    margin-right: 8px;
+    margin-right: var(--forge-space-2);
 }
 
 /* Segmented choices in the bar size to their labels (the dock stretches them to share its width). */
@@ -265,7 +250,8 @@
     margin-top: 2px;
 }
 
-/* The agent's dock, on the right: transcript, review bar, message box. */
+/* ---- The agent's dock, on the right: transcript, review bar, message box -------------------------------- */
+
 .forge-dock--right {
     left: auto;
     right: 10px;
@@ -280,31 +266,31 @@
 .forge-chat {
     white-space: normal;
     margin-bottom: 6px;
-    padding: 4px 6px;
-    border-radius: 4px;
+    padding: 5px 8px;
+    border-radius: var(--forge-control-radius);
 }
 
-.forge-root .forge-chat--user {
-    background-color: rgba(205, 145, 40, 0.18);
-    color: rgb(240, 226, 200);
+.forge-chat--user {
+    background-color: var(--forge-accent-soft);
+    color: var(--forge-text);
 }
 
-.forge-root .forge-chat--activity {
+.forge-chat--activity {
     margin-bottom: 2px;
     padding-top: 0;
     padding-bottom: 0;
-    font-size: 11px;
-    color: rgb(140, 176, 150);
+    font-size: var(--forge-font-size-sm);
+    color: var(--forge-success);
 }
 
-.forge-root .forge-chat--notice {
-    font-size: 11px;
+.forge-chat--notice {
+    font-size: var(--forge-font-size-sm);
     -unity-font-style: italic;
-    color: rgb(156, 162, 174);
+    color: var(--forge-text-muted);
 }
 
-.forge-root .forge-chat--error {
-    color: rgb(240, 122, 110);
+.forge-chat--error {
+    color: var(--forge-danger);
 }
 
 /* Markdown in agent replies (MarkdownView). */
@@ -336,13 +322,13 @@
 }
 
 .forge-md__heading {
-    -unity-font-style: bold;
+    -unity-font-definition: url("Fonts/Inter-SemiBold.ttf");
 }
 
 .forge-md__code {
-    padding: 4px;
-    border-radius: 3px;
-    background-color: rgba(0, 0, 0, 0.25);
+    padding: 4px 6px;
+    border-radius: 4px;
+    background-color: var(--forge-input-bg);
     color: rgb(169, 211, 255);
 }
 
@@ -354,16 +340,16 @@
 .forge-agent-mark-text {
     flex-grow: 1;
     flex-shrink: 1;
-    font-size: 11px;
+    font-size: var(--forge-font-size-sm);
 }
 
 .forge-agent-review {
     margin-bottom: 6px;
-    padding: 6px;
-    border-radius: 4px;
+    padding: var(--forge-space-2);
+    border-radius: var(--forge-control-radius);
     border-width: 1px;
-    border-color: rgba(205, 145, 40, 0.55);
-    background-color: rgba(205, 145, 40, 0.12);
+    border-color: var(--forge-accent-border);
+    background-color: var(--forge-accent-soft);
 }
 
 .forge-agent-input {
@@ -379,17 +365,18 @@
     white-space: normal;
 }
 
+/* ---- Status bar and the fatal box ------------------------------------------------------------------------ */
+
 .forge-status {
     position: absolute;
-    left: 10px;
+    left: 62px;
     right: 10px;
     bottom: 10px;
     height: 28px;
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-left: var(--forge-space-3);
+    padding-right: var(--forge-space-3);
     -unity-text-align: middle-left;
-    background-color: rgba(24, 26, 31, 0.93);
-    border-radius: 4px;
+    color: var(--forge-text-muted);
 }
 
 .forge-fatal {
@@ -397,9 +384,9 @@
     left: 10px;
     top: 10px;
     width: 520px;
-    padding: 12px;
-    background-color: rgba(110, 28, 28, 0.95);
-    border-radius: 6px;
+    padding: var(--forge-space-3);
+    background-color: var(--forge-danger-bg);
+    border-radius: var(--forge-panel-radius);
 }
 
 .forge-hidden {

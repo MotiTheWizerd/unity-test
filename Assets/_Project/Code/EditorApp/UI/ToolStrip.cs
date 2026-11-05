@@ -6,22 +6,22 @@ using UnityEngine.UIElements;
 namespace Forge.EditorApp.UI
 {
     /// <summary>
-    /// The tool strip: a button per tool from <see cref="ToolCatalog"/>, with its name and key, grouped as the catalog
-    /// groups them. The current tool is highlighted (the hand while Space holds it); tools that change the world are
-    /// greyed out while the agent's build is open.
+    /// The tool strip: an icon button per tool from <see cref="ToolCatalog"/>, grouped as the catalog groups them,
+    /// with the tool's name and key as a tooltip. The current tool is highlighted (the hand while Space holds it);
+    /// tools that change the world are greyed out while the agent's build is open.
     /// </summary>
     public sealed class ToolStrip : IPanelSection
     {
         const string ToolClass = "forge-tool";
-        const string KeyClass = "forge-tool__key";
         const string GapClass = "forge-tool-strip__gap";
 
         readonly EditorContext _context;
         readonly Dictionary<ToolKind, Button> _buttons = new Dictionary<ToolKind, Button>();
 
-        public ToolStrip(VisualElement root, EditorContext context)
+        public ToolStrip(VisualElement root, EditorContext context, TooltipLayer tooltips)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            if (tooltips == null) throw new ArgumentNullException(nameof(tooltips));
             var strip = PanelElements.Required<VisualElement>(root, "tool-strip");
             strip.Clear();
 
@@ -32,6 +32,7 @@ namespace Forge.EditorApp.UI
                     strip.Add(Gap());
                 group = tool.Group;
                 var button = CreateButton(tool);
+                tooltips.Attach(button, Tooltip(tool));
                 strip.Add(button);
                 _buttons.Add(tool.Kind, button);
             }
@@ -53,14 +54,13 @@ namespace Forge.EditorApp.UI
         Button CreateButton(ToolDefinition tool)
         {
             var kind = tool.Kind;
-            var button = new Button(() => _context.SelectTool(kind)) { tooltip = $"{tool.Name} ({tool.KeyLabel}): {tool.Hint}" };
+            var button = new Button(() => _context.SelectTool(kind));
             button.AddToClassList(ToolClass);
-            button.Add(new Label(tool.Name));
-            var key = new Label(tool.KeyLabel);
-            key.AddToClassList(KeyClass);
-            button.Add(key);
+            button.Add(PanelElements.Icon(tool.Icon));
             return button;
         }
+
+        static string Tooltip(ToolDefinition tool) => $"{tool.Name}  <color=#9EA4AE>{tool.KeyLabel}</color>";
 
         static VisualElement Gap()
         {

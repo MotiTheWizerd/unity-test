@@ -1,0 +1,62 @@
+/*
+ * Forge design tokens: the one place the editor's look is decided.
+ * Every other style sheet reads these through var(); change a value here and the whole UI follows.
+ * Delicate dark glass: black panels at 60% opacity, thin light borders, one warm accent.
+ */
+
+:root {
+    /* Surfaces */
+    --forge-panel-bg: rgba(0, 0, 0, 0.6);
+    --forge-panel-border: rgba(255, 255, 255, 0.08);
+    --forge-panel-radius: 8px;
+
+    /* Controls (buttons, tiles, segments) */
+    --forge-control-bg: rgba(255, 255, 255, 0.06);
+    --forge-control-bg-hover: rgba(255, 255, 255, 0.11);
+    --forge-control-bg-pressed: rgba(255, 255, 255, 0.16);
+    --forge-control-border: rgba(255, 255, 255, 0.1);
+    --forge-control-radius: 5px;
+
+    /* Inputs (text, numbers, dropdowns) */
+    --forge-input-bg: rgba(0, 0, 0, 0.35);
+    --forge-input-bg-hover: rgba(0, 0, 0, 0.45);
+    --forge-input-border: rgba(255, 255, 255, 0.1);
+    --forge-input-border-focus: rgba(232, 163, 61, 0.7);
+
+    /* Text */
+    --forge-text: rgb(236, 238, 241);
+    --forge-text-muted: rgb(172, 178, 188);
+    --forge-text-dim: rgb(128, 134, 144);
+    --forge-text-on-accent: rgb(24, 20, 12);
+
+    /* Accent: the warm highlight for the active tool, the selected object, the agent's draft */
+    --forge-accent: rgb(232, 163, 61);
+    --forge-accent-hover: rgb(240, 178, 86);
+    --forge-accent-soft: rgba(232, 163, 61, 0.16);
+    --forge-accent-border: rgba(232, 163, 61, 0.55);
+
+    /* Status colours */
+    --forge-danger: rgb(240, 122, 110);
+    --forge-danger-bg: rgba(110, 28, 28, 0.9);
+    --forge-success: rgb(140, 196, 150);
+
+    /* Lines */
+    --forge-divider: rgba(255, 255, 255, 0.07);
+    --forge-track: rgba(255, 255, 255, 0.14);
+
+    /* Type scale (Inter) */
+    --forge-font-size: 12px;
+    --forge-font-size-sm: 11px;
+    --forge-font-size-xs: 10px;
+    --forge-font-size-title: 14px;
+
+    /* Spacing scale */
+    --forge-space-1: 4px;
+    --forge-space-2: 8px;
+    --forge-space-3: 12px;
+    --forge-space-4: 16px;
+
+    /* Motion */
+    --forge-motion-fast: 0.1s;
+    --forge-motion: 0.18s;
+}

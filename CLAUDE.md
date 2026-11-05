@@ -20,6 +20,12 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
   Check `Library/Bee/artifacts/*/<Assembly>.rsp` to see the real references.
 - Test count lower than expected = a stale test DLL. Read the console for compile errors.
 - Commit with the Bash tool (heredoc). PowerShell 5.1 `-Encoding utf8` adds a BOM.
+- **UI theme imports:** after adding an `@import` to `UI/ForgeRuntimeTheme.tss`, the running panel keeps
+  the old flattened theme (the new sheet's rules silently don't apply, even across play restarts).
+  Force-reimport the `.tss` (`AssetDatabase.ImportAsset(..., ForceUpdate)`) and request a script
+  reload (`EditorUtility.RequestScriptReload()`), then play again. Sheets attached in UXML don't need this.
+- SVG icons import as UI Toolkit `VectorImage` through the built-in vector graphics module; the
+  `com.unity.vectorgraphics` package is not needed and 2.0.0-preview.24 does not compile here.
 - **Play-mode script reload:** with "Recompile And Continue Playing", Unity reloads the
   domain mid-play and re-serializes *private* fields. Non-serializable runtime state
   becomes null and strings become `""`. Mark runtime-only fields `[NonSerialized]`.
