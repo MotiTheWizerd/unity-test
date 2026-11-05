@@ -7,16 +7,20 @@ namespace Forge.World
     /// <summary>Turns a <see cref="TerrainChunkRecord"/> into a Unity Terrain and keeps its heights in sync.</summary>
     static class TerrainChunkBuilder
     {
-        public static GameObject Build(TerrainChunkRecord chunk, Transform parent)
+        /// <param name="material">The terrain material (Materials/Terrain). Set explicitly, not left to the render
+        /// pipeline's default, which a build may strip.</param>
+        public static GameObject Build(TerrainChunkRecord chunk, Transform parent, Material material)
         {
             var data = new TerrainData { name = chunk.Id.ToString() };
             ApplyHeights(data, chunk.Heights.Load());
 
             var go = Terrain.CreateTerrainGameObject(data);
             go.name = chunk.Id.ToString();
+            var terrain = go.GetComponent<Terrain>();
+            terrain.materialTemplate = material;
             // Lets Unity connect neighbouring chunks so their LOD edges match. The
             // streamer marks connectivity dirty whenever chunks come and go.
-            go.GetComponent<Terrain>().allowAutoConnect = true;
+            terrain.allowAutoConnect = true;
             go.transform.SetParent(parent, false);
             go.transform.localPosition = new Vector3(chunk.Coord.X * WorldGrid.ChunkSize, 0f, chunk.Coord.Z * WorldGrid.ChunkSize);
             return go;

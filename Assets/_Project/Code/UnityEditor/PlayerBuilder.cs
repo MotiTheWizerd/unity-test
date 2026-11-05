@@ -25,6 +25,13 @@ namespace Forge.UnityEditor
 
         static void Build(BuildOptions options)
         {
+            // A running player locks its files, and the build would stall writing over them.
+            if (System.Diagnostics.Process.GetProcessesByName(Path.GetFileNameWithoutExtension(Executable)).Length > 0)
+            {
+                EditorUtility.DisplayDialog("Forge is running", $"Close {Executable} first, then build again.", "OK");
+                return;
+            }
+
             var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
             if (scenes.Length == 0)
             {

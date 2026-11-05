@@ -508,6 +508,7 @@ MonoBehaviour:
   _frameBudgetMs: 4
   _prefabs: {fileID: 11400000, guid: ef98c5dbdddd92a499bac64fa87db9b0, type: 2}
   _water: {fileID: 2100000, guid: 648d42d9baa219046adaf74fd39cd111, type: 2}
+  _terrainMaterial: {fileID: 2100000, guid: 208f3e7d694310f4299a1bec270635dd, type: 2}
   _interiorFloorMaterial: {fileID: 2100000, guid: 64aeb05968465834799377faddce59db, type: 2}
   _sky: {fileID: 11400000, guid: 809b6fa0062c19647bba0b3d2550d0a5, type: 2}
   _sun: {fileID: 410087040}

@@ -52,6 +52,9 @@ namespace Forge.EditorApp
         [SerializeField, Tooltip("Material of the sea and the lakes (Materials/Water); without one no water is shown.")]
         Material _water;
 
+        [SerializeField, Tooltip("Material the land is drawn with (Materials/Terrain, URP Terrain Lit).")]
+        Material _terrainMaterial;
+
         [SerializeField, Tooltip("Unlit material the interior floor grid is painted with (Materials/InteriorFloor).")]
         Material _interiorFloorMaterial;
 
@@ -104,7 +107,7 @@ namespace Forge.EditorApp
                 var resolveMs = Lap(clock);
 
                 var assets = new PrefabAssetCatalog(_prefabs, new PrimitiveAssetCatalog());
-                _view = new WorldView(transform, assets);
+                _view = new WorldView(transform, assets, _terrainMaterial);
                 _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs);
                 _view.Sync(_context.Session.World);
                 _interiorFloor = InteriorFloor.Create(transform, _interiorFloorMaterial);
@@ -205,6 +208,7 @@ namespace Forge.EditorApp
         // What the editor can't open without; optional parts (water, sky, agent) only warn when they are missing.
         string MissingSetup() =>
             _prefabs == null ? "EditorApp has no Prefab Catalog assigned (EditorAppBootstrap._prefabs)."
+            : _terrainMaterial == null ? "EditorApp has no terrain material assigned (EditorAppBootstrap._terrainMaterial)."
             : _interiorFloorMaterial == null ? "EditorApp has no interior floor material assigned (EditorAppBootstrap._interiorFloorMaterial)."
             : null;
 

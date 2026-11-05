@@ -22,15 +22,18 @@ namespace Forge.World
     {
         readonly Transform _root;
         readonly IAssetCatalog _catalog;
+        readonly Material _terrainMaterial;
         readonly Dictionary<RecordId, Presented> _presented = new Dictionary<RecordId, Presented>();
         readonly HashSet<ChunkCoord> _loaded = new HashSet<ChunkCoord>();
         ResolvedWorld _world;
         ChunkIndex _index = new ChunkIndex();
 
-        public WorldView(Transform root, IAssetCatalog catalog)
+        /// <param name="terrainMaterial">What the land is drawn with (Materials/Terrain).</param>
+        public WorldView(Transform root, IAssetCatalog catalog, Material terrainMaterial)
         {
             _root = root != null ? root : throw new ArgumentNullException(nameof(root));
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+            _terrainMaterial = terrainMaterial != null ? terrainMaterial : throw new ArgumentNullException(nameof(terrainMaterial));
         }
 
         public int PresentedCount => _presented.Count;
@@ -210,7 +213,7 @@ namespace Forge.World
             if (_index.TryGetTerrain(coord, out var chunk))
             {
                 Present(chunk, null,
-                    () => TerrainChunkBuilder.Build(chunk, _root),
+                    () => TerrainChunkBuilder.Build(chunk, _root, _terrainMaterial),
                     go => TerrainChunkBuilder.ApplyHeights(go, chunk.Heights.Load()));
                 count++;
             }
