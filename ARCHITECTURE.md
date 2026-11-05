@@ -588,7 +588,7 @@ slopes), so results are exact and every edit goes through the edit session.
   collapsible with a chevron), the fields `ForgeTextInput`, `ForgeTextArea`, `ForgeNumberField` and
   `ForgeIntegerField` (delayed commit), `ForgeSlider` (number box on), `ForgeCheckbox`, `ForgeDropdown` (thin
   subclasses of Unity's controls that add the field chrome and a `unit` label, `FieldChrome`), `ForgeButton`
-  (`icon`, `variant` default / primary / ghost; the icon is the button's background image, because a button with a
+  (`icon`, `variant` default / primary / ghost, `small` for toolbars; the icon is the button's background image, because a button with a
   child is no longer measured by its text), `ForgeSeparator` (a hairline, `vertical` between the items of a row),
   `TabBar`, `AssetTile`, and `Icons.Make(name)`. The theme imports
   every component sheet, so they work in any panel. Runtime UI Toolkit shows no tooltips, so `TooltipLayer` at a

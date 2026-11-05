@@ -17,8 +17,10 @@ namespace Forge.EditorApp.UI.Controls
         public const string Class = "forge-button";
         public const string IconOnlyClass = "forge-button--icon-only";
         public const string WithIconClass = "forge-button--with-icon";
+        public const string SmallClass = "forge-button--small";
 
         string _iconName = string.Empty;
+        bool _small;
         ForgeButtonVariant _variant = ForgeButtonVariant.Default;
 
         public ForgeButton() : this(null)
@@ -57,6 +59,18 @@ namespace Forge.EditorApp.UI.Controls
                 RemoveFromClassList(VariantClass(_variant));
                 _variant = value;
                 AddToClassList(VariantClass(_variant));
+            }
+        }
+
+        /// <summary>A smaller box and icon, for toolbars.</summary>
+        [UxmlAttribute]
+        public bool small
+        {
+            get => _small;
+            set
+            {
+                _small = value;
+                EnableInClassList(SmallClass, value);
             }
         }
 

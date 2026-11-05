@@ -26,10 +26,11 @@
     color: var(--forge-text);
 }
 
-/* The chosen tab is a quiet lift, not the accent. */
+/* The chosen tab is an accent outline: no fill, accent border and text. */
 .forge-tab.is-active,
 .forge-tab.is-active:hover {
-    background-color: var(--forge-control-bg-pressed);
-    border-color: var(--forge-control-border);
-    color: var(--forge-text);
+    background-color: transparent;
+    border-width: 1px;
+    border-color: var(--forge-accent);
+    color: var(--forge-accent);
 }

@@ -19,6 +19,7 @@
                                 <forge:ForgeButton icon="map-pin" variant="Ghost" tooltip="Ghost, icon only" />
                                 <forge:ForgeButton text="Active" class="is-active" />
                                 <forge:ForgeButton icon="hand" variant="Ghost" class="is-active" tooltip="Active ghost (a chosen tool)" />
+                                <forge:ForgeButton icon="save" variant="Ghost" small="true" tooltip="Small, for toolbars" />
                             </ui:VisualElement>
                             <ui:VisualElement class="gallery-row forge-choices">
                                 <forge:ForgeButton text="One" class="is-active" />
