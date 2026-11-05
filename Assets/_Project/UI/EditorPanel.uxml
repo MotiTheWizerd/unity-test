@@ -10,10 +10,6 @@
             </ui:VisualElement>
             <ui:ScrollView name="editing" class="forge-scroll">
                 <forge:ForgeSection title="SPACE">
-                    <ui:VisualElement class="forge-row">
-                        <forge:ForgeDropdown name="space-picker" class="forge-grow" />
-                        <forge:ForgeButton name="space-new" text="New…" icon="plus" />
-                    </ui:VisualElement>
                     <ui:VisualElement name="space-sea" class="forge-row">
                         <forge:ForgeCheckbox name="space-sea-on" label="Sea level" />
                         <forge:ForgeNumberField name="space-sea-level" unit="m" />
@@ -70,6 +66,12 @@
         <forge:ForgePanel name="tool-strip" class="forge-tool-strip" />
 
         <forge:ForgePanel name="tool-options" class="forge-options">
+            <ui:VisualElement class="forge-options__row forge-options__row--global">
+                <ui:Label class="forge-options__name" text="SPACE" />
+                <forge:ForgeDropdown name="space-picker" class="forge-options__space" tooltip="The space you are editing" />
+                <forge:ForgeButton name="space-new" icon="plus" variant="Ghost" tooltip="New space…" />
+            </ui:VisualElement>
+            <ui:VisualElement class="forge-options__row">
             <ui:Label name="tool-options-name" class="forge-options__name" />
             <ui:VisualElement name="options-selection" class="forge-options__group">
                 <ui:Label name="selection-count" />
@@ -99,7 +101,7 @@
                 <forge:ForgeNumberField name="water-level" label="Level" unit="m" />
                 <forge:ForgeButton name="water-remove" text="Remove" icon="x" tooltip="Del" />
             </ui:VisualElement>
-            <ui:Label name="tool-options-hint" class="forge-muted forge-options__hint" />
+            </ui:VisualElement>
         </forge:ForgePanel>
 
         <forge:ForgePanel name="assets" class="forge-assets">

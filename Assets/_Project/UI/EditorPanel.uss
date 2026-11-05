@@ -123,7 +123,7 @@
     background-color: var(--forge-divider);
 }
 
-/* ---- The tool options bar: the current tool's name, settings and hint, across the top of the view ------- */
+/* ---- The options bar across the top: a global row (the space), then the current tool's row ---------------- */
 
 .forge-options {
     position: absolute;
@@ -131,15 +131,24 @@
     right: 360px;
     top: 10px;
     padding: var(--forge-space-1) var(--forge-space-3);
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
 }
 
-.forge-options > .forge-panel__body {
+.forge-options__row {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
+    min-height: 30px;
+}
+
+.forge-options__row--global {
+    border-bottom-width: 1px;
+    border-color: var(--forge-divider);
+    margin-bottom: 2px;
+}
+
+.forge-options__space {
+    width: 200px;
+    margin-right: 2px;
 }
 
 .forge-options__name {
@@ -184,11 +193,6 @@
 .forge-options .unity-toggle > .unity-base-field__label {
     min-width: 0;
     width: auto;
-}
-
-.forge-options__hint {
-    width: 100%;
-    margin-top: 2px;
 }
 
 /* ---- The agent's dock, on the right: transcript, review bar, message box -------------------------------- */
