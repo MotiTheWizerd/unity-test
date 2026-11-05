@@ -49,6 +49,9 @@ namespace Forge.EditorApp
         [SerializeField, Min(0), Tooltip("How many chunks the camera may stray from the scene's origin before the scene is rebased under it, keeping float precision far from the world's origin.")]
         int _rebaseDistance = 8;
 
+        [SerializeField, Min(0), Tooltip("Chunks within this distance (in chunks) are shown as coarse far land, beyond the loaded chunks; the fog reaches this far.")]
+        int _farRadius = 16;
+
         [SerializeField, Tooltip("Prefabs for the asset keys of base objects; unlisted keys fall back to primitives.")]
         PrefabCatalog _prefabs;
 
@@ -57,6 +60,9 @@ namespace Forge.EditorApp
 
         [SerializeField, Tooltip("Material the land is drawn with (Materials/Terrain, URP Terrain Lit).")]
         Material _terrainMaterial;
+
+        [SerializeField, Tooltip("Material the far land is drawn with (Materials/FarTerrain); without one nothing shows beyond the loaded chunks.")]
+        Material _farTerrainMaterial;
 
         [SerializeField, Tooltip("Unlit material the interior floor grid is painted with (Materials/InteriorFloor).")]
         Material _interiorFloorMaterial;
@@ -117,7 +123,7 @@ namespace Forge.EditorApp
                 _frame = new WorldFrame(transform, _rebaseDistance);
                 _frame.Shifted += OnSceneShifted;
                 _view = new WorldView(transform, assets, _terrainMaterial);
-                _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs);
+                _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs, CreateFarTerrain());
                 _view.Sync(_context.Session.World);
                 _interiorFloor = InteriorFloor.Create(transform, _interiorFloorMaterial);
                 _waterView = CreateWaterView();
@@ -192,6 +198,8 @@ namespace Forge.EditorApp
 
             if (_frame != null)
                 _frame.Shifted -= OnSceneShifted;
+            _streamer?.Dispose();
+            _streamer?.Far?.Dispose();
             _view?.Dispose();
             _waterView?.Dispose();
             _skyView?.Dispose();
@@ -242,7 +250,8 @@ namespace Forge.EditorApp
             : _interiorFloorMaterial == null ? "EditorApp has no interior floor material assigned (EditorAppBootstrap._interiorFloorMaterial)."
             : null;
 
-        // The fog is thick where streaming stops loading land, so the world fades into the sky instead of ending.
+        // The fog is thick where the land stops (the far land's reach, or the loaded chunks' without far land), so
+        // the world fades into the sky instead of ending.
         SkyView CreateSkyView()
         {
             if (_sky == null || _sun == null)
@@ -251,7 +260,20 @@ namespace Forge.EditorApp
                 return null;
             }
 
-            return new SkyView(_sky, _sun, transform, _loadRadius * WorldGrid.ChunkSize);
+            var reach = _streamer.Far?.Reach ?? _loadRadius * WorldGrid.ChunkSize;
+            return new SkyView(_sky, _sun, transform, reach);
+        }
+
+        // Coarse land beyond the loaded chunks, under the world root like everything else that stands in the world.
+        FarTerrainView CreateFarTerrain()
+        {
+            if (_farTerrainMaterial == null)
+            {
+                Debug.LogWarning("[Forge] EditorApp has no far terrain material (EditorAppBootstrap._farTerrainMaterial); nothing shows beyond the loaded chunks.");
+                return null;
+            }
+
+            return new FarTerrainView(transform, _farTerrainMaterial, _farRadius);
         }
 
         // The sea is as large as the camera can see in every direction, so it reaches the horizon.

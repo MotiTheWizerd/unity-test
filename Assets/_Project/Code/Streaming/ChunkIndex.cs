@@ -39,6 +39,9 @@ namespace Forge.Streaming
 
         public int TerrainCount => _terrain.Count;
 
+        /// <summary>Every coordinate with a terrain chunk.</summary>
+        public IEnumerable<ChunkCoord> TerrainCoords => _terrain.Keys;
+
         /// <summary>How many objects the space holds. Reads every chunk of the space.</summary>
         public int ObjectCount =>
             _store == null || Space.IsDefault ? 0 : _store.ObjectChunks(Space).Sum(coord => ObjectsIn(coord).Count);

@@ -12,29 +12,37 @@ namespace Forge.World
     /// within a per-frame time budget, so crossing into new terrain spreads the
     /// work over several frames instead of one long hitch.
     /// </summary>
-    public sealed class WorldStreamer
+    public sealed class WorldStreamer : IDisposable
     {
         readonly WorldView _view;
         readonly ChunkWindow _window;
         readonly double _frameBudgetMs;
+        readonly FarTerrainView _far;
         ChunkCoord? _lastFocus;
 
         /// <param name="frameBudgetMs">
         /// Loading time allowed per frame. At least one chunk always loads, and
         /// another starts only if the average chunk build time still fits.
         /// </param>
-        public WorldStreamer(WorldView view, ChunkWindow window, double frameBudgetMs)
+        /// <param name="far">The far land beyond the loaded chunks, streamed in the budget left after them; null for none.</param>
+        public WorldStreamer(WorldView view, ChunkWindow window, double frameBudgetMs, FarTerrainView far = null)
         {
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _window = window ?? throw new ArgumentNullException(nameof(window));
             if (!(frameBudgetMs > 0))
                 throw new ArgumentOutOfRangeException(nameof(frameBudgetMs), frameBudgetMs, "Frame budget must be positive.");
             _frameBudgetMs = frameBudgetMs;
+            _far = far;
+            if (_far != null)
+                _view.TerrainChanged += _far.Invalidate;
         }
 
         public StreamingStats Stats { get; } = new StreamingStats();
 
         public ChunkWindow Window => _window;
+
+        /// <summary>The far land, or null when there is none.</summary>
+        public FarTerrainView Far => _far;
 
         /// <summary>Loads the whole window around <paramref name="focus"/> (world coordinates) now, ignoring the budget (e.g. at startup).</summary>
         public void LoadAll(Vector3 focus) => Step(focus, double.PositiveInfinity);
@@ -43,6 +51,7 @@ namespace Forge.World
         public void ShowSpace(Forge.Data.RecordId space, Vector3 focus)
         {
             _view.ShowSpace(space);
+            _far?.ShowSpace(coord => _view.TryGetTerrain(coord, out var chunk) ? chunk.Heights : null);
             _lastFocus = null;
             LoadAll(focus);
         }
@@ -50,11 +59,22 @@ namespace Forge.World
         /// <summary>Streams towards <paramref name="focus"/> (world coordinates) within the frame budget. Returns true if chunks came or went.</summary>
         public bool Tick(Vector3 focus) => Step(focus, _frameBudgetMs);
 
+        public void Dispose()
+        {
+            if (_far != null)
+                _view.TerrainChanged -= _far.Invalidate;
+        }
+
         bool Step(Vector3 position, double budgetMs)
         {
             var focus = WorldGrid.ChunkOf(position.x, position.z);
             if (focus == _lastFocus && Stats.PendingLoads == 0)
+            {
+                // Nothing near to do; the far land may still be coming in.
+                StreamFar(focus, Stopwatch.StartNew(), budgetMs, loadedChunks: 0);
                 return false;
+            }
+
             _lastFocus = focus;
 
             var step = Stopwatch.StartNew();
@@ -79,7 +99,20 @@ namespace Forge.World
                 Terrain.SetConnectivityDirty();
 
             Stats.RecordStep(step.Elapsed.TotalMilliseconds, plan.Load.Count - loads);
+            StreamFar(focus, step, budgetMs, loads);
             return changed;
+        }
+
+        // The far land takes the budget the chunks left in the frame; a far tile builds even past it only when no
+        // chunk did, so far land keeps coming in once the near land is settled. It is never loaded all at once (a
+        // space opens with its near land and the far land fades in over the next frames), so LoadAll's unbounded
+        // budget is capped to a frame's.
+        void StreamFar(ChunkCoord focus, Stopwatch step, double budgetMs, int loadedChunks)
+        {
+            if (_far == null)
+                return;
+            var remaining = Math.Min(budgetMs, _frameBudgetMs) - step.Elapsed.TotalMilliseconds;
+            _far.Tick(focus, remaining, atLeastOne: loadedChunks == 0);
         }
     }
 }

@@ -47,6 +47,10 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
   `localPosition` (world coordinates); anything positioned from a camera ray or a physics hit goes through
   `WorldFrame.ToWorld`. `transform.position` of a world object is a scene coordinate, not a world one.
   To check a rebase live: move `_focus` 9+ chunks away and invoke the bootstrap's `Update` by reflection.
+- Far land lives under the world root as objects named `far (x, z)` (tile coordinates). To see it on the small
+  default world, extend the land east by 20 chunks via `SpaceEdits.ExtendLand` inside `EditorContext.TryEdit`, put
+  the camera at the old edge looking east, tick `Update` by reflection, screenshot, then `EditorContext.Undo()`.
+  Count tiles with a live mesh (`MeshFilter.sharedMesh != null`): destroyed ones linger while the editor is unfocused.
 - Regenerate the base plugin with the menu item `Forge/Generate Core Plugin`
   (`execute_menu_item`). It is deterministic. After a plugin format change, regenerate it and the
   stress world, and set Moti's saved `forge.user.json` (under `AppData/LocalLow/MotiTheWizerd/Forge/Plugins`)

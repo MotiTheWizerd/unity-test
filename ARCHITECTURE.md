@@ -23,8 +23,8 @@ Assets/_Project/
     Data.Json/   Forge.Data.Json — JSON plugin format (Newtonsoft), engine-free
     Editing/     Forge.Editing — engine-free edit session (masters + active plugin), commands, world-building commands
     Agent/       Forge.Agent   — engine-free world-building agent: tools over the commands, MCP endpoint, Claude Code backend
-    Streaming/   Forge.Streaming — engine-free chunk index and streaming window
-    World/       Forge.World   — Unity presentation: terrain chunks, placed objects, streamer
+    Streaming/   Forge.Streaming — engine-free chunk index, streaming window, scene origin, far tiles
+    World/       Forge.World   — Unity presentation: terrain chunks, far land, placed objects, streamer
     EditorApp/   Forge.EditorApp — the runtime editor: bootstrap, tools, camera, UI
     UnityEditor/ Forge.UnityEditor — dev tools inside the Unity Editor (Forge menu)
   Tests/
@@ -161,8 +161,8 @@ afterwards with `SpaceEdits.ExtendLand`: a strip of chunks along one side (`Land
 (`LandBounds`), at the base height, each new chunk ramping from the existing edge so the join is seamless; one undo
 step. The SPACE section shows the reach with N / S / E / W buttons, and the agent has `extend_land`. The only
 cap is a sanity bound of 320 chunks per axis (`MaxExtent`, ≈ 20 km). Far from the world's origin the scene is
-rebased under the camera (*origin shifting*, see Streaming), so 32-bit float jitter never shows; what still limits
-big maps is the lack of distant terrain level of detail past the load radius. Placed objects already
+rebased under the camera (*origin shifting*, see Streaming), so 32-bit float jitter never shows, and the land past
+the loaded chunks is drawn as coarse *far tiles* out to a kilometre (see Streaming). Placed objects already
 load a chunk at a time (*Objects storage*), and the stress world's 24k objects cost 94 ms and 2 MB to open. The
 editor shows and edits one space at a time (`EditorContext.ActiveSpace`); the chunk index, terrain grid, terrain edits,
 terrain followers and the agent's commands are all per space.
@@ -264,8 +264,10 @@ used let go first; the same `BudgetCache<T>` as `HeightCache`).
   lowest id and logs a warning.
 - Sculpting only edits existing chunks and never creates new ones. Upright objects follow the ground
   by its height change under their pivot; slope objects (fences, rocks) are also re-tilted.
-- The edge of the streamed area is hidden by fog, thick at the load radius; there is no distant LOD or impostors yet, so
-  nothing beyond it shows.
+- Beyond the loaded chunks the land is coarse far tiles (8 m samples, no collider, nothing on them: no objects, no
+  water depth, no picking); past the far radius the fog hides everything. Far land lags a sculpt stroke until the
+  stroke commits, and sits 2 m under the real land, so a ditch dug deeper than that between two 8 m samples can show
+  it through until the tile rebuilds. Far tiles' normals are per tile, so a faint lighting seam can show on tile edges.
   Terrain heights and placed objects both load a chunk at a time; the records in between (base objects, spaces,
   climates, lakes, the small terrain chunk records) load whole, which is fine until there are hundreds of thousands.
 - An object's old chunk is only refreshed in the scene when that chunk has been shown: `ChunkIndex` learns where an
@@ -430,6 +432,17 @@ used let go first; the same `BudgetCache<T>` as `HeightCache`).
   scene coordinates (camera rays, physics) and world ones: `ScenePicker` takes world rays and returns `WorldHit`s, the
   controller converts the camera's ray once into `ToolInput.Ray`, and `SpaceCameras` remembers world poses. Tools,
   commands and the agent never see scene coordinates. The thumbnail rig is deliberately *not* under the root.
+- **Far land (distant LOD).** Past the loaded chunks the land is drawn from the records as coarse meshes: `FarTiles`
+  (engine-free) cuts the land into tiles of 4 × 4 chunks (256 m) and samples each every 8 m straight from the chunks'
+  own samples (every 8th at 1 m, every 4th at 2 m: never interpolated, so tile edges and chunk edges share exact
+  heights), into an immutable `FarTile` (heights plus which chunks exist, so missing chunks are holes, not land at 0).
+  `FarTerrainView` (World) streams the tiles with a `ChunkWindow` over *tile* coordinates (`_farRadius` 16 chunks →
+  4 tiles ≈ 1 km, the fog's reach), under the world root like everything else, and `FarTerrainMesh` builds a plain
+  mesh per tile with no collider (`ScenePicker` never hits far land). Tiles cover the near land too, 2 m below it, so
+  the real chunks draw over them and there is no seam to stitch at the load radius. `WorldStreamer` gives the far
+  land whatever budget the chunks left in the frame (one tile anyway when no chunk loaded, so it never stalls);
+  tiles rebuild when `WorldView.TerrainChanged` names a chunk of theirs (a sculpt commit, extend land, undo), edge
+  neighbours included. A tile reads its 16 chunks through the height cache, ~2.5 ms worst case here.
 - Measured on the stress world (25,394 records: 1,024 chunks = 2 × 2 km, ~24k objects,
   30 MB JSON), with Unity unfocused, so this is CPU work only and excludes render and destroy cost:
   - startup: load plugins 1,312 ms, resolve 9 ms, first view 211 ms (113 chunks, 2,615 objects)

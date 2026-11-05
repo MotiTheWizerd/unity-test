@@ -42,6 +42,15 @@ namespace Forge.World
         public RecordId Space => _index.Space;
 
         /// <summary>
+        /// Raised with the chunks whose terrain record changed in a <see cref="Sync"/>, loaded or not (far land is
+        /// drawn from records, not from loaded chunks); after a full rebuild, with every chunk of the space.
+        /// </summary>
+        public event Action<IReadOnlyCollection<ChunkCoord>> TerrainChanged;
+
+        /// <summary>The winning terrain record at <paramref name="coord"/> in the shown space, loaded or not.</summary>
+        public bool TryGetTerrain(ChunkCoord coord, out TerrainChunkRecord chunk) => _index.TryGetTerrain(coord, out chunk);
+
+        /// <summary>
         /// Shows <paramref name="space"/> instead of the current one: everything presented is removed and no chunk
         /// stays loaded, so the streamer loads the new space from scratch.
         /// </summary>
@@ -127,9 +136,29 @@ namespace Forge.World
             var previous = _world;
             _world = world;
             if (world.TryGetChangesSince(previous, out var changed) && NoDependencyChanged(previous.Records, changed))
+            {
                 ApplyChanges(changed);
+                // A terrain record's old and new coordinates are the same (chunks don't move), but a removed one is
+                // only in the previous store and an added one only in the new.
+                var terrain = new HashSet<ChunkCoord>(TerrainCoords(previous.Records, changed));
+                terrain.UnionWith(TerrainCoords(world.Records, changed));
+                if (terrain.Count > 0)
+                    TerrainChanged?.Invoke(terrain);
+            }
             else
+            {
                 Rebuild();
+                TerrainChanged?.Invoke(_index.TerrainCoords.ToList());
+            }
+        }
+
+        IEnumerable<ChunkCoord> TerrainCoords(IRecordStore store, IEnumerable<RecordId> ids)
+        {
+            foreach (var id in ids)
+            {
+                if (store.TryGet(id, out var record) && record is TerrainChunkRecord chunk && chunk.Space == Space)
+                    yield return chunk.Coord;
+            }
         }
 
         // Base objects are dependencies of many placed objects; a change to one is rare (no tool edits them yet) and
