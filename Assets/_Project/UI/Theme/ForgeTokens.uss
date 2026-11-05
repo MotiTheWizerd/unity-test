@@ -22,7 +22,7 @@
     --forge-input-bg: rgba(0, 0, 0, 0.35);
     --forge-input-bg-hover: rgba(0, 0, 0, 0.45);
     --forge-input-border: rgba(255, 255, 255, 0.1);
-    --forge-input-border-focus: rgba(232, 163, 61, 0.7);
+    --forge-input-border-focus: rgba(212, 175, 55, 0.75);
 
     /* Text */
     --forge-text: rgb(236, 238, 241);
@@ -30,11 +30,11 @@
     --forge-text-dim: rgb(128, 134, 144);
     --forge-text-on-accent: rgb(24, 20, 12);
 
-    /* Accent: the warm highlight for the active tool, the selected object, the agent's draft */
-    --forge-accent: rgb(232, 163, 61);
-    --forge-accent-hover: rgb(240, 178, 86);
-    --forge-accent-soft: rgba(232, 163, 61, 0.16);
-    --forge-accent-border: rgba(232, 163, 61, 0.55);
+    /* Accent: gold, for the active tool, the selected object, the agent's draft */
+    --forge-accent: rgb(212, 175, 55);
+    --forge-accent-hover: rgb(228, 193, 78);
+    --forge-accent-soft: rgba(212, 175, 55, 0.16);
+    --forge-accent-border: rgba(212, 175, 55, 0.55);
 
     /* Status colours */
     --forge-danger: rgb(240, 122, 110);

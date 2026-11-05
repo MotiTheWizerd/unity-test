@@ -27,15 +27,13 @@
     white-space: normal;
 }
 
-/* Number boxes: bare digits, centred, four digits wide, no fill; a line appears under them on hover and focus.
-   Sliders' number boxes carry the same class (ForgeSlider), so all numbers look alike. */
+/* Number boxes: bare digits, centred, no fill; a line appears under them on hover and focus. The width comes from
+   the field's digits (FieldChrome.SetDigits). Sliders' number boxes carry the same class, so all numbers look alike. */
 .forge-number-field {
     flex-grow: 0;
 }
 
 .forge-number-field > .unity-base-text-field__input {
-    width: 44px;
-    min-width: 44px;
     flex-grow: 0;
     padding: 3px 2px;
     background-color: transparent;

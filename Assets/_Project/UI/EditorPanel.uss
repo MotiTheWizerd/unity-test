@@ -171,7 +171,13 @@
 }
 
 .forge-options__slider {
-    width: 220px;
+    width: 240px;
+}
+
+/* Fields in the bar size their label to its text; the dock's fixed label column would waste the row. */
+.forge-options .unity-base-field__label {
+    min-width: 0;
+    width: auto;
 }
 
 /* Toggles in the bar size to their label; the dock's fixed label column would cut them off. */
