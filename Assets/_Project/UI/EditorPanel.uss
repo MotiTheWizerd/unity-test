@@ -147,7 +147,7 @@
 }
 
 .forge-options__space {
-    width: 200px;
+    width: 150px;
     margin-right: 2px;
 }
 
