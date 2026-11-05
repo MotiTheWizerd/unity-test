@@ -18,8 +18,12 @@ namespace Forge.World
         Texture2D _texture;
 
         /// <summary>A hidden floor under <paramref name="parent"/>; call <see cref="Show"/> to bring it up.</summary>
-        public static InteriorFloor Create(Transform parent)
+        /// <param name="material">An unlit material (Materials/InteriorFloor) the floor copies and paints its grid into.</param>
+        public static InteriorFloor Create(Transform parent, Material material)
         {
+            if (material == null)
+                throw new System.ArgumentNullException(nameof(material));
+
             var go = GameObject.CreatePrimitive(PrimitiveType.Plane);
             go.name = "InteriorFloor";
             go.transform.SetParent(parent, false);
@@ -28,14 +32,14 @@ namespace Forge.World
             go.SetActive(false);
 
             var floor = go.AddComponent<InteriorFloor>();
-            floor.Paint(go.GetComponent<MeshRenderer>());
+            floor.Paint(go.GetComponent<MeshRenderer>(), material);
             return floor;
         }
 
         public void Show(bool visible) => gameObject.SetActive(visible);
 
         // A grid of 1 m cells with a stronger line every 8 m, tiled across the floor.
-        void Paint(MeshRenderer meshRenderer)
+        void Paint(MeshRenderer meshRenderer, Material template)
         {
             _texture = new Texture2D(TexturePixels, TexturePixels, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Trilinear };
             var fill = new Color(0.30f, 0.31f, 0.33f);
@@ -51,8 +55,8 @@ namespace Forge.World
             }
 
             _texture.Apply();
-            var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Texture");
-            _material = new Material(shader) { mainTexture = _texture };
+            // A copy of a material asset, not Shader.Find: a build only includes shaders that assets reference.
+            _material = new Material(template) { name = "InteriorFloor (runtime)", mainTexture = _texture };
             _material.mainTextureScale = Vector2.one * (Size / (CellsPerTile * CellSize));
             meshRenderer.sharedMaterial = _material;
             meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;

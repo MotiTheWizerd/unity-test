@@ -52,6 +52,9 @@ namespace Forge.EditorApp
         [SerializeField, Tooltip("Material of the sea and the lakes (Materials/Water); without one no water is shown.")]
         Material _water;
 
+        [SerializeField, Tooltip("Unlit material the interior floor grid is painted with (Materials/InteriorFloor).")]
+        Material _interiorFloorMaterial;
+
         [SerializeField, Tooltip("How the sky looks (Settings/Sky); without one the scene keeps its own sky and light.")]
         SkyProfile _sky;
 
@@ -79,11 +82,10 @@ namespace Forge.EditorApp
 
         void Start()
         {
-            if (_prefabs == null)
+            if (MissingSetup() is string missing)
             {
-                const string message = "EditorApp has no Prefab Catalog assigned (EditorAppBootstrap._prefabs).";
-                Debug.LogError($"[Forge] {message}");
-                _panel.ShowFatal(message);
+                Debug.LogError($"[Forge] {missing}");
+                _panel.ShowFatal(missing);
                 return;
             }
 
@@ -105,7 +107,7 @@ namespace Forge.EditorApp
                 _view = new WorldView(transform, assets);
                 _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs);
                 _view.Sync(_context.Session.World);
-                _interiorFloor = InteriorFloor.Create(transform);
+                _interiorFloor = InteriorFloor.Create(transform, _interiorFloorMaterial);
                 _waterView = CreateWaterView();
                 _skyView = CreateSkyView();
                 if (_skyView != null)
@@ -199,6 +201,12 @@ namespace Forge.EditorApp
             _context.Selection.Prune(world.Records);
             _highlighter.Refresh();
         }
+
+        // What the editor can't open without; optional parts (water, sky, agent) only warn when they are missing.
+        string MissingSetup() =>
+            _prefabs == null ? "EditorApp has no Prefab Catalog assigned (EditorAppBootstrap._prefabs)."
+            : _interiorFloorMaterial == null ? "EditorApp has no interior floor material assigned (EditorAppBootstrap._interiorFloorMaterial)."
+            : null;
 
         // The fog is thick where streaming stops loading land, so the world fades into the sky instead of ending.
         SkyView CreateSkyView()

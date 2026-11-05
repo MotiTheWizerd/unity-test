@@ -33,11 +33,14 @@ Assets/_Project/
   UI/            EditorPanel.uxml/.uss (runtime editor UI), ForgeRuntimeTheme.tss, ForgePanelSettings
   Content/       PrefabCatalog.asset (asset key → prefab); Placeholder/ holds generated placeholder prefabs + materials
   Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview), Water.shader (sea and lakes), Sky.shader (the skybox)
-  Materials/     GizmoOverlay.mat, PlacementGhost.mat, Water.mat, Sky.mat
+  Materials/     GizmoOverlay.mat, PlacementGhost.mat, Water.mat, Sky.mat, InteriorFloor.mat (runtime code copies
+                 materials assets reference, never Shader.Find, so builds include the shaders)
   Settings/      URP, input and volume assets; Worlds/ holds the WorldProfile assets; Agent/ the agent's settings and instructions; Sky/ the SkyProfile assets
 Assets/StreamingAssets/Plugins/   shipped base plugins (forge.core.json = our "Skyrim.esm", its heights in forge.core.<hash>.terrain)
 Assets/StreamingAssets/StressWorld/  generated stress-test world (git-ignored, Forge/Generate Stress World)
 <persistentDataPath>/Plugins/     user plugins; the active plugin (forge.user) is saved here
+Builds/Windows/Forge.exe          the standalone player (git-ignored; Forge → Build and Run (Windows), `PlayerBuilder`):
+                                  fullscreen at the screen's resolution, same base and user plugins as Play mode
 ```
 
 Planned modules (each is created when its first code arrives, not before):
