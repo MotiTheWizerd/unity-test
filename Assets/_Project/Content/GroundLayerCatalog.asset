@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6074c9ce0d300c45a84358fafa4d74c, type: 3}
+  m_Name: GroundLayerCatalog
+  m_EditorClassIdentifier: Forge.World::Forge.World.Assets.GroundLayerCatalog
+  _entries:
+  - _key: ground/dirt
+    _asset: {fileID: 8574412962073106934, guid: cdbfbe0456126494695bc4a3cc27ccae, type: 2}
+  - _key: ground/grass
+    _asset: {fileID: 8574412962073106934, guid: 4db6c6efbac1b574095cfc55312a3155, type: 2}
+  - _key: ground/rock
+    _asset: {fileID: 8574412962073106934, guid: 393fa266cf6a3074c88021a2126d6f61, type: 2}
+  - _key: ground/sand
+    _asset: {fileID: 8574412962073106934, guid: 856ebd7e557aded4b92aed4d9979727f, type: 2}
+  _baseKey: ground/grass

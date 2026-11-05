@@ -64,6 +64,9 @@ namespace Forge.EditorApp
         [SerializeField, Tooltip("Material the far land is drawn with (Materials/FarTerrain); without one nothing shows beyond the loaded chunks.")]
         Material _farTerrainMaterial;
 
+        [SerializeField, Tooltip("The terrain layer of each ground layer's asset key (Content/GroundLayerCatalog); without one the land is drawn unpainted.")]
+        GroundLayerCatalog _groundLayers;
+
         [SerializeField, Tooltip("Unlit material the interior floor grid is painted with (Materials/InteriorFloor).")]
         Material _interiorFloorMaterial;
 
@@ -122,7 +125,7 @@ namespace Forge.EditorApp
                 // This object is the world root: the world is built under it at world coordinates, and the frame moves it.
                 _frame = new WorldFrame(transform, _rebaseDistance);
                 _frame.Shifted += OnSceneShifted;
-                _view = new WorldView(transform, assets, _terrainMaterial);
+                _view = new WorldView(transform, assets, _terrainMaterial, CreateGroundLooks());
                 _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs, CreateFarTerrain());
                 _view.Sync(_context.Session.World);
                 _interiorFloor = InteriorFloor.Create(transform, _interiorFloorMaterial);
@@ -262,6 +265,16 @@ namespace Forge.EditorApp
 
             var reach = _streamer.Far?.FogReach ?? _loadRadius * WorldGrid.ChunkSize;
             return new SkyView(_sky, _sun, transform, reach);
+        }
+
+        // How painted ground looks; optional, so a world without ground textures still opens (unpainted).
+        GroundLooks CreateGroundLooks()
+        {
+            if (_groundLayers != null)
+                return new GroundLooks(_groundLayers);
+
+            Debug.LogWarning("[Forge] EditorApp has no ground layer catalog (EditorAppBootstrap._groundLayers); the land is drawn unpainted.");
+            return null;
         }
 
         // Coarse land beyond the loaded chunks, under the world root like everything else that stands in the world.

@@ -23,17 +23,20 @@ namespace Forge.World
         readonly Transform _root;
         readonly IAssetCatalog _catalog;
         readonly Material _terrainMaterial;
+        readonly GroundLooks _ground;
         readonly Dictionary<RecordId, Presented> _presented = new Dictionary<RecordId, Presented>();
         readonly HashSet<ChunkCoord> _loaded = new HashSet<ChunkCoord>();
         ResolvedWorld _world;
         ChunkIndex _index = new ChunkIndex();
 
         /// <param name="terrainMaterial">What the land is drawn with (Materials/Terrain).</param>
-        public WorldView(Transform root, IAssetCatalog catalog, Material terrainMaterial)
+        /// <param name="ground">How ground layers look; null draws the land unpainted.</param>
+        public WorldView(Transform root, IAssetCatalog catalog, Material terrainMaterial, GroundLooks ground = null)
         {
             _root = root != null ? root : throw new ArgumentNullException(nameof(root));
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             _terrainMaterial = terrainMaterial != null ? terrainMaterial : throw new ArgumentNullException(nameof(terrainMaterial));
+            _ground = ground;
         }
 
         public int PresentedCount => _presented.Count;
@@ -113,13 +116,20 @@ namespace Forge.World
                 TerrainChunkBuilder.ApplyHeights(presented.GameObject, heights);
         }
 
-        /// <summary>Restores chunks to their record heights, discarding previews.</summary>
+        /// <summary>Shows preview paint on a chunk without changing any record (e.g. during a paint stroke).</summary>
+        public void PreviewPaint(ChunkCoord coord, ChunkPaint paint)
+        {
+            if (TryGetPresentedTerrain(coord, out var presented))
+                TerrainChunkBuilder.ApplyPaint(presented.GameObject, paint, _ground);
+        }
+
+        /// <summary>Restores chunks to their record heights and paint, discarding previews.</summary>
         public void ResetTerrain(IEnumerable<ChunkCoord> coords)
         {
             foreach (var coord in coords ?? Enumerable.Empty<ChunkCoord>())
             {
                 if (TryGetPresentedTerrain(coord, out var presented))
-                    TerrainChunkBuilder.ApplyHeights(presented.GameObject, ((TerrainChunkRecord)presented.Record).Heights.Load());
+                    TerrainChunkBuilder.Update(presented.GameObject, null, (TerrainChunkRecord)presented.Record, _ground);
             }
         }
 
@@ -135,6 +145,7 @@ namespace Forge.World
 
             var previous = _world;
             _world = world;
+            _ground?.Use(world.Records);
             if (world.TryGetChangesSince(previous, out var changed) && NoDependencyChanged(previous.Records, changed))
             {
                 ApplyChanges(changed);
@@ -241,9 +252,11 @@ namespace Forge.World
             var count = 0;
             if (_index.TryGetTerrain(coord, out var chunk))
             {
+                // The record shown so far, so an update touches only heights or paint, whichever changed.
+                var shown = _presented.TryGetValue(chunk.Id, out var current) ? current.Record as TerrainChunkRecord : null;
                 Present(chunk, null,
-                    () => TerrainChunkBuilder.Build(chunk, _root, _terrainMaterial),
-                    go => TerrainChunkBuilder.ApplyHeights(go, chunk.Heights.Load()));
+                    () => TerrainChunkBuilder.Build(chunk, _root, _terrainMaterial, _ground),
+                    go => TerrainChunkBuilder.Update(go, shown, chunk, _ground));
                 count++;
             }
 

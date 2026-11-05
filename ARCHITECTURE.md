@@ -31,7 +31,8 @@ Assets/_Project/
     EditMode/    Forge.Tests.EditMode — unit and architecture tests
   Scenes/        Main.unity (editor scene: EditorApp + Main Camera)
   UI/            EditorPanel.uxml/.uss (runtime editor UI), ForgeRuntimeTheme.tss, ForgePanelSettings
-  Content/       PrefabCatalog.asset (asset key → prefab); Placeholder/ holds generated placeholder prefabs + materials
+  Content/       PrefabCatalog.asset (asset key → prefab), GroundLayerCatalog.asset (asset key → terrain layer);
+                 Placeholder/ holds generated placeholder prefabs + materials; Ground/ the ground textures (CC0)
   Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview), Water.shader (sea and lakes), Sky.shader (the skybox)
   Materials/     GizmoOverlay.mat, PlacementGhost.mat, Water.mat, Sky.mat, InteriorFloor.mat (runtime code copies
                  materials assets reference, never Shader.Find, so builds include the shaders)
@@ -541,7 +542,19 @@ slopes), so results are exact and every edit goes through the edit session.
   `PrefabAssetCatalog` looks the key up in the `PrefabCatalog` ScriptableObject (`Content/PrefabCatalog.asset`,
   assigned on `EditorAppBootstrap._prefabs`) and falls back to `PrimitiveAssetCatalog` (`primitive/*`, and a
   magenta cube for unknown keys). Swapping a prefab in the catalog re-skins every object using that key
-  without touching a plugin. Prefab pivots sit at the ground contact point.
+  without touching a plugin. Prefab pivots sit at the ground contact point. Both content tables (prefabs, ground
+  layers) are a `KeyedAssetCatalog<T>`: entries sorted by key, looked up once into a dictionary.
+- **Ground looks**: a `GroundLayerRecord`'s asset key is looked up in the `GroundLayerCatalog`
+  (`Content/GroundLayerCatalog.asset`, on `EditorAppBootstrap._groundLayers`, optional: without it the land is drawn
+  unpainted) to a Unity `TerrainLayer` (`GroundLooks`, which also falls back to the catalog's base layer, with one
+  warning, for a layer the world or catalog lacks). `TerrainChunkBuilder` gives each chunk one terrain layer per
+  ground layer it names and its weights as the alphamap (64 per edge); an unpainted chunk is the base layer (grass)
+  alone, and an update touches only heights or paint, whichever changed. The textures are CC0 scans from ambientCG
+  under `Content/Ground/<Layer>/` (credited in `CREDITS.md`, ~8 MB a layer with its packed mask). *Forge → Ground →
+  Build Ground Layers* makes each folder's `TerrainLayer` (3 m tiles), packs its mask map (metallic 0, occlusion,
+  height, smoothness = 1 − roughness) and lists it under `ground/<folder>`; drop a new folder in and rebuild to add
+  a layer. `Materials/Terrain.mat` (URP Terrain Lit) has `_NORMALMAP`, `_MASKMAP` and height-based blending on:
+  Unity sets those keywords from the Inspector only, never for a runtime terrain.
 - **Placeholder content** (`UnityEditor/Content`): `PlaceholderContent.All` is the one table of the base
   game's placeable objects (record name, display name, category, asset key, how to build the prefab).
   *Forge → Generate Placeholder Content* builds the materials and prefabs from primitives in a preview scene
@@ -791,5 +804,5 @@ and the condition for removing it, and is listed here.
 | Where | What | Why | Remove when |
 |-------|------|-----|-------------|
 | `Packages/manifest.json` | MCP for Unity tracks the git default branch, not a release tag | Fast setup. The exact commit is locked in `packages-lock.json` | Pin to a release tag on the next package update |
-| `World/Assets/PrefabCatalog.cs` | Catalog entries reference prefabs directly, so all content loads with the catalog at startup | A dozen placeholder prefabs fit in memory easily | Content outgrows memory → load prefabs by asset key through Addressables, streamed with the chunks |
+| `World/Assets/KeyedAssetCatalog.cs` | Catalog entries (prefabs, terrain layers) reference assets directly, so all content loads with the catalog at startup | A dozen placeholder prefabs and four ground layers fit in memory easily | Content outgrows memory → load prefabs by asset key through Addressables, streamed with the chunks |
 | `EditorApp/EditorController.cs`, `Tools/ToolDefinition.cs` | Input read by polling devices, not an Input Actions asset; tool keys are fixed `Key`s in `ToolCatalog` | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset, labels read from it |
