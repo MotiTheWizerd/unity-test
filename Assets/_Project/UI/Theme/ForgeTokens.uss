@@ -57,6 +57,16 @@
     --forge-space-3: 12px;
     --forge-space-4: 16px;
 
+    /* Unity's own variables for typing, selecting and focus, so its blue never shows through */
+    --unity-selection-color: rgba(212, 175, 55, 0.35);
+    --unity-cursor-color: rgb(212, 175, 55);
+    --unity-colors-input_field-border-focus: rgba(212, 175, 55, 0.75);
+    --unity-colors-input_field-border-hover: rgba(255, 255, 255, 0.1);
+    --unity-colors-input_field-border: rgba(255, 255, 255, 0.1);
+    --unity-colors-highlight-background: rgba(212, 175, 55, 0.35);
+    --unity-colors-highlight-background-inactive: rgba(212, 175, 55, 0.2);
+    --unity-colors-highlight-text: rgb(236, 238, 241);
+
     /* Motion */
     --forge-motion-fast: 0.1s;
     --forge-motion: 0.18s;

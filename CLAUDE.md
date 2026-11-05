@@ -28,6 +28,10 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
   UxmlElementAttribute"); reimport the `.uxml` after the compile and the message is gone.
 - Unity's default theme sizes slider parts per orientation (`.unity-base-slider--horizontal .…__dragger`), so
   overrides need that specificity. A USS type selector (`Button`) names the C# type: subclasses don't match.
+- Unity's runtime theme colours focus rings and text selection through its own variables
+  (`--unity-colors-input_field-border-focus`, `--unity-selection-color`, `--unity-cursor-color`,
+  `--unity-colors-highlight-*`); override them in `ForgeTokens.uss`, selectors alone don't reach them.
+  A text input ignores an inline `width`; set `min-width` and `max-width` instead (`FieldChrome.SetDigits`).
 - SVG icons import as UI Toolkit `VectorImage` through the built-in vector graphics module; the
   `com.unity.vectorgraphics` package is not needed and 2.0.0-preview.24 does not compile here.
 - **Play-mode script reload:** with "Recompile And Continue Playing", Unity reloads the

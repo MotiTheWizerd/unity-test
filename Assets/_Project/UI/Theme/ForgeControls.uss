@@ -105,7 +105,12 @@
     background-color: var(--forge-input-bg-hover);
 }
 
-.unity-base-text-field__input:focus {
+/* Every form Unity uses for the focus ring, at its specificity, so its blue never shows. */
+.unity-base-text-field__input:focus,
+.unity-base-text-field__input:focus:enabled,
+.unity-base-text-field:focus > .unity-base-text-field__input,
+.unity-base-text-field:focus:enabled > .unity-base-text-field__input,
+.unity-base-field:focus:enabled > .unity-base-text-field__input {
     border-color: var(--forge-input-border-focus);
 }
 
