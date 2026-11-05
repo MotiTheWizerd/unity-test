@@ -46,6 +46,9 @@ namespace Forge.EditorApp
         [SerializeField, Min(0.1f), Tooltip("Milliseconds per frame spent building chunks (at least one per frame).")]
         float _frameBudgetMs = 4f;
 
+        [SerializeField, Min(0), Tooltip("How many chunks the camera may stray from the scene's origin before the scene is rebased under it, keeping float precision far from the world's origin.")]
+        int _rebaseDistance = 8;
+
         [SerializeField, Tooltip("Prefabs for the asset keys of base objects; unlisted keys fall back to primitives.")]
         PrefabCatalog _prefabs;
 
@@ -71,6 +74,7 @@ namespace Forge.EditorApp
         [SerializeField] EditorPanel _panel;
 
         // Runtime-only state; see CLAUDE.md (play-mode reload) for why these are [NonSerialized].
+        [NonSerialized] WorldFrame _frame;
         [NonSerialized] WorldView _view;
         [NonSerialized] WorldStreamer _streamer;
         [NonSerialized] EditorContext _context;
@@ -109,6 +113,9 @@ namespace Forge.EditorApp
                 var resolveMs = Lap(clock);
 
                 var assets = new PrefabAssetCatalog(_prefabs, new PrimitiveAssetCatalog());
+                // This object is the world root: the world is built under it at world coordinates, and the frame moves it.
+                _frame = new WorldFrame(transform, _rebaseDistance);
+                _frame.Shifted += OnSceneShifted;
                 _view = new WorldView(transform, assets, _terrainMaterial);
                 _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs);
                 _view.Sync(_context.Session.World);
@@ -136,8 +143,9 @@ namespace Forge.EditorApp
                 _context.Session.WorldChanged += OnWorldChanged;
                 _context.Selection.Changed += _highlighter.Refresh;
 
-                _thumbnails = new ThumbnailRenderer(assets, transform);
-                _controller.Initialize(_context, _view, _waterView, _panel, assets, _agent);
+                // Not under the world root: the root moves far from zero, and the pictures would jitter with it.
+                _thumbnails = new ThumbnailRenderer(assets, null);
+                _controller.Initialize(_context, _frame, _view, _waterView, _panel, assets, _agent);
                 _panel.Initialize(_context, _controller.Commands, diagnostics, _thumbnails, _controller.Agent?.Conversation);
             }
             catch (Exception ex) when (ex is DataValidationException || ex is IOException)
@@ -153,11 +161,24 @@ namespace Forge.EditorApp
                 return;
 
             _frames.Record(Time.unscaledDeltaTime * 1000.0);
+            // The camera's world position is the same before and after a rebase: the scene moves under it.
+            var focus = _frame.ToWorld(_focus.position);
+            _frame.Follow(focus);
             // Chunks that stream back in must show their selection tint again.
-            if (_streamer.Tick(_focus.position))
+            if (_streamer.Tick(focus))
                 _highlighter.Refresh();
             _waterView.Follow(_focus.position);
             _skyDirector?.Tick(Time.unscaledDeltaTime);
+        }
+
+        // Everything under the world root moved with it; the camera is not under it and follows by hand.
+        void OnSceneShifted(Vector3 delta)
+        {
+            if (_focus.TryGetComponent<FlyCamera>(out var flyCamera))
+                flyCamera.Shift(delta);
+            else
+                _focus.position += delta;
+            Debug.Log($"[Forge] Scene rebased: {_frame.Origin}.");
         }
 
         void OnDestroy()
@@ -169,6 +190,8 @@ namespace Forge.EditorApp
                 _context.Selection.Changed -= _highlighter.Refresh;
             }
 
+            if (_frame != null)
+                _frame.Shifted -= OnSceneShifted;
             _view?.Dispose();
             _waterView?.Dispose();
             _skyView?.Dispose();
@@ -182,18 +205,21 @@ namespace Forge.EditorApp
             var record = _context.ActiveSpaceRecord;
             if (!_shownSpace.IsDefault)
             {
-                _spaceCameras.Remember(_shownSpace, _focus);
+                _spaceCameras.Remember(_shownSpace, new Pose(_frame.ToWorld(_focus.position), _focus.rotation));
                 var pose = _spaceCameras.Recall(record);
+                // Rebased first, so a far-off view lands near the scene's origin, not far from it.
+                _frame.Follow(pose.position);
+                var position = _frame.ToScene(pose.position);
                 if (_focus.TryGetComponent<FlyCamera>(out var flyCamera))
-                    flyCamera.Teleport(pose.position, pose.rotation);
+                    flyCamera.Teleport(position, pose.rotation);
                 else
-                    _focus.SetPositionAndRotation(pose.position, pose.rotation);
+                    _focus.SetPositionAndRotation(position, pose.rotation);
             }
 
             _shownSpace = space;
             _interiorFloor.Show(record.Kind == SpaceKind.Interior);
             _waterView.Sync(_context.Session.World, space);
-            _streamer.ShowSpace(space, _focus.position);
+            _streamer.ShowSpace(space, _frame.ToWorld(_focus.position));
             _highlighter?.Refresh();
         }
 

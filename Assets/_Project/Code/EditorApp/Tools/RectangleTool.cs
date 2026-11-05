@@ -79,7 +79,7 @@ namespace Forge.EditorApp.Tools
             {
                 if (input.PrimaryPressed && !input.PointerOverUI && _picker.TryPickTerrain(input.Ray, out var press))
                 {
-                    _start = Flat(press.point);
+                    _start = Flat(press.Point);
                     _rolls.Clear();
                 }
 
@@ -87,7 +87,7 @@ namespace Forge.EditorApp.Tools
             }
 
             if (input.PrimaryHeld && !input.PointerOverUI && _picker.TryPickTerrain(input.Ray, out var hit))
-                LayOut(baseObject, Flat(hit.point), square: input.Additive);
+                LayOut(baseObject, Flat(hit.Point), square: input.Additive);
 
             if (input.PrimaryReleased || !input.PrimaryHeld)
                 Commit(baseObject);

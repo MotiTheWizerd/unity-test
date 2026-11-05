@@ -30,19 +30,22 @@ namespace Forge.EditorApp.Gizmos
         /// Material for every part, normally the always-on-top GizmoOverlay. Null keeps
         /// the primitives' default material, which the world can hide.
         /// </param>
-        public Gizmo(string name, int layer, Material material)
+        /// <param name="worldRoot">What the gizmo sits under, so the world coordinates it is shown at hold.</param>
+        public Gizmo(string name, int layer, Material material, Transform worldRoot)
         {
             _root = new GameObject(name);
+            _root.transform.SetParent(worldRoot, false);
             _root.SetActive(false);
             _layer = layer;
             _material = material;
         }
 
+        /// <param name="pivot">World coordinates.</param>
         public void Show(Vector3 pivot, Camera camera)
         {
             _root.SetActive(true);
-            _root.transform.position = pivot;
-            var distance = Vector3.Distance(camera.transform.position, pivot);
+            _root.transform.localPosition = pivot;
+            var distance = Vector3.Distance(camera.transform.position, _root.transform.position);
             _root.transform.localScale = Vector3.one * Mathf.Max(0.01f, distance * ScreenSizeFactor);
         }
 

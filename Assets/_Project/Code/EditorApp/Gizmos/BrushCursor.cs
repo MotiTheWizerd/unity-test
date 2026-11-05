@@ -12,15 +12,18 @@ namespace Forge.EditorApp.Gizmos
     {
         const int Segments = 64;
 
-        readonly LineGizmo _line = new LineGizmo("BrushCursor", loop: true);
+        readonly LineGizmo _line;
         readonly Vector3[] _points = new Vector3[Segments];
         readonly TerrainSurface _surface;
 
-        public BrushCursor(TerrainSurface surface)
+        /// <param name="worldRoot">What the ring is drawn under, so its world coordinates hold.</param>
+        public BrushCursor(TerrainSurface surface, Transform worldRoot)
         {
             _surface = surface ?? throw new ArgumentNullException(nameof(surface));
+            _line = new LineGizmo("BrushCursor", loop: true, worldRoot);
         }
 
+        /// <param name="center">World coordinates.</param>
         public void Show(Vector3 center, float radius, BrushMode mode)
         {
             for (var i = 0; i < Segments; i++)

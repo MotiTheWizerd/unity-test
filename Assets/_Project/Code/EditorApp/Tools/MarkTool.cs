@@ -50,7 +50,7 @@ namespace Forge.EditorApp.Tools
                 else if (input.PrimaryPressed && _picker.TryPickTerrain(input.Ray, out var start))
                 {
                     _beforeDrag = _context.Mark;
-                    _dragStart = Flat(start.point);
+                    _dragStart = Flat(start.Point);
                     _context.Mark = GroundMark.Spot(_dragStart.Value);
                 }
 
@@ -59,7 +59,7 @@ namespace Forge.EditorApp.Tools
 
             // The mark follows the drag live, so it shows what letting go will mark.
             if (!input.PointerOverUI && _picker.TryPickTerrain(input.Ray, out var hit))
-                _context.Mark = GroundMark.FromDrag(_dragStart.Value, Flat(hit.point));
+                _context.Mark = GroundMark.FromDrag(_dragStart.Value, Flat(hit.Point));
 
             if (input.PrimaryReleased || !input.PrimaryHeld)
             {

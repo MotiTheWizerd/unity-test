@@ -69,7 +69,7 @@ namespace Forge.EditorApp.Tools
                 if (input.Delete)
                     _commands.RemoveCurrentLake();
                 else if (input.PrimaryPressed && _picker.TryPickTerrain(input.Ray, out var hit))
-                    Begin(Flat(hit.point), input.Pointer.y);
+                    Begin(Flat(hit.Point), input.Pointer.y);
                 return;
             }
 

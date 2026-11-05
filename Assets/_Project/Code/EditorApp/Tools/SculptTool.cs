@@ -30,13 +30,14 @@ namespace Forge.EditorApp.Tools
         float _dabTimer;
 
         /// <param name="slopes">Which followed objects are also re-tilted to the new ground (fences, rocks).</param>
-        public SculptTool(EditorContext context, WorldView view, ScenePicker picker, SlopeAlignment slopes)
+        /// <param name="worldRoot">What the brush ring is drawn under.</param>
+        public SculptTool(EditorContext context, WorldView view, ScenePicker picker, SlopeAlignment slopes, Transform worldRoot)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _picker = picker ?? throw new ArgumentNullException(nameof(picker));
             _slopes = slopes ?? throw new ArgumentNullException(nameof(slopes));
-            _cursor = new BrushCursor(new TerrainSurface(picker));
+            _cursor = new BrushCursor(new TerrainSurface(picker), worldRoot);
         }
 
         public void Activate() => _context.Report($"Sculpt: hold left mouse on the terrain ({_context.BrushMode})");
@@ -68,14 +69,14 @@ namespace Forge.EditorApp.Tools
 
             var onTerrain = _picker.TryPickTerrain(input.Ray, out var hit);
             if (onTerrain)
-                _cursor.Show(hit.point, _context.BrushRadius, _context.BrushMode);
+                _cursor.Show(hit.Point, _context.BrushRadius, _context.BrushMode);
             else
                 _cursor.Hide();
 
             if (_stroke == null)
             {
                 if (input.PrimaryPressed && onTerrain)
-                    BeginStroke(hit.point);
+                    BeginStroke(hit.Point);
                 return;
             }
 
@@ -86,7 +87,7 @@ namespace Forge.EditorApp.Tools
                 for (var i = 0; i < MaxDabsPerFrame && _dabTimer >= interval; i++)
                 {
                     _dabTimer -= interval;
-                    Dab(hit.point);
+                    Dab(hit.Point);
                 }
 
                 // Drop backlog the cap skipped, so a hitch doesn't cause a burst later.

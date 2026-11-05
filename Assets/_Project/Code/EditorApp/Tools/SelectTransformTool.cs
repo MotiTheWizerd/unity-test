@@ -48,8 +48,9 @@ namespace Forge.EditorApp.Tools
         /// <param name="kind">Select, Move, Rotate or Scale.</param>
         /// <param name="gizmoMaterial">Material for the gizmo (the always-on-top overlay); null for the default.</param>
         /// <param name="seating">How sliding objects are set down on the ground, exactly as placing does.</param>
+        /// <param name="worldRoot">What the gizmo sits under, so it stays on the pivot's world coordinates.</param>
         public SelectTransformTool(ToolKind kind, EditorContext context, WorldView view, ScenePicker picker, Camera camera,
-            Material gizmoMaterial, ObjectSeating seating)
+            Material gizmoMaterial, ObjectSeating seating, Transform worldRoot)
         {
             _kind = kind;
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -57,7 +58,7 @@ namespace Forge.EditorApp.Tools
             _picker = picker ?? throw new ArgumentNullException(nameof(picker));
             _camera = camera != null ? camera : throw new ArgumentNullException(nameof(camera));
             _seating = seating ?? throw new ArgumentNullException(nameof(seating));
-            _gizmo = CreateGizmo(kind, picker.GizmoLayer, gizmoMaterial);
+            _gizmo = CreateGizmo(kind, picker.GizmoLayer, gizmoMaterial, worldRoot);
         }
 
         // The controller shows the tool's hint (ToolCatalog).
@@ -329,14 +330,14 @@ namespace Forge.EditorApp.Tools
             _drag = null;
         }
 
-        static Gizmo CreateGizmo(ToolKind kind, int layer, Material material)
+        static Gizmo CreateGizmo(ToolKind kind, int layer, Material material, Transform worldRoot)
         {
             switch (kind)
             {
                 case ToolKind.Select: return null;
-                case ToolKind.Move: return GizmoShapes.Translate(layer, material);
-                case ToolKind.Rotate: return GizmoShapes.Rotate(layer, material);
-                case ToolKind.Scale: return GizmoShapes.Scale(layer, material);
+                case ToolKind.Move: return GizmoShapes.Translate(layer, material, worldRoot);
+                case ToolKind.Rotate: return GizmoShapes.Rotate(layer, material, worldRoot);
+                case ToolKind.Scale: return GizmoShapes.Scale(layer, material, worldRoot);
                 default: throw new ArgumentOutOfRangeException(nameof(kind), kind, "Not a select or transform tool.");
             }
         }

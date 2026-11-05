@@ -160,9 +160,9 @@ worldspace starts as flat land of 3 to 64 chunks per edge (`SpaceEdits.Sizes`, `
 afterwards with `SpaceEdits.ExtendLand`: a strip of chunks along one side (`LandSide`), the full reach of the land
 (`LandBounds`), at the base height, each new chunk ramping from the existing edge so the join is seamless; one undo
 step. The SPACE section shows the reach with N / S / E / W buttons, and the agent has `extend_land`. The only
-cap is a sanity bound of 320 chunks per axis (`MaxExtent`, ≈ 20 km). What still limits big maps, in the order to
-fix them: 32-bit float positions jitter past ~5–10 km from
-the origin (origin shifting); and no distant terrain level of detail past the load radius. Placed objects already
+cap is a sanity bound of 320 chunks per axis (`MaxExtent`, ≈ 20 km). Far from the world's origin the scene is
+rebased under the camera (*origin shifting*, see Streaming), so 32-bit float jitter never shows; what still limits
+big maps is the lack of distant terrain level of detail past the load radius. Placed objects already
 load a chunk at a time (*Objects storage*), and the stress world's 24k objects cost 94 ms and 2 MB to open. The
 editor shows and edits one space at a time (`EditorContext.ActiveSpace`); the chunk index, terrain grid, terrain edits,
 terrain followers and the agent's commands are all per space.
@@ -417,9 +417,19 @@ used let go first; the same `BudgetCache<T>` as `HeightCache`).
   `ChunkIndex.Update` re-indexes just those ids and returns the dirty chunks, and only loaded
   dirty chunks are re-presented. A change to a dependency (a base object, which many placed objects
   depend on) falls back to a full rebuild; records the view doesn't present (spaces, lakes) are skipped.
-- `WorldStreamer` follows the camera. It unloads at once and loads within a per-frame time
+- `WorldStreamer` follows the camera (a world-coordinate focus). It unloads at once and loads within a per-frame time
   budget (`EditorAppBootstrap`: radius 6 / 8 chunks, 4 ms). A new chunk starts only if the
   average build time still fits. Terrains use `allowAutoConnect`, so LOD edges stitch.
+- **Origin shifting.** Records keep true world coordinates however big the map; the scene is laid out relative to a
+  `SceneOrigin` (engine-free): the corner of one chunk, moved to the focus's chunk once the focus strays more than
+  `_rebaseDistance` chunks (8) from it, so rebases are rare and by whole chunks. `WorldFrame` makes the world root
+  (the `EditorApp` object) that frame: everything that stands in the world (terrain, objects, water, the interior
+  floor, gizmos, ghosts and ground lines) is a child of it at its world coordinates, so a rebase is one root move
+  (`Follow`), and `Shifted` tells the camera, which is not under the root, how far to move (`FlyCamera.Shift`, glide
+  included). Heights are never rebased (the origin's y is 0). The frame's two conversions are the only bridge between
+  scene coordinates (camera rays, physics) and world ones: `ScenePicker` takes world rays and returns `WorldHit`s, the
+  controller converts the camera's ray once into `ToolInput.Ray`, and `SpaceCameras` remembers world poses. Tools,
+  commands and the agent never see scene coordinates. The thumbnail rig is deliberately *not* under the root.
 - Measured on the stress world (25,394 records: 1,024 chunks = 2 × 2 km, ~24k objects,
   30 MB JSON), with Unity unfocused, so this is CPU work only and excludes render and destroy cost:
   - startup: load plugins 1,312 ms, resolve 9 ms, first view 211 ms (113 chunks, 2,615 objects)
@@ -621,7 +631,8 @@ slopes), so results are exact and every edit goes through the edit session.
   `DropSelectionToGround` (End) finds the terrain under each selected object, looking through
   other objects, and moves the object so the lowest point of its renderer bounds rests on
   the surface. The whole selection is one undo step. `FrameSelection` (F) frames the selection.
-- `ScenePicker` owns all raycasts. Gizmo handles live on the **`ForgeGizmo`** layer
+- `ScenePicker` owns all raycasts, in world coordinates (it converts through the `WorldFrame`, see Streaming:
+  origin shifting). Gizmo handles live on the **`ForgeGizmo`** layer
   (TagManager), so world picks and handle picks never interfere.
 - `Gizmo` is the shared gizmo machinery: primitive parts tagged with their `GizmoHandle`, hover
   and axis tint through property blocks, and a constant on-screen size. `GizmoShapes` describes the

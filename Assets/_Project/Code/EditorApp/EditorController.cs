@@ -33,6 +33,7 @@ namespace Forge.EditorApp
         Material _ghostMaterial;
 
         [NonSerialized] EditorContext _context;
+        [NonSerialized] WorldFrame _frame;
         [NonSerialized] IInputBlocker _ui;
         [NonSerialized] Dictionary<ToolKind, IEditorTool> _tools;
         [NonSerialized] ToolKind? _activeKind;
@@ -44,35 +45,39 @@ namespace Forge.EditorApp
         /// <summary>The world-building agent, or null when the editor has no agent settings.</summary>
         public AgentHost Agent { get; private set; }
 
+        /// <param name="frame">The world's frame in the scene: tools work in world coordinates, and this is where the camera's rays are converted.</param>
         /// <param name="ui">Clicks over this UI are kept from the tools; typing into it is kept from the shortcuts.</param>
         /// <param name="assets">The world's asset catalog, so tool previews look like the real objects.</param>
         /// <param name="agent">How the world-building agent runs; null leaves the editor without one.</param>
         /// <param name="water">The water on show, which the Water tool reads and previews through.</param>
-        public void Initialize(EditorContext context, WorldView view, WaterView water, IInputBlocker ui, IAssetCatalog assets, AgentSettings agent)
+        public void Initialize(EditorContext context, WorldFrame frame, WorldView view, WaterView water, IInputBlocker ui, IAssetCatalog assets, AgentSettings agent)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _frame = frame ?? throw new ArgumentNullException(nameof(frame));
             _ui = ui ?? throw new ArgumentNullException(nameof(ui));
-            var picker = new ScenePicker(_maxRayDistance);
+            var picker = new ScenePicker(frame, _maxRayDistance);
             var shapes = new AssetShapes(assets);
             var slopes = new SlopeAlignment(context, shapes);
             var seating = new ObjectSeating(picker.TerrainHeightAt, slopes.ShapeToAlign, shapes.ShapeOf);
-            _flyCamera.Initialize(ui, ray => picker.TryPickWorld(ray, out var hit) ? hit.distance : (float?)null);
+            // The camera's rays are the scene's; the distance along one is the same in either frame.
+            _flyCamera.Initialize(ui, ray => picker.TryPickWorld(frame.ToWorld(ray), out var hit) ? hit.Distance : (float?)null);
             Commands = new EditorCommands(context, view, picker, _flyCamera, slopes);
+            var root = frame.Root;
             _tools = new Dictionary<ToolKind, IEditorTool>
             {
-                { ToolKind.Select, new SelectTransformTool(ToolKind.Select, context, view, picker, _camera, _gizmoMaterial, seating) },
-                { ToolKind.Move, new SelectTransformTool(ToolKind.Move, context, view, picker, _camera, _gizmoMaterial, seating) },
-                { ToolKind.Rotate, new SelectTransformTool(ToolKind.Rotate, context, view, picker, _camera, _gizmoMaterial, seating) },
-                { ToolKind.Scale, new SelectTransformTool(ToolKind.Scale, context, view, picker, _camera, _gizmoMaterial, seating) },
+                { ToolKind.Select, new SelectTransformTool(ToolKind.Select, context, view, picker, _camera, _gizmoMaterial, seating, root) },
+                { ToolKind.Move, new SelectTransformTool(ToolKind.Move, context, view, picker, _camera, _gizmoMaterial, seating, root) },
+                { ToolKind.Rotate, new SelectTransformTool(ToolKind.Rotate, context, view, picker, _camera, _gizmoMaterial, seating, root) },
+                { ToolKind.Scale, new SelectTransformTool(ToolKind.Scale, context, view, picker, _camera, _gizmoMaterial, seating, root) },
                 { ToolKind.Hand, new HandTool(context, _flyCamera) },
-                { ToolKind.Place, new PlaceTool(context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
-                { ToolKind.Outline, new RectangleTool(RectPattern.Outline, context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
-                { ToolKind.Fill, new RectangleTool(RectPattern.Fill, context, picker, new PlacementGhost(assets, shapes, _ghostMaterial), seating) },
-                { ToolKind.Sculpt, new SculptTool(context, view, picker, slopes) },
+                { ToolKind.Place, new PlaceTool(context, picker, new PlacementGhost(assets, shapes, _ghostMaterial, root), seating) },
+                { ToolKind.Outline, new RectangleTool(RectPattern.Outline, context, picker, new PlacementGhost(assets, shapes, _ghostMaterial, root), seating) },
+                { ToolKind.Fill, new RectangleTool(RectPattern.Fill, context, picker, new PlacementGhost(assets, shapes, _ghostMaterial, root), seating) },
+                { ToolKind.Sculpt, new SculptTool(context, view, picker, slopes, root) },
                 { ToolKind.Water, new WaterTool(context, picker, Commands, water) },
                 { ToolKind.Mark, new MarkTool(context, picker) },
             };
-            _markView = new MarkView(new TerrainSurface(picker));
+            _markView = new MarkView(new TerrainSurface(picker), root);
 
             if (agent != null)
                 Agent = new AgentHost(context, seating, new EditorBriefing(context, () => GroundInView(picker)), agent);
@@ -119,7 +124,7 @@ namespace Forge.EditorApp
             var overPanel = _ui.IsPointerOverUI(pointer);
             var looking = mouse.rightButton.isPressed;
             var input = new ToolInput(
-                _camera.ScreenPointToRay(pointer),
+                _frame.ToWorld(_camera.ScreenPointToRay(pointer)),
                 pointer,
                 mouse.delta.ReadValue(),
                 pointerOverUI: overPanel,
@@ -225,6 +230,6 @@ namespace Forge.EditorApp
 
         // The terrain at the middle of the view: where "here" is when the user asks the agent to build.
         Vector3? GroundInView(ScenePicker picker) =>
-            picker.TryPickTerrain(_camera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)), out var hit) ? hit.point : (Vector3?)null;
+            picker.TryPickTerrain(_frame.ToWorld(_camera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f))), out var hit) ? hit.Point : (Vector3?)null;
     }
 }

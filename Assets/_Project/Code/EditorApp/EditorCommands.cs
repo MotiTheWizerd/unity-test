@@ -143,18 +143,21 @@ namespace Forge.EditorApp
         }
 
         // Everything else drops straight down, keeping its rotation, so its lowest drawn point lands on the surface.
+        // The object's local position is its world one (it sits under the world root); heights are never rebased, so
+        // the renderer bounds' heights are world heights too.
         bool TryDropStraight(PlacedObjectRecord placed, out (System.Numerics.Vector3, System.Numerics.Quaternion) pose)
         {
             pose = default;
             if (!_view.TryGetObject(placed.Id, out var go) || !RendererBounds.TryGet(go, out var bounds))
                 return false;
 
-            var probe = new Ray(new Vector3(go.transform.position.x, bounds.max.y + ProbeHeight, go.transform.position.z), Vector3.down);
+            var position = go.transform.localPosition;
+            var probe = new Ray(new Vector3(position.x, bounds.max.y + ProbeHeight, position.z), Vector3.down);
             if (!_picker.TryPickTerrain(probe, out var ground))
                 return false;
 
             var target = placed.Position;
-            target.Y = ground.point.y + (go.transform.position.y - bounds.min.y);
+            target.Y = ground.Point.y + (position.y - bounds.min.y);
             pose = (target, placed.Rotation);
             return true;
         }

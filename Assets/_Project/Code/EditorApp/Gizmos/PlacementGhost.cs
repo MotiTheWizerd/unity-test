@@ -18,16 +18,19 @@ namespace Forge.EditorApp.Gizmos
         readonly IAssetCatalog _catalog;
         readonly AssetShapes _shapes;
         readonly Material _material;
+        readonly Transform _worldRoot;
         readonly List<GameObject> _instances = new List<GameObject>();
         Transform _root;
         string _assetKey;
 
         /// <param name="material">Material for every part (Forge/PlacementGhost).</param>
-        public PlacementGhost(IAssetCatalog catalog, AssetShapes shapes, Material material)
+        /// <param name="worldRoot">What the ghosts sit under, so the world coordinates they are shown at hold.</param>
+        public PlacementGhost(IAssetCatalog catalog, AssetShapes shapes, Material material, Transform worldRoot)
         {
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             _shapes = shapes ?? throw new ArgumentNullException(nameof(shapes));
             _material = material != null ? material : throw new ArgumentNullException(nameof(material));
+            _worldRoot = worldRoot;
         }
 
         /// <summary>The shown object's footprint and pivot height, at scale 1 and no rotation.</summary>
@@ -45,13 +48,13 @@ namespace Forge.EditorApp.Gizmos
             Instance(0);
         }
 
-        /// <summary>Shows copy <paramref name="index"/> (created on demand) at the given pose.</summary>
+        /// <summary>Shows copy <paramref name="index"/> (created on demand) at the given pose, in world coordinates.</summary>
         public void Show(int index, Vector3 position, Quaternion rotation, float scale)
         {
             if (_assetKey == null)
                 return;
             var instance = Instance(index);
-            instance.transform.SetPositionAndRotation(position, rotation);
+            instance.transform.SetLocalPositionAndRotation(position, rotation);
             instance.transform.localScale = Vector3.one * scale;
             instance.SetActive(true);
         }
@@ -74,9 +77,12 @@ namespace Forge.EditorApp.Gizmos
 
         GameObject Instance(int index)
         {
-            // One parent keeps a painted row's copies together instead of cluttering the scene root.
+            // One parent keeps a painted row's copies together instead of cluttering the world root.
             if (_root == null)
+            {
                 _root = new GameObject("PlacementGhosts").transform;
+                _root.SetParent(_worldRoot, false);
+            }
 
             while (_instances.Count <= index)
             {

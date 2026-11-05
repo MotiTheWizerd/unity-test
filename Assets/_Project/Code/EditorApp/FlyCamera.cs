@@ -71,6 +71,14 @@ namespace Forge.EditorApp
             SyncAngles();
         }
 
+        /// <summary>Moves the camera by <paramref name="delta"/>, and any glide it is on with it: the scene was rebased under it.</summary>
+        public void Shift(Vector3 delta)
+        {
+            transform.position += delta;
+            if (_glideTarget.HasValue)
+                _glideTarget += delta;
+        }
+
         void Awake() => _camera = GetComponent<Camera>();
 
         void Start() => SyncAngles();

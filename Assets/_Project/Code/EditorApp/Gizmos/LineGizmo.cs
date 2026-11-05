@@ -12,19 +12,22 @@ namespace Forge.EditorApp.Gizmos
         readonly Material _material;
         Vector3[] _buffer = new Vector3[0];
 
-        public LineGizmo(string name, bool loop)
+        /// <param name="parent">The world root: the points are world coordinates, so the line sits under it.</param>
+        public LineGizmo(string name, bool loop, Transform parent)
         {
             var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
             go.SetActive(false);
             _line = go.AddComponent<LineRenderer>();
             _line.loop = loop;
-            _line.useWorldSpace = true;
+            _line.useWorldSpace = false;
             _line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             _line.receiveShadows = false;
             _material = new Material(Shader.Find("Sprites/Default"));
             _line.sharedMaterial = _material;
         }
 
+        /// <param name="points">World coordinates.</param>
         public void Show(IReadOnlyList<Vector3> points, float width, Color color)
         {
             if (_buffer.Length != points.Count)

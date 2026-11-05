@@ -87,13 +87,13 @@ namespace Forge.EditorApp.Tools
 
             _ghost.Use(baseObject.AssetKey);
             var roll = _context.PlacementRoll;
-            var pose = PoseAt(baseObject, hit.point, hit.collider is TerrainCollider, _context.PlacementYaw + roll.YawDegrees, roll.Scale);
+            var pose = PoseAt(baseObject, hit.Point, hit.OnTerrain, _context.PlacementYaw + roll.YawDegrees, roll.Scale);
             _poses.Clear();
             _poses.Add(pose);
             ShowGhosts(_poses);
 
             if (input.PrimaryPressed)
-                BeginStroke(pose, hit.collider is TerrainCollider);
+                BeginStroke(pose, hit.OnTerrain);
         }
 
         bool TryGetBase(out BaseObjectRecord baseObject)
@@ -121,7 +121,7 @@ namespace Forge.EditorApp.Tools
         void ContinueStroke(in ToolInput input, BaseObjectRecord baseObject)
         {
             if (input.PrimaryHeld && !input.PointerOverUI && _picker.TryPickWorld(input.Ray, out var hit))
-                _stroke.MoveTo(Flat(hit.point), line: input.Additive);
+                _stroke.MoveTo(Flat(hit.Point), line: input.Additive);
 
             BuildPoses(baseObject);
             ShowGhosts(_poses);

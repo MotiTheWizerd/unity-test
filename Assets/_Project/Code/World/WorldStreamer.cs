@@ -36,10 +36,10 @@ namespace Forge.World
 
         public ChunkWindow Window => _window;
 
-        /// <summary>Loads the whole window around <paramref name="focus"/> now, ignoring the budget (e.g. at startup).</summary>
+        /// <summary>Loads the whole window around <paramref name="focus"/> (world coordinates) now, ignoring the budget (e.g. at startup).</summary>
         public void LoadAll(Vector3 focus) => Step(focus, double.PositiveInfinity);
 
-        /// <summary>Switches the view to <paramref name="space"/> and loads the window around <paramref name="focus"/> in it now.</summary>
+        /// <summary>Switches the view to <paramref name="space"/> and loads the window around <paramref name="focus"/> (world coordinates) in it now.</summary>
         public void ShowSpace(Forge.Data.RecordId space, Vector3 focus)
         {
             _view.ShowSpace(space);
@@ -47,7 +47,7 @@ namespace Forge.World
             LoadAll(focus);
         }
 
-        /// <summary>Streams towards <paramref name="focus"/> within the frame budget. Returns true if chunks came or went.</summary>
+        /// <summary>Streams towards <paramref name="focus"/> (world coordinates) within the frame budget. Returns true if chunks came or went.</summary>
         public bool Tick(Vector3 focus) => Step(focus, _frameBudgetMs);
 
         bool Step(Vector3 position, double budgetMs)

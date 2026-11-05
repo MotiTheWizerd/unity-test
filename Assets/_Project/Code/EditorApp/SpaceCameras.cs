@@ -6,8 +6,8 @@ using UnityEngine;
 namespace Forge.EditorApp
 {
     /// <summary>
-    /// Where the camera was in each space, so switching back returns to the same view; a space seen for the
-    /// first time opens on a default view of its middle.
+    /// Where the camera was in each space, in world coordinates, so switching back returns to the same view; a space
+    /// seen for the first time opens on a default view of its middle.
     /// </summary>
     public sealed class SpaceCameras
     {
@@ -18,9 +18,10 @@ namespace Forge.EditorApp
 
         readonly Dictionary<RecordId, Pose> _poses = new Dictionary<RecordId, Pose>();
 
-        public void Remember(RecordId space, Transform camera) => _poses[space] = new Pose(camera.position, camera.rotation);
+        /// <param name="pose">The camera's pose, its position in world coordinates.</param>
+        public void Remember(RecordId space, Pose pose) => _poses[space] = pose;
 
-        /// <summary>The camera's last pose in <paramref name="space"/>, or the default view of its middle.</summary>
+        /// <summary>The camera's last pose in <paramref name="space"/>, or the default view of its middle; the position in world coordinates.</summary>
         public Pose Recall(SpaceRecord space)
         {
             if (_poses.TryGetValue(space.Id, out var pose))

@@ -15,9 +15,9 @@ namespace Forge.EditorApp.Gizmos
         static readonly GizmoHandle[] Axes = { GizmoHandle.AxisX, GizmoHandle.AxisY, GizmoHandle.AxisZ };
 
         /// <summary>Arrows along X/Y/Z, plus a center ball for moving on the ground plane.</summary>
-        public static Gizmo Translate(int layer, Material material)
+        public static Gizmo Translate(int layer, Material material, Transform worldRoot)
         {
-            var gizmo = new Gizmo("TranslateGizmo", layer, material);
+            var gizmo = new Gizmo("TranslateGizmo", layer, material, worldRoot);
             foreach (var axis in Axes)
             {
                 AddStem(gizmo, axis, 1f);
@@ -29,9 +29,9 @@ namespace Forge.EditorApp.Gizmos
         }
 
         /// <summary>One ring around each axis, built from short cylinder segments.</summary>
-        public static Gizmo Rotate(int layer, Material material)
+        public static Gizmo Rotate(int layer, Material material, Transform worldRoot)
         {
-            var gizmo = new Gizmo("RotateGizmo", layer, material);
+            var gizmo = new Gizmo("RotateGizmo", layer, material, worldRoot);
             var segmentLength = 2f * Mathf.PI / RingSegments;
             foreach (var axis in Axes)
             {
@@ -54,9 +54,9 @@ namespace Forge.EditorApp.Gizmos
         }
 
         /// <summary>Short stems with cube tips (uniform scale along any axis), plus a center cube.</summary>
-        public static Gizmo Scale(int layer, Material material)
+        public static Gizmo Scale(int layer, Material material, Transform worldRoot)
         {
-            var gizmo = new Gizmo("ScaleGizmo", layer, material);
+            var gizmo = new Gizmo("ScaleGizmo", layer, material, worldRoot);
             foreach (var axis in Axes)
             {
                 AddStem(gizmo, axis, 0.8f);

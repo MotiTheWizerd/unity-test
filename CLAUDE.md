@@ -43,6 +43,10 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
   The editor pref `ScriptCompilationDuringPlay` is set to 1 (recompile after playing).
 - `Transform.Find` treats `/` as a path separator, and record ids contain `/`, so look
   objects up via `RecordLink`, not by name.
+- The world root moves (origin shifting): anything that stands in the world goes *under* it and uses
+  `localPosition` (world coordinates); anything positioned from a camera ray or a physics hit goes through
+  `WorldFrame.ToWorld`. `transform.position` of a world object is a scene coordinate, not a world one.
+  To check a rebase live: move `_focus` 9+ chunks away and invoke the bootstrap's `Update` by reflection.
 - Regenerate the base plugin with the menu item `Forge/Generate Core Plugin`
   (`execute_menu_item`). It is deterministic. After a plugin format change, regenerate it and the
   stress world, and set Moti's saved `forge.user.json` (under `AppData/LocalLow/MotiTheWizerd/Forge/Plugins`)

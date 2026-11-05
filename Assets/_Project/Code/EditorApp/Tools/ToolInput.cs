@@ -22,7 +22,7 @@ namespace Forge.EditorApp.Tools
             Snap = snap;
         }
 
-        /// <summary>World ray under the pointer.</summary>
+        /// <summary>The ray under the pointer, in world coordinates (the camera's ray, converted through the <c>WorldFrame</c>).</summary>
         public Ray Ray { get; }
 
         /// <summary>The pointer's screen position, in pixels from the bottom left.</summary>

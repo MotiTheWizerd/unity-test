@@ -20,16 +20,19 @@ namespace Forge.EditorApp.Gizmos
 
         static readonly Color MarkColor = new Color(1f, 0.3f, 0.85f);
 
-        readonly LineGizmo _outline = new LineGizmo("MarkOutline", loop: true);
-        readonly LineGizmo _post = new LineGizmo("MarkPost", loop: false);
+        readonly LineGizmo _outline;
+        readonly LineGizmo _post;
         readonly List<Vector3> _points = new List<Vector3>();
         readonly TerrainSurface _surface;
         GroundMark _shownMark;
         object _shownWorld;
 
-        public MarkView(TerrainSurface surface)
+        /// <param name="worldRoot">What the mark is drawn under, so its world coordinates hold.</param>
+        public MarkView(TerrainSurface surface, Transform worldRoot)
         {
             _surface = surface ?? throw new ArgumentNullException(nameof(surface));
+            _outline = new LineGizmo("MarkOutline", loop: true, worldRoot);
+            _post = new LineGizmo("MarkPost", loop: false, worldRoot);
         }
 
         /// <param name="mark">The mark to show, or null to show none.</param>
