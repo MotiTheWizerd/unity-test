@@ -798,8 +798,9 @@ slopes), so results are exact and every edit goes through the edit session.
   a class every `--forge-motion-pulse` and the sheet fades its opacity, UI Toolkit having no keyframes; the agent
   button is busy while the agent works; the icon is the button's background image, because a button with a
   child is no longer measured by its text), `ForgeSeparator` (a hairline, `vertical` between the items of a row),
-  `ForgeSideDock` (a glass card along a side: a `TabBar` over its `ForgeDockPage` children, each a `key` and a tab
-  `title`, one shown at a time; `Show(key)`, `Toggle(key)` for a page's button, `SetOpen`, `OpenChanged` / `PageChanged`;
+  `ForgeSideDock` (a glass card along a side: a row of small icon tabs, as in the top bar, with a vertical separator
+  between them, over its `ForgeDockPage` children, each a `key`, an `icon` and a `title` (the tooltip), one shown at a
+  time; `Show(key)`, `Toggle(key)` for a page's button, `SetOpen`, `OpenChanged` / `PageChanged`;
   where it stands is the layout's classes), `TabBar`, `AssetTile`, and `Icons.Make(name)`. The theme imports
   every component sheet, so they work in any panel. Runtime UI Toolkit shows no tooltips, so `TooltipLayer` at a
   panel's root draws its own: any element's `tooltip` (UXML or code) shows beside it after a short rest, rich text

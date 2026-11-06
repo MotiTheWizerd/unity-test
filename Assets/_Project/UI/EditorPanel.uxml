@@ -80,7 +80,7 @@
         </forge:ForgePanel>
 
         <forge:ForgeSideDock name="side-dock" class="forge-dock forge-dock--right forge-hidden">
-            <forge:ForgeDockPage name="side-page-agent" key="agent" title="Agent">
+            <forge:ForgeDockPage name="side-page-agent" key="agent" title="Agent" icon="bot">
                 <ui:VisualElement class="forge-dock-page__bar">
                     <forge:ForgeButton name="agent-new" text="New chat" icon="sparkles" variant="Ghost" />
                 </ui:VisualElement>
@@ -105,7 +105,7 @@
                     <forge:ForgeButton name="agent-stop" text="Stop" />
                 </ui:VisualElement>
             </forge:ForgeDockPage>
-            <forge:ForgeDockPage name="side-page-materials" key="materials" title="Materials">
+            <forge:ForgeDockPage name="side-page-materials" key="materials" title="Materials" icon="palette">
                 <ui:Label class="forge-muted forge-wrap" text="Materials will live here." />
             </forge:ForgeDockPage>
         </forge:ForgeSideDock>
