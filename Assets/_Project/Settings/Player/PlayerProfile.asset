@@ -18,8 +18,9 @@ MonoBehaviour:
   _stepHeight: 0.4
   _slopeLimit: 50
   _model: {fileID: 8301520851496015657, guid: a69373ee747a66a4496309ea698c2843, type: 3}
+  _walkSpeed: 1.8
   _runSpeed: 4.5
-  _sprintSpeed: 7.5
+  _sprintSpeed: 6
   _jumpHeight: 1.1
   _gravity: 18
   _groundAcceleration: 45

@@ -560,7 +560,7 @@ from any camera, so both cameras read the same player.
 - `PlayerCommands` are the only input the rules see (move: x right, y forward in [-1, 1]; turn in degrees; sprint
   held; jump and toggle-walk pressed this frame), so a gamepad, a script or a test drives the player alike.
 - `PlayerLocomotion` (`LocomotionSettings`: run 4.5 m/s, the default pace as in Skyrim, walk 1.8 while
-  walking is toggled on (Caps Lock, as Skyrim's, kept between spawns), sprint 7.5 over either, a 1.1 m jump, gravity
+  walking is toggled on (Caps Lock, as Skyrim's, kept between spawns), sprint 6 over either (faster and the clips show it as fast-forward), a 1.1 m jump, gravity
   18 m/s², ground and air acceleration, a 50 m/s fall cap, 0.12 s coyote time): on the ground the pace eases toward the
   wanted one in about a tenth of a second and the body is pressed into the ground (`GroundStickSpeed`) so it stays on
   downhill slopes; in the air gravity pulls and steering is weak; a head against a ceiling stops rising; one jump per
