@@ -74,8 +74,8 @@ namespace Forge.UnityEditor.Content
             return new Color((float)(r / pixels.Length), (float)(g / pixels.Length), (float)(b / pixels.Length), 1f);
         }
 
-        /// <summary>Sets how a texture imports (at most 1024 px), reimporting only when that changes.</summary>
-        public static void Configure(string path, TextureImporterType type, bool sRGB)
+        /// <summary>Sets how a texture imports (at most <paramref name="maxSize"/> px), reimporting only when that changes.</summary>
+        public static void Configure(string path, TextureImporterType type, bool sRGB, int maxSize = 1024)
         {
             if (!(AssetImporter.GetAtPath(path) is TextureImporter importer))
             {
@@ -83,11 +83,11 @@ namespace Forge.UnityEditor.Content
                 importer = (TextureImporter)AssetImporter.GetAtPath(path);
             }
 
-            if (importer.textureType == type && importer.sRGBTexture == sRGB && importer.maxTextureSize == 1024)
+            if (importer.textureType == type && importer.sRGBTexture == sRGB && importer.maxTextureSize == maxSize)
                 return;
             importer.textureType = type;
             importer.sRGBTexture = sRGB;
-            importer.maxTextureSize = 1024;
+            importer.maxTextureSize = maxSize;
             importer.SaveAndReimport();
         }
 

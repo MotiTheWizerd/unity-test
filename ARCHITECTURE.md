@@ -35,7 +35,8 @@ Assets/_Project/
   Scenes/        Main.unity (editor scene: EditorApp + Main Camera)
   UI/            EditorPanel.uxml/.uss (runtime editor UI), ForgeRuntimeTheme.tss, ForgePanelSettings
   Content/       PrefabCatalog.asset (asset key → prefab), GroundLayerCatalog.asset (asset key → terrain layer);
-                 Placeholder/ holds generated placeholder prefabs + materials; Ground/ the ground textures (CC0)
+                 Placeholder/ holds generated placeholder prefabs + materials; Ground/ the ground textures (CC0);
+                 Characters/ one folder per rigged character (model, texture, built material and prefab)
   Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview), Water.shader (sea and lakes), Sky.shader (the skybox)
   Materials/     GizmoOverlay.mat, PlacementGhost.mat, Water.mat, Sky.mat, InteriorFloor.mat (runtime code copies
                  materials assets reference, never Shader.Find, so builds include the shaders)
@@ -596,10 +597,20 @@ from any camera, so both cameras read the same player.
   game will use it as it is.
 - **The model** (`PlayerAvatar`, Play): the profile's `_model` prefab riding on the body's object, turned to the body's
   heading, its colliders removed (the body is the collider), on the body's layer; in first person its renderers cast
-  only shadows. Today the placeholder mannequin (`player_mannequin`, 1.8 m: legs, tunic, arms, head and a dark band
-  across the face showing the front), built from primitives by `PlaceholderCharacters` (UnityEditor) through
-  *Forge → Generate Placeholder Player* (or the whole *Generate Placeholder Content*), which gives it to the profile
-  unless it already wears a model. A real character from Blender, with animations, replaces the prefab.
+  only shadows. The player is the **Viking hero** (`Content/Characters/VikingHero`, 1.85 m, eyes at 1.72 m), the first
+  real character, from the `blender-tests` art repo (see its CREDITS.md). Before him it wore a placeholder mannequin
+  (`player_mannequin`, built from primitives by `PlaceholderCharacters` through *Forge → Generate Placeholder Player*,
+  which gives it to a profile with no model); it stays as the fallback.
+- **Characters** (`Content/Characters/<Name>/`): the rigged model `<Name>.fbx` (feet at the origin, facing +Z, meters),
+  its colour `<Name>_Color.png` and optionally `<Name>_Normal.png`. `CharacterImport` (an `AssetPostprocessor`) imports
+  every model there as a **humanoid** with its own avatar, so a Mixamo skeleton maps to Unity's human rig and any
+  humanoid animation plays on it, and with no materials, cameras or lights. *Forge → Characters → Build Characters*
+  (`CharacterBuilder`) makes each folder's URP Lit material (2048 px textures, matte) and prefab: a variant of the model
+  (a re-exported model updates it) wearing the material, its skeleton put back in the bind pose (a Mixamo download
+  stands in its animation's first frame), with an `Animator` on the avatar, no root motion (the body moves it) and
+  culled transforms off screen. A new character is a folder dropped in and a rebuild. The models and textures are plain
+  git objects (`.gitattributes`), as the ground's are. Animations come next: Mixamo clips (in place, without skin)
+  driven by the player's speed and footing.
 - **Play from here** (`PlayFromHere`, EditorApp, built by the controller when the bootstrap has a `_player` profile):
   when the app starts playing, it spawns the player (`PlayerSession`) on whatever the middle of the view shows (else
   the ground under the camera, else it falls from the camera), facing the camera's heading, and rests the fly camera

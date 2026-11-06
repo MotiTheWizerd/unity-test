@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ed3f8f89ceee8a41b2e612b6b0baf29, type: 3}
   m_Name: PlayerProfile
   m_EditorClassIdentifier: Forge.Play::Forge.Play.PlayerProfile
-  _height: 1.8
+  _height: 1.85
   _radius: 0.3
-  _eyeHeight: 1.65
+  _eyeHeight: 1.72
   _stepHeight: 0.4
   _slopeLimit: 50
-  _model: {fileID: 7124029419884558983, guid: 1ede7af33c2d7d642bdd6f3cc7593886, type: 3}
+  _model: {fileID: 8301520851496015657, guid: a69373ee747a66a4496309ea698c2843, type: 3}
   _runSpeed: 4.5
   _sprintSpeed: 7.5
   _jumpHeight: 1.1
