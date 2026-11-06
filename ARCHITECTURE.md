@@ -469,6 +469,24 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
   average of its color texture, linear, stored in the catalog by the build tool). `Shaders/FarTerrain.shader`
   (`Forge/FarTerrain`, on `Materials/FarTerrain.mat`) lights those colors with the sun and the sky's ambient and
   fogs them like the near land, with a depth pass so the water reads its depth next to far shores.
+- **Grass** grows from the paint: a ground layer may say what grass it grows (`GroundLayerRecord.Grass`,
+  `GrassSettings`: tufts per m² where painted fully, height; optional, so bare layers and old plugins are unchanged).
+  `GrassScatter.Grow` (Streaming, engine-free, tested) turns a chunk into tufts: per paint texel, each layer with
+  grass grows its density times its share (unpainted ground counts as the unpainted layer), standing on the
+  bilinear ground, none below the sea, seeded per texel so a chunk always grows the same grass. `GrassView` (World)
+  keeps a patch per chunk within the material's fade end (45 m) of the camera, each a `GraphicsBuffer` of 32-byte
+  tufts drawn with one `Graphics.RenderMeshPrimitives` of `GrassTuftMesh` (6 blades, 18 triangles): no game objects,
+  no colliders, so picking and seating never hit grass. A patch is regrown when its chunk's terrain record or the
+  sea level changes (records are immutable, so a reference check per frame), nearest first in the frame budget.
+  Patches draw through the world root's matrix, so a rebase is free. `Shaders/Grass.shader` (`Forge/Grass`, on
+  `Materials/Grass.mat`) reads the buffer by instance id, sways tips with the wind, shrinks blades into the ground
+  between the fade start and end so the edge never pops, colors each tuft its ground's map color (root darker, tip
+  lighter, a little variation), lights it like the far land with up-facing normals, and has a depth pass.
+  `EditorGrassSource` feeds it the shown land, the world's ground layers and the active sea; lakes don't stop grass
+  yet. Measured here: ~100k tufts (1.8M triangles) around the camera on unpainted land; a 20k-tuft patch takes
+  ~10 ms to grow in the editor (see Shortcuts).
+- Ground layers are matte: the build tool scales each mask map's smoothness into [0, 0.35]
+  (`TerrainLayer.maskMapRemapMax.w`), and material balls use the same value, so scanned grass has no wet sun glare.
 - Measured on the stress world (25,394 records: 1,024 chunks = 2 × 2 km, ~24k objects,
   30 MB JSON), with Unity unfocused, so this is CPU work only and excludes render and destroy cost:
   - startup: load plugins 1,312 ms, resolve 9 ms, first view 211 ms (113 chunks, 2,615 objects)
@@ -829,3 +847,4 @@ and the condition for removing it, and is listed here.
 | `EditorApp/EditorCommands.cs` (`AutoPaintSpace`) | Auto paint's roles (slope, steep, shore) are the base game's ground looks by asset key (`ground/dirt`, `ground/rock`, `ground/sand`) | The base game's four layers are the only ground | Worlds need their own ground → the rules become data (a climate's or worldspace's `AutoPaintRules`) |
 | `World/Assets/KeyedAssetCatalog.cs` | Catalog entries (prefabs, terrain layers) reference assets directly, so all content loads with the catalog at startup | A dozen placeholder prefabs and four ground layers fit in memory easily | Content outgrows memory → load prefabs by asset key through Addressables, streamed with the chunks |
 | `EditorApp/EditorController.cs`, `Tools/ToolDefinition.cs` | Input read by polling devices, not an Input Actions asset; tool keys are fixed `Key`s in `ToolCatalog` | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset, labels read from it |
+| `World/GrassView.cs` (`Grow`) | Grass patches grow on the main thread, ~10 ms for a 20k-tuft patch in the editor, so crossing into a new chunk can cost a frame | One patch a frame is a short hitch; simpler than threading while grass is new | Hitches show while flying → grow on a worker thread (`GrassScatter` is engine-free; only the buffer upload needs the main thread) |

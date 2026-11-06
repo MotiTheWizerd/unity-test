@@ -23,6 +23,9 @@ namespace Forge.UnityEditor.Content
         /// <summary>Meters one repeat of a ground texture covers: the scans are of about a meter or two of ground.</summary>
         const float TileSize = 3f;
 
+        /// <summary>Most smoothness a ground layer shows (its mask map's smoothness is scaled into [0, this]).</summary>
+        const float MaxSmoothness = 0.35f;
+
         [MenuItem("Forge/Ground/Build Ground Layers")]
         static void Build()
         {
@@ -84,6 +87,8 @@ namespace Forge.UnityEditor.Content
             layer.maskMapTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(maskPath);
             layer.tileSize = new Vector2(TileSize, TileSize);
             layer.metallic = 0f;
+            // Natural ground is matte: scans' smoothness, taken whole, gives grass a wet sun glare.
+            layer.maskMapRemapMax = new Vector4(1f, 1f, 1f, MaxSmoothness);
             EditorUtility.SetDirty(layer);
             return layer;
         }

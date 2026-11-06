@@ -64,6 +64,9 @@ namespace Forge.EditorApp
         [SerializeField, Tooltip("Material the far land is drawn with (Materials/FarTerrain); without one nothing shows beyond the loaded chunks.")]
         Material _farTerrainMaterial;
 
+        [SerializeField, Tooltip("Material grass is drawn with (Materials/Grass, Forge/Grass); its fade end is how far grass shows. Without one no grass grows.")]
+        Material _grassMaterial;
+
         [SerializeField, Tooltip("The terrain layer of each ground layer's asset key (Content/GroundLayerCatalog); without one the land is drawn unpainted.")]
         GroundLayerCatalog _groundLayers;
 
@@ -95,6 +98,8 @@ namespace Forge.EditorApp
         [NonSerialized] SkyDirector _skyDirector;
         [NonSerialized] SpaceCameras _spaceCameras;
         [NonSerialized] ThumbnailRenderer _thumbnails;
+        [NonSerialized] GrassView _grass;
+        [NonSerialized] EditorGrassSource _grassSource;
         [NonSerialized] RecordId _shownSpace;
 
         void Start()
@@ -130,6 +135,7 @@ namespace Forge.EditorApp
                 _view = new WorldView(transform, assets, _terrainMaterial, ground);
                 _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs, CreateFarTerrain(ground));
                 _view.Sync(_context.Session.World);
+                _grass = CreateGrass(ground);
                 _interiorFloor = InteriorFloor.Create(transform, _interiorFloorMaterial);
                 _waterView = CreateWaterView();
                 _skyView = CreateSkyView();
@@ -180,6 +186,9 @@ namespace Forge.EditorApp
                 _highlighter.Refresh();
             _waterView.Follow(_focus.position);
             _skyDirector?.Tick(Time.unscaledDeltaTime);
+            // Grass grows in a budget of its own: it is near the camera, where a missing patch shows most.
+            _grass?.Tick(focus, _frameBudgetMs);
+            _grass?.Draw(_focus.position);
         }
 
         // Everything under the world root moved with it; the camera is not under it and follows by hand.
@@ -208,6 +217,7 @@ namespace Forge.EditorApp
             _view?.Dispose();
             _waterView?.Dispose();
             _skyView?.Dispose();
+            _grass?.Dispose();
             _thumbnails?.Dispose();
         }
 
@@ -233,6 +243,8 @@ namespace Forge.EditorApp
             _interiorFloor.Show(record.Kind == SpaceKind.Interior);
             _waterView.Sync(_context.Session.World, space);
             _streamer.ShowSpace(space, _frame.ToWorld(_focus.position));
+            if (_grass != null)
+                _grass.Show(_grassSource);
             _highlighter?.Refresh();
         }
 
@@ -277,6 +289,21 @@ namespace Forge.EditorApp
 
             Debug.LogWarning("[Forge] EditorApp has no ground layer catalog (EditorAppBootstrap._groundLayers); the land is drawn unpainted.");
             return null;
+        }
+
+        // Grass near the camera, grown from the paint; optional, so a world without the material opens bare. Its color is
+        // the color its ground shows from afar, so grass and the land under it match.
+        GrassView CreateGrass(GroundLooks ground)
+        {
+            if (_grassMaterial == null)
+            {
+                Debug.LogWarning("[Forge] EditorApp has no grass material (EditorAppBootstrap._grassMaterial); no grass grows.");
+                return null;
+            }
+
+            _grassSource = new EditorGrassSource(_context, _view);
+            // Shown a space by OnSpaceChanged, like the streamer.
+            return new GrassView(transform, _grassMaterial, layer => ground != null ? ground.MapColorOf(layer) : new Color(0.1f, 0.16f, 0.04f));
         }
 
         // Coarse land beyond the loaded chunks, under the world root like everything else that stands in the world.

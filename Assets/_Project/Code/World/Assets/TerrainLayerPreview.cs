@@ -17,6 +17,7 @@ namespace Forge.World.Assets
         static readonly int BumpScale = Shader.PropertyToID("_BumpScale");
         static readonly int MetallicGlossMap = Shader.PropertyToID("_MetallicGlossMap");
         static readonly int OcclusionMap = Shader.PropertyToID("_OcclusionMap");
+        static readonly int Smoothness = Shader.PropertyToID("_Smoothness");
 
         /// <summary>A new material for <paramref name="layer"/> (the caller destroys it); null without a layer or a template.</summary>
         public static Material Create(TerrainLayer layer, Material template)
@@ -32,6 +33,8 @@ namespace Forge.World.Assets
             material.SetFloat(BumpScale, layer.normalScale);
             material.SetTexture(MetallicGlossMap, layer.maskMapTexture);
             material.SetTexture(OcclusionMap, layer.maskMapTexture);
+            // Lit scales the map's smoothness by this, as the terrain does by the layer's mask remap.
+            material.SetFloat(Smoothness, layer.maskMapRemapMax.w);
             return material;
         }
     }
