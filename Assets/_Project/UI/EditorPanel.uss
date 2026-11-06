@@ -460,10 +460,13 @@
     flex-basis: auto;
 }
 
-.forge-agent-picture__remove {
+/* A dark disc under the ×, so it reads on any picture. */
+.forge-agent-picture > .forge-agent-picture__remove {
     position: absolute;
     top: 2px;
     right: 2px;
+    border-radius: 99px;
+    background-color: rgba(0, 0, 0, 0.6);
 }
 
 /* ---- Status bar and the fatal box ------------------------------------------------------------------------ */
