@@ -14,8 +14,8 @@ using UnityEngine;
 namespace Forge.EditorApp.Tools
 {
     /// <summary>
-    /// The select tool and the three transform tools, which share picking: click to select (Shift adds or removes),
-    /// drag on empty space for a box that selects every loaded object whose middle shows inside it (Shift adds them),
+    /// The select tool and the three transform tools, which share picking: click to select (Shift or Ctrl adds or removes),
+    /// drag on empty space for a box that selects every loaded object whose middle shows inside it (Shift or Ctrl adds them),
     /// Del deletes the selection, Esc cancels a drag or clears the selection.
     /// <list type="bullet">
     /// <item><see cref="ToolKind.Select"/> only selects.</item>
@@ -140,7 +140,7 @@ namespace Forge.EditorApp.Tools
             {
                 // Empty space: a drag draws a selection box, a click clears the selection (Shift: keeps it).
                 _boxStart = input.Pointer;
-                _boxAdditive = input.Additive;
+                _boxAdditive = input.ExtendsSelection;
                 return;
             }
 
@@ -148,7 +148,7 @@ namespace Forge.EditorApp.Tools
             if (slot != null)
                 _context.MaterialSlot = slot;
 
-            if (input.Additive)
+            if (input.ExtendsSelection)
             {
                 selection.Toggle(id);
                 return;

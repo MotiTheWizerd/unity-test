@@ -40,8 +40,11 @@ namespace Forge.EditorApp.Tools
 
         public bool PrimaryReleased { get; }
 
-        /// <summary>Modifier for additive selection (Shift).</summary>
+        /// <summary>Shift held: adds to the selection, draws a straight row (place), makes a square (outline, fill).</summary>
         public bool Additive { get; }
+
+        /// <summary>Shift or Ctrl held on a click or a box: it adds to (or takes from) the selection, as in most editors.</summary>
+        public bool ExtendsSelection => Additive || Snap;
 
         /// <summary>Esc: cancel the current action.</summary>
         public bool Cancel { get; }

@@ -286,6 +286,14 @@ namespace Forge.EditorApp
         string NameOfGround(RecordId layer) =>
             _context.Session.World.Records.TryGet(layer, out var record) && record is GroundLayerRecord ground ? ground.DisplayName : layer.ToString();
 
+        /// <summary>Selects every placed object shown in the space on view (Ctrl+A): the loaded ones, as box select does.</summary>
+        public void SelectAll()
+        {
+            var ids = _view.PlacedObjects.Select(pair => pair.Key).ToList();
+            _context.Selection.Replace(ids);
+            _context.Report(ids.Count > 0 ? $"Selected all {ids.Count} object(s) in view" : "Select all: no objects here");
+        }
+
         /// <summary>Glides the camera so the whole selection fills the view (F).</summary>
         public void FrameSelection()
         {
