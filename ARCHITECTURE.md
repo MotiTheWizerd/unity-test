@@ -823,7 +823,12 @@ slopes), so results are exact and every edit goes through the edit session.
   a lit sphere wearing `GroundLooks.CreatePreviewMaterial`, a URP Lit stand-in built by `TerrainLayerPreview` from
   the layer's color, normal and mask maps and tint, destroyed once the picture is taken); picking one calls `EditorContext.SelectPaintLayer` (paint tool, that ground).
   **Materials are applied, not placed**, so they live on the side dock's **Materials** page (`MaterialsPage`, brought
-  up to date only while on show), in two pieces so the first can move to an inspector later: `MaterialSlotList`, the
+  up to date only while on show). On top a **preview card** (`MaterialPreview` in a `Controls/PreviewCard`): a large
+  ball (`IAssetThumbnails.GetBallPreview`, 512 px, key and rim light, `MaterialBalls.PreviewOf`) standing on a studio
+  backdrop painted in code (`StudioBackdrop`: a glow behind it, dark edges, a floor shadow), named, with "On Roof" when
+  the chosen part wears it. It shows the ball last clicked in the library, else what the chosen part wears ("Own
+  look"); a new selection or chosen part puts that part back in focus. A live, turnable preview is parked. Under it,
+  two pieces, so the first can move to an inspector later: `MaterialSlotList`, the
   selection's parts (`EditorCommands.SelectionSlots`, read from `AssetSlots`, labelled by `Materials.SlotLabel`), a
   `MaterialPartRow` each with a small ball and the name of what it wears ("Own look" for the base look), clicking one
   chooses `EditorContext.MaterialSlot` (the first slot when unset; clicking an object with a select tool sets it to the

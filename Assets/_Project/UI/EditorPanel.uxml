@@ -101,6 +101,7 @@
                 </ui:VisualElement>
             </forge:ForgeDockPage>
             <forge:ForgeDockPage name="side-page-materials" key="materials" title="Materials" icon="palette">
+                <forge:PreviewCard name="material-preview" />
                 <forge:ForgeSection title="SELECTED OBJECT">
                     <ui:Label name="material-slots-hint" class="forge-muted forge-wrap" />
                     <ui:VisualElement name="material-slots" class="forge-material-slots" />

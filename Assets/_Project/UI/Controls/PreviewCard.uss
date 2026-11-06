@@ -11,13 +11,15 @@
     -unity-background-scale-mode: scale-and-crop;
 }
 
-/* The picture stands on the backdrop's floor line (StudioBackdrop.FloorLine, 13% up), centred. */
+/* The picture stands on the backdrop's floor line (StudioBackdrop.FloorLine, 13% up), centred. A rendered ball fills
+   about the middle 57% of its picture with ~19% empty below it, so the picture hangs past the card's bottom edge
+   (clipped, it's transparent there) for the ball to touch its shadow. */
 .forge-preview-card__picture {
     position: absolute;
-    bottom: 12px;
+    bottom: -9px;
     left: 50%;
-    width: 176px;
-    height: 176px;
+    width: 210px;
+    height: 210px;
     translate: -50% 0;
     justify-content: center;
     align-items: center;

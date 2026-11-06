@@ -11,7 +11,8 @@ namespace Forge.EditorApp.UI
     /// <summary>
     /// The world's materials as a grid of balls (<see cref="MaterialBalls"/>). Clicking one dresses the selection's chosen
     /// slot in it (<see cref="EditorCommands.DressSelection"/>); dragging one onto a part in the world dresses that part
-    /// (<see cref="EditorCommands.DropMaterial"/>). The ball of what the selection wears in the chosen slot is lit. Tiles
+    /// (<see cref="EditorCommands.DropMaterial"/>); a click is also told (<see cref="Picked"/>, the preview card shows
+    /// it). The ball of what the selection wears in the chosen slot is lit. Tiles
     /// are rebuilt only when the world's materials change.
     /// </summary>
     public sealed class MaterialLibrary
@@ -30,6 +31,9 @@ namespace Forge.EditorApp.UI
             _balls = balls ?? throw new ArgumentNullException(nameof(balls));
             _grid = PanelElements.Required<ScrollView>(root, "material-library");
         }
+
+        /// <summary>Raised when a ball is clicked, before it dresses the selection.</summary>
+        public event Action<RecordId> Picked;
 
         public void Refresh()
         {
@@ -59,7 +63,11 @@ namespace Forge.EditorApp.UI
         AssetTile CreateTile(MaterialRecord material)
         {
             var id = material.Id;
-            var tile = new AssetTile(material.DisplayName, 0, () => _commands.DressSelection(id))
+            var tile = new AssetTile(material.DisplayName, 0, () =>
+            {
+                Picked?.Invoke(id);
+                _commands.DressSelection(id);
+            })
             {
                 tooltip = $"{material.DisplayName}  <color=#9EA4AE>· click: dress the chosen part · drag onto any part</color>",
             };
