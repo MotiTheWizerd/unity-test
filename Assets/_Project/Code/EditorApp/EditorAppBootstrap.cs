@@ -309,8 +309,10 @@ namespace Forge.EditorApp
         // The camera's pose, its position in world coordinates.
         Pose CameraPose() => new Pose(_frame.ToWorld(_focus.position), _focus.rotation);
 
-        // Where the editing camera is: while playing, where it was when play began (what the editor keeps between sessions).
-        Pose EditingCameraPose() => _editingPose ?? CameraPose();
+        // Where the editing camera is: while playing, where it was when play began (what the editor keeps between
+        // sessions). None once the camera is destroyed: on shutdown Unity destroys the scene in no set order, so the
+        // camera can go before the last save.
+        Pose? EditingCameraPose() => _editingPose ?? (_focus != null ? CameraPose() : (Pose?)null);
 
         // Puts the camera at a pose in world coordinates. Rebased first, so a far-off view lands near the scene's
         // origin, not far from it.
@@ -344,7 +346,9 @@ namespace Forge.EditorApp
         // What the editor keeps between sessions; the context and the panel write their own parts.
         void CaptureState(EditorPrefs prefs, WorldViewState world)
         {
-            _spaceCameras.Remember(_context.ActiveSpace, EditingCameraPose());
+            // Without a camera, the pose remembered at the last capture (a second ago at most) stands.
+            if (EditingCameraPose() is Pose pose)
+                _spaceCameras.Remember(_context.ActiveSpace, pose);
             world.Space = _context.ActiveSpace.ToString();
             world.Cameras = world.Cameras ?? new Dictionary<string, SavedPose>();
             foreach (var pair in _spaceCameras.Poses)
