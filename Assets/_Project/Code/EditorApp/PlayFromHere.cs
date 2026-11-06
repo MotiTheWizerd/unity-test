@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using Forge.Data.Records;
 using Forge.EditorApp.Tools;
 using Forge.Editing.Modes;
 using Forge.Game.Player;
@@ -63,7 +65,10 @@ namespace Forge.EditorApp
             if (mode == AppMode.Playing)
             {
                 var view = _camera.transform;
-                _session.Spawn(SpawnFeet(view), Compass.HeadingOf(new System.Numerics.Vector2(view.forward.x, view.forward.z)));
+                _session.Spawn(
+                    SpawnFeet(view),
+                    Compass.HeadingOf(new System.Numerics.Vector2(view.forward.x, view.forward.z)),
+                    _context.Session.World.Records.OfType<AttributeRecord>());
                 _flyCamera.enabled = false;
             }
             else

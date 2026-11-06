@@ -3,6 +3,7 @@
     "rootNamespace": "Forge.Play",
     "references": [
         "Forge.Core",
+        "Forge.Data",
         "Forge.Game",
         "Forge.World",
         "Unity.InputSystem"

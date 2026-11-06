@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Forge.Core.Geometry;
+using Forge.Game.Attributes;
 using Forge.Game.Motion;
 
 namespace Forge.Game.Player
@@ -19,14 +20,24 @@ namespace Forge.Game.Player
         MotorContact _contact;
 
         /// <param name="eyeHeight">Meters from the feet to the eyes, where a first-person camera sits.</param>
-        public PlayerCharacter(IPlayerMotor motor, LocomotionSettings locomotion, float eyeHeight)
+        /// <param name="attributes">The player's attributes, which moving costs (<see cref="MovementCosts"/>) are paid from
+        /// and which tick with it; null for a player whose moves cost nothing.</param>
+        public PlayerCharacter(IPlayerMotor motor, LocomotionSettings locomotion, float eyeHeight, ActorAttributes attributes = null)
         {
             Motor = motor ?? throw new ArgumentNullException(nameof(motor));
             if (!(eyeHeight > 0f) || float.IsInfinity(eyeHeight))
                 throw new ArgumentOutOfRangeException(nameof(eyeHeight), eyeHeight, "Must be a positive number.");
             EyeHeight = eyeHeight;
             Locomotion = new PlayerLocomotion(locomotion);
+            if (attributes != null)
+                Costs = new MovementCosts(attributes);
         }
+
+        /// <summary>What moving costs the player, paid from its attributes; null when its moves cost nothing.</summary>
+        public MovementCosts Costs { get; }
+
+        /// <summary>The player's attributes; null when it has none.</summary>
+        public ActorAttributes Attributes => Costs?.Attributes;
 
         public IPlayerMotor Motor { get; }
 
@@ -58,13 +69,27 @@ namespace Forge.Game.Player
         public void Tick(PlayerCommands commands, float deltaTime)
         {
             Look.Turn(commands.Turn);
+            if (Costs != null)
+                commands = Costs.Afford(commands, deltaTime);
             var from = Motor.Position;
             var move = Locomotion.Step(commands, Look.Heading, _contact, deltaTime);
             if (move != Vector3.Zero)
                 _contact = Motor.Move(move);
             if (deltaTime > 0f)
+            {
                 Motion = BodyMotion.Between(from, Motor.Position, deltaTime, _contact.Grounded);
+                Costs?.Pay(Locomotion.Jumped, _contact.Grounded, Motor.Position.Y);
+                Attributes?.Tick(deltaTime);
+            }
+
             TurnBody(deltaTime);
+        }
+
+        /// <summary>The world moved under the player by <paramref name="delta"/> (a rebase); the player moves with it, mid-fall or not.</summary>
+        public void Shift(Vector3 delta)
+        {
+            Motor.Teleport(Motor.Position + delta);
+            Costs?.Shift(delta.Y);
         }
 
         /// <summary>Stands the player at <paramref name="feet"/>, body and look facing <paramref name="heading"/>, level, at rest.</summary>
@@ -76,6 +101,7 @@ namespace Forge.Game.Player
             Locomotion.Stop();
             _contact = default;
             Motion = BodyMotion.Still;
+            Costs?.Reset();
         }
 
         void TurnBody(float deltaTime)

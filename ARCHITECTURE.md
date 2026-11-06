@@ -669,6 +669,13 @@ where it came from.
   never leaves more than it holds. `Drain` takes what there is, `TrySpend` all or nothing, `Restore` gives back; any
   spend holds the refill back for the regen delay. `SetBase` gives the actor its own base (a level gained). Events:
   `Changed` (value or what is left) and `Depleted` (a resource ran out), for HUDs and rules, so nothing polls.
+- **What moving costs** (`MovementCosts`, Game.Player, the player's today): sprinting spends `SprintCost` stamina a
+  second while moving and running dry leaves the actor **winded** (no sprint) until a quarter of its stamina is back;
+  a jump needs and spends `JumpCost`; a fall (`FallTracker`, Game.Motion: the highest point off the ground less where it
+  touched down, moved with a rebase) past `FallSafeHeight` costs `FallDamage` health a meter. `PlayerCharacter` takes
+  the actor's attributes, has the costs filter its commands and pay for the move, and ticks the attributes. At zero
+  health nothing more happens yet. `PlayerSession` keeps the player's attributes from one spawn to the next, and starts
+  them afresh only when the world's attribute records changed; a world without attributes plays as before.
 - **Live numbers are game state, not world data**: an actor's damage, own bases and timed effects belong to a save
   game, never to a plugin; modifiers from equipment are rebuilt from what is worn, so each fact lives in one place.
 

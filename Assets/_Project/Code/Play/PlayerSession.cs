@@ -1,4 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using Forge.Data.Records;
+using Forge.Game.Attributes;
 using Forge.Game.Cameras;
 using Forge.Game.Player;
 using Forge.World;
@@ -21,6 +25,7 @@ namespace Forge.Play
         readonly CameraDirector _director;
         CharacterControllerMotor _motor;
         PlayerAvatar _avatar;
+        AttributeRecord[] _attributeRecords;
 
         /// <param name="camera">The camera the player sees through while spawned.</param>
         public PlayerSession(PlayerProfile profile, Transform camera)
@@ -40,14 +45,25 @@ namespace Forge.Play
         /// <summary>The player while spawned, else null.</summary>
         public PlayerCharacter Player { get; private set; }
 
-        /// <summary>Stands the player at <paramref name="feet"/> (scene coordinates), facing <paramref name="heading"/>, and gives it the camera and the controls.</summary>
-        public void Spawn(Vector3 feet, float heading)
+        /// <summary>
+        /// The player's attributes (health, stamina, ...), kept from one spawn to the next, as a game keeps them; null
+        /// until a spawn gives the world's attributes.
+        /// </summary>
+        public ActorAttributes Attributes { get; private set; }
+
+        /// <summary>
+        /// Stands the player at <paramref name="feet"/> (scene coordinates), facing <paramref name="heading"/>, and gives it
+        /// the camera and the controls. <paramref name="attributes"/> are the world's (its resolved attribute records):
+        /// the player keeps its numbers while they stay the same, and starts afresh from them when they changed.
+        /// </summary>
+        public void Spawn(Vector3 feet, float heading, IEnumerable<AttributeRecord> attributes)
         {
             Despawn();
+            UpdateAttributes(attributes);
             _motor = new CharacterControllerMotor(_profile);
             if (_profile.Model != null)
                 _avatar = new PlayerAvatar(_motor.Body, _profile.Model);
-            Player = new PlayerCharacter(_motor, _profile.Locomotion(), _profile.EyeHeight);
+            Player = new PlayerCharacter(_motor, _profile.Locomotion(), _profile.EyeHeight, Attributes);
             Player.PlaceAt(feet.ToNumerics(), heading);
             Views.ThirdPerson.Begin();
             Frame(0f);
@@ -71,8 +87,18 @@ namespace Forge.Play
         /// <summary>The scene moved by <paramref name="delta"/> under the world (a rebase); the player moves with it.</summary>
         public void Shift(Vector3 delta)
         {
-            if (Player != null)
-                Player.Motor.Teleport(Player.Feet + delta.ToNumerics());
+            Player?.Shift(delta.ToNumerics());
+        }
+
+        // Records are immutable, so the same records (by reference) are the same attributes.
+        void UpdateAttributes(IEnumerable<AttributeRecord> attributes)
+        {
+            var records = (attributes ?? throw new ArgumentNullException(nameof(attributes))).ToArray();
+            if (_attributeRecords != null && records.Length == _attributeRecords.Length && !records.Except(_attributeRecords).Any())
+                return;
+            _attributeRecords = records;
+            // A world without attributes (one made before them) plays as before: moving costs nothing.
+            Attributes = records.Length > 0 ? new ActorAttributes(AttributeSet.From(records)) : null;
         }
 
         /// <summary>Takes the player away and gives the mouse back; the camera is the caller's again.</summary>

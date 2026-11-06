@@ -30,6 +30,9 @@ namespace Forge.Game.Player
         /// <summary>Walking rather than running, until switched back; sprint still outruns both.</summary>
         public bool Walking { get; private set; }
 
+        /// <summary>Whether the last step took off in a jump.</summary>
+        public bool Jumped { get; private set; }
+
         /// <summary>
         /// The move for one frame of <paramref name="deltaTime"/> seconds, facing <paramref name="heading"/> (compass
         /// degrees), after a move that touched <paramref name="contact"/>.
@@ -38,6 +41,7 @@ namespace Forge.Game.Player
         {
             if (commands.ToggleWalk)
                 Walking = !Walking;
+            Jumped = false;
             if (!(deltaTime > 0f))
                 return Vector3.Zero;
 
@@ -61,6 +65,7 @@ namespace Forge.Game.Player
             {
                 up = _settings.JumpSpeed;
                 _jumped = true;
+                Jumped = true;
             }
             else if (contact.Grounded && velocity.Y <= 0f)
             {
