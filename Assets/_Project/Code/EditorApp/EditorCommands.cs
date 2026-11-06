@@ -307,6 +307,40 @@ namespace Forge.EditorApp
             _context.Report(ids.Count > 0 ? $"Selected all {ids.Count} object(s) in view" : "Select all: no objects here");
         }
 
+        /// <summary>Clears the selection (Ctrl+Shift+A; Esc in a select tool does the same).</summary>
+        public void DeselectAll()
+        {
+            if (_context.Selection.IsEmpty)
+                return;
+            _context.Selection.Clear();
+            _context.Report("Deselected");
+        }
+
+        /// <summary>
+        /// Copies the selected objects where they stand, materials and all (Ctrl+D, as in Unity and the Creation Kit), and
+        /// selects the copies so they can be moved straight away. One undo step.
+        /// </summary>
+        public void DuplicateSelection()
+        {
+            if (_context.Selection.IsEmpty)
+            {
+                _context.Report("Duplicate: select objects first");
+                return;
+            }
+
+            IReadOnlyList<PlacedObjectRecord> copies = Array.Empty<PlacedObjectRecord>();
+            if (!_context.TryEdit("Duplicate", () => copies = ObjectEdits.Duplicate(_context.Session, _context.Selection.Ids, "Duplicate")))
+                return;
+            if (copies.Count == 0)
+            {
+                _context.Report("Duplicate: nothing selected can be copied");
+                return;
+            }
+
+            _context.Selection.Replace(copies.Select(c => c.Id));
+            _context.Report($"Duplicated {copies.Count} object(s) in place; move them where you want them");
+        }
+
         /// <summary>Glides the camera so the whole selection fills the view (F).</summary>
         public void FrameSelection()
         {

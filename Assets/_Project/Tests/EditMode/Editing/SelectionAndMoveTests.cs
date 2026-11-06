@@ -280,6 +280,38 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void Duplicate_CopiesWhereTheyStand_WithMaterials_AsOneUndoStep()
+        {
+            var session = NewSession();
+            ObjectEdits.SetMaterial(session, new[] { Ref1 }, "Bark", Oak);
+            var original = session.World.Records.Get<PlacedObjectRecord>(Ref1);
+
+            var copies = ObjectEdits.Duplicate(session, new[] { Ref1, Tree, Ref1 }, "Duplicate");
+
+            Assert.That(copies, Has.Count.EqualTo(1), "The base object isn't placed, and an id twice is copied once.");
+            var copy = session.World.Records.Get<PlacedObjectRecord>(copies[0].Id);
+            Assert.That(copy.Id, Is.Not.EqualTo(Ref1));
+            Assert.That(copy.BaseId, Is.EqualTo(original.BaseId));
+            Assert.That(copy.Space, Is.EqualTo(original.Space));
+            Assert.That(copy.HasSameTransform(original), Is.True);
+            Assert.That(copy.MaterialIn("Bark"), Is.EqualTo(Oak));
+            Assert.That(session.UndoDescription, Does.StartWith("Duplicate"));
+
+            session.Undo();
+            Assert.That(session.World.Records.Contains(copy.Id), Is.False);
+            Assert.That(session.World.Records.Contains(Ref1), Is.True);
+        }
+
+        [Test]
+        public void Duplicate_NothingPlaced_RecordsNothing()
+        {
+            var session = NewSession();
+
+            Assert.That(ObjectEdits.Duplicate(session, new[] { Tree }, "Duplicate"), Is.Empty);
+            Assert.That(session.CanUndo, Is.False);
+        }
+
+        [Test]
         public void Pivot_IsAveragePosition()
         {
             var session = NewSession();

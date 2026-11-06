@@ -47,6 +47,43 @@ namespace Forge.Editing
             return records;
         }
 
+        /// <summary>
+        /// Copies every placed object in <paramref name="ids"/> where it stands: same kind, space, transform and materials,
+        /// a new id each, as one undo step described with <paramref name="description"/>. Ids that aren't placed objects
+        /// are skipped. Returns the copies, in the order of <paramref name="ids"/>.
+        /// </summary>
+        public static IReadOnlyList<PlacedObjectRecord> Duplicate(EditSession session, IEnumerable<RecordId> ids, string description)
+        {
+            if (session == null)
+                throw new ArgumentNullException(nameof(session));
+            if (ids == null)
+                throw new ArgumentNullException(nameof(ids));
+            if (string.IsNullOrWhiteSpace(description))
+                throw new ArgumentException("A description is required for the undo step.", nameof(description));
+
+            var originals = new List<PlacedObjectRecord>();
+            foreach (var id in ids.Distinct())
+            {
+                if (session.World.Records.TryGet(id, out var record) && record is PlacedObjectRecord placed)
+                    originals.Add(placed);
+            }
+
+            if (originals.Count == 0)
+                return Array.Empty<PlacedObjectRecord>();
+
+            // All ids up front: each id stays free until its record is put.
+            var newIds = session.NewIds(PlacedIdPrefix, originals.Count);
+            var copies = originals
+                .Select((p, i) => new PlacedObjectRecord(newIds[i], p.BaseId, p.Space, p.Position, p.Rotation, p.Scale, p.Materials))
+                .ToList();
+            session.Batch(description, () =>
+            {
+                foreach (var copy in copies)
+                    session.Put(copy);
+            });
+            return copies;
+        }
+
         /// <summary>Moves every placed object in <paramref name="ids"/> by <paramref name="delta"/>. Returns how many moved.</summary>
         public static int Move(EditSession session, IEnumerable<RecordId> ids, Vector3 delta)
         {

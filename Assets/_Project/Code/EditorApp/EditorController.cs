@@ -15,6 +15,7 @@ namespace Forge.EditorApp
     /// <summary>
     /// Builds the editing services the tools share (picking, shapes, seating, commands, the agent) and routes
     /// input: global shortcuts (each tool's key from <see cref="ToolCatalog"/>, Space held for the hand, Ctrl+S save, Ctrl+A select all,
+    /// Ctrl+Shift+A deselect, Ctrl+D duplicate,
     /// Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z undo/redo, 1-9 palette, [ ] brush size or placement turn, End drop to ground,
     /// F frame selection) are handled here; everything else is passed to the current tool. Pointer clicks over the
     /// UI panel are filtered out, and so are shortcuts while a UI text field has the keyboard. While the agent's
@@ -166,8 +167,12 @@ namespace Forge.EditorApp
             {
                 if (keyboard.sKey.wasPressedThisFrame)
                     _context.Save();
+                else if (keyboard.aKey.wasPressedThisFrame && keyboard.shiftKey.isPressed)
+                    Commands.DeselectAll();
                 else if (keyboard.aKey.wasPressedThisFrame)
                     Commands.SelectAll();
+                else if (keyboard.dKey.wasPressedThisFrame)
+                    Commands.DuplicateSelection();
                 else if (keyboard.zKey.wasPressedThisFrame && !keyboard.shiftKey.isPressed)
                     _context.Undo();
                 else if (keyboard.yKey.wasPressedThisFrame || (keyboard.zKey.wasPressedThisFrame && keyboard.shiftKey.isPressed))
