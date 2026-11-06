@@ -556,6 +556,26 @@ namespace Forge.Tests.Agent
         }
 
         [Test]
+        public void WhatAToolSaw_ShowsOnItsLine()
+        {
+            using (var rig = new Rig(async (turn, report, cancellation, tools) =>
+                   {
+                       await tools.CallAsync("snapshot", new JObject());
+                       report(AgentEvent.Said("Looks right."));
+                       report(AgentEvent.Done());
+                   }))
+            {
+                rig.World.Registry.Add(new ToolInvokerTests.Snapshot());
+                rig.Conversation.Send("How does it look?");
+                rig.Settle();
+
+                var line = rig.Conversation.Entries.Single(e => e.Role == ChatRole.Activity);
+                Assert.That(line.Text, Is.EqualTo("Took a picture."));
+                Assert.That(line.Images.Single().Bytes, Is.EqualTo(new byte[] { 9 }));
+            }
+        }
+
+        [Test]
         public void AFailureBeforeAnyWord_IsNotSlept()
         {
             using (var rig = new Rig((turn, report, cancellation, tools) =>

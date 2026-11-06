@@ -647,6 +647,14 @@ slopes), so results are exact and every edit goes through the edit session.
 - **Tools**: `ToolInvoker` turns the command registry into tools: `ToolSchema` builds each JSON schema from
   the `[Param]`s, arguments bind from snake_case JSON (missing or unknown arguments are errors), results go back
   as snake_case JSON. Bad arguments and refusals come back as error results the model reads and corrects.
+  A result that brings pictures back (`IPictureResult`) keeps them out of its JSON; they ride on the `ToolResult`,
+  go to the model as MCP image blocks after the text, and show on the tool's line in the chat.
+- **Look**: the agent's eyes are `look` (`LookCommand`, EditorApp, registered by `AgentHost` beside the building
+  commands, since it needs the engine). With no arguments it pictures the user's view; with `x`, `z` a ground point
+  from `distance` m, facing `heading`, down by `pitch` (90: plan view). `AgentEyes` moves the editor camera for the
+  one render (`AgentPictures.Snapshot`) and puts it back, so the user's view never moves. The build under review is
+  the selection, so it shows highlighted. Only what the streaming has loaded is drawn: views far from the user's camera
+  lack the grass and show the far land's coarse tiles. The instructions ask for a few looks after building, not one per step.
 - **Threading**: the edit session belongs to the main thread. `AgentToolHost` carries every call there through
   a `MainThreadQueue`, which the editor pumps each frame, and takes calls only while a request is open.
 - **MCP**: `McpServer` answers MCP's `initialize`, `ping`, `tools/list` and `tools/call` (JSON-RPC 2.0; unknown

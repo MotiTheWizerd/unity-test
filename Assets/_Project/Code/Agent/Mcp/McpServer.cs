@@ -118,9 +118,20 @@ namespace Forge.Agent.Mcp
 
             var arguments = parameters["arguments"] as JObject ?? new JObject();
             var result = await _tools.CallAsync(name, arguments).ConfigureAwait(false);
+            var content = new JArray(new JObject { ["type"] = "text", ["text"] = result.Content });
+            foreach (var picture in result.Pictures)
+            {
+                content.Add(new JObject
+                {
+                    ["type"] = "image",
+                    ["data"] = Convert.ToBase64String(picture.Bytes),
+                    ["mimeType"] = picture.MediaType,
+                });
+            }
+
             return Result(id, new JObject
             {
-                ["content"] = new JArray(new JObject { ["type"] = "text", ["text"] = result.Content }),
+                ["content"] = content,
                 ["isError"] = result.IsError,
             });
         }

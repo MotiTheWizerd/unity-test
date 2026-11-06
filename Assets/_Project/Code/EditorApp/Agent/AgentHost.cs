@@ -33,7 +33,8 @@ namespace Forge.EditorApp.Agent
         EditDraft _shownDraft;
         int _shownRevision;
 
-        public AgentHost(EditorContext context, ObjectSeating seating, AssetSlots slots, EditorBriefing briefing, AgentSettings settings)
+        /// <param name="eyes">The view the agent's look command pictures.</param>
+        public AgentHost(EditorContext context, ObjectSeating seating, AssetSlots slots, EditorBriefing briefing, AgentEyes eyes, AgentSettings settings)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             if (seating == null)
@@ -42,11 +43,14 @@ namespace Forge.EditorApp.Agent
                 throw new ArgumentNullException(nameof(slots));
             if (briefing == null)
                 throw new ArgumentNullException(nameof(briefing));
+            if (eyes == null)
+                throw new ArgumentNullException(nameof(eyes));
             if (settings == null)
                 throw new ArgumentNullException(nameof(settings));
 
             var commands = new CommandRegistry();
             BuildingCommands.AddTo(commands, new BuildContext(context.Session, () => context.ActiveSpace, seating, context.PlacementOptions, slots.SlotsOf));
+            commands.Add(new LookCommand(eyes));
             var tools = new AgentToolHost(new ToolInvoker(commands), _mainThread);
             var claudeCode = settings.ClaudeCode(Path.Combine(Application.persistentDataPath, WorkingFolder));
             var backend = new ClaudeCodeBackend(claudeCode, tools);

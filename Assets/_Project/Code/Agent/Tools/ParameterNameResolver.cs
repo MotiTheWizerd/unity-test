@@ -7,7 +7,8 @@ namespace Forge.Agent.Tools
 {
     /// <summary>
     /// Reads and writes command arguments and results under the names commands give them (snake_case, see
-    /// <see cref="CommandParameters.NameOf"/>), and makes every argument that isn't optional required.
+    /// <see cref="CommandParameters.NameOf"/>), makes every argument that isn't optional required, and leaves a
+    /// result's pictures out (<see cref="IPictureResult"/>).
     /// </summary>
     sealed class ParameterNameResolver : DefaultContractResolver
     {
@@ -16,6 +17,9 @@ namespace Forge.Agent.Tools
         protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
         {
             var property = base.CreateProperty(member, memberSerialization);
+            // A result's pictures go to the model as pictures, not as base64 inside its JSON.
+            if (member.Name == nameof(IPictureResult.Pictures) && typeof(IPictureResult).IsAssignableFrom(member.DeclaringType))
+                property.Ignored = true;
             var info = member.GetCustomAttribute<ParamAttribute>();
             if (info != null && !info.Optional)
                 property.Required = Required.Always;

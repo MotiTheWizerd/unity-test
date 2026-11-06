@@ -92,7 +92,8 @@ namespace Forge.EditorApp
             _markView = new MarkView(new TerrainSurface(picker), root);
 
             if (agent != null)
-                Agent = new AgentHost(context, seating, slots, new EditorBriefing(context, () => GroundInView(picker)), agent);
+                Agent = new AgentHost(context, seating, slots, new EditorBriefing(context, () => GroundInView(picker)),
+                    new AgentEyes(_camera, frame, picker.TerrainHeightAt), agent);
             if (player != null)
                 PlayFromHere = new PlayFromHere(context, picker, frame, _camera, _flyCamera, player);
             else

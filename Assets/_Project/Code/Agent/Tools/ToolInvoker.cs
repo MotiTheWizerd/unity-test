@@ -64,7 +64,7 @@ namespace Forge.Agent.Tools
             }
 
             var content = JToken.FromObject(result, _serializer).ToString(Formatting.None);
-            return ToolResult.Success(content, result.Summary);
+            return ToolResult.Success(content, result.Summary, (result as IPictureResult)?.Pictures);
         }
     }
 }

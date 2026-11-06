@@ -25,7 +25,23 @@ namespace Forge.Tests.Agent
             };
 
             public Task<ToolResult> CallAsync(string name, JObject arguments) =>
-                Task.FromResult(ToolResult.Success(arguments.ToString(Formatting.None), "echoed"));
+                Task.FromResult(ToolResult.Success(arguments.ToString(Formatting.None), "echoed", Pictures));
+
+            public IReadOnlyList<Forge.Agent.AgentImage> Pictures { get; set; }
+        }
+
+        [Test]
+        public void ToolsCall_APictureFollowsTheTextAsAnImageBlock()
+        {
+            var tools = new EchoTools { Pictures = new[] { new Forge.Agent.AgentImage("image/jpeg", new byte[] { 1, 2, 3 }) } };
+            var answer = JObject.Parse(new McpServer(tools, "forge", "0.1.0")
+                .HandleAsync("{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"echo\",\"arguments\":{}}}")
+                .GetAwaiter().GetResult());
+
+            var content = (JArray)answer["result"]["content"];
+            Assert.That(content.Select(c => (string)c["type"]), Is.EqualTo(new[] { "text", "image" }));
+            Assert.That((string)content[1]["data"], Is.EqualTo("AQID"));
+            Assert.That((string)content[1]["mimeType"], Is.EqualTo("image/jpeg"));
         }
 
         static McpServer NewServer() => new McpServer(new EchoTools(), "forge", "0.1.0");

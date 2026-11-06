@@ -328,7 +328,10 @@ namespace Forge.Agent
             if (_disposed)
                 return;
             _notes?.Used(call);
-            Add(ChatRole.Activity, call.Result.IsError ? $"{call.Tool} refused: {call.Result.Summary}" : call.Result.Summary);
+            // What the agent looked at shows on its line, so the user sees what it saw.
+            _entries.Add(new ChatEntry(ChatRole.Activity, call.Result.IsError ? $"{call.Tool} refused: {call.Result.Summary}" : call.Result.Summary,
+                call.Result.Pictures));
+            Changed();
         }
 
         void OnTurnEnded(Task turn)

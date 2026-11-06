@@ -50,6 +50,43 @@ namespace Forge.Tests.Agent
             Assert.That(result.Summary, Is.EqualTo((string)answer["summary"]));
         }
 
+        /// <summary>A command that brings a picture back, as the editor's look does.</summary>
+        internal sealed class Snapshot : Forge.Editing.Commands.EditorCommand<Snapshot.Arguments, Snapshot.Result>
+        {
+            public Snapshot() : base("snapshot", "Takes a picture.")
+            {
+            }
+
+            public sealed class Arguments
+            {
+            }
+
+            public sealed class Result : IPictureResult
+            {
+                public string Summary => "Took a picture.";
+
+                public int Width => 2;
+
+                public IReadOnlyList<AgentImage> Pictures { get; } = new[] { new AgentImage("image/png", new byte[] { 9 }) };
+            }
+
+            protected override Result Run(Arguments arguments) => new Result();
+        }
+
+        [Test]
+        public void Invoke_APictureResult_BringsItsPictures_OutsideTheJson()
+        {
+            var registry = new Forge.Editing.Commands.CommandRegistry();
+            registry.Add(new Snapshot());
+
+            var result = new ToolInvoker(registry).Invoke("snapshot", new JObject());
+
+            Assert.That(result.IsError, Is.False, result.Content);
+            Assert.That(result.Pictures.Single().Bytes, Is.EqualTo(new byte[] { 9 }));
+            var answer = JObject.Parse(result.Content);
+            Assert.That(answer.Properties().Select(p => p.Name), Is.EquivalentTo(new[] { "summary", "width" }));
+        }
+
         [Test]
         public void Invoke_AMissingArgument_IsAnErrorTheModelCanRead()
         {
