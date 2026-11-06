@@ -46,3 +46,7 @@ Assets/_Project/Content/Characters/**/*.fbx -filter -diff -merge binary
 Assets/_Project/Content/Characters/**/*.jpg -filter -diff -merge binary
 Assets/_Project/Content/Characters/**/*.png -filter -diff -merge binary
 Assets/_Project/Content/Animations/**/*.fbx -filter -diff -merge binary
+
+# Models (static meshes and their textures) likewise: plain git objects, not LFS.
+Assets/_Project/Content/Models/**/*.fbx -filter -diff -merge binary
+Assets/_Project/Content/Models/**/*.png -filter -diff -merge binary

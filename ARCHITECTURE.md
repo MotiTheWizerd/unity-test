@@ -37,7 +37,8 @@ Assets/_Project/
   UI/            EditorPanel.uxml/.uss (runtime editor UI), ForgeRuntimeTheme.tss, ForgePanelSettings
   Content/       PrefabCatalog.asset (asset key → prefab), GroundLayerCatalog.asset (asset key → terrain layer);
                  Placeholder/ holds generated placeholder prefabs + materials; Ground/ the ground textures (CC0);
-                 Characters/ one folder per rigged character (model, texture, built material and prefab)
+                 Characters/ one folder per rigged character (model, texture, built material and prefab);
+                 Models/ one folder per static model (the real art: model, textures, built material and prefab)
   Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview), Water.shader (sea and lakes), Sky.shader (the skybox)
   Materials/     GizmoOverlay.mat, PlacementGhost.mat, Water.mat, Sky.mat, InteriorFloor.mat (runtime code copies
                  materials assets reference, never Shader.Find, so builds include the shaders)
@@ -865,6 +866,20 @@ slopes), so results are exact and every edit goes through the edit session.
   records. Regenerating keeps asset GUIDs and each prefab's root id (so references survive) but rewrites the
   ids of the parts inside a prefab, so it shows a diff. `PrefabCatalogTests` fails if a shipped base object
   has no prefab or the catalog lists unused keys.
+- **Models** (`Content/Models/<Name>/`, the real art; credited in its `CREDITS.md`, plain git like the characters):
+  `<Name>.fbx` in meters, and in the art repo's naming, each optional, `<Name>_BaseColor.png`,
+  `<Name>_MetallicSmoothness.png` (metal in R, smoothness in A) and `<Name>_Normal.png` (OpenGL). `ModelImport` (an
+  `AssetPostprocessor`) imports every model there with no materials, cameras, lights or animation; meshes named
+  `…_LOD0/1/2` are its levels of detail (Unity groups them; `ModelImport.LodHeight` gives full detail down to 15% of the
+  screen's height and culls below 1%, the levels between stepping down evenly) and meshes named `…_COL` become convex
+  colliders that are never drawn. *Forge → Models → Build Models* (`ModelBuilder`) makes each folder's URP Lit
+  material (2048 px textures) and prefab: the model as it rests in the world, turned as its optional `<Name>.json` says
+  (`{ "rest": [90, 0, 0] }`: the sword, modelled point up as a hand holds it, lies flat with its point to the front),
+  its lowest point on the pivot and its footprint centred on it (the asset contract, whatever the file's pivot), the
+  model inside keeping its own pivot (the sword's grip) for whatever holds it later. It lists the prefab in the prefab
+  catalog under `models/<name in snake case>` (`ModelImport.KeyFor`); `CoreModels` is forge.core's records for them.
+  The first is the **Viking Sword** (from `blender-tests`, an item: weapon, 9, worth 75). `ModelContentTests` fails if
+  a model isn't built or breaks the contract (resting on its pivot, centred, colliding only through undrawn convex hulls).
 - `EditorContext.Palette` is an engine-free `ObjectPalette` (`Forge.Editing.Palette`), cached per
   world version. UI and shortcuts read it every frame, and scanning 25k records per frame would cost
   real time. Order: category (uncategorized last), then display name, then id; `Groups` holds the

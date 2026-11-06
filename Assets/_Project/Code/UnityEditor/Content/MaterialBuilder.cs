@@ -100,7 +100,7 @@ namespace Forge.UnityEditor.Content
             return material;
         }
 
-        static void SetKeyword(Material material, string keyword, bool on)
+        public static void SetKeyword(Material material, string keyword, bool on)
         {
             if (on)
                 material.EnableKeyword(keyword);

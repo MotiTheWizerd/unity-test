@@ -167,7 +167,8 @@ namespace Forge.UnityEditor.Content
             }
         }
 
-        static PrefabCatalog LoadOrCreateCatalog()
+        /// <summary>The project's prefab catalog, made at <see cref="CatalogPath"/> if there is none yet.</summary>
+        public static PrefabCatalog LoadOrCreateCatalog()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<PrefabCatalog>(CatalogPath);
             if (catalog != null)

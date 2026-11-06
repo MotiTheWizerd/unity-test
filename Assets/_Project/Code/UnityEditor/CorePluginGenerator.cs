@@ -46,6 +46,7 @@ namespace Forge.UnityEditor
                 BaseObject("totem", "Totem", "primitive/capsule", "Props/Decor"),
             };
             records.AddRange(PlaceholderContent.All.Select(c => BaseObject(c.Name, c.DisplayName, c.AssetKey, c.Category, c.Placement, c.Item)));
+            records.AddRange(CoreModels.All(PluginId));
 
             records.AddRange(CoreClimates.All(PluginId));
             records.AddRange(CoreGroundLayers.All(PluginId));

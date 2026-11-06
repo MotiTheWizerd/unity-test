@@ -29,6 +29,8 @@ MonoBehaviour:
     _asset: {fileID: 8910920425072526150, guid: 5f17434e69fa7be459f9c9056586e57a, type: 3}
   - _key: items/potion_healing
     _asset: {fileID: 6686484224693062410, guid: 82879ba5aef89ba499e8469c0d3689db, type: 3}
+  - _key: models/viking_sword
+    _asset: {fileID: 7334485041194033550, guid: f9cc20fa2cb4dac47b66c046438096e1, type: 3}
   - _key: nature/bush
     _asset: {fileID: 6383628795285860037, guid: 5db7512fba635b240b40c81b24ec6ecb, type: 3}
   - _key: nature/rock_cluster

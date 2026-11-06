@@ -692,6 +692,24 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:viking_sword",
+      "displayName": "Viking Sword",
+      "assetKey": "models/viking_sword",
+      "category": "Items/Weapons",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      },
+      "item": {
+        "kind": "weapon",
+        "weight": 9.0,
+        "value": 75
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:wall_interior",
       "displayName": "Interior Wall",
       "assetKey": "architecture/wall_interior",
