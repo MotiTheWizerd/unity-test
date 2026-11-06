@@ -5,8 +5,8 @@ namespace Forge.Data.Sky
     /// <summary>
     /// The world's time: the day number and the hour, running at <see cref="Scale"/> game seconds per real second
     /// (Skyrim's 20: a day lasts 72 real minutes) while <see cref="Running"/>. The one source of time for the sky
-    /// and, later, for shops, window lights and NPC schedules. In the editor it is a view setting, never saved; the
-    /// game will save it with the player's progress.
+    /// and, later, for shops, window lights and NPC schedules. In the editor it is a view setting, kept with the
+    /// editor's state, never in a plugin; the game will save it with the player's progress.
     /// </summary>
     public sealed class WorldClock
     {

@@ -14,6 +14,7 @@ using Forge.EditorApp.Diagnostics;
 using Forge.EditorApp.Tools;
 using Forge.EditorApp.UI;
 using Forge.Editing;
+using Forge.Editing.State;
 using Forge.Streaming;
 using Forge.World;
 using Forge.World.Assets;
@@ -104,6 +105,7 @@ namespace Forge.EditorApp
         [NonSerialized] SkyView _skyView;
         [NonSerialized] SkyDirector _skyDirector;
         [NonSerialized] SpaceCameras _spaceCameras;
+        [NonSerialized] EditorStateKeeper _state;
         [NonSerialized] ThumbnailRenderer _thumbnails;
         [NonSerialized] GrassView _grass;
         [NonSerialized] EditorGrassSource _grassSource;
@@ -153,9 +155,18 @@ namespace Forge.EditorApp
                     _skyDirector.Tick(0f);
                 }
                 _spaceCameras = new SpaceCameras();
+                // Where the user left off: the space on show, the camera in each space, the editor's settings.
+                _state = new EditorStateKeeper(Application.persistentDataPath, _profile.ActivePluginId, CaptureState);
+                RestoreCameras(_state.World);
+                _context.Restore(_state.Prefs, _state.World);
                 _context.SpaceChanged += OnSpaceChanged;
-                if (!RecordId.TryParse(_profile.StartSpace, out var startSpace) || !_context.ShowSpace(startSpace))
+                if (!RecordId.TryParse(_profile.StartSpace, out var startSpace) || !(_context.Session.World.Records.TryGet(startSpace, out var start) && start is SpaceRecord))
                     throw new DataValidationException(new[] { $"World '{_profile.name}' has no start space '{_profile.StartSpace}'." });
+                var firstSpace = KeptSpace(_state.World) ?? startSpace;
+                // The first space opens where the camera last was in it; the scene's own view the first time.
+                if (_spaceCameras.TryRecall(firstSpace, out var firstPose))
+                    PlaceCamera(firstPose);
+                _context.ShowSpace(firstSpace);
                 var viewMs = Lap(clock);
 
                 _frames = new FrameTimeTracker();
@@ -172,6 +183,7 @@ namespace Forge.EditorApp
                 _thumbnails = new ThumbnailRenderer(assets, null);
                 _controller.Initialize(_context, _frame, _view, _waterView, _panel, assets, _agent);
                 _panel.Initialize(_context, _controller.Commands, diagnostics, _thumbnails, ground, materials, _controller.Agent?.Conversation);
+                _panel.Restore(_state.Prefs, _state.World);
             }
             catch (Exception ex) when (ex is DataValidationException || ex is IOException)
             {
@@ -198,6 +210,7 @@ namespace Forge.EditorApp
             _grass?.Tick(focus, _frameBudgetMs);
             _grass?.Draw(_focus.position);
             _highlighter.Draw();
+            _state.Tick(Time.unscaledDeltaTime);
         }
 
         // The part a material carried from the assets browser would dress if dropped now.
@@ -228,6 +241,10 @@ namespace Forge.EditorApp
 
         void OnDestroy()
         {
+            // Before anything is torn down: the capture reads the context, the camera and the panel.
+            if (_streamer != null)
+                _state?.Save();
+
             if (_context != null)
             {
                 _context.Session.WorldChanged -= OnWorldChanged;
@@ -253,15 +270,8 @@ namespace Forge.EditorApp
             var record = _context.ActiveSpaceRecord;
             if (!_shownSpace.IsDefault)
             {
-                _spaceCameras.Remember(_shownSpace, new Pose(_frame.ToWorld(_focus.position), _focus.rotation));
-                var pose = _spaceCameras.Recall(record);
-                // Rebased first, so a far-off view lands near the scene's origin, not far from it.
-                _frame.Follow(pose.position);
-                var position = _frame.ToScene(pose.position);
-                if (_focus.TryGetComponent<FlyCamera>(out var flyCamera))
-                    flyCamera.Teleport(position, pose.rotation);
-                else
-                    _focus.SetPositionAndRotation(position, pose.rotation);
+                _spaceCameras.Remember(_shownSpace, CameraPose());
+                PlaceCamera(_spaceCameras.Recall(record));
             }
 
             _shownSpace = space;
@@ -271,6 +281,50 @@ namespace Forge.EditorApp
             if (_grass != null)
                 _grass.Show(_grassSource);
             _highlighter?.Refresh();
+        }
+
+        // The camera's pose, its position in world coordinates.
+        Pose CameraPose() => new Pose(_frame.ToWorld(_focus.position), _focus.rotation);
+
+        // Puts the camera at a pose in world coordinates. Rebased first, so a far-off view lands near the scene's
+        // origin, not far from it.
+        void PlaceCamera(Pose pose)
+        {
+            _frame.Follow(pose.position);
+            var position = _frame.ToScene(pose.position);
+            if (_focus.TryGetComponent<FlyCamera>(out var flyCamera))
+                flyCamera.Teleport(position, pose.rotation);
+            else
+                _focus.SetPositionAndRotation(position, pose.rotation);
+        }
+
+        // The space the user left off in, if it is still a space of this world.
+        RecordId? KeptSpace(WorldViewState world) =>
+            RecordId.TryParse(world.Space, out var space) && _context.Session.World.Records.TryGet(space, out var record) && record is SpaceRecord
+                ? space
+                : (RecordId?)null;
+
+        void RestoreCameras(WorldViewState world)
+        {
+            if (world.Cameras == null)
+                return;
+            foreach (var pair in world.Cameras)
+            {
+                if (pair.Value != null && pair.Value.IsValid && RecordId.TryParse(pair.Key, out var space))
+                    _spaceCameras.Remember(space, new Pose(pair.Value.Position.ToUnity(), pair.Value.Rotation.ToUnity()));
+            }
+        }
+
+        // What the editor keeps between sessions; the context and the panel write their own parts.
+        void CaptureState(EditorPrefs prefs, WorldViewState world)
+        {
+            _spaceCameras.Remember(_context.ActiveSpace, CameraPose());
+            world.Space = _context.ActiveSpace.ToString();
+            world.Cameras = world.Cameras ?? new Dictionary<string, SavedPose>();
+            foreach (var pair in _spaceCameras.Poses)
+                world.Cameras[pair.Key.ToString()] = SavedPose.Of(pair.Value.position.ToNumerics(), pair.Value.rotation.ToNumerics());
+            _context.Capture(prefs, world);
+            _panel.Capture(prefs, world);
         }
 
         // Order matters: rebuild the scene, drop selections of vanished records, then re-tint.

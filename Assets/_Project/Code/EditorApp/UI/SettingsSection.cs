@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Forge.EditorApp.UI.Controls;
+using Forge.Editing.State;
 using UnityEngine.UIElements;
 
 namespace Forge.EditorApp.UI
@@ -10,7 +11,7 @@ namespace Forge.EditorApp.UI
     /// the sections that used to live in the left dock, each still run by its own presenter. The top bar's new-space
     /// button opens the card on the Space page when it shows the new-space form there.
     /// </summary>
-    public sealed class SettingsSection : IPanelSection
+    public sealed class SettingsSection : IPanelSection, IKeptSection
     {
         public const string Space = "space";
         public const string Time = "time";
@@ -74,6 +75,16 @@ namespace Forge.EditorApp.UI
 
         public void Refresh()
         {
+        }
+
+        public void Capture(EditorPrefs prefs, WorldViewState world) => prefs.SettingsTab = _tabs.Current;
+
+        public void Restore(EditorPrefs prefs, WorldViewState world)
+        {
+            if (prefs.SettingsTab == null || !_pages.ContainsKey(prefs.SettingsTab))
+                return;
+            _tabs.Select(prefs.SettingsTab);
+            ShowPage(prefs.SettingsTab);
         }
     }
 }

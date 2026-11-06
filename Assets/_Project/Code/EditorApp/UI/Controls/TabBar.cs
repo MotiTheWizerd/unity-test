@@ -53,6 +53,9 @@ namespace Forge.EditorApp.UI.Controls
             Highlight();
         }
 
+        /// <summary>Whether there is a tab <paramref name="key"/>.</summary>
+        public bool Contains(string key) => key != null && _tabs.ContainsKey(key);
+
         /// <summary>Makes <paramref name="key"/> current without raising <see cref="Picked"/>.</summary>
         public void Select(string key)
         {

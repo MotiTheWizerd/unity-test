@@ -13,6 +13,7 @@ using Forge.Editing;
 using Forge.Editing.Geometry;
 using Forge.Editing.Palette;
 using Forge.Editing.Placement;
+using Forge.Editing.State;
 using Forge.Editing.Terrain;
 
 namespace Forge.EditorApp
@@ -148,7 +149,7 @@ namespace Forge.EditorApp
         /// <summary>The spot or area the user marked for the agent (M), or null. Editor state: never saved or undone.</summary>
         public GroundMark Mark { get; set; }
 
-        /// <summary>The time of day the editor shows (the sky follows it). Editor state: never saved or undone.</summary>
+        /// <summary>The time of day the editor shows (the sky follows it). Editor state: kept between sessions, never in a plugin or undone.</summary>
         public WorldClock Clock { get; } = new WorldClock(10f);
 
         /// <summary>
@@ -499,6 +500,69 @@ namespace Forge.EditorApp
             Session.MarkSaved();
             Report($"Saved {Session.ActivePluginId} to {ActivePluginPath}");
             return true;
+        }
+
+        /// <summary>Writes the settings this context holds into the kept state (<see cref="EditorStateKeeper"/>).</summary>
+        public void Capture(EditorPrefs prefs, WorldViewState world)
+        {
+            prefs.FlySpeed = FlySpeed.Multiplier;
+            prefs.FlySpeedByHeight = FlySpeed.FollowsHeight;
+            prefs.BrushRadius = BrushRadius;
+            prefs.BrushStrength = BrushStrength;
+            prefs.BrushMode = BrushMode.ToString();
+            prefs.ObjectsFollowTerrain = ObjectsFollowTerrain;
+            prefs.RandomizePlacement = RandomizePlacement;
+            prefs.AlignToSlope = AlignPlacementToSlope;
+            prefs.WholePieces = RectangleSnapToPieces;
+
+            world.Tool = ActiveTool.ToString();
+            world.Placing = SelectedBaseObject != null ? SelectedBaseId.ToString() : null;
+            world.Clock = SavedClock.Of(Clock);
+            world.Gaps = world.Gaps ?? new Dictionary<string, SavedGap>();
+            foreach (var pair in PlacementOptions.Gaps)
+                world.Gaps[pair.Key.ToString()] = SavedGap.Of(pair.Value);
+        }
+
+        /// <summary>
+        /// Takes back the settings kept from an earlier session. Values never kept keep their defaults, and ones that no
+        /// longer fit (an object or a tool that is gone) are skipped.
+        /// </summary>
+        public void Restore(EditorPrefs prefs, WorldViewState world)
+        {
+            if (prefs.FlySpeed is float speed && speed > 0f && !float.IsInfinity(speed))
+                FlySpeed.Set(speed);
+            if (prefs.FlySpeedByHeight is bool byHeight)
+                FlySpeed.FollowsHeight = byHeight;
+            if (prefs.BrushRadius is float radius && !float.IsNaN(radius))
+                BrushRadius = radius;
+            if (prefs.BrushStrength is float strength && !float.IsNaN(strength))
+                BrushStrength = strength;
+            if (Enum.TryParse(prefs.BrushMode, out BrushMode mode) && Enum.IsDefined(typeof(BrushMode), mode))
+                BrushMode = mode;
+            if (prefs.ObjectsFollowTerrain is bool follow)
+                ObjectsFollowTerrain = follow;
+            if (prefs.RandomizePlacement is bool randomize)
+                PlacementOptions.Randomize = randomize;
+            if (prefs.AlignToSlope is bool align)
+                AlignPlacementToSlope = align;
+            if (prefs.WholePieces is bool wholePieces)
+                RectangleSnapToPieces = wholePieces;
+
+            world.Clock?.ApplyTo(Clock);
+            if (world.Gaps != null)
+            {
+                foreach (var pair in world.Gaps)
+                {
+                    if (pair.Value != null && RecordId.TryParse(pair.Key, out var baseId))
+                        PlacementOptions.SetGap(baseId, pair.Value.ToRowGap());
+                }
+            }
+
+            if (RecordId.TryParse(world.Placing, out var placing) && Session.World.Records.TryGet(placing, out var record) && record is BaseObjectRecord)
+                SelectedBaseId = placing;
+            RerollPlacement();
+            if (Enum.TryParse(world.Tool, out ToolKind tool) && Enum.IsDefined(typeof(ToolKind), tool))
+                SelectTool(tool);
         }
 
         public string DisplayNameOf(RecordId id) =>

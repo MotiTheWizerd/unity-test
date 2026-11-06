@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Forge.Agent;
 using Forge.EditorApp.Diagnostics;
 using Forge.EditorApp.UI.Controls;
+using Forge.Editing.State;
 using Forge.World;
 using Forge.World.Assets;
 using UnityEngine;
@@ -78,6 +80,22 @@ namespace Forge.EditorApp.UI
             }
             Refresh();
         }
+
+        /// <summary>Writes the layout of every section kept between sessions (<see cref="IKeptSection"/>).</summary>
+        public void Capture(EditorPrefs prefs, WorldViewState world)
+        {
+            foreach (var section in KeptSections)
+                section.Capture(prefs, world);
+        }
+
+        /// <summary>Takes back the layout kept from an earlier session; call after <see cref="Initialize"/>.</summary>
+        public void Restore(EditorPrefs prefs, WorldViewState world)
+        {
+            foreach (var section in KeptSections)
+                section.Restore(prefs, world);
+        }
+
+        IEnumerable<IKeptSection> KeptSections => _sections?.OfType<IKeptSection>() ?? Enumerable.Empty<IKeptSection>();
 
         // UI Toolkit turns arrow keys / WASD into navigation that walks focus between buttons, and
         // Space / Enter into "submit" on the focused one. Here those keys fly the camera and drive

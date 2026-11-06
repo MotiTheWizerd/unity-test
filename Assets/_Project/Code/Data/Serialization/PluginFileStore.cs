@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 
@@ -22,8 +21,6 @@ namespace Forge.Data.Serialization
     /// </remarks>
     public sealed class PluginFileStore
     {
-        static readonly Encoding Utf8NoBom = new UTF8Encoding(false);
-
         readonly IPluginSerializer _serializer;
         readonly TerrainCache _terrain;
         readonly ObjectCache _objects;
@@ -75,19 +72,7 @@ namespace Forge.Data.Serialization
             var terrain = SaveTerrain(plugin);
             var objects = SaveObjects(plugin);
 
-            var path = PathFor(plugin.Id);
-            var temp = path + ".tmp";
-            using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
-            {
-                using (var writer = new StreamWriter(stream, Utf8NoBom, 4096, leaveOpen: true))
-                    _serializer.Write(plugin, writer, terrain, objects);
-                stream.Flush(flushToDisk: true);
-            }
-
-            if (File.Exists(path))
-                File.Replace(temp, path, null);
-            else
-                File.Move(temp, path);
+            AtomicFile.WriteText(PathFor(plugin.Id), writer => _serializer.Write(plugin, writer, terrain, objects));
 
             RemoveOldSideFiles(plugin.Id, TerrainFile.Extension, terrain?.FileName, _loadedTerrain);
             RemoveOldSideFiles(plugin.Id, ObjectsFile.Extension, objects?.FileName, _loadedObjects);
@@ -192,7 +177,7 @@ namespace Forge.Data.Serialization
             Plugin plugin;
             try
             {
-                using (var reader = new StreamReader(path, Utf8NoBom))
+                using (var reader = new StreamReader(path, AtomicFile.Utf8NoBom))
                     plugin = _serializer.Read(reader, name => OpenTerrain(terrainName = name), (name, manifest) => OpenObjects(objectsName = name, manifest));
             }
             catch (DataValidationException ex)

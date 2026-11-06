@@ -7,6 +7,7 @@ using Forge.EditorApp.Tools;
 using Forge.EditorApp.UI.Controls;
 using Forge.Editing;
 using Forge.Editing.Palette;
+using Forge.Editing.State;
 using Forge.Editing.Terrain;
 using Forge.World;
 using Forge.World.Assets;
@@ -25,7 +26,7 @@ namespace Forge.EditorApp.UI
     /// tiles can also be dragged into the world (<see cref="TileDrag"/>): a material dresses the part it is dropped on, a
     /// ground paints a spot where it lands.
     /// </summary>
-    public sealed class AssetsBrowser : IPanelSection
+    public sealed class AssetsBrowser : IPanelSection, IKeptSection
     {
         // A category tab's key is a category's first segment, which never holds the separator, so these can't clash.
         static readonly string GroundTab = CategoryPath.Separator + "ground";
@@ -295,6 +296,35 @@ namespace Forge.EditorApp.UI
             else if (_expandedHeight.HasValue)
             {
                 _panel.style.height = _expandedHeight.Value;
+            }
+        }
+
+        public void Capture(EditorPrefs prefs, WorldViewState world)
+        {
+            prefs.AssetsCollapsed = _collapsed;
+            prefs.AssetsHeight = _expandedHeight;
+            world.AssetsTab = _tabs.Current;
+            world.AssetsSearch = _query.Length > 0 ? _query : null;
+        }
+
+        public void Restore(EditorPrefs prefs, WorldViewState world)
+        {
+            if (prefs.AssetsHeight is float height && !float.IsNaN(height))
+            {
+                _expandedHeight = Mathf.Clamp(height, MinHeight, MaxHeight);
+                if (!_collapsed)
+                    _panel.style.height = _expandedHeight.Value;
+            }
+
+            if (prefs.AssetsCollapsed is bool collapsed)
+                SetCollapsed(collapsed);
+            // The tabs exist once the panel has refreshed; a category that is gone leaves the first tab current.
+            if (_tabs.Contains(world.AssetsTab))
+                _tabs.Select(world.AssetsTab);
+            if (!string.IsNullOrEmpty(world.AssetsSearch))
+            {
+                _query = world.AssetsSearch;
+                _search.SetValueWithoutNotify(_query);
             }
         }
 

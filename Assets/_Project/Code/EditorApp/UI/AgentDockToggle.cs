@@ -1,5 +1,6 @@
 using System;
 using Forge.Agent;
+using Forge.Editing.State;
 using Forge.EditorApp.UI.Controls;
 using UnityEngine.UIElements;
 
@@ -11,7 +12,7 @@ namespace Forge.EditorApp.UI
     /// it is open, and the layout root wears <see cref="OpenClass"/> so the top bar and the assets browser leave the
     /// dock its room (EditorPanel.uss, AssetsBrowser.uss).
     /// </summary>
-    public sealed class AgentDockToggle : IPanelSection
+    public sealed class AgentDockToggle : IPanelSection, IKeptSection
     {
         public const string OpenClass = "is-agent-open";
 
@@ -40,5 +41,13 @@ namespace Forge.EditorApp.UI
         }
 
         public void Refresh() => _button.busy = _conversation.State == AgentState.Working;
+
+        public void Capture(EditorPrefs prefs, WorldViewState world) => prefs.AgentDockOpen = IsOpen;
+
+        public void Restore(EditorPrefs prefs, WorldViewState world)
+        {
+            if (prefs.AgentDockOpen is bool open)
+                SetOpen(open);
+        }
     }
 }

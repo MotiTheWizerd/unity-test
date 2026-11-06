@@ -21,10 +21,16 @@ namespace Forge.EditorApp
         /// <param name="pose">The camera's pose, its position in world coordinates.</param>
         public void Remember(RecordId space, Pose pose) => _poses[space] = pose;
 
+        /// <summary>The poses remembered so far, by space (the editor keeps them between sessions).</summary>
+        public IReadOnlyDictionary<RecordId, Pose> Poses => _poses;
+
+        /// <summary>The camera's last pose in <paramref name="space"/>, if it has been there.</summary>
+        public bool TryRecall(RecordId space, out Pose pose) => _poses.TryGetValue(space, out pose);
+
         /// <summary>The camera's last pose in <paramref name="space"/>, or the default view of its middle; the position in world coordinates.</summary>
         public Pose Recall(SpaceRecord space)
         {
-            if (_poses.TryGetValue(space.Id, out var pose))
+            if (TryRecall(space.Id, out var pose))
                 return pose;
 
             var offset = space.Kind == SpaceKind.Interior ? InteriorOffset : WorldspaceOffset + Vector3.up * space.BaseHeight;

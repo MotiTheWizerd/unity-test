@@ -40,6 +40,7 @@ Assets/_Project/
 Assets/StreamingAssets/Plugins/   shipped base plugins (forge.core.json = our "Skyrim.esm", its heights in forge.core.<hash>.terrain)
 Assets/StreamingAssets/StressWorld/  generated stress-test world (git-ignored, Forge/Generate Stress World)
 <persistentDataPath>/Plugins/     user plugins; the active plugin (forge.user) is saved here
+<persistentDataPath>/Editor/      the editor's state between sessions: prefs.json (the user's), Worlds/<edit plugin id>.json (per world)
 Builds/Windows/Forge.exe          the standalone player (git-ignored; Forge → Build and Run (Windows), `PlayerBuilder`):
                                   fullscreen at the screen's resolution, same base and user plugins as Play mode
 ```
@@ -195,8 +196,8 @@ join the same `WaterMap`.
 
 **Time and the sun** (`Forge.Data.Sky`, engine-free, so the game will use the same): `WorldClock` holds the day number
 and the hour, running at `Scale` game seconds per real second (20, as in Skyrim) while `Running`; in the editor it is a
-view setting (`EditorContext.Clock`, the TIME OF DAY slider, Run toggle and Day field, never saved), the game will
-save it.
+view setting (`EditorContext.Clock`, the TIME OF DAY slider, Run toggle and Day field, kept with the editor's state, never
+in a plugin), the game will save it.
 `DayCycle` is the shape of a day (sunrise, sunset, noon height; `DayCycle.Default` = 6:00, 20:00, 60°, every day of
 a worldspace without a climate; `DayCycle.Between` blends two). `SunPath.At(day, hour)` is a stylized arc (`SunPath.Arc`): rising east,
 highest south midway, setting west, then under the horizon through the north, `NightDepth` (40°) down at the middle of
@@ -694,7 +695,7 @@ slopes), so results are exact and every edit goes through the edit session.
     clicked spot (stacking still works); the others rest on the terrain under them. The row previews as ghosts
     and is placed on release as one undo step ("Place 5 Wooden Fence"), using `EditSession.NewIds` so
     the ids are distinct before any is put; Esc drops the row. Gap and random extra (panel sliders, 0–20 m)
-    are remembered per base object for the session: built things start at 0, natural things at 1 m + up to 2 m.
+    are remembered per base object (and kept between sessions): built things start at 0, natural things at 1 m + up to 2 m.
     **Align to slope**: on terrain, objects whose rules ask for it (fences, walls, campfire, bushes, rocks) are tilted by
     the engine-free `GroundFit`: the terrain is sampled at both ends of the footprint along local X and Z (at least
     0.25 m out), the plane through those slopes gives the up direction (capped at 35°), and the pivot sits at their
@@ -867,6 +868,23 @@ slopes), so results are exact and every edit goes through the edit session.
   cursor. `EditorCommands.FrameSelection` fits the selection's combined renderer bounds through
   `ICameraRig.Frame`. The fit distance is the engine-free `ViewMath.FitDistance` (narrower of the vertical
   and horizontal FOV), and the camera glides there with `SmoothDamp`.
+- **Editor state between sessions** (`EditorStateKeeper`): the editor opens where the user left off. Two documents,
+  both engine-free classes in `Forge.Editing.State` with every value optional (null: never set, the default stands; ids
+  and names that no longer fit are skipped): **`EditorPrefs`**, the user's, the same in every world (agent dock open,
+  assets browser collapsed and height, settings tab, fly speed and by height, brush radius, strength and mode, objects
+  follow terrain, random turn & size, align to slope, whole pieces), in `<persistentDataPath>/Editor/prefs.json`; and
+  **`WorldViewState`**, per world (the space on show, the camera's pose per space in world coordinates, the tool, the
+  assets tab and search, the object being placed, the time of day, the row gaps per object), in
+  `Editor/Worlds/<edit plugin id>.json`. Editor state never goes into a plugin: plugins are shared data, this is one
+  user's view of it (the Creation Kit keeps its prefs in an ini, not the .esp). Each file is a `JsonDocumentFile<T>`
+  (`Forge.Data.Json`): camelCase, settable properties only, nulls and unknown fields skipped, written atomically
+  (`AtomicFile`, shared with `PluginFileStore`) and only when its text changed; a missing or unreadable file is the
+  default document, with a warning, so a lost preference never stops the editor from opening. The bootstrap reads both
+  at startup (cameras and space before the first `ShowSpace`, `EditorContext.Restore`, then `EditorPanel.Restore` for
+  every `IKeptSection`: `AgentDockToggle`, `SettingsSection`, `AssetsBrowser`), captures them once a second
+  (`EditorContext.Capture`, `EditorPanel.Capture`, the cameras) and once more on `OnDestroy`. The mark, the selection
+  and the agent's draft are not kept. JSON is enough for a few dozen values; if the editor comes to keep growing things
+  (thumbnail caches, history across sessions), a SQLite store can replace the files behind the same two documents.
 - Runtime-only fields on MonoBehaviours are `[NonSerialized]` (see CLAUDE.md, play-mode reload).
 
 ---
