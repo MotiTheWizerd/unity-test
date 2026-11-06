@@ -558,8 +558,9 @@ from any camera, so both cameras read the same player.
   that says what it touched in a `MotorContact`, `Teleport`). `Tick(PlayerCommands, dt)` turns the look, steps the
   rules and has the body make the move; `PlaceAt(feet, heading)` stands it somewhere at rest. `Eyes` = feet + eye height.
 - `PlayerCommands` are the only input the rules see (move: x right, y forward in [-1, 1]; turn in degrees; sprint
-  held; jump pressed this frame), so a gamepad, a script or a test drives the player alike.
-- `PlayerLocomotion` (`LocomotionSettings`: run 4.5 m/s, the default pace as in Skyrim, sprint 7.5, a 1.1 m jump, gravity
+  held; jump and toggle-walk pressed this frame), so a gamepad, a script or a test drives the player alike.
+- `PlayerLocomotion` (`LocomotionSettings`: run 4.5 m/s, the default pace as in Skyrim, walk 1.8 while
+  walking is toggled on (Caps Lock, as Skyrim's, kept between spawns), sprint 7.5 over either, a 1.1 m jump, gravity
   18 m/s², ground and air acceleration, a 50 m/s fall cap, 0.12 s coyote time): on the ground the pace eases toward the
   wanted one in about a tenth of a second and the body is pressed into the ground (`GroundStickSpeed`) so it stays on
   downhill slopes; in the air gravity pulls and steering is weak; a head against a ceiling stops rising; one jump per
@@ -569,7 +570,7 @@ from any camera, so both cameras read the same player.
   0.3 m radius, 0.4 m steps, 50° slopes), its own scene object on the Ignore Raycast layer, so the editor's picks and the
   camera's probes look through it. It collides with the terrain and the placed objects' colliders.
 - `PlayerControls` (Play) read the profile's action map (`Settings/InputSystem_Actions`, map Player: Move, Look, Sprint,
-  Jump, ToggleView, Zoom; WASD and arrows, mouse, Shift, Space, F, the wheel, and the gamepad) into `PlayerCommands` and
+  Jump, ToggleWalk, ToggleView, Zoom; WASD and arrows, mouse, Shift, Space, Caps Lock, F, the wheel, and the gamepad) into `PlayerCommands` and
   `ViewCommands`; the look is pointer pixels × the profile's sensitivity (0.1° per pixel), and the wheel's binding scales
   its steps (120 a notch) to notches with a Scale processor. No key is named in code.
 - `PlayerProfile` (`Settings/Player/PlayerProfile.asset`) holds the body, the pace and the controls, tuned in the
@@ -609,8 +610,23 @@ from any camera, so both cameras read the same player.
   (a re-exported model updates it) wearing the material, its skeleton put back in the bind pose (a Mixamo download
   stands in its animation's first frame), with an `Animator` on the avatar, no root motion (the body moves it) and
   culled transforms off screen. A new character is a folder dropped in and a rebuild. The models and textures are plain
-  git objects (`.gitattributes`), as the ground's are. Animations come next: Mixamo clips (in place, without skin)
-  driven by the player's speed and footing.
+  git objects (`.gitattributes`), as the ground's are.
+- **Animations** (`Content/Animations/Humanoid/<Move>.fbx`): one Mixamo clip per move (FBX for Unity, 30 fps, without
+  skin, travel left in), named after its move (`HumanoidMoves`: ground moves Idle, Walk, Run, Sprint blended by speed;
+  Jump, Fall, Land in the air). `AnimationImport` imports each as a humanoid clip read against one T-posed Mixamo
+  skeleton (`ReferenceRig`, the hero's today: a skinless file has no rest pose and Unity would take its first frame,
+  mid-stride, for one, turning the legs out), loops the repeating moves, bakes turning into the pose and keeps travel as
+  root motion, which the body ignores but which gives each clip's own speed; a jump's rise is left out of its pose (the
+  body's rise shows it). *Build Characters* first builds the shared `Humanoid.controller` (`HumanoidAnimatorBuilder`)
+  from the moves present: the ground moves blended at their clips' speeds; a jump when the body leaves the ground going
+  up, a fall when it drops past 3 m/s, a landing when it touches down, each optional. A new move is a file dropped in
+  and a rebuild.
+- **How the body moved** (`BodyMotion`, Game): `PlayerCharacter.Motion` each frame, from where the body actually went
+  (ground speed, vertical speed, grounded), so a run into a wall shows standing. `StrideMatch` keeps the feet planted:
+  the speed in the clips' own size (the avatar's `humanScale`) picks the blend, and past the fastest clip it plays
+  faster. `HumanoidAnimation` (Play) is the one thing feeding an `Animator` (Speed damped 0.1 s, Pace, Grounded,
+  VerticalSpeed; TopSpeed is the builder's default); `PlayerAvatar.Animate` drives it, and the player's animator always
+  animates, so its first-person shadow walks too.
 - **Play from here** (`PlayFromHere`, EditorApp, built by the controller when the bootstrap has a `_player` profile):
   when the app starts playing, it spawns the player (`PlayerSession`) on whatever the middle of the view shows (else
   the ground under the camera, else it falls from the camera), facing the camera's heading, and rests the fly camera

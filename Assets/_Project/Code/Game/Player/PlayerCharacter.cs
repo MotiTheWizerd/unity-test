@@ -50,13 +50,19 @@ namespace Forge.Game.Player
         /// <summary>Whether the last move ended standing on something.</summary>
         public bool IsGrounded => _contact.Grounded;
 
+        /// <summary>How the body moved in the last frame, which its look (animations) shows.</summary>
+        public BodyMotion Motion { get; private set; } = BodyMotion.Still;
+
         /// <summary>Plays one frame of <paramref name="deltaTime"/> seconds.</summary>
         public void Tick(PlayerCommands commands, float deltaTime)
         {
             Look.Turn(commands.Turn);
+            var from = Motor.Position;
             var move = Locomotion.Step(commands, Look.Heading, _contact, deltaTime);
             if (move != Vector3.Zero)
                 _contact = Motor.Move(move);
+            if (deltaTime > 0f)
+                Motion = BodyMotion.Between(from, Motor.Position, deltaTime, _contact.Grounded);
             TurnBody(deltaTime);
         }
 
@@ -68,6 +74,7 @@ namespace Forge.Game.Player
             BodyHeading = Look.Heading;
             Locomotion.Stop();
             _contact = default;
+            Motion = BodyMotion.Still;
         }
 
         void TurnBody(float deltaTime)

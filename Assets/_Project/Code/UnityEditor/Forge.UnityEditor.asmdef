@@ -4,7 +4,8 @@
     "references": [
         "Forge.Data",
         "Forge.Data.Json",
-        "Forge.World"
+        "Forge.World",
+        "Forge.Play"
     ],
     "includePlatforms": [
         "Editor"

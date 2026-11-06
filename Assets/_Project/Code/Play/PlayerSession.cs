@@ -96,7 +96,7 @@ namespace Forge.Play
             _controls.Dispose();
         }
 
-        // The camera frames the player as the current view says; the model turns with the body and shows unless the camera is inside it.
+        // The camera frames the player as the current view says; the model turns with the body, shows unless the camera is inside it, and animates as the body moved.
         void Frame(float deltaTime)
         {
             var view = Views.Current;
@@ -107,6 +107,8 @@ namespace Forge.Play
                 return;
             _avatar.Face(Player.BodyHeading);
             _avatar.Show(view.ShowsBody);
+            if (deltaTime > 0f)
+                _avatar.Animate(Player.Motion, deltaTime);
         }
     }
 }

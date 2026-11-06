@@ -114,6 +114,45 @@ namespace Forge.Tests.Game
             Assert.That(GroundSpeed(player), Is.EqualTo(Settings.SprintSpeed).Within(1e-3f));
         }
 
+        static readonly PlayerCommands ToggleWalk = new PlayerCommands(Vector2.Zero, Vector2.Zero, false, false, toggleWalk: true);
+
+        [Test]
+        public void ToggleWalk_WalksAtTheWalkPace_UntilToggledBack()
+        {
+            var player = OnFlatGround();
+
+            player.Tick(ToggleWalk, Frame);
+            Run(player, Walk(0f, 1f), 1f);
+            Assert.That(player.Locomotion.Walking, Is.True);
+            Assert.That(GroundSpeed(player), Is.EqualTo(Settings.WalkSpeed).Within(1e-3f));
+
+            player.Tick(ToggleWalk, Frame);
+            Run(player, Walk(0f, 1f), 1f);
+            Assert.That(GroundSpeed(player), Is.EqualTo(Settings.RunSpeed).Within(1e-3f));
+        }
+
+        [Test]
+        public void Walking_SprintStillOutrunsIt()
+        {
+            var player = OnFlatGround();
+
+            player.Tick(ToggleWalk, Frame);
+            Run(player, Walk(0f, 1f, sprint: true), 1f);
+
+            Assert.That(GroundSpeed(player), Is.EqualTo(Settings.SprintSpeed).Within(1e-3f));
+        }
+
+        [Test]
+        public void Walking_StaysChosen_AfterAStop()
+        {
+            var player = OnFlatGround();
+            player.Tick(ToggleWalk, Frame);
+
+            player.PlaceAt(Vector3.Zero, 0f);
+
+            Assert.That(player.Locomotion.Walking, Is.True);
+        }
+
         [Test]
         public void LettingGo_StopsWithinAMoment()
         {

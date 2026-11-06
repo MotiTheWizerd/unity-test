@@ -27,12 +27,17 @@ namespace Forge.Game.Player
         /// <summary>Meters per second, world axes (y up).</summary>
         public Vector3 Velocity { get; private set; }
 
+        /// <summary>Walking rather than running, until switched back; sprint still outruns both.</summary>
+        public bool Walking { get; private set; }
+
         /// <summary>
         /// The move for one frame of <paramref name="deltaTime"/> seconds, facing <paramref name="heading"/> (compass
         /// degrees), after a move that touched <paramref name="contact"/>.
         /// </summary>
         public Vector3 Step(PlayerCommands commands, float heading, MotorContact contact, float deltaTime)
         {
+            if (commands.ToggleWalk)
+                Walking = !Walking;
             if (!(deltaTime > 0f))
                 return Vector3.Zero;
 
@@ -72,7 +77,7 @@ namespace Forge.Game.Player
             return Velocity * deltaTime;
         }
 
-        /// <summary>Stands still: no speed, no jump in progress (after a teleport, say).</summary>
+        /// <summary>Stands still: no speed, no jump in progress (after a teleport, say). Walking or running stays as chosen.</summary>
         public void Stop()
         {
             Velocity = Vector3.Zero;
@@ -90,7 +95,7 @@ namespace Forge.Game.Player
             if (length > 1f)
                 move /= length;
 
-            var pace = commands.Sprint ? _settings.SprintSpeed : _settings.RunSpeed;
+            var pace = commands.Sprint ? _settings.SprintSpeed : Walking ? _settings.WalkSpeed : _settings.RunSpeed;
             return (Compass.Right(heading) * move.X + Compass.Forward(heading) * move.Y) * pace;
         }
 

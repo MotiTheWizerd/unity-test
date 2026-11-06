@@ -14,7 +14,8 @@ namespace Forge.UnityEditor.Content
     /// <see cref="CharacterImport"/>; feet at the origin, facing +Z, in meters), its colour {Name}_Color.png and, if it has
     /// one, its normal map {Name}_Normal.png. The tool makes a URP Lit material {Name}.mat from them and a prefab
     /// {Name}.prefab, a variant of the model (so a re-exported model updates it), wearing the material, with an Animator on
-    /// the model's humanoid avatar and no root motion (the player's body moves it). Existing assets are updated in place,
+    /// the model's humanoid avatar playing the shared humanoid animations (<see cref="HumanoidAnimatorBuilder"/>, built
+    /// first) and no root motion (the player's body moves it). Existing assets are updated in place,
     /// so their GUIDs, and everything referencing them (the player profile), survive a rebuild.
     /// </summary>
     static class CharacterBuilder
@@ -24,10 +25,11 @@ namespace Forge.UnityEditor.Content
         [MenuItem("Forge/Characters/Build Characters")]
         static void Build()
         {
+            var animations = HumanoidAnimatorBuilder.Build();
             var built = 0;
             foreach (var folder in AssetDatabase.GetSubFolders(CharacterImport.CharactersFolder).OrderBy(f => f, System.StringComparer.Ordinal))
             {
-                if (BuildCharacter(folder, Path.GetFileName(folder)) != null)
+                if (BuildCharacter(folder, Path.GetFileName(folder), animations) != null)
                     built++;
             }
 
@@ -35,8 +37,11 @@ namespace Forge.UnityEditor.Content
             Debug.Log($"[Forge] Built {built} character(s) under {CharacterImport.CharactersFolder}.");
         }
 
-        /// <summary>The prefab built for the character folder <paramref name="folder"/>, or null when it isn't a character.</summary>
-        public static GameObject BuildCharacter(string folder, string name)
+        /// <summary>
+        /// The prefab built for the character folder <paramref name="folder"/>, playing <paramref name="animations"/>
+        /// (none: it stands in its rest pose), or null when it isn't a character.
+        /// </summary>
+        public static GameObject BuildCharacter(string folder, string name, RuntimeAnimatorController animations)
         {
             var modelPath = $"{folder}/{name}.fbx";
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
@@ -64,15 +69,17 @@ namespace Forge.UnityEditor.Content
                     renderer.shadowCastingMode = ShadowCastingMode.On;
                 }
 
-                foreach (var skinned in instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-                    RestInBindPose(skinned);
-
                 if (!instance.TryGetComponent<Animator>(out var animator))
                     animator = instance.AddComponent<Animator>();
                 animator.avatar = avatar;
+                animator.runtimeAnimatorController = animations;
                 animator.applyRootMotion = false;
                 // Off-screen characters don't pose their bones; the player is always on screen when it shows.
                 animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+
+                // After the animator: binding it puts the bones back as the file has them.
+                foreach (var skinned in instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                    RestInBindPose(skinned);
                 return PrefabUtility.SaveAsPrefabAsset(instance, $"{folder}/{name}.prefab");
             }
             finally

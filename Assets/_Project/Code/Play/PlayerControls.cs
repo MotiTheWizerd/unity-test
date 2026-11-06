@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 namespace Forge.Play
 {
     /// <summary>
-    /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump, ToggleView, Zoom) into
+    /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump, ToggleWalk, ToggleView, Zoom) into
     /// <see cref="PlayerCommands"/> and <see cref="ViewCommands"/>, the rules' only input. Rebinding, a gamepad or
     /// another layout is the actions asset's business; nothing here names a key (the wheel's binding scales its steps to
     /// notches). The map is on only while enabled (while playing).
@@ -19,6 +19,7 @@ namespace Forge.Play
         readonly InputAction _look;
         readonly InputAction _sprint;
         readonly InputAction _jump;
+        readonly InputAction _toggleWalk;
         readonly InputAction _toggleView;
         readonly InputAction _zoom;
         readonly float _lookSensitivity;
@@ -36,6 +37,7 @@ namespace Forge.Play
             _look = _map.FindAction("Look", throwIfNotFound: true);
             _sprint = _map.FindAction("Sprint", throwIfNotFound: true);
             _jump = _map.FindAction("Jump", throwIfNotFound: true);
+            _toggleWalk = _map.FindAction("ToggleWalk", throwIfNotFound: true);
             _toggleView = _map.FindAction("ToggleView", throwIfNotFound: true);
             _zoom = _map.FindAction("Zoom", throwIfNotFound: true);
             _lookSensitivity = profile.LookSensitivity;
@@ -58,7 +60,8 @@ namespace Forge.Play
                 new System.Numerics.Vector2(move.x, move.y),
                 new System.Numerics.Vector2(look.x, look.y),
                 _sprint.IsPressed(),
-                _jump.WasPressedThisFrame());
+                _jump.WasPressedThisFrame(),
+                _toggleWalk.WasPressedThisFrame());
         }
 
         /// <summary>This frame's view commands; nothing while the map is off.</summary>

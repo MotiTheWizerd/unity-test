@@ -32,6 +32,9 @@ namespace Forge.Play
         GameObject _model;
 
         [Header("Moving")]
+        [SerializeField, Min(0.1f), Tooltip("While walking is switched on (Caps Lock), meters per second. Matches the Walk clip's stride.")]
+        float _walkSpeed = 1.8f;
+
         [SerializeField, Min(0.1f), Tooltip("The everyday pace, meters per second.")]
         float _runSpeed = 4.5f;
 
@@ -88,7 +91,7 @@ namespace Forge.Play
         [SerializeField, Tooltip("The input actions; the player reads its map (Settings/InputSystem_Actions).")]
         InputActionAsset _controls;
 
-        [SerializeField, Tooltip("The action map the player reads: Move, Look, Sprint, Jump, ToggleView, Zoom.")]
+        [SerializeField, Tooltip("The action map the player reads: Move, Look, Sprint, Jump, ToggleWalk, ToggleView, Zoom.")]
         string _controlsMap = "Player";
 
         [SerializeField, Min(0.001f), Tooltip("Degrees the view turns per pixel the mouse moves.")]
@@ -124,7 +127,8 @@ namespace Forge.Play
                 groundAcceleration: _groundAcceleration,
                 airAcceleration: _airAcceleration,
                 coyoteTime: _coyoteTime,
-                turnRate: _turnRate);
+                turnRate: _turnRate,
+                walkSpeed: _walkSpeed);
 
         public ThirdPersonSettings ThirdPerson() =>
             new ThirdPersonSettings(
