@@ -23,7 +23,12 @@ namespace Forge.EditorApp.UI
         }
 
         /// <summary>The ball of <paramref name="material"/>, or null when there are no pictures.</summary>
-        public Texture2D Of(MaterialRecord material)
+        public Texture2D Of(MaterialRecord material) => Picture(material, false);
+
+        /// <summary>The large ball of <paramref name="material"/> for a preview card, or null when there are no pictures.</summary>
+        public Texture2D PreviewOf(MaterialRecord material) => Picture(material, true);
+
+        Texture2D Picture(MaterialRecord material, bool preview)
         {
             if (material == null)
                 throw new ArgumentNullException(nameof(material));
@@ -31,7 +36,9 @@ namespace Forge.EditorApp.UI
                 return null;
             // Ball pictures are keyed by look, so a material and a ground of one key can't share one.
             var id = material.Id;
-            return _thumbnails.GetBall(material.AssetKey, () => _looks.CreatePreviewMaterial(id));
+            return preview
+                ? _thumbnails.GetBallPreview(material.AssetKey, () => _looks.CreatePreviewMaterial(id))
+                : _thumbnails.GetBall(material.AssetKey, () => _looks.CreatePreviewMaterial(id));
         }
     }
 }

@@ -9,7 +9,8 @@ namespace Forge.World.Assets
     /// Pictures of assets for the UI: each asset key is instantiated once through the same catalog the world uses,
     /// framed whole (<see cref="ThumbnailFraming"/>) and drawn by a private camera into a small texture with a
     /// transparent background, then kept for the session. Rendering happens on first request, so only shown tiles
-    /// cost anything.
+    /// cost anything. Material balls come small, for tiles, or large and lit like a product shot (a key light and a rim
+    /// light), for a preview card.
     /// </summary>
     /// <remarks>
     /// The rig lives on the ForgePreview layer so the camera draws nothing of the world, and the instance exists
@@ -20,17 +21,19 @@ namespace Forge.World.Assets
     {
         public const string LayerName = "ForgePreview";
         public const int Size = 128;
+        public const int PreviewSize = 512;
 
         static readonly Color Transparent = new Color(0f, 0f, 0f, 0f);
         static readonly Color Ambient = new Color(0.35f, 0.35f, 0.38f);
 
         readonly IAssetCatalog _assets;
         readonly Dictionary<string, Texture2D> _cache = new Dictionary<string, Texture2D>(StringComparer.Ordinal);
+        readonly Dictionary<int, RenderTexture> _targets = new Dictionary<int, RenderTexture>();
         readonly GameObject _rig;
         readonly Camera _camera;
         readonly Transform _stage;
         readonly Light _light;
-        readonly RenderTexture _target;
+        readonly Light _rim;
         readonly int _layer;
 
         public ThumbnailRenderer(IAssetCatalog assets, Transform parent)
@@ -54,22 +57,44 @@ namespace Forge.World.Assets
             _camera.allowMSAA = false;
             _camera.useOcclusionCulling = false;
 
-            var light = new GameObject("Light").AddComponent<Light>();
-            light.transform.SetParent(_rig.transform, false);
-            light.type = LightType.Directional;
-            light.transform.rotation = Quaternion.Euler(40f, -30f, 0f);
-            light.intensity = 1.1f;
-            light.shadows = LightShadows.None;
-            light.cullingMask = _camera.cullingMask;
-            light.enabled = false; // on only while rendering
-            _light = light;
+            _light = CreateLight("Light", Quaternion.Euler(40f, -30f, 0f), 1.1f, Color.white);
+            // From behind and above, for previews: a cool bright edge that lifts the ball off its backdrop.
+            _rim = CreateLight("Rim", Quaternion.Euler(25f, 150f, 0f), 0.9f, new Color(0.85f, 0.9f, 1f));
 
             _stage = new GameObject("Stage").transform;
             _stage.SetParent(_rig.transform, false);
-
-            _target = new RenderTexture(Size, Size, 16, RenderTextureFormat.ARGB32) { name = "Thumbnail" };
-            _camera.targetTexture = _target;
         }
+
+        // A directional light of the rig, lighting only what the camera draws; on only while rendering.
+        Light CreateLight(string name, Quaternion rotation, float intensity, Color color)
+        {
+            var light = new GameObject(name).AddComponent<Light>();
+            light.transform.SetParent(_rig.transform, false);
+            light.transform.rotation = rotation;
+            light.type = LightType.Directional;
+            light.intensity = intensity;
+            light.color = color;
+            light.shadows = LightShadows.None;
+            light.cullingMask = _camera.cullingMask;
+            light.enabled = false;
+            return light;
+        }
+
+        /// <summary>How a picture is taken: its size in pixels, and whether the rim light joins the key light.</summary>
+        readonly struct Shot
+        {
+            public Shot(int size, bool rim)
+            {
+                Size = size;
+                Rim = rim;
+            }
+
+            public int Size { get; }
+            public bool Rim { get; }
+        }
+
+        static readonly Shot Tile = new Shot(Size, false);
+        static readonly Shot Preview = new Shot(PreviewSize, true);
 
         /// <summary>The picture for <paramref name="assetKey"/>, rendered on first request.</summary>
         public Texture2D Get(string assetKey) => Get(assetKey, null, null);
@@ -79,9 +104,9 @@ namespace Forge.World.Assets
         {
             if (string.IsNullOrEmpty(assetKey)) throw new ArgumentException("Asset key is required.", nameof(assetKey));
             if (string.IsNullOrEmpty(lookKey) || dress == null)
-                return Cached(assetKey, () => _assets.Instantiate(assetKey, _stage));
+                return Cached(assetKey, Tile, () => _assets.Instantiate(assetKey, _stage));
 
-            return Cached(assetKey + LookSeparator + lookKey, () =>
+            return Cached(assetKey + LookSeparator + lookKey, Tile, () =>
             {
                 var instance = _assets.Instantiate(assetKey, _stage);
                 dress(instance);
@@ -96,7 +121,19 @@ namespace Forge.World.Assets
         /// A material ball: a sphere wearing the material <paramref name="createMaterial"/> makes, rendered on first
         /// request for <paramref name="key"/>. The material is made only then, and destroyed once the picture is taken.
         /// </summary>
-        public Texture2D GetBall(string key, Func<Material> createMaterial)
+        public Texture2D GetBall(string key, Func<Material> createMaterial) => Ball(BallPrefix, key, Tile, createMaterial);
+
+        /// <summary>
+        /// A large material ball for a preview card (<see cref="PreviewSize"/>, key and rim light) on a transparent
+        /// background; otherwise as <see cref="GetBall"/>.
+        /// </summary>
+        public Texture2D GetBallPreview(string key, Func<Material> createMaterial) => Ball(PreviewPrefix, key, Preview, createMaterial);
+
+        // Balls share the cache with assets; the prefixes keep a ball, its preview and an asset of the same key apart.
+        const string BallPrefix = "ball:";
+        const string PreviewPrefix = "preview:";
+
+        Texture2D Ball(string prefix, string key, Shot shot, Func<Material> createMaterial)
         {
             if (string.IsNullOrEmpty(key)) throw new ArgumentException("Key is required.", nameof(key));
             if (createMaterial == null) throw new ArgumentNullException(nameof(createMaterial));
@@ -104,10 +141,10 @@ namespace Forge.World.Assets
             Material material = null;
             try
             {
-                return Cached(BallPrefix + key, () =>
+                return Cached(prefix + key, shot, () =>
                 {
                     material = createMaterial();
-                    return Ball(material);
+                    return CreateBall(material);
                 });
             }
             finally
@@ -117,13 +154,10 @@ namespace Forge.World.Assets
             }
         }
 
-        // Balls share the cache with assets; the prefix keeps a ball and an asset of the same key apart.
-        const string BallPrefix = "ball:";
-
         /// <summary>Texture repeats around and over the ball, so a ground texture shows at about its real scale.</summary>
         static readonly Vector2 BallTiling = new Vector2(2f, 1f);
 
-        GameObject Ball(Material material)
+        GameObject CreateBall(Material material)
         {
             var ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             UnityEngine.Object.DestroyImmediate(ball.GetComponent<Collider>());
@@ -137,19 +171,21 @@ namespace Forge.World.Assets
             return ball;
         }
 
-        Texture2D Cached(string key, Func<GameObject> stage)
+        Texture2D Cached(string key, Shot shot, Func<GameObject> stage)
         {
             if (!_cache.TryGetValue(key, out var texture))
             {
-                texture = Render(key, stage);
+                texture = Render(key, shot, stage);
                 _cache.Add(key, texture);
             }
 
             return texture;
         }
 
-        Texture2D Render(string key, Func<GameObject> stage)
+        Texture2D Render(string key, Shot shot, Func<GameObject> stage)
         {
+            var target = TargetOf(shot.Size);
+            _camera.targetTexture = target;
             var instance = stage();
             try
             {
@@ -160,11 +196,11 @@ namespace Forge.World.Assets
                 _camera.nearClipPlane = near;
                 _camera.farClipPlane = far;
 
-                using (new PreviewLighting(_light, Ambient))
+                using (new PreviewLighting(_light, shot.Rim ? _rim : null, Ambient))
                 using (SyncShaderCompilation.Begin())
                     _camera.Render();
 
-                return ReadBack(key);
+                return ReadBack(key, target);
             }
             finally
             {
@@ -173,12 +209,25 @@ namespace Forge.World.Assets
             }
         }
 
-        Texture2D ReadBack(string key)
+        // One target per picture size, made when first needed.
+        RenderTexture TargetOf(int size)
         {
+            if (!_targets.TryGetValue(size, out var target))
+            {
+                target = new RenderTexture(size, size, 16, RenderTextureFormat.ARGB32) { name = $"Thumbnail {size}" };
+                _targets.Add(size, target);
+            }
+
+            return target;
+        }
+
+        static Texture2D ReadBack(string key, RenderTexture target)
+        {
+            var size = target.width;
             var previous = RenderTexture.active;
-            RenderTexture.active = _target;
-            var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, false) { name = $"Thumbnail {key}" };
-            texture.ReadPixels(new Rect(0, 0, Size, Size), 0, 0);
+            RenderTexture.active = target;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = $"Thumbnail {key}" };
+            texture.ReadPixels(new Rect(0, 0, size, size), 0, 0);
             texture.Apply(false, true);
             RenderTexture.active = previous;
             return texture;
@@ -209,9 +258,15 @@ namespace Forge.World.Assets
             foreach (var texture in _cache.Values)
                 UnityEngine.Object.Destroy(texture);
             _cache.Clear();
-            if (_target != null)
-                _target.Release();
-            UnityEngine.Object.Destroy(_target);
+            if (_camera != null)
+                _camera.targetTexture = null;
+            foreach (var target in _targets.Values)
+            {
+                target.Release();
+                UnityEngine.Object.Destroy(target);
+            }
+
+            _targets.Clear();
             if (_rig != null)
                 UnityEngine.Object.Destroy(_rig);
         }
@@ -244,23 +299,25 @@ namespace Forge.World.Assets
         }
 
         /// <summary>
-        /// For one render: the rig's light on, every other light off, and a flat ambient instead of the sky's.
-        /// Restores everything after.
+        /// For one render: the rig's lights on (the key light, and the rim light when given), every other light off,
+        /// and a flat ambient instead of the sky's. Restores everything after.
         /// </summary>
         readonly struct PreviewLighting : IDisposable
         {
             readonly Light _own;
+            readonly Light _rim;
             readonly List<Light> _silenced;
             readonly AmbientMode _ambientMode;
             readonly Color _ambientColor;
 
-            public PreviewLighting(Light own, Color ambient)
+            public PreviewLighting(Light own, Light rim, Color ambient)
             {
                 _own = own;
+                _rim = rim;
                 _silenced = new List<Light>();
                 foreach (var light in UnityEngine.Object.FindObjectsByType<Light>())
                 {
-                    if (light != own && light.enabled)
+                    if (light != own && light != rim && light.enabled)
                     {
                         light.enabled = false;
                         _silenced.Add(light);
@@ -272,11 +329,15 @@ namespace Forge.World.Assets
                 RenderSettings.ambientMode = AmbientMode.Flat;
                 RenderSettings.ambientLight = ambient;
                 own.enabled = true;
+                if (rim != null)
+                    rim.enabled = true;
             }
 
             public void Dispose()
             {
                 _own.enabled = false;
+                if (_rim != null)
+                    _rim.enabled = false;
                 foreach (var light in _silenced)
                     light.enabled = true;
                 RenderSettings.ambientMode = _ambientMode;

@@ -11,4 +11,5 @@
 @import url("Controls/TabBar.uss");
 @import url("Controls/ForgeSideDock.uss");
 @import url("Controls/AssetTile.uss");
+@import url("Controls/PreviewCard.uss");
 @import url("Controls/Tooltip.uss");

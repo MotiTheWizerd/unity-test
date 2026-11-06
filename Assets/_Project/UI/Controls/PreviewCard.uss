@@ -1,0 +1,49 @@
+/* PreviewCard: a big picture on a studio backdrop, its name and a caption in the corner. Tokens from Theme/ForgeTokens.uss. */
+
+.forge-preview-card {
+    flex-shrink: 0;
+    height: 210px;
+    margin-bottom: var(--forge-space-3);
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: var(--forge-divider);
+    overflow: hidden;
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+/* The picture stands on the backdrop's floor line (StudioBackdrop.FloorLine, 13% up), centred. */
+.forge-preview-card__picture {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    width: 176px;
+    height: 176px;
+    translate: -50% 0;
+    justify-content: center;
+    align-items: center;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.forge-preview-card__picture .forge-icon {
+    width: 40px;
+    height: 40px;
+    -unity-background-image-tint-color: var(--forge-text-dim);
+}
+
+.forge-preview-card__title {
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    padding: 0;
+    -unity-font-definition: url("../Fonts/Inter-SemiBold.ttf");
+    color: var(--forge-text);
+}
+
+.forge-preview-card__caption {
+    position: absolute;
+    top: 26px;
+    left: 10px;
+    padding: 0;
+    font-size: var(--forge-font-size-sm);
+    color: var(--forge-text-muted);
+}

@@ -21,5 +21,11 @@ namespace Forge.World.Assets
         /// (called only when the picture isn't cached yet; the material is destroyed after). Never null.
         /// </summary>
         Texture2D GetBall(string key, Func<Material> createMaterial);
+
+        /// <summary>
+        /// A large material ball for a preview card, lit like a product shot, on a transparent background (the card
+        /// draws its own backdrop). As <see cref="GetBall"/> otherwise; never null.
+        /// </summary>
+        Texture2D GetBallPreview(string key, Func<Material> createMaterial);
     }
 }
