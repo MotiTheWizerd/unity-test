@@ -42,7 +42,7 @@ namespace Forge.EditorApp.UI
 
         public void Refresh()
         {
-            var shown = WorksOnSelection(_context.CurrentTool);
+            var shown = ToolCatalog.Of(_context.CurrentTool).WorksOnSelection;
             PanelElements.SetVisible(_group, shown);
             if (!shown)
                 return;
@@ -83,8 +83,5 @@ namespace Forge.EditorApp.UI
 
             return 0;
         }
-
-        static bool WorksOnSelection(ToolKind tool) =>
-            tool == ToolKind.Select || tool == ToolKind.Move || tool == ToolKind.Rotate || tool == ToolKind.Scale;
     }
 }

@@ -11,6 +11,7 @@ using Forge.Data.Serialization;
 using Forge.Data.Terrain;
 using Forge.EditorApp.Agent;
 using Forge.EditorApp.Diagnostics;
+using Forge.EditorApp.Tools;
 using Forge.EditorApp.UI;
 using Forge.Editing;
 using Forge.Streaming;
@@ -72,6 +73,9 @@ namespace Forge.EditorApp
 
         [SerializeField, Tooltip("The Unity material of each material record's asset key (Content/MaterialCatalog); without one every object wears its own materials.")]
         MaterialCatalog _materials;
+
+        [SerializeField, Tooltip("What the selection highlight is drawn with over selected objects (Materials/SelectionOverlay).")]
+        Material _selectionOverlay;
 
         [SerializeField, Tooltip("Unlit material the interior floor grid is painted with (Materials/InteriorFloor).")]
         Material _interiorFloorMaterial;
@@ -160,7 +164,7 @@ namespace Forge.EditorApp
                 Debug.Log($"[Forge] Opened '{_profile.name}': {_context.Session.World.Records.Count} records, " +
                           $"load {loadMs:0} ms, resolve {resolveMs:0} ms, first view {viewMs:0} ms ({_view.LoadedChunks.Count} chunks, {_view.PresentedCount} presented).");
 
-                _highlighter = new SelectionHighlighter(_context.Selection, _view);
+                _highlighter = new SelectionHighlighter(_context.Selection, _view, _selectionOverlay, EmphasizedSlot);
                 _context.Session.WorldChanged += OnWorldChanged;
                 _context.Selection.Changed += _highlighter.Refresh;
 
@@ -193,6 +197,14 @@ namespace Forge.EditorApp
             // Grass grows in a budget of its own: it is near the camera, where a missing patch shows most.
             _grass?.Tick(focus, _frameBudgetMs);
             _grass?.Draw(_focus.position);
+            _highlighter.Draw();
+        }
+
+        // While a select tool is current, the parts a material ball would dress stand out from the rest of the selection.
+        string EmphasizedSlot()
+        {
+            var commands = _controller.Commands;
+            return commands != null && ToolCatalog.Of(_context.CurrentTool).WorksOnSelection ? commands.DressedSlot(commands.SelectionSlots()) : null;
         }
 
         // Everything under the world root moved with it; the camera is not under it and follows by hand.
@@ -269,6 +281,7 @@ namespace Forge.EditorApp
             _prefabs == null ? "EditorApp has no Prefab Catalog assigned (EditorAppBootstrap._prefabs)."
             : _terrainMaterial == null ? "EditorApp has no terrain material assigned (EditorAppBootstrap._terrainMaterial)."
             : _interiorFloorMaterial == null ? "EditorApp has no interior floor material assigned (EditorAppBootstrap._interiorFloorMaterial)."
+            : _selectionOverlay == null ? "EditorApp has no selection overlay material assigned (EditorAppBootstrap._selectionOverlay)."
             : null;
 
         // The fog is thick where the land stops (just inside the far land's reach, or at the loaded chunks' without far

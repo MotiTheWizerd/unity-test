@@ -17,9 +17,13 @@ namespace Forge.World
         [NonSerialized] Renderer[] _renderers = Array.Empty<Renderer>();
         [NonSerialized] Material[][] _defaults = Array.Empty<Material[]>();
         [NonSerialized] string[] _slots = Array.Empty<string>();
+        [NonSerialized] Part[] _parts = Array.Empty<Part>();
 
         /// <summary>The slot names, in the order the asset's renderers first wear them.</summary>
         public IReadOnlyList<string> Slots => _slots;
+
+        /// <summary>Every drawn part of the object: a renderer's sub-mesh and the slot it belongs to (null when it has none).</summary>
+        public IReadOnlyList<Part> Parts => _parts;
 
         /// <summary>Adds the component to <paramref name="target"/>, capturing what its renderers wear now as their defaults.</summary>
         public static MaterialSlots Capture(GameObject target)
@@ -28,18 +32,22 @@ namespace Forge.World
             slots._renderers = target.GetComponentsInChildren<Renderer>(true);
             slots._defaults = new Material[slots._renderers.Length][];
             var names = new List<string>();
+            var parts = new List<Part>();
             for (var i = 0; i < slots._renderers.Length; i++)
             {
-                slots._defaults[i] = slots._renderers[i].sharedMaterials;
-                foreach (var material in slots._defaults[i])
+                var renderer = slots._renderers[i];
+                slots._defaults[i] = renderer.sharedMaterials;
+                for (var m = 0; m < slots._defaults[i].Length; m++)
                 {
-                    var name = SlotOf(material);
+                    var name = SlotOf(slots._defaults[i][m]);
                     if (name != null && !names.Contains(name))
                         names.Add(name);
+                    parts.Add(new Part(renderer, m, name));
                 }
             }
 
             slots._slots = names.ToArray();
+            slots._parts = parts.ToArray();
             return slots;
         }
 
@@ -93,6 +101,24 @@ namespace Forge.World
 
                 _renderers[i].sharedMaterials = materials;
             }
+        }
+
+        /// <summary>One drawn part: a sub-mesh of a renderer, and the slot it belongs to.</summary>
+        public readonly struct Part
+        {
+            public Part(Renderer renderer, int subMesh, string slot)
+            {
+                Renderer = renderer;
+                SubMesh = subMesh;
+                Slot = slot;
+            }
+
+            public Renderer Renderer { get; }
+
+            public int SubMesh { get; }
+
+            /// <summary>The slot, or null when the part wears no named material.</summary>
+            public string Slot { get; }
         }
     }
 }

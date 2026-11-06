@@ -758,8 +758,12 @@ slopes), so results are exact and every edit goes through the edit session.
   and axis tint through property blocks, and a constant on-screen size. `GizmoShapes` describes the
   translate, rotate (rings of cylinder segments) and scale shapes. Parts use the
   `GizmoOverlay` material (`Shaders/GizmoOverlay.shader`, ZTest Always, unlit), so terrain never hides
-  a handle. The material is assigned on `EditorController`. `SelectionHighlighter` tints selected objects (property blocks, so shared
-  materials are never touched).
+  a handle. The material is assigned on `EditorController`. `SelectionHighlighter` draws selected objects again
+  each frame with `Shaders/SelectionOverlay.shader` (`Forge/SelectionOverlay`, on `EditorAppBootstrap._selectionOverlay`:
+  transparent, a faint fill plus a view-angle rim, pulled slightly toward the camera), one `Graphics.RenderMesh` per
+  part (`MaterialSlots.Parts`), so the objects' own materials show through; while a select tool is current, the parts
+  of the slot a material ball would dress get a stronger glow. (A tint replacing the base color read on flat
+  placeholder colors but vanished on textured materials.)
 - **UI** (`EditorApp/UI`, UI Toolkit): the layout lives in `UI/EditorPanel.uxml`, rendered by a `UIDocument` with
   `ForgePanelSettings`. **The look is decided in one place**: `UI/Theme/ForgeTokens.uss` holds the design tokens
   (USS variables: panel glass `rgba(0,0,0,0.9)`, the warm accent, text tones, radii, spacing, type scale, motion);

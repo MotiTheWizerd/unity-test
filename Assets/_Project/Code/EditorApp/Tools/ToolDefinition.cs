@@ -58,5 +58,11 @@ namespace Forge.EditorApp.Tools
 
         /// <summary>Whether the tool strokes the terrain with the shared brush (sculpt, paint): [ ] resize it.</summary>
         public bool UsesBrush { get; }
+
+        /// <summary>
+        /// Whether the tool works on the selection (select, move, rotate, scale): its options show the selection's
+        /// actions and material slot, and the chosen slot is highlighted.
+        /// </summary>
+        public bool WorksOnSelection => Kind == ToolKind.Select || Kind == ToolKind.Move || Kind == ToolKind.Rotate || Kind == ToolKind.Scale;
     }
 }
