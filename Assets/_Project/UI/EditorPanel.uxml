@@ -28,12 +28,6 @@
                 <ui:Label name="selection-count" />
                 <forge:ForgeButton name="frame-selection" text="Frame" tooltip="F" />
                 <forge:ForgeButton name="drop-to-ground" text="Drop" tooltip="End" />
-                <forge:ForgeDropdown name="material-slot" label="Slot" tooltip="The material slot a material from the Materials tab dresses" />
-                <forge:ForgeButton name="reset-materials" text="Reset look" tooltip="Give the selection back its own materials in every slot" />
-                <forge:ForgeButton name="make-variant" text="Make variant" tooltip="Save this object's look as a new object in the assets browser, to place more of it" />
-                <forge:ForgeTextInput name="variant-name" placeholder-text="Variant name" tooltip="Enter saves, Esc cancels" />
-                <forge:ForgeButton name="variant-save" text="Save" variant="primary" />
-                <forge:ForgeButton name="variant-cancel" text="Cancel" variant="ghost" />
             </ui:VisualElement>
             <ui:VisualElement name="options-rectangle" class="forge-options__group">
                 <forge:ForgeCheckbox name="rectangle-snap" label="Whole pieces" />
@@ -74,6 +68,7 @@
                 <ui:VisualElement name="assets-tabs" class="forge-assets__tabs" />
                 <ui:Label name="assets-count" class="forge-muted forge-assets__count" />
                 <forge:ForgeTextInput name="assets-search" placeholder-text="Search…" class="forge-assets__search" />
+                <forge:ForgeButton name="materials-toggle" icon="palette" small="true" tooltip="Materials" />
                 <forge:ForgeButton name="assets-collapse" variant="Ghost" small="true" tooltip="Collapse / expand" />
             </ui:VisualElement>
             <ui:ScrollView name="assets-grid" class="forge-assets__grid" />
@@ -106,7 +101,21 @@
                 </ui:VisualElement>
             </forge:ForgeDockPage>
             <forge:ForgeDockPage name="side-page-materials" key="materials" title="Materials" icon="palette">
-                <ui:Label class="forge-muted forge-wrap" text="Materials will live here." />
+                <forge:ForgeSection title="SELECTED OBJECT">
+                    <ui:Label name="material-slots-hint" class="forge-muted forge-wrap" />
+                    <ui:VisualElement name="material-slots" class="forge-material-slots" />
+                    <ui:VisualElement class="forge-row forge-choices forge-material-actions">
+                        <forge:ForgeButton name="reset-materials" text="Reset look" tooltip="Give the selection back its own materials in every part" />
+                        <forge:ForgeButton name="make-variant" text="Make variant" tooltip="Save this object's look as a new object in the assets browser, to place more of it" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="forge-row forge-material-actions">
+                        <forge:ForgeTextInput name="variant-name" placeholder-text="Variant name" tooltip="Enter saves, Esc cancels" class="forge-grow" />
+                        <forge:ForgeButton name="variant-save" text="Save" variant="primary" />
+                        <forge:ForgeButton name="variant-cancel" text="Cancel" variant="ghost" />
+                    </ui:VisualElement>
+                </forge:ForgeSection>
+                <ui:Label class="forge-section__title forge-material-library__title" text="LIBRARY" />
+                <ui:ScrollView name="material-library" class="forge-material-library" />
             </forge:ForgeDockPage>
         </forge:ForgeSideDock>
 

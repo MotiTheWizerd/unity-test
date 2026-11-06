@@ -1,0 +1,36 @@
+using System;
+using Forge.EditorApp.UI.Controls;
+using UnityEngine.UIElements;
+
+namespace Forge.EditorApp.UI
+{
+    /// <summary>
+    /// The side dock's Materials page: the selected object's parts (<see cref="MaterialSlotList"/>, with Reset look and
+    /// Make variant, <see cref="VariantForm"/>) over the library of materials (<see cref="MaterialLibrary"/>). It is only
+    /// brought up to date while it is on show.
+    /// </summary>
+    public sealed class MaterialsPage : IPanelSection
+    {
+        readonly ForgeSideDock _dock;
+        readonly MaterialSlotList _slots;
+        readonly VariantForm _variant;
+        readonly MaterialLibrary _library;
+
+        public MaterialsPage(VisualElement root, ForgeSideDock dock, EditorContext context, EditorCommands commands, MaterialBalls balls)
+        {
+            _dock = dock ?? throw new ArgumentNullException(nameof(dock));
+            _slots = new MaterialSlotList(root, context, commands, balls);
+            _variant = new VariantForm(root, commands);
+            _library = new MaterialLibrary(root, context, commands, balls);
+        }
+
+        public void Refresh()
+        {
+            if (!_dock.IsOpen || _dock.Current != SideDockSection.MaterialsPage)
+                return;
+            _slots.Refresh();
+            _variant.Refresh();
+            _library.Refresh();
+        }
+    }
+}

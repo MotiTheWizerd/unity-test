@@ -6,7 +6,8 @@ namespace Forge.EditorApp.UI
 {
     /// <summary>
     /// The side dock on the right (<see cref="ForgeSideDock"/>): an Agent page (the chat, run by <see cref="AgentSection"/>)
-    /// and a Materials page. It starts closed; buttons open it on their page (<see cref="AgentDockToggle"/>). While it is
+    /// and a Materials page (<see cref="MaterialsPage"/>). It starts closed; buttons open it on their page
+    /// (<see cref="DockPageToggle"/>: the top bar's agent button, the assets browser's materials button). While it is
     /// open the layout root wears <see cref="OpenClass"/>, so the assets browser leaves it its room (EditorPanel.uss). Its
     /// open state and page are kept between sessions.
     /// </summary>
@@ -27,6 +28,16 @@ namespace Forge.EditorApp.UI
         }
 
         public ForgeSideDock Dock { get; }
+
+        /// <summary>Takes page <paramref name="key"/> and its tab out of the dock (a feature that isn't there, such as the agent).</summary>
+        public void RemovePage(string key)
+        {
+            var page = Dock.Page(key);
+            if (page == null)
+                return;
+            page.RemoveFromHierarchy();
+            Dock.RebuildTabs();
+        }
 
         public void Refresh()
         {

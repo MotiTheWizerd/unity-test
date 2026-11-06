@@ -195,7 +195,7 @@ namespace Forge.EditorApp
 
         /// <summary>
         /// Dresses the chosen slot (<see cref="DressedSlot"/>) of every selected object that has it in
-        /// <paramref name="material"/> (the assets browser's material balls). One undo step.
+        /// <paramref name="material"/> (the Materials page's balls). One undo step.
         /// </summary>
         public void DressSelection(RecordId material)
         {
@@ -213,7 +213,7 @@ namespace Forge.EditorApp
                     : $"Already {NameOf(material)} on {Materials.SlotLabel(slot)}");
         }
 
-        /// <summary>Gives every selected object back its base object's look in every slot (the selection options' Reset). One undo step.</summary>
+        /// <summary>Gives every selected object back its base object's look in every slot (the Materials page's Reset look). One undo step.</summary>
         public void ResetSelectionMaterials()
         {
             var changed = 0;

@@ -113,7 +113,7 @@ one in the active plugin.
   `MaterialOverrides.Layer(base, own)`, its own winning slot by slot (`MaterialOverrides` holds the list rules both
   share). `ObjectEdits.MakeVariant(placed, name)` saves a placed object's look as a new base object in the active plugin
   (`variant/<n>`: same asset, category and placement rules, the layered materials) and makes the object an instance of
-  it, one undo step; the selection options' **Make variant** (one object selected) asks for the name, suggested from what
+  it, one undo step; the Materials page's **Make variant** (one object selected) asks for the name, suggested from what
   it wears ("Small House (Cut Stone, Thatch)"), and the new object becomes the palette's pick. Its tile's picture wears
   its materials (`IAssetThumbnails.Get(assetKey, lookKey, dress)`, `MaterialLooks.Dress` / `KeyOf`).
 - `MaterialRecord` (`material/<name>`): a surface objects can wear (display name, asset key the presentation resolves
@@ -744,9 +744,10 @@ slopes), so results are exact and every edit goes through the edit session.
   if it changes the world (`ToolDefinition.EditsWorld`; Select, Hand and Mark keep working, and so do the camera
   and F), the settings card's pages, the options bar and the strip's editing tools are disabled, and `EditorContext`
   refuses edits, undo, redo and saving (`IsDraftOpen`). The agent's chat (`AgentSection`) is the **Agent** page of the
-  **side dock** on the right (`SideDockSection`, a `ForgeSideDock` with an Agent and a Materials page; Materials is empty
-  for now and will take the materials). The dock starts closed; the top bar's agent button beside the gear
-  (`AgentDockToggle`) opens it on the Agent page, turns to it from another page, or closes it (`ForgeSideDock.Toggle`),
+  **side dock** on the right (`SideDockSection`, a `ForgeSideDock` with an Agent and a Materials page). The dock starts
+  closed; a `DockPageToggle` button opens it on its page, turns to it from another page, or closes it
+  (`ForgeSideDock.Toggle`): the top bar's agent button beside the gear (pulsing while the agent works) and the assets
+  browser's palette button beside the search (Materials). Without an agent its page is removed (`RemovePage`),
   and the assets browser widens into its room while it is closed (the layout root wears `is-side-dock-open`). The top bar is centred, at most `--forge-toolbar-max-width` (1000 px) wide. It shows the transcript, Accept / Retry /
   Discard while reviewing, and a message box (Enter sends, Shift+Enter: new line). The agent's replies are
   Markdown: `Forge.Core.Text.Markdown` (engine-free) parses the subset chat uses into blocks and styled spans, and
@@ -820,16 +821,18 @@ slopes), so results are exact and every edit goes through the edit session.
   button and a drag handle on the top edge for its height. After the categories comes a **Ground** tab (key
   `/ground`, which no category head can be): one tile per `GroundLayerRecord`, its picture a material ball (`ThumbnailRenderer.GetBall`:
   a lit sphere wearing `GroundLooks.CreatePreviewMaterial`, a URP Lit stand-in built by `TerrainLayerPreview` from
-  the layer's color, normal and mask maps and tint, destroyed once the picture is taken); picking one calls `EditorContext.SelectPaintLayer` (paint tool, that ground). Then a
-  **Materials** tab (`/materials`): one ball per `MaterialRecord` (`MaterialLooks.CreatePreviewMaterial`, a throwaway
-  copy of the catalog's material); picking one calls `EditorCommands.DressSelection`, which dresses the chosen slot of
-  every selected object that has it, as one undo step, and the tile of what the selection wears there is lit. The
-  slot is picked in the selection options (`SelectionSection`: a Slot dropdown listing the selection's slots,
-  `EditorCommands.SelectionSlots`, read from `AssetSlots`, labelled by `Materials.SlotLabel`;
-  the choice is `EditorContext.MaterialSlot`, the first slot when unset; clicking an object with a select tool sets it
-  to the slot of the part clicked, `ScenePicker.TryPickPlacedObject` → `MaterialSlots.SlotOf(collider)`, so "click the
-  roof, then a ball" dresses the roof) beside a Reset look button
-  (`ResetSelectionMaterials`). Material and ground tiles also **drag into the world** (`Controls/TileDrag`, a
+  the layer's color, normal and mask maps and tint, destroyed once the picture is taken); picking one calls `EditorContext.SelectPaintLayer` (paint tool, that ground).
+  **Materials are applied, not placed**, so they live on the side dock's **Materials** page (`MaterialsPage`, brought
+  up to date only while on show), in two pieces so the first can move to an inspector later: `MaterialSlotList`, the
+  selection's parts (`EditorCommands.SelectionSlots`, read from `AssetSlots`, labelled by `Materials.SlotLabel`), a
+  `MaterialPartRow` each with a small ball and the name of what it wears ("Own look" for the base look), clicking one
+  chooses `EditorContext.MaterialSlot` (the first slot when unset; clicking an object with a select tool sets it to the
+  slot of the part clicked, `ScenePicker.TryPickPlacedObject` → `MaterialSlots.SlotOf(collider)`, so "click the roof,
+  then a ball" dresses the roof), with Reset look (`ResetSelectionMaterials`) and Make variant (`VariantForm`) under
+  them; and `MaterialLibrary`, one ball per `MaterialRecord` (`MaterialBalls`: `MaterialLooks.CreatePreviewMaterial`, a
+  throwaway copy of the catalog's material, shared by both pieces); picking one calls `EditorCommands.DressSelection`,
+  which dresses the chosen slot of every selected object that has it, as one undo step, and the ball of what the
+  selection wears there is lit. Material and ground tiles also **drag into the world** (`Controls/TileDrag`, a
   `PointerManipulator`: past 8 px a copy of the tile's picture follows the pointer on the panel root; letting go off
   every panel element is a drop, and the tile's click is swallowed). While carried, `EditorContext.Drag` (`AssetDrag`)
   says what, and the highlighter lights the part a material would land on (`EditorCommands.TryPartUnderPointer`, the

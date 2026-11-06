@@ -400,7 +400,7 @@ namespace Forge.EditorApp
         }
 
         /// <summary>
-        /// The material slot picking a material dresses on the selection (the selection options' Slot picker); null, or a
+        /// The material slot picking a material dresses on the selection (a part row on the Materials page); null, or a
         /// slot the selection lacks, means its first slot.
         /// </summary>
         public string MaterialSlot { get; set; }

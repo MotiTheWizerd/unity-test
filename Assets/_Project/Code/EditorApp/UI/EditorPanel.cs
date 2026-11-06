@@ -36,7 +36,7 @@ namespace Forge.EditorApp.UI
 
         /// <param name="thumbnails">Pictures for the assets browser's object tiles; null leaves the placeholder icons.</param>
         /// <param name="groundLooks">Pictures for the assets browser's ground tiles; null leaves the placeholder icons.</param>
-        /// <param name="materialLooks">Pictures for the assets browser's material tiles; null leaves the placeholder icons.</param>
+        /// <param name="materialLooks">Pictures for the Materials page's balls and the variants' tiles; null leaves the placeholder icons.</param>
         /// <param name="agent">The world-building agent's conversation; null hides the agent button (the side dock stays closed).</param>
         public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics, IAssetThumbnails thumbnails, GroundLooks groundLooks, MaterialLooks materialLooks, AgentConversation agent)
         {
@@ -70,15 +70,17 @@ namespace Forge.EditorApp.UI
 
             var sideDock = new SideDockSection(Root);
             _sections.Add(sideDock);
+            _sections.Add(new MaterialsPage(Root, sideDock.Dock, context, commands, new MaterialBalls(thumbnails, materialLooks)));
+            _sections.Add(new DockPageToggle(Root, "materials-toggle", sideDock.Dock, SideDockSection.MaterialsPage));
             if (agent != null)
             {
                 _sections.Add(new AgentSection(Root, agent, context));
-                _sections.Add(new AgentDockToggle(Root, sideDock.Dock, agent));
+                _sections.Add(new DockPageToggle(Root, "agent-toggle", sideDock.Dock, SideDockSection.AgentPage, () => agent.State == AgentState.Working));
             }
             else
             {
-                // Without the agent nothing opens the dock yet (its Materials page is still empty).
-                sideDock.Dock.SetOpen(false);
+                // Without the agent its page and button go; the dock keeps its other pages.
+                sideDock.RemovePage(SideDockSection.AgentPage);
                 PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "agent-toggle"), false);
             }
             Refresh();

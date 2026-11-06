@@ -224,6 +224,89 @@
     width: auto;
 }
 
+/* ---- The side dock's Materials page: the selection's parts over the library (MaterialsPage) -------------- */
+
+.forge-material-slots {
+    margin-bottom: var(--forge-space-1);
+}
+
+.forge-material-actions {
+    margin-top: var(--forge-space-1);
+}
+
+/* A part of the selection (MaterialPartRow): its ball, its name, what it wears; the chosen one is lit. */
+.forge-slot-row {
+    flex-direction: row;
+    align-items: center;
+    height: 34px;
+    margin: 1px 0;
+    padding: 2px 8px 2px 3px;
+    background-color: transparent;
+    border-color: transparent;
+    border-radius: var(--forge-control-radius);
+    -unity-text-align: middle-left;
+}
+
+.forge-slot-row:hover:enabled {
+    background-color: var(--forge-control-bg-hover);
+    border-color: transparent;
+}
+
+.forge-slot-row:focus:enabled {
+    border-color: transparent;
+}
+
+.forge-slot-row.is-active,
+.forge-slot-row.is-active:hover:enabled,
+.forge-slot-row.is-active:focus:enabled {
+    background-color: var(--forge-accent-soft);
+    border-color: var(--forge-accent);
+}
+
+.forge-slot-row__ball {
+    width: 28px;
+    height: 28px;
+    margin-right: 8px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 14px;
+    background-color: var(--forge-control-bg);
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.forge-slot-row__ball .forge-icon {
+    width: 14px;
+    height: 14px;
+    -unity-background-image-tint-color: var(--forge-text-dim);
+}
+
+.forge-slot-row__name {
+    flex-grow: 1;
+    padding: 0;
+    color: var(--forge-text);
+}
+
+.forge-slot-row__worn {
+    padding: 0;
+    font-size: var(--forge-font-size-sm);
+    color: var(--forge-text-muted);
+}
+
+.forge-material-library__title {
+    margin-bottom: var(--forge-space-1);
+}
+
+/* The library's balls flow in rows, as the assets browser's tiles do. */
+.forge-material-library {
+    flex-grow: 1;
+}
+
+.forge-material-library .unity-scroll-view__content-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+}
+
 /* ---- The side dock's Agent page: transcript, review bar, message box ------------------------------------- */
 
 .forge-agent-transcript {
