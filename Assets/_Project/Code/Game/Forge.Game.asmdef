@@ -1,0 +1,16 @@
+{
+    "name": "Forge.Game",
+    "rootNamespace": "Forge.Game",
+    "references": [
+        "Forge.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

@@ -24,7 +24,9 @@ Assets/_Project/
     Editing/     Forge.Editing — engine-free edit session (masters + active plugin), commands, world-building commands
     Agent/       Forge.Agent   — engine-free world-building agent: tools over the commands, MCP endpoint, Claude Code backend
     Streaming/   Forge.Streaming — engine-free chunk index, streaming window, scene origin, far tiles
+    Game/        Forge.Game    — engine-free game rules: the player's look and movement over a motor
     World/       Forge.World   — Unity presentation: terrain chunks, far land, placed objects, streamer
+    Play/        Forge.Play    — Unity side of playing: the player's body (CharacterController), controls, profile
     EditorApp/   Forge.EditorApp — the runtime editor: bootstrap, tools, camera, UI
     UnityEditor/ Forge.UnityEditor — dev tools inside the Unity Editor (Forge menu)
   Tests/
@@ -36,7 +38,9 @@ Assets/_Project/
   Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview), Water.shader (sea and lakes), Sky.shader (the skybox)
   Materials/     GizmoOverlay.mat, PlacementGhost.mat, Water.mat, Sky.mat, InteriorFloor.mat (runtime code copies
                  materials assets reference, never Shader.Find, so builds include the shaders)
-  Settings/      URP, input and volume assets; Worlds/ holds the WorldProfile assets; Agent/ the agent's settings and instructions; Sky/ the SkyProfile assets
+  Settings/      URP, input (InputSystem_Actions: the project-wide actions, its Player map drives the player) and volume assets;
+                 Worlds/ holds the WorldProfile assets; Agent/ the agent's settings and instructions; Sky/ the SkyProfile assets;
+                 Player/ the PlayerProfile
 Assets/StreamingAssets/Plugins/   shipped base plugins (forge.core.json = our "Skyrim.esm", its heights in forge.core.<hash>.terrain)
 Assets/StreamingAssets/StressWorld/  generated stress-test world (git-ignored, Forge/Generate Stress World)
 <persistentDataPath>/Plugins/     user plugins; the active plugin (forge.user) is saved here
@@ -49,25 +53,26 @@ Planned modules (each is created when its first code arrives, not before):
 
 | Assembly         | Engine?  | Purpose                                                     |
 |------------------|----------|-------------------------------------------------------------|
-| `Forge.Game`     | Unity    | The game runtime: player and gameplay over the same data. `TerrainGrid` and `WaterMap` move below `Forge.Editing` for it (the game asks them for ground and swimming) |
+| `Forge.GameApp`  | Unity    | The shipped game's composition root: the world played, no editor. `TerrainGrid` and `WaterMap` move below `Forge.Editing` for the game (it asks them for ground and swimming) |
 
 ### Dependency rule
 
 Dependencies point **down** only. Cycles are impossible, because asmdefs reject them.
 
 ```
-          EditorApp                (Game)
-       /    |    |    \              |
-   Agent  World  |  Data.Json      World
-     |      |    |                   |
-  Editing   | Streaming          Streaming
-      \     |     /
-          Data
-            |
-          Core
+              EditorApp
+       /    |    |    \     \
+   Agent  World  |  Data.Json  Play ── World
+     |      |    |              |
+  Editing   | Streaming        Game
+      \     |     /             |
+          Data                  |
+            |                   |
+          Core ─────────────────┘
 ```
 
-(EditorApp also references Editing directly; Agent references Data for record ids.)
+(EditorApp also references Editing directly; Agent references Data for record ids. `Forge.Game` needs only Core:
+the game's rules never see the editor, and `Forge.Play` is the one place they meet the engine.)
 
 `Forge.UnityEditor` is editor-only tooling and may reference anything below EditorApp.
 
@@ -539,6 +544,33 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
     index updates. Before that it took 22–55 ms (a full resolve plus a full index rebuild per edit).
 - The panel's **Performance** foldout shows these numbers live: chunks, build times,
   worst frame and hitches (>50 ms), last edit and startup phases.
+
+## The player (Forge.Game + Forge.Play)
+
+The game's rules are engine-free (`Forge.Game`, tested with a fake body); `Forge.Play` gives them the engine's body and
+controls, as Streaming and World split the streaming. Built first-person, with the look kept apart from any camera so a
+third-person camera (Skyrim's other half) reads the same player.
+
+- `PlayerCharacter` is the player in the world: its `PlayerLook` (a compass heading, which also turns the body, and a
+  pitch up positive, held within ±85°), its `PlayerLocomotion` and its body, an `IPlayerMotor` (feet position, `Move`
+  that says what it touched in a `MotorContact`, `Teleport`). `Tick(PlayerCommands, dt)` turns the look, steps the
+  rules and has the body make the move; `PlaceAt(feet, heading)` stands it somewhere at rest. `Eyes` = feet + eye height.
+- `PlayerCommands` are the only input the rules see (move: x right, y forward in [-1, 1]; turn in degrees; sprint
+  held; jump pressed this frame), so a gamepad, a script or a test drives the player alike.
+- `PlayerLocomotion` (`LocomotionSettings`: run 4.5 m/s, the default pace as in Skyrim, sprint 7.5, a 1.1 m jump, gravity
+  18 m/s², ground and air acceleration, a 50 m/s fall cap, 0.12 s coyote time): on the ground the pace eases toward the
+  wanted one in about a tenth of a second and the body is pressed into the ground (`GroundStickSpeed`) so it stays on
+  downhill slopes; in the air gravity pulls and steering is weak; a head against a ceiling stops rising; one jump per
+  landing, still allowed just after stepping off an edge. Diagonals are no faster. Headings turn into directions through
+  `Forge.Core.Geometry.Compass` (also behind `PlacementMath`).
+- `CharacterControllerMotor` (Play) is the body: Unity's `CharacterController` sized from the profile (1.8 m tall,
+  0.3 m radius, 0.4 m steps, 50° slopes), its own scene object on the Ignore Raycast layer, so the editor's picks and the
+  camera's probes look through it. It collides with the terrain and the placed objects' colliders.
+- `PlayerControls` (Play) read the profile's action map (`Settings/InputSystem_Actions`, map Player: Move, Look, Sprint,
+  Jump; WASD and arrows, mouse, Shift, Space, and the gamepad) into commands; the look is pointer pixels × the profile's
+  sensitivity (0.1° per pixel). No key is named in code.
+- `PlayerProfile` (`Settings/Player/PlayerProfile.asset`) holds the body, the pace and the controls, tuned in the
+  Inspector.
 
 ## World-building agent (Forge.Agent)
 

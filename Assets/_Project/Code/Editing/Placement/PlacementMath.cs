@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Forge.Core.Geometry;
 
 namespace Forge.Editing.Placement
 {
@@ -12,11 +13,7 @@ namespace Forge.Editing.Placement
         const float DegreesToRadians = (float)(Math.PI / 180.0);
 
         /// <summary>Where an object's local +X points on the ground when turned <paramref name="yawDegrees"/>.</summary>
-        public static Vector2 LocalXAxis(float yawDegrees)
-        {
-            var radians = yawDegrees * DegreesToRadians;
-            return new Vector2((float)Math.Cos(radians), -(float)Math.Sin(radians));
-        }
+        public static Vector2 LocalXAxis(float yawDegrees) => Compass.Right(yawDegrees);
 
         /// <summary>The yaw in [0, 360) that points an object's local +X (a fence's length) along <paramref name="direction"/>.</summary>
         public static float YawAlong(Vector2 direction) =>
@@ -40,10 +37,6 @@ namespace Forge.Editing.Placement
             return Quaternion.Normalize(Quaternion.Concatenate(rotation, Quaternion.CreateFromAxisAngle(Vector3.UnitY, turn)));
         }
 
-        public static float NormalizeDegrees(float degrees)
-        {
-            var wrapped = degrees % 360f;
-            return wrapped < 0f ? wrapped + 360f : wrapped;
-        }
+        public static float NormalizeDegrees(float degrees) => Compass.Normalize(degrees);
     }
 }

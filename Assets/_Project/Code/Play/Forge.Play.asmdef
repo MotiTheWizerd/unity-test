@@ -1,0 +1,19 @@
+{
+    "name": "Forge.Play",
+    "rootNamespace": "Forge.Play",
+    "references": [
+        "Forge.Core",
+        "Forge.Game",
+        "Forge.World",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

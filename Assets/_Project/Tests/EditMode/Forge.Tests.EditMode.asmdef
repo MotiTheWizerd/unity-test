@@ -10,7 +10,8 @@
         "Forge.Editing",
         "Forge.Agent",
         "Forge.Streaming",
-        "Forge.World"
+        "Forge.World",
+        "Forge.Game"
     ],
     "includePlatforms": [
         "Editor"
