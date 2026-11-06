@@ -332,6 +332,16 @@
     margin-bottom: 6px;
 }
 
+/* Only the transcript gives up room: a long one scrolls, and the rows under it keep their size (the review bar's
+   text overlapped its buttons when they shrank with it). */
+.forge-agent-review,
+.forge-agent-mark,
+.forge-agent-attachments,
+.forge-agent-input,
+.forge-agent-send-row {
+    flex-shrink: 0;
+}
+
 .forge-chat {
     white-space: normal;
     margin-bottom: 6px;
