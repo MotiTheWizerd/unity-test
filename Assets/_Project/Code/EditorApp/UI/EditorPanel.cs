@@ -34,8 +34,9 @@ namespace Forge.EditorApp.UI
 
         /// <param name="thumbnails">Pictures for the assets browser's object tiles; null leaves the placeholder icons.</param>
         /// <param name="groundLooks">Pictures for the assets browser's ground tiles; null leaves the placeholder icons.</param>
+        /// <param name="materialLooks">Pictures for the assets browser's material tiles; null leaves the placeholder icons.</param>
         /// <param name="agent">The world-building agent's conversation; null hides the agent dock.</param>
-        public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics, IAssetThumbnails thumbnails, GroundLooks groundLooks, AgentConversation agent)
+        public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics, IAssetThumbnails thumbnails, GroundLooks groundLooks, MaterialLooks materialLooks, AgentConversation agent)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             // The document root covers the whole screen; only real panel elements may catch the pointer.
@@ -57,7 +58,7 @@ namespace Forge.EditorApp.UI
                 new SculptSection(Root, context),
                 new PaintSection(Root, context, commands),
                 new WaterSection(Root, context, commands),
-                new AssetsBrowser(Root, context, thumbnails, groundLooks),
+                new AssetsBrowser(Root, context, commands, thumbnails, groundLooks, materialLooks),
                 new HistorySection(Root, context),
                 new FlySpeedSection(Root, context),
                 new SettingsSection(Root),

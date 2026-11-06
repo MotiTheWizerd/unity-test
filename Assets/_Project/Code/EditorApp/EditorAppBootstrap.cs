@@ -70,6 +70,9 @@ namespace Forge.EditorApp
         [SerializeField, Tooltip("The terrain layer of each ground layer's asset key (Content/GroundLayerCatalog); without one the land is drawn unpainted.")]
         GroundLayerCatalog _groundLayers;
 
+        [SerializeField, Tooltip("The Unity material of each material record's asset key (Content/MaterialCatalog); without one every object wears its own materials.")]
+        MaterialCatalog _materials;
+
         [SerializeField, Tooltip("Unlit material the interior floor grid is painted with (Materials/InteriorFloor).")]
         Material _interiorFloorMaterial;
 
@@ -132,7 +135,8 @@ namespace Forge.EditorApp
                 _frame.Shifted += OnSceneShifted;
                 // One look-up of the ground's looks, for the near land and the far.
                 var ground = CreateGroundLooks();
-                _view = new WorldView(transform, assets, _terrainMaterial, ground);
+                var materials = CreateMaterialLooks();
+                _view = new WorldView(transform, assets, _terrainMaterial, ground, materials);
                 _streamer = new WorldStreamer(_view, new ChunkWindow(_loadRadius, Math.Max(_loadRadius, _unloadRadius)), _frameBudgetMs, CreateFarTerrain(ground));
                 _view.Sync(_context.Session.World);
                 _grass = CreateGrass(ground);
@@ -163,7 +167,7 @@ namespace Forge.EditorApp
                 // Not under the world root: the root moves far from zero, and the pictures would jitter with it.
                 _thumbnails = new ThumbnailRenderer(assets, null);
                 _controller.Initialize(_context, _frame, _view, _waterView, _panel, assets, _agent);
-                _panel.Initialize(_context, _controller.Commands, diagnostics, _thumbnails, ground, _controller.Agent?.Conversation);
+                _panel.Initialize(_context, _controller.Commands, diagnostics, _thumbnails, ground, materials, _controller.Agent?.Conversation);
             }
             catch (Exception ex) when (ex is DataValidationException || ex is IOException)
             {
@@ -288,6 +292,16 @@ namespace Forge.EditorApp
                 return new GroundLooks(_groundLayers);
 
             Debug.LogWarning("[Forge] EditorApp has no ground layer catalog (EditorAppBootstrap._groundLayers); the land is drawn unpainted.");
+            return null;
+        }
+
+        // How materials look; optional, so a world without the catalog still opens, every object in its own look.
+        MaterialLooks CreateMaterialLooks()
+        {
+            if (_materials != null)
+                return new MaterialLooks(_materials);
+
+            Debug.LogWarning("[Forge] EditorApp has no material catalog (EditorAppBootstrap._materials); objects keep their own materials.");
             return null;
         }
 

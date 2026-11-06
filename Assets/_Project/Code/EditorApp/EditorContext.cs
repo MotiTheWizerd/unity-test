@@ -34,6 +34,8 @@ namespace Forge.EditorApp
         RecordId? _unpaintedGround;
         RecordId? _paintLayer;
         string _baseGroundLook;
+        ResolvedWorld _materialWorld;
+        IReadOnlyList<MaterialRecord> _materials;
 
         public EditorContext(EditSession session, PluginFileStore activeStore)
         {
@@ -380,6 +382,27 @@ namespace Forge.EditorApp
             _groundLayers = Forge.Editing.Terrain.GroundLayers.Of(_groundWorld.Records);
             _unpaintedGround = BaseGroundLook == null ? null : Forge.Editing.Terrain.GroundLayers.WithLook(_groundWorld.Records, BaseGroundLook);
         }
+
+        /// <summary>The world's materials, by name. Cached per world version.</summary>
+        public IReadOnlyList<MaterialRecord> Materials
+        {
+            get
+            {
+                if (!ReferenceEquals(_materialWorld, Session.World))
+                {
+                    _materialWorld = Session.World;
+                    _materials = Forge.Editing.Materials.Of(_materialWorld.Records);
+                }
+
+                return _materials;
+            }
+        }
+
+        /// <summary>
+        /// The material slot picking a material dresses on the selection (the selection options' Slot picker); null, or a
+        /// slot the selection lacks, means its first slot.
+        /// </summary>
+        public string MaterialSlot { get; set; }
 
         public string Status { get; private set; }
 

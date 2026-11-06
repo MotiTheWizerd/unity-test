@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Forge.Data;
 using Forge.Data.Records;
 using Forge.EditorApp.Tools;
@@ -85,6 +86,87 @@ namespace Forge.EditorApp
                 _context.Report("Removed the lake");
             }
         }
+
+        /// <summary>
+        /// The material slots of the selected objects shown in the scene, in the order they are first worn, each once;
+        /// empty when nothing selected has any. Slots come from the objects' assets (<see cref="MaterialSlots"/>).
+        /// </summary>
+        public IReadOnlyList<string> SelectionSlots()
+        {
+            var slots = new List<string>();
+            foreach (var id in _context.Selection.Ids)
+            {
+                if (!(_view.TryGetObject(id, out var go) && go.TryGetComponent<MaterialSlots>(out var own)))
+                    continue;
+                foreach (var slot in own.Slots)
+                {
+                    if (!slots.Contains(slot))
+                        slots.Add(slot);
+                }
+            }
+
+            return slots;
+        }
+
+        /// <summary>The slot picking a material dresses: the one chosen when the selection has it, else its first; null when it has none.</summary>
+        public string DressedSlot(IReadOnlyList<string> slots) =>
+            slots.Count == 0 ? null
+            : _context.MaterialSlot != null && slots.Contains(_context.MaterialSlot) ? _context.MaterialSlot
+            : slots[0];
+
+        /// <summary>
+        /// What the selection wears in <paramref name="slot"/>: the material of the first selected object that has one
+        /// there, or null when they all keep their base look.
+        /// </summary>
+        public RecordId? SelectionMaterial(string slot)
+        {
+            if (slot == null)
+                return null;
+            foreach (var id in _context.Selection.Ids)
+            {
+                if (_context.Session.World.Records.TryGet(id, out var record) && record is PlacedObjectRecord placed && placed.MaterialIn(slot) is RecordId worn)
+                    return worn;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Dresses the chosen slot (<see cref="DressedSlot"/>) of every selected object that has it in
+        /// <paramref name="material"/> (the assets browser's material balls). One undo step.
+        /// </summary>
+        public void DressSelection(RecordId material)
+        {
+            var slot = DressedSlot(SelectionSlots());
+            if (slot == null)
+            {
+                _context.Report(_context.Selection.IsEmpty ? "Material: select an object first" : "Material: the selection has no material slots");
+                return;
+            }
+
+            var changed = 0;
+            if (_context.TryEdit("Set material", () => changed = ObjectEdits.SetMaterial(_context.Session, SelectedWithSlot(slot), slot, material)))
+                _context.Report(changed > 0
+                    ? $"{NameOf(material)} on {Materials.SlotLabel(slot)} of {changed} object(s)"
+                    : $"Already {NameOf(material)} on {Materials.SlotLabel(slot)}");
+        }
+
+        /// <summary>Gives every selected object back its base object's look in every slot (the selection options' Reset). One undo step.</summary>
+        public void ResetSelectionMaterials()
+        {
+            var changed = 0;
+            if (_context.TryEdit("Reset materials", () => changed = ObjectEdits.ResetMaterials(_context.Session, _context.Selection.Ids)))
+                _context.Report(changed > 0 ? $"Reset the materials of {changed} object(s)" : "Materials: the selection wears its own look already");
+        }
+
+        // Selected objects whose asset has the slot, so dressing it never writes an override no one could see.
+        List<RecordId> SelectedWithSlot(string slot) =>
+            _context.Selection.Ids
+                .Where(id => _view.TryGetObject(id, out var go) && go.TryGetComponent<MaterialSlots>(out var slots) && slots.Slots.Contains(slot))
+                .ToList();
+
+        string NameOf(RecordId material) =>
+            _context.Session.World.Records.TryGet(material, out var record) && record is MaterialRecord found ? found.DisplayName : material.ToString();
 
         /// <summary>Glides the camera so the whole selection fills the view (F).</summary>
         public void FrameSelection()

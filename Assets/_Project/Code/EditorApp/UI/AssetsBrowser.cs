@@ -5,6 +5,7 @@ using Forge.Data;
 using Forge.Data.Records;
 using Forge.EditorApp.Tools;
 using Forge.EditorApp.UI.Controls;
+using Forge.Editing;
 using Forge.Editing.Palette;
 using Forge.Editing.Terrain;
 using Forge.World;
@@ -15,17 +16,20 @@ using UnityEngine.UIElements;
 namespace Forge.EditorApp.UI
 {
     /// <summary>
-    /// The assets browser along the bottom: a tab per top-level category (<see cref="PaletteTabs"/>) plus a Ground tab,
-    /// a flowing grid of tiles for the current tab (the sub-category is in the tooltip), and a search that spans every
-    /// tab. The panel collapses to its header and its height can be dragged. Tiles are rebuilt only when what is shown
-    /// changes. Picking an object tile chooses what the placing tools lay (<see cref="EditorContext.SelectPlacement"/>);
-    /// picking a ground tile chooses what the paint tool lays (<see cref="EditorContext.SelectPaintLayer"/>).
+    /// The assets browser along the bottom: a tab per top-level category (<see cref="PaletteTabs"/>) plus a Ground and a
+    /// Materials tab, a flowing grid of tiles for the current tab (the sub-category is in the tooltip), and a search that
+    /// spans every tab. The panel collapses to its header and its height can be dragged. Tiles are rebuilt only when what
+    /// is shown changes. Picking an object tile chooses what the placing tools lay (<see cref="EditorContext.SelectPlacement"/>);
+    /// picking a ground tile chooses what the paint tool lays (<see cref="EditorContext.SelectPaintLayer"/>); picking a
+    /// material dresses the selection's chosen slot in it (<see cref="EditorCommands.DressSelection"/>).
     /// </summary>
     public sealed class AssetsBrowser : IPanelSection
     {
-        // A category tab's key is a category's first segment, which never holds the separator, so this can't clash.
+        // A category tab's key is a category's first segment, which never holds the separator, so these can't clash.
         static readonly string GroundTab = CategoryPath.Separator + "ground";
+        static readonly string MaterialsTab = CategoryPath.Separator + "materials";
         const string GroundTitle = "Ground";
+        const string MaterialsTitle = "Materials";
         const string UncategorizedTitle = "Uncategorized";
         const string CollapsedClass = "is-collapsed";
         const string CollapseIconOpen = "chevron-down";
@@ -35,8 +39,10 @@ namespace Forge.EditorApp.UI
         const int ShortcutCount = 9;
 
         readonly EditorContext _context;
+        readonly EditorCommands _commands;
         readonly IAssetThumbnails _thumbnails;
         readonly GroundLooks _groundLooks;
+        readonly MaterialLooks _materialLooks;
         readonly VisualElement _panel;
         readonly VisualElement _resize;
         readonly TabBar _tabs;
@@ -46,9 +52,11 @@ namespace Forge.EditorApp.UI
         readonly ForgeButton _collapse;
         readonly Dictionary<RecordId, AssetTile> _tiles = new Dictionary<RecordId, AssetTile>();
         readonly Dictionary<RecordId, AssetTile> _groundTiles = new Dictionary<RecordId, AssetTile>();
+        readonly Dictionary<RecordId, AssetTile> _materialTiles = new Dictionary<RecordId, AssetTile>();
 
         ObjectPalette _source;
         IReadOnlyList<GroundLayerRecord> _ground;
+        IReadOnlyList<MaterialRecord> _materials;
         string _query = string.Empty;
         string _shownQuery;
         string _shownTab;
@@ -59,11 +67,14 @@ namespace Forge.EditorApp.UI
 
         /// <param name="thumbnails">Pictures for the object tiles; null leaves the placeholder icons.</param>
         /// <param name="groundLooks">What the ground tiles' material balls wear; null (or no thumbnails) leaves the placeholder icons.</param>
-        public AssetsBrowser(VisualElement root, EditorContext context, IAssetThumbnails thumbnails, GroundLooks groundLooks)
+        /// <param name="materialLooks">What the material tiles' balls wear; null (or no thumbnails) leaves the placeholder icons.</param>
+        public AssetsBrowser(VisualElement root, EditorContext context, EditorCommands commands, IAssetThumbnails thumbnails, GroundLooks groundLooks, MaterialLooks materialLooks)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             _thumbnails = thumbnails;
             _groundLooks = groundLooks;
+            _materialLooks = materialLooks;
             _panel = PanelElements.Required<VisualElement>(root, "assets");
             _resize = PanelElements.Required<VisualElement>(root, "assets-resize");
             _search = PanelElements.Required<TextField>(root, "assets-search");
@@ -98,10 +109,13 @@ namespace Forge.EditorApp.UI
             var ground = _context.GroundLayers;
             var groundChanged = !ReferenceEquals(ground, _ground) && !SameEntries(ground, _ground);
             _ground = ground;
-            if (sourceChanged || groundChanged)
+            var materials = _context.Materials;
+            var materialsChanged = !ReferenceEquals(materials, _materials) && !SameEntries(materials, _materials);
+            _materials = materials;
+            if (sourceChanged || groundChanged || materialsChanged)
                 _tabs.SetTabs(Tabs());
 
-            if (sourceChanged || groundChanged || _query != _shownQuery || _tabs.Current != _shownTab)
+            if (sourceChanged || groundChanged || materialsChanged || _query != _shownQuery || _tabs.Current != _shownTab)
             {
                 _shownQuery = _query;
                 _shownTab = _tabs.Current;
@@ -116,13 +130,24 @@ namespace Forge.EditorApp.UI
             var paintLayer = _context.PaintLayer;
             foreach (var pair in _groundTiles)
                 PanelElements.SetActive(pair.Value, painting && pair.Key == paintLayer);
+            // What the selection wears in the slot a ball would dress.
+            if (_materialTiles.Count > 0)
+            {
+                var worn = _commands.SelectionMaterial(_commands.DressedSlot(_commands.SelectionSlots()));
+                foreach (var pair in _materialTiles)
+                    PanelElements.SetActive(pair.Value, pair.Key == worn);
+            }
         }
 
-        // A tab per category, then Ground when the world has ground layers.
+        // A tab per category, then Ground and Materials when the world has them.
         (string Key, string Title)[] Tabs()
         {
             var tabs = PaletteTabs.From(_source).Select(t => (t.Category, TabTitle(t.Category)));
-            return (_ground.Count > 0 ? tabs.Append((GroundTab, GroundTitle)) : tabs).ToArray();
+            if (_ground.Count > 0)
+                tabs = tabs.Append((GroundTab, GroundTitle));
+            if (_materials.Count > 0)
+                tabs = tabs.Append((MaterialsTab, MaterialsTitle));
+            return tabs.ToArray();
         }
 
         void Rebuild()
@@ -130,21 +155,28 @@ namespace Forge.EditorApp.UI
             _grid.Clear();
             _tiles.Clear();
             _groundTiles.Clear();
+            _materialTiles.Clear();
 
             var searching = _query.Trim().Length > 0;
             _tabs.SetDimmed(searching);
 
-            // A search spans every tab, objects then ground; otherwise the grid shows the current tab.
+            // A search spans every tab, objects then ground then materials; otherwise the grid shows the current tab.
             IReadOnlyList<PaletteGroup> groups = Array.Empty<PaletteGroup>();
             IReadOnlyList<GroundLayerRecord> ground = Array.Empty<GroundLayerRecord>();
+            IReadOnlyList<MaterialRecord> materials = Array.Empty<MaterialRecord>();
             if (searching)
             {
                 groups = _source.Filter(_query).Groups;
                 ground = GroundLayers.Filter(_ground, _query);
+                materials = Materials.Filter(_materials, _query);
             }
             else if (_tabs.Current == GroundTab)
             {
                 ground = _ground;
+            }
+            else if (_tabs.Current == MaterialsTab)
+            {
+                materials = _materials;
             }
             else
             {
@@ -166,14 +198,21 @@ namespace Forge.EditorApp.UI
                 shownCount++;
             }
 
+            foreach (var material in materials)
+            {
+                _grid.Add(CreateTile(material));
+                shownCount++;
+            }
+
             PanelElements.SetText(_count, CountText(searching, shownCount));
         }
 
         static string CountText(int shown, int total, string what) => shown != total ? $"{shown} of {total}" : $"{total} {what}";
 
         string CountText(bool searching, int shownCount) =>
-            searching ? CountText(shownCount, _source.Count + _ground.Count, "assets")
+            searching ? CountText(shownCount, _source.Count + _ground.Count + _materials.Count, "assets")
             : _tabs.Current == GroundTab ? CountText(shownCount, _ground.Count, "grounds")
+            : _tabs.Current == MaterialsTab ? CountText(shownCount, _materials.Count, "materials")
             : CountText(shownCount, _source.Count, "objects");
 
         AssetTile CreateTile(BaseObjectRecord record)
@@ -200,6 +239,20 @@ namespace Forge.EditorApp.UI
             if (_thumbnails != null && _groundLooks != null)
                 tile.SetThumbnail(_thumbnails.GetBall(layer.AssetKey, () => _groundLooks.CreatePreviewMaterial(id)));
             _groundTiles.Add(id, tile);
+            return tile;
+        }
+
+        AssetTile CreateTile(MaterialRecord material)
+        {
+            var id = material.Id;
+            var tile = new AssetTile(material.DisplayName, 0, () => _commands.DressSelection(id))
+            {
+                tooltip = $"{material.DisplayName}  <color=#9EA4AE>· {MaterialsTitle}: click to dress the selection's slot</color>",
+            };
+            // Ball pictures are keyed by look, so a material and a ground of one key can't share one.
+            if (_thumbnails != null && _materialLooks != null)
+                tile.SetThumbnail(_thumbnails.GetBall(material.AssetKey, () => _materialLooks.CreatePreviewMaterial(id)));
+            _materialTiles.Add(id, tile);
             return tile;
         }
 
@@ -268,6 +321,9 @@ namespace Forge.EditorApp.UI
             x.Id == y.Id && x.DisplayName == y.DisplayName && x.Category == y.Category;
 
         static bool SameEntries(IReadOnlyList<GroundLayerRecord> a, IReadOnlyList<GroundLayerRecord> b) =>
+            b != null && a.Count == b.Count && a.Zip(b, (x, y) => x.Id == y.Id && x.DisplayName == y.DisplayName && x.AssetKey == y.AssetKey).All(same => same);
+
+        static bool SameEntries(IReadOnlyList<MaterialRecord> a, IReadOnlyList<MaterialRecord> b) =>
             b != null && a.Count == b.Count && a.Zip(b, (x, y) => x.Id == y.Id && x.DisplayName == y.DisplayName && x.AssetKey == y.AssetKey).All(same => same);
     }
 }

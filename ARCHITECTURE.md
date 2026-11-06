@@ -102,7 +102,15 @@ one in the active plugin.
   Absent = placed exactly as aimed, upright. Records hold no derived properties (serializers write
   every public property); helpers like `PlacementRoll.CanVary` live in Editing.
 - Optional fields are omitted from plugin JSON rather than written as `null` (`NullValueHandling.Ignore`).
-- `PlacedObjectRecord`: an instance in the world (base id, position, rotation, scale).
+- `PlacedObjectRecord`: an instance in the world (base id, position, rotation, scale), and optionally the
+  `Materials` it wears instead of its base object's in some **material slots** (`MaterialOverride`: slot, material id;
+  sorted by slot, each slot once, at most 64; empty = the base object's look). A slot is named after the material the
+  asset wears there by default ("Roof", "Plaster"), as Blender and Unreal name a mesh's slots, so the data never
+  depends on how an asset is put together inside; every part wearing that material is one slot. Overrides are per
+  placed object (the Creation Kit's way to vary one is a new base object, which can come later as "make a variant").
+- `MaterialRecord` (`material/<name>`): a surface objects can wear (display name, asset key the presentation resolves
+  to the look), like a ground layer: a mod restyles a material everywhere by overriding it, or adds its own.
+  `forge.core` ships eight (`CoreMaterials`).
 - New record types must be registered in `RecordTypeRegistry.CreateDefault()`.
 
 **Plugins** = manifest (`id`, `version`, `masters`) + records + deletions.
@@ -269,7 +277,11 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
 - **The codec** (`ObjectCodec`): per block a string table of namespaces and base ids, then per object its namespace
   index, name, base id indices, position, rotation and scale as plain floats: ~64 bytes an object. Decoding checks
   that every object stands in the block's chunk and space, belongs to the plugin or a master, and that ids are sorted
-  and unique; so a block that breaks the plugin's rules fails when first read, not at load.
+  and unique; so a block that breaks the plugin's rules fails when first read, not at load. A block where some object
+  wears other materials is codec 2 (`ObjectCodec.WithMaterials`): after its scale each object lists its overrides
+  (a count byte, then slot, material namespace and material name as string table indices); every other block stays
+  codec 1 (`Plain`), byte for byte what it was, so files without materials never change. The table stores each block's
+  codec, and a saved-again file copies it with the packed block.
 - **Saving** (`PluginFileStore.Save`): the objects file is written like the terrain file (blocks still stored in another
   objects file are copied packed with their hashes), named by its content, then the JSON names it; older objects files
   go after the commit, except the one the plugin was loaded with.
@@ -326,7 +338,9 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
 - `ObjectEdits.Transform(ids, change, verb)` is **the one commit path for every transform**:
   one undo step, and objects whose transform doesn't change are skipped. `Move`, `SetPositions`
   (drop to ground) and gizmo drags all go through it. Changing a master's object creates an
-  override in the active plugin. `ObjectEdits.Delete` deletes many objects as one step.
+  override in the active plugin. `ObjectEdits.Delete` deletes many objects as one step. `ObjectEdits.SetMaterial`
+  (one slot of many objects, a material or null for the base look) and `ResetMaterials` (every slot) share the same
+  commit path: one undo step, unchanged objects skipped, transforms keep an object's materials.
 - **Gizmo drags** (`Editing/Transforms`) are engine-free `ITransformDrag`s, fed pointer rays:
   `MoveDrag` (axis or plane), `RotateDrag` (around a world axis through the pivot; the angle
   accumulates past ±180°) and `ScaleDrag` (uniform, a ratio of distances along an axis or radially
@@ -569,8 +583,8 @@ slopes), so results are exact and every edit goes through the edit session.
   `PrefabAssetCatalog` looks the key up in the `PrefabCatalog` ScriptableObject (`Content/PrefabCatalog.asset`,
   assigned on `EditorAppBootstrap._prefabs`) and falls back to `PrimitiveAssetCatalog` (`primitive/*`, and a
   magenta cube for unknown keys). Swapping a prefab in the catalog re-skins every object using that key
-  without touching a plugin. Prefab pivots sit at the ground contact point. Both content tables (prefabs, ground
-  layers) are a `KeyedAssetCatalog<T>`: entries sorted by key, looked up once into a dictionary.
+  without touching a plugin. Prefab pivots sit at the ground contact point. The content tables (prefabs, ground
+  layers, materials) are each a `KeyedAssetCatalog<T>`: entries sorted by key, looked up once into a dictionary.
 - **Ground looks**: a `GroundLayerRecord`'s asset key is looked up in the `GroundLayerCatalog`
   (`Content/GroundLayerCatalog.asset`, on `EditorAppBootstrap._groundLayers`, optional: without it the land is drawn
   unpainted) to a Unity `TerrainLayer` (`GroundLooks`, which also falls back to the catalog's base layer, with one
@@ -582,6 +596,18 @@ slopes), so results are exact and every edit goes through the edit session.
   height, smoothness = 1 − roughness) and lists it under `ground/<folder>`; drop a new folder in and rebuild to add
   a layer. `Materials/Terrain.mat` (URP Terrain Lit) has `_NORMALMAP`, `_MASKMAP` and height-based blending on:
   Unity sets those keywords from the Inspector only, never for a runtime terrain.
+- **Material looks**: a `MaterialRecord`'s asset key is looked up in the `MaterialCatalog`
+  (`Content/MaterialCatalog.asset`, on `EditorAppBootstrap._materials`, optional: without it every object wears its own
+  materials) to a Unity material (`MaterialLooks`; a material the world or catalog lacks leaves the slot in its base
+  look, with one warning). `WorldView` puts a `MaterialSlots` on every placed object it builds, capturing what each
+  renderer wears by default, so `Dress(overrides)` swaps `sharedMaterials` per slot and gives slots back their defaults;
+  a record whose materials changed is dressed again in place, and a changed `MaterialRecord` (like a base object) is a
+  dependency, so it rebuilds. The textures are CC0 ambientCG scans under `Content/Materials/<Name>/` (credited in
+  `CREDITS.md`, plain git like the ground's); *Forge → Materials → Build Materials* makes each folder's URP Lit
+  `<Name>.mat` (color, normal, and one packed mask as metallic-smoothness and occlusion map, `TextureMaps.PackMask`,
+  shared with the ground builder) and lists it under `material/<folder>`. `MaterialCatalogTests` guards that every
+  shipped material has a look with its maps on. The placeholder shapes are Unity primitives with 0–1 UVs per face, so
+  a material stretches over a long wall; real meshes bring proper UVs.
 - **Placeholder content** (`UnityEditor/Content`): `PlaceholderContent.All` is the one table of the base
   game's placeable objects (record name, display name, category, asset key, how to build the prefab).
   *Forge → Generate Placeholder Content* builds the materials and prefabs from primitives in a preview scene
@@ -771,17 +797,23 @@ slopes), so results are exact and every edit goes through the edit session.
   button and a drag handle on the top edge for its height. After the categories comes a **Ground** tab (key
   `/ground`, which no category head can be): one tile per `GroundLayerRecord`, its picture a material ball (`ThumbnailRenderer.GetBall`:
   a lit sphere wearing `GroundLooks.CreatePreviewMaterial`, a URP Lit stand-in built by `TerrainLayerPreview` from
-  the layer's color, normal and mask maps and tint, destroyed once the picture is taken); picking one calls `EditorContext.SelectPaintLayer` (paint tool, that ground). Every list
+  the layer's color, normal and mask maps and tint, destroyed once the picture is taken); picking one calls `EditorContext.SelectPaintLayer` (paint tool, that ground). Then a
+  **Materials** tab (`/materials`): one ball per `MaterialRecord` (`MaterialLooks.CreatePreviewMaterial`, a throwaway
+  copy of the catalog's material); picking one calls `EditorCommands.DressSelection`, which dresses the chosen slot of
+  every selected object that has it, as one undo step, and the tile of what the selection wears there is lit. The
+  slot is picked in the selection options (`SelectionSection`: a Slot dropdown listing the selection's slots,
+  `EditorCommands.SelectionSlots`, read from the shown objects' `MaterialSlots`, labelled by `Materials.SlotLabel`;
+  the choice is `EditorContext.MaterialSlot`, the first slot when unset) beside a Reset look button
+  (`ResetSelectionMaterials`). Every list
   is searched alike through `SearchQuery` (all terms, any field, ignoring case). Each object tile's picture comes from `ThumbnailRenderer`
   (`World/Assets`, behind `IAssetThumbnails`): on first request it instantiates the asset key through the same
   `IAssetCatalog` the world uses, frames it whole with `ThumbnailFraming` (orthographic three-quarter view, pure
   math, tested), renders it with a private camera on the `ForgePreview` layer into a 128 px texture with a
   transparent background, and keeps it for the session. The rig brings its own light and a flat ambient and
   silences the scene's lights for that one render, so pictures look the same at any time of day; the instance is
-  destroyed immediately after, because the next picture may be rendered in the same frame. Tabs for materials and
-  textures will sit in the same bar. The **tool options bar** (across the top of the view) shows the current
+  destroyed immediately after, because the next picture may be rendered in the same frame. The **tool options bar** (across the top of the view) shows the current
   tool's name and hint, and each tool's settings are their own section inside it, shown while that tool is
-  current: `SelectionSection` (count, Frame, Drop) for Select/Move/Rotate/Scale, `RectangleSection` (whole pieces)
+  current: `SelectionSection` (count, Frame, Drop, material Slot, Reset look) for Select/Move/Rotate/Scale, `RectangleSection` (whole pieces)
   for Outline and Fill, `PlacementSection` (turn, random turn & size, align to slope, gaps) for Place, Outline and Fill, `SculptSection` (brush) for Sculpt, `WaterSection` (the current lake's level, Remove) for Water. Each presenter
   binds its UXML elements by name (`PanelElements.Required` fails loudly on a mismatch), sends
   actions to `EditorContext` / `EditorCommands`, and mirrors state in `Refresh()` every frame,

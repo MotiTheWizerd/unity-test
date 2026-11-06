@@ -24,6 +24,7 @@ namespace Forge.World
         readonly IAssetCatalog _catalog;
         readonly Material _terrainMaterial;
         readonly GroundLooks _ground;
+        readonly MaterialLooks _materials;
         readonly Dictionary<RecordId, Presented> _presented = new Dictionary<RecordId, Presented>();
         readonly HashSet<ChunkCoord> _loaded = new HashSet<ChunkCoord>();
         ResolvedWorld _world;
@@ -31,12 +32,14 @@ namespace Forge.World
 
         /// <param name="terrainMaterial">What the land is drawn with (Materials/Terrain).</param>
         /// <param name="ground">How ground layers look; null draws the land unpainted.</param>
-        public WorldView(Transform root, IAssetCatalog catalog, Material terrainMaterial, GroundLooks ground = null)
+        /// <param name="materials">How materials look; null shows every object in its base look.</param>
+        public WorldView(Transform root, IAssetCatalog catalog, Material terrainMaterial, GroundLooks ground = null, MaterialLooks materials = null)
         {
             _root = root != null ? root : throw new ArgumentNullException(nameof(root));
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             _terrainMaterial = terrainMaterial != null ? terrainMaterial : throw new ArgumentNullException(nameof(terrainMaterial));
             _ground = ground;
+            _materials = materials;
         }
 
         public int PresentedCount => _presented.Count;
@@ -146,6 +149,7 @@ namespace Forge.World
             var previous = _world;
             _world = world;
             _ground?.Use(world.Records);
+            _materials?.Use(world.Records);
             if (world.TryGetChangesSince(previous, out var changed) && NoDependencyChanged(previous.Records, changed))
             {
                 ApplyChanges(changed);
@@ -172,12 +176,13 @@ namespace Forge.World
             }
         }
 
-        // Base objects are dependencies of many placed objects; a change to one is rare (no tool edits them yet) and
-        // simply falls back to a rebuild. Records the view doesn't present (spaces, lakes) are skipped by the index.
+        // Base objects and materials are dependencies of many placed objects; a change to one is rare (no tool edits them
+        // yet) and simply falls back to a rebuild. Records the view doesn't present (spaces, lakes) are skipped by the index.
         bool NoDependencyChanged(IRecordStore previous, IEnumerable<RecordId> changed) =>
             changed.All(id => !IsDependency(previous, id) && !IsDependency(_world.Records, id));
 
-        static bool IsDependency(IRecordStore store, RecordId id) => store.TryGet(id, out var record) && record is BaseObjectRecord;
+        static bool IsDependency(IRecordStore store, RecordId id) =>
+            store.TryGet(id, out var record) && (record is BaseObjectRecord || record is MaterialRecord);
 
         void Rebuild()
         {
@@ -263,9 +268,15 @@ namespace Forge.World
             foreach (var placed in _index.ObjectsIn(coord))
             {
                 _world.Records.TryGet(placed.BaseId, out var baseRecord);
+                var shown = _presented.TryGetValue(placed.Id, out var current) ? current.Record as PlacedObjectRecord : null;
                 Present(placed, baseRecord,
                     () => BuildPlaced(placed, baseRecord as BaseObjectRecord),
-                    go => ApplyTransform(go.transform, placed));
+                    go =>
+                    {
+                        ApplyTransform(go.transform, placed);
+                        if (!placed.HasSameMaterials(shown))
+                            Dress(go, placed);
+                    });
                 count++;
             }
 
@@ -312,7 +323,17 @@ namespace Forge.World
             var go = _catalog.Instantiate(baseRecord?.AssetKey, _root);
             go.name = placed.Id.ToString();
             ApplyTransform(go.transform, placed);
+            MaterialSlots.Capture(go);
+            if (placed.Materials.Count > 0)
+                Dress(go, placed);
             return go;
+        }
+
+        // Every slot the record names wears its material; the rest wear the asset's own.
+        void Dress(GameObject go, PlacedObjectRecord placed)
+        {
+            if (go.TryGetComponent<MaterialSlots>(out var slots))
+                slots.Dress(placed.Materials, id => _materials?.Of(id));
         }
 
         static void ApplyTransform(Transform transform, PlacedObjectRecord placed)

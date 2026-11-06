@@ -28,6 +28,8 @@
                 <ui:Label name="selection-count" />
                 <forge:ForgeButton name="frame-selection" text="Frame" tooltip="F" />
                 <forge:ForgeButton name="drop-to-ground" text="Drop" tooltip="End" />
+                <forge:ForgeDropdown name="material-slot" label="Slot" tooltip="The material slot a material from the Materials tab dresses" />
+                <forge:ForgeButton name="reset-materials" text="Reset look" tooltip="Give the selection back its own materials in every slot" />
             </ui:VisualElement>
             <ui:VisualElement name="options-rectangle" class="forge-options__group">
                 <forge:ForgeCheckbox name="rectangle-snap" label="Whole pieces" />

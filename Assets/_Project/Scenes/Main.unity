@@ -514,6 +514,7 @@ MonoBehaviour:
   _farTerrainMaterial: {fileID: 2100000, guid: ef8fb23861bdf7849a872f6e2b128cef, type: 2}
   _grassMaterial: {fileID: 2100000, guid: a59485f0fda95114a8716bc8ba4240f2, type: 2}
   _groundLayers: {fileID: 11400000, guid: 0a4360062ec1e894ab46e89f8ae6f1dc, type: 2}
+  _materials: {fileID: 11400000, guid: 9d256971e1f8275449de8f8057461f55, type: 2}
   _interiorFloorMaterial: {fileID: 2100000, guid: 64aeb05968465834799377faddce59db, type: 2}
   _sky: {fileID: 11400000, guid: 809b6fa0062c19647bba0b3d2550d0a5, type: 2}
   _sun: {fileID: 410087040}
