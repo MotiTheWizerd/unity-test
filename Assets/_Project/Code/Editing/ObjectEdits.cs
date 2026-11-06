@@ -104,6 +104,39 @@ namespace Forge.Editing
         public static int ResetMaterials(EditSession session, IEnumerable<RecordId> ids) =>
             Change(session, ids, p => p.WithMaterials(null), (a, b) => a.HasSameMaterials(b), "Reset materials of");
 
+        /// <summary>Name prefix of the ids variants get in the active plugin, e.g. "user:variant/000003".</summary>
+        public const string VariantIdPrefix = "variant";
+
+        /// <summary>
+        /// Saves what placed object <paramref name="placedId"/> looks like as a new kind of object, a variant of its base
+        /// object named <paramref name="displayName"/>: the same asset, category and placement rules, wearing the base
+        /// object's materials with the placed object's own on top. The placed object becomes an instance of the variant
+        /// (its own materials now come from it). One undo step. Returns the variant's id.
+        /// </summary>
+        /// <exception cref="ArgumentException">There is no such placed object, its base object is missing, or the name is blank.</exception>
+        public static RecordId MakeVariant(EditSession session, RecordId placedId, string displayName)
+        {
+            if (session == null)
+                throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(displayName))
+                throw new ArgumentException("A variant needs a name.", nameof(displayName));
+            var records = session.World.Records;
+            if (!(records.TryGet(placedId, out var record) && record is PlacedObjectRecord placed))
+                throw new ArgumentException($"There is no placed object '{placedId}'.", nameof(placedId));
+            if (!(records.TryGet(placed.BaseId, out var kind) && kind is BaseObjectRecord baseObject))
+                throw new ArgumentException($"The kind of '{placedId}', {placed.BaseId}, no longer exists.", nameof(placedId));
+
+            var name = displayName.Trim();
+            var variant = new BaseObjectRecord(session.NewId(VariantIdPrefix), name, baseObject.AssetKey, baseObject.Category,
+                baseObject.Placement, MaterialOverrides.Layer(baseObject.Materials, placed.Materials));
+            session.Batch($"Make variant {name}", () =>
+            {
+                session.Put(variant);
+                session.Put(placed.WithBase(variant.Id));
+            });
+            return variant.Id;
+        }
+
         // The one commit path for changes to existing placed objects: one undo step, unchanged objects skipped.
         static int Change(EditSession session, IEnumerable<RecordId> ids, Func<PlacedObjectRecord, PlacedObjectRecord> change,
             Func<PlacedObjectRecord, PlacedObjectRecord, bool> same, string verb)

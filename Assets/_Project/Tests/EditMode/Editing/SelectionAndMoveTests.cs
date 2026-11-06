@@ -140,6 +140,51 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void MakeVariant_SavesTheLook_AsANewKind_TheObjectNowIsOne_InOneUndoStep()
+        {
+            var session = NewSession();
+            ObjectEdits.SetMaterial(session, new[] { Ref1 }, "Bark", Oak);
+
+            var variant = ObjectEdits.MakeVariant(session, Ref1, "  Oak-bark Tree ");
+
+            var kind = session.World.Records.Get<BaseObjectRecord>(variant);
+            var tree = session.World.Records.Get<BaseObjectRecord>(Tree);
+            var placed = session.World.Records.Get<PlacedObjectRecord>(Ref1);
+            Assert.That(variant.ToString(), Is.EqualTo("user:variant/000001"));
+            Assert.That((kind.DisplayName, kind.AssetKey, kind.Category), Is.EqualTo(("Oak-bark Tree", tree.AssetKey, tree.Category)));
+            Assert.That(kind.Materials, Is.EqualTo(new[] { new MaterialOverride("Bark", Oak) }));
+            Assert.That(placed.BaseId, Is.EqualTo(variant));
+            Assert.That(placed.Materials, Is.Empty, "Its look now comes from the variant.");
+            Assert.That(session.UndoDescription, Is.EqualTo("Make variant Oak-bark Tree"));
+
+            session.Undo();
+            Assert.That(session.World.Records.Contains(variant), Is.False);
+            Assert.That(session.World.Records.Get<PlacedObjectRecord>(Ref1).MaterialIn("Bark"), Is.EqualTo(Oak));
+        }
+
+        [Test]
+        public void MakeVariant_RefusesABlankName_AndWhatIsNotAPlacedObject()
+        {
+            var session = NewSession();
+
+            Assert.Throws<ArgumentException>(() => ObjectEdits.MakeVariant(session, Ref1, " "));
+            Assert.Throws<ArgumentException>(() => ObjectEdits.MakeVariant(session, Tree, "Tree 2"));
+            Assert.That(session.CanUndo, Is.False);
+        }
+
+        [Test]
+        public void MaterialOverrides_Layer_PutsAnObjectsOwnOverItsKinds()
+        {
+            var stone = MaterialRecord.IdFor("core", "stone");
+            var under = new[] { new MaterialOverride("Bark", Oak), new MaterialOverride("Leaves", Oak) };
+            var over = new[] { new MaterialOverride("Leaves", stone) };
+
+            Assert.That(MaterialOverrides.Layer(under, over), Is.EqualTo(new[] { new MaterialOverride("Bark", Oak), new MaterialOverride("Leaves", stone) }));
+            Assert.That(MaterialOverrides.Layer(null, over), Is.SameAs(over));
+            Assert.That(MaterialOverrides.Layer(under, MaterialOverrides.None), Is.SameAs(under));
+        }
+
+        [Test]
         public void Transform_KeepsAnObjectsMaterials()
         {
             var session = NewSession();

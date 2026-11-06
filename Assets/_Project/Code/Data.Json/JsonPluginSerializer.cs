@@ -170,6 +170,7 @@ namespace Forge.Data.Json
             {
                 new RecordConverter(_registry),
                 new RecordIdConverter(),
+                new MaterialOverridesConverter(),
                 new Vector3Converter(),
                 new QuaternionConverter(),
                 new ChunkCoordConverter(),

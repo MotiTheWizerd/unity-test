@@ -72,11 +72,25 @@ namespace Forge.World.Assets
         }
 
         /// <summary>The picture for <paramref name="assetKey"/>, rendered on first request.</summary>
-        public Texture2D Get(string assetKey)
+        public Texture2D Get(string assetKey) => Get(assetKey, null, null);
+
+        /// <summary>The picture for <paramref name="assetKey"/> dressed by <paramref name="dress"/>, rendered on first request.</summary>
+        public Texture2D Get(string assetKey, string lookKey, Action<GameObject> dress)
         {
             if (string.IsNullOrEmpty(assetKey)) throw new ArgumentException("Asset key is required.", nameof(assetKey));
-            return Cached(assetKey, () => _assets.Instantiate(assetKey, _stage));
+            if (string.IsNullOrEmpty(lookKey) || dress == null)
+                return Cached(assetKey, () => _assets.Instantiate(assetKey, _stage));
+
+            return Cached(assetKey + LookSeparator + lookKey, () =>
+            {
+                var instance = _assets.Instantiate(assetKey, _stage);
+                dress(instance);
+                return instance;
+            });
         }
+
+        // Asset keys never hold it, so a dressed look can't collide with a plain asset's picture.
+        const string LookSeparator = "|";
 
         /// <summary>
         /// A material ball: a sphere wearing the material <paramref name="createMaterial"/> makes, rendered on first

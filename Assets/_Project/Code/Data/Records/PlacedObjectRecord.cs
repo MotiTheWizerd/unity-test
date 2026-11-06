@@ -12,11 +12,6 @@ namespace Forge.Data.Records
     /// </summary>
     public sealed class PlacedObjectRecord : Record
     {
-        /// <summary>Most slots one object can dress differently.</summary>
-        public const int MaxMaterials = 64;
-
-        static readonly IReadOnlyList<MaterialOverride> NoMaterials = Array.Empty<MaterialOverride>();
-
         /// <param name="materials">Slots dressed in another material; null or empty: the base object's look throughout.</param>
         public PlacedObjectRecord(RecordId id, RecordId baseId, RecordId space, Vector3 position, Quaternion rotation, float scale,
             IEnumerable<MaterialOverride> materials = null)
@@ -38,7 +33,7 @@ namespace Forge.Data.Records
             Position = position;
             Rotation = rotation;
             Scale = scale;
-            Materials = Sorted(materials);
+            Materials = MaterialOverrides.Validated(materials, nameof(materials));
         }
 
         public RecordId BaseId { get; }
@@ -56,16 +51,7 @@ namespace Forge.Data.Records
         public IReadOnlyList<MaterialOverride> Materials { get; }
 
         /// <summary>The material worn in <paramref name="slot"/> instead of the base object's, or null when it keeps that.</summary>
-        public RecordId? MaterialIn(string slot)
-        {
-            foreach (var material in Materials)
-            {
-                if (string.Equals(material.Slot, slot, StringComparison.Ordinal))
-                    return material.Material;
-            }
-
-            return null;
-        }
+        public RecordId? MaterialIn(string slot) => MaterialOverrides.In(Materials, slot);
 
         public PlacedObjectRecord WithPosition(Vector3 position) => WithTransform(position, Rotation, Scale);
 
@@ -87,6 +73,10 @@ namespace Forge.Data.Records
         public PlacedObjectRecord WithMaterials(IEnumerable<MaterialOverride> materials) =>
             new PlacedObjectRecord(Id, BaseId, Space, Position, Rotation, Scale, materials);
 
+        /// <summary>A copy that is an instance of <paramref name="baseId"/> instead, wearing <paramref name="materials"/> (null: none of its own).</summary>
+        public PlacedObjectRecord WithBase(RecordId baseId, IEnumerable<MaterialOverride> materials = null) =>
+            new PlacedObjectRecord(Id, baseId, Space, Position, Rotation, Scale, materials);
+
         /// <summary>True when position, rotation and scale are exactly equal.</summary>
         public bool HasSameTransform(PlacedObjectRecord other) =>
             other != null && Position == other.Position && Rotation == other.Rotation && Scale == other.Scale;
@@ -96,26 +86,5 @@ namespace Forge.Data.Records
             other != null && Materials.SequenceEqual(other.Materials);
 
         static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
-
-        static IReadOnlyList<MaterialOverride> Sorted(IEnumerable<MaterialOverride> materials)
-        {
-            if (materials == null)
-                return NoMaterials;
-
-            var sorted = materials.OrderBy(m => m.Slot, StringComparer.Ordinal).ToArray();
-            if (sorted.Length == 0)
-                return NoMaterials;
-            if (sorted.Length > MaxMaterials)
-                throw new ArgumentException($"An object dresses at most {MaxMaterials} slots, not {sorted.Length}.", nameof(materials));
-            for (var i = 0; i < sorted.Length; i++)
-            {
-                if (sorted[i].Slot == null)
-                    throw new ArgumentException("A material override needs a slot.", nameof(materials));
-                if (i > 0 && sorted[i - 1].Slot == sorted[i].Slot)
-                    throw new ArgumentException($"Slot '{sorted[i].Slot}' is dressed more than once.", nameof(materials));
-            }
-
-            return sorted;
-        }
     }
 }

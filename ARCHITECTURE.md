@@ -106,8 +106,15 @@ one in the active plugin.
   `Materials` it wears instead of its base object's in some **material slots** (`MaterialOverride`: slot, material id;
   sorted by slot, each slot once, at most 64; empty = the base object's look). A slot is named after the material the
   asset wears there by default ("Roof", "Plaster"), as Blender and Unreal name a mesh's slots, so the data never
-  depends on how an asset is put together inside; every part wearing that material is one slot. Overrides are per
-  placed object (the Creation Kit's way to vary one is a new base object, which can come later as "make a variant").
+  depends on how an asset is put together inside; every part wearing that material is one slot. A base object may
+  carry overrides too (`BaseObjectRecord.Materials`, null when none; in JSON `"materials": {"Roof": "…:material/thatch"}`,
+  `MaterialOverridesConverter`): a **variant**, the Creation Kit's way to vary an object. What an instance wears is
+  `MaterialOverrides.Layer(base, own)`, its own winning slot by slot (`MaterialOverrides` holds the list rules both
+  share). `ObjectEdits.MakeVariant(placed, name)` saves a placed object's look as a new base object in the active plugin
+  (`variant/<n>`: same asset, category and placement rules, the layered materials) and makes the object an instance of
+  it, one undo step; the selection options' **Make variant** (one object selected) asks for the name, suggested from what
+  it wears ("Small House (Cut Stone, Thatch)"), and the new object becomes the palette's pick. Its tile's picture wears
+  its materials (`IAssetThumbnails.Get(assetKey, lookKey, dress)`, `MaterialLooks.Dress` / `KeyOf`).
 - `MaterialRecord` (`material/<name>`): a surface objects can wear (display name, asset key the presentation resolves
   to the look), like a ground layer: a mod restyles a material everywhere by overriding it, or adds its own.
   `forge.core` ships eight (`CoreMaterials`).

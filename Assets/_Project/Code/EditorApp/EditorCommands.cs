@@ -131,13 +131,63 @@ namespace Forge.EditorApp
         {
             if (slot == null)
                 return null;
+            var records = _context.Session.World.Records;
             foreach (var id in _context.Selection.Ids)
             {
-                if (_context.Session.World.Records.TryGet(id, out var record) && record is PlacedObjectRecord placed && placed.MaterialIn(slot) is RecordId worn)
+                if (records.TryGet(id, out var record) && record is PlacedObjectRecord placed
+                    && MaterialOverrides.In(MaterialOverrides.Layer(BaseOf(placed)?.Materials, placed.Materials), slot) is RecordId worn)
                     return worn;
             }
 
             return null;
+        }
+
+        BaseObjectRecord BaseOf(PlacedObjectRecord placed) =>
+            _context.Session.World.Records.TryGet(placed.BaseId, out var record) ? record as BaseObjectRecord : null;
+
+        /// <summary>The one placed object selected, or null when the selection is empty or holds more than one.</summary>
+        public PlacedObjectRecord SingleSelected() =>
+            _context.Selection.Count == 1 && _context.Session.World.Records.TryGet(_context.Selection.Ids.First(), out var record)
+                ? record as PlacedObjectRecord
+                : null;
+
+        /// <summary>A name for a variant of the one selected object: its kind's name with what makes it differ, e.g. "Small House (Thatch)".</summary>
+        public string SuggestedVariantName()
+        {
+            var placed = SingleSelected();
+            var kind = placed != null ? BaseOf(placed) : null;
+            if (kind == null)
+                return string.Empty;
+            var worn = placed.Materials.Select(m => NameOf(m.Material)).Distinct().ToList();
+            return worn.Count == 0 ? $"{kind.DisplayName} (variant)" : $"{kind.DisplayName} ({string.Join(", ", worn)})";
+        }
+
+        /// <summary>
+        /// Saves the one selected object's look as a new kind of object named <paramref name="name"/>
+        /// (<see cref="ObjectEdits.MakeVariant"/>), files it beside its kind in the assets browser and makes it what the
+        /// placing tools lay next. One undo step.
+        /// </summary>
+        public void MakeVariantOfSelection(string name)
+        {
+            var placed = SingleSelected();
+            if (placed == null)
+            {
+                _context.Report("Make variant: select one object first");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                _context.Report("Make variant: give it a name");
+                return;
+            }
+
+            RecordId variant = default;
+            if (_context.TryEdit("Make variant", () => variant = ObjectEdits.MakeVariant(_context.Session, placed.Id, name)))
+            {
+                _context.SelectedBaseId = variant;
+                _context.Report($"Saved {name.Trim()} as a new object; place more of it from the assets browser");
+            }
         }
 
         /// <summary>

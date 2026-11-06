@@ -355,6 +355,36 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesAVariantsMaterials_AsSlotToMaterial_AndOmitsThemWhenAbsent()
+        {
+            var thatch = MaterialRecord.IdFor("core", "thatch");
+            var stone = MaterialRecord.IdFor("core", "stone");
+            var plugin = Plugin("core",
+                new BaseObjectRecord(RecordId.Parse("core:cottage"), "Stone Cottage", "architecture/house", "Architecture",
+                    materials: new[] { new MaterialOverride("Roof", thatch), new MaterialOverride("Plaster", stone) }),
+                new BaseObjectRecord(RecordId.Parse("core:house"), "House", "architecture/house"));
+
+            var json = Write(plugin);
+            var copy = Read(json).Records.OfType<BaseObjectRecord>().ToDictionary(r => r.Id.ToString());
+
+            Assert.That(copy["core:cottage"].Materials, Is.EqualTo(new[] { new MaterialOverride("Plaster", stone), new MaterialOverride("Roof", thatch) }));
+            Assert.That(copy["core:house"].Materials, Is.Null);
+            StringAssert.Contains("\"Roof\": \"core:material/thatch\"", json);
+            Assert.That(Regex.Matches(json, "\"materials\"").Count, Is.EqualTo(1));
+            Assert.That(Write(Read(json)), Is.EqualTo(json));
+        }
+
+        [Test]
+        public void Read_AVariantWithABadMaterial_IsRejected()
+        {
+            var plugin = Plugin("core", new BaseObjectRecord(RecordId.Parse("core:cottage"), "Cottage", "architecture/house",
+                materials: new[] { new MaterialOverride("Roof", MaterialRecord.IdFor("core", "thatch")) }));
+            var json = Write(plugin).Replace("\"core:material/thatch\"", "\"not an id\"");
+
+            Assert.Throws<DataValidationException>(() => Read(json));
+        }
+
+        [Test]
         public void Read_InvalidPlacementRules_SurfaceTheModelError()
         {
             var plugin = Plugin("core", new BaseObjectRecord(RecordId.Parse("core:pine"), "Pine", "nature/pine", null, new PlacementRules(false, 1f, 2f, false)));

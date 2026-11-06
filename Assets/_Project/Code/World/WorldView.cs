@@ -274,8 +274,9 @@ namespace Forge.World
                     go =>
                     {
                         ApplyTransform(go.transform, placed);
+                        // A base object's change rebuilds the object, so only its own materials can differ here.
                         if (!placed.HasSameMaterials(shown))
-                            Dress(go, placed);
+                            Dress(go, placed, baseRecord as BaseObjectRecord);
                     });
                 count++;
             }
@@ -324,16 +325,18 @@ namespace Forge.World
             go.name = placed.Id.ToString();
             ApplyTransform(go.transform, placed);
             MaterialSlots.Capture(go);
-            if (placed.Materials.Count > 0)
-                Dress(go, placed);
+            if (placed.Materials.Count > 0 || baseRecord?.Materials != null)
+                Dress(go, placed, baseRecord);
             return go;
         }
 
-        // Every slot the record names wears its material; the rest wear the asset's own.
-        void Dress(GameObject go, PlacedObjectRecord placed)
+        // Every slot the base object (a variant) or the placed object names wears its material, the placed object's
+        // winning; the rest wear the asset's own.
+        void Dress(GameObject go, PlacedObjectRecord placed, BaseObjectRecord baseRecord)
         {
-            if (go.TryGetComponent<MaterialSlots>(out var slots))
-                slots.Dress(placed.Materials, id => _materials?.Of(id));
+            var worn = MaterialOverrides.Layer(baseRecord?.Materials, placed.Materials);
+            if (_materials != null)
+                _materials.Dress(go, worn);
         }
 
         static void ApplyTransform(Transform transform, PlacedObjectRecord placed)

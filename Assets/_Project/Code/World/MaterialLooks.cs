@@ -38,6 +38,21 @@ namespace Forge.World
         }
 
         /// <summary>
+        /// Dresses <paramref name="instance"/> (an asset built by the asset catalog) in <paramref name="materials"/>, slot
+        /// by slot; its slots are captured first if they weren't (<see cref="MaterialSlots"/>).
+        /// </summary>
+        public void Dress(GameObject instance, IReadOnlyList<MaterialOverride> materials)
+        {
+            if (!instance.TryGetComponent<MaterialSlots>(out var slots))
+                slots = MaterialSlots.Capture(instance);
+            slots.Dress(materials ?? MaterialOverrides.None, Of);
+        }
+
+        /// <summary>A name for a look made of <paramref name="materials"/>, e.g. for caching its picture: "Roof=core:material/thatch;…".</summary>
+        public static string KeyOf(IReadOnlyList<MaterialOverride> materials) =>
+            materials == null || materials.Count == 0 ? null : string.Join(";", System.Linq.Enumerable.Select(materials, m => $"{m.Slot}={m.Material}"));
+
+        /// <summary>
         /// A copy of <paramref name="material"/>'s look for its material ball (the caller destroys it, so the shared asset
         /// is never touched); null when it has no look.
         /// </summary>

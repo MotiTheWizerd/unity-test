@@ -38,6 +38,55 @@ namespace Forge.Data.Json
         }
     }
 
+    /// <summary>
+    /// Writes a list of material overrides (a variant's look) as an object from slot to material id, in slot order:
+    /// <c>{"Roof": "forge.core:material/thatch"}</c>.
+    /// </summary>
+    sealed class MaterialOverridesConverter : JsonConverter
+    {
+        // Writing sees the list's runtime type (an array); reading, the declared one.
+        public override bool CanConvert(Type objectType) => typeof(IEnumerable<MaterialOverride>).IsAssignableFrom(objectType);
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            writer.WriteStartObject();
+            foreach (var material in (IEnumerable<MaterialOverride>)value)
+            {
+                writer.WritePropertyName(material.Slot);
+                writer.WriteValue(material.Material.ToString());
+            }
+
+            writer.WriteEndObject();
+        }
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            var token = JToken.Load(reader);
+            if (token.Type == JTokenType.Null)
+                return null;
+            if (!(token is JObject slots))
+                throw new JsonSerializationException($"Expected an object from slot to material id at {token.Path}.");
+
+            var materials = new List<MaterialOverride>();
+            foreach (var property in slots.Properties())
+            {
+                var text = property.Value.Type == JTokenType.String ? (string)property.Value : null;
+                if (!RecordId.TryParse(text, out var id))
+                    throw new JsonSerializationException($"Invalid material id '{property.Value}' for slot '{property.Name}' at {property.Path}.");
+                try
+                {
+                    materials.Add(new MaterialOverride(property.Name, id));
+                }
+                catch (ArgumentException ex)
+                {
+                    throw new JsonSerializationException($"Invalid slot '{property.Name}' at {property.Path}: {ex.Message}", ex);
+                }
+            }
+
+            return materials;
+        }
+    }
+
     /// <summary>Writes vectors as compact [x, y, z] arrays.</summary>
     sealed class Vector3Converter : JsonConverter<Vector3>
     {

@@ -30,6 +30,10 @@
                 <forge:ForgeButton name="drop-to-ground" text="Drop" tooltip="End" />
                 <forge:ForgeDropdown name="material-slot" label="Slot" tooltip="The material slot a material from the Materials tab dresses" />
                 <forge:ForgeButton name="reset-materials" text="Reset look" tooltip="Give the selection back its own materials in every slot" />
+                <forge:ForgeButton name="make-variant" text="Make variant" tooltip="Save this object's look as a new object in the assets browser, to place more of it" />
+                <forge:ForgeTextInput name="variant-name" placeholder-text="Variant name" tooltip="Enter saves, Esc cancels" />
+                <forge:ForgeButton name="variant-save" text="Save" variant="primary" />
+                <forge:ForgeButton name="variant-cancel" text="Cancel" variant="ghost" />
             </ui:VisualElement>
             <ui:VisualElement name="options-rectangle" class="forge-options__group">
                 <forge:ForgeCheckbox name="rectangle-snap" label="Whole pieces" />

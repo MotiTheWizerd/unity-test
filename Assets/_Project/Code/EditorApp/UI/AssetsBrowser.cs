@@ -222,8 +222,11 @@ namespace Forge.EditorApp.UI
             var index = _source.IndexOf(id);
             var shortcut = index >= 0 && index < ShortcutCount ? index + 1 : 0;
             var tile = new AssetTile(record.DisplayName, shortcut, () => _context.SelectPlacement(id)) { tooltip = Tooltip(record, shortcut) };
+            // A variant's picture wears its materials.
             if (_thumbnails != null)
-                tile.SetThumbnail(_thumbnails.Get(record.AssetKey));
+                tile.SetThumbnail(record.Materials != null && _materialLooks != null
+                    ? _thumbnails.Get(record.AssetKey, MaterialLooks.KeyOf(record.Materials), go => _materialLooks.Dress(go, record.Materials))
+                    : _thumbnails.Get(record.AssetKey));
             _tiles.Add(id, tile);
             return tile;
         }
@@ -318,7 +321,8 @@ namespace Forge.EditorApp.UI
             b != null && a.Count == b.Count && a.Objects.Zip(b.Objects, Same).All(same => same);
 
         static bool Same(BaseObjectRecord x, BaseObjectRecord y) =>
-            x.Id == y.Id && x.DisplayName == y.DisplayName && x.Category == y.Category;
+            x.Id == y.Id && x.DisplayName == y.DisplayName && x.Category == y.Category && x.AssetKey == y.AssetKey
+            && MaterialLooks.KeyOf(x.Materials) == MaterialLooks.KeyOf(y.Materials);
 
         static bool SameEntries(IReadOnlyList<GroundLayerRecord> a, IReadOnlyList<GroundLayerRecord> b) =>
             b != null && a.Count == b.Count && a.Zip(b, (x, y) => x.Id == y.Id && x.DisplayName == y.DisplayName && x.AssetKey == y.AssetKey).All(same => same);

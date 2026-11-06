@@ -9,7 +9,8 @@ namespace Forge.EditorApp.UI
 {
     /// <summary>
     /// The select and transform tools' options: the selection count, frame and drop to ground, and, while the selection
-    /// has material slots, which slot a material ball dresses and a reset to the base look.
+    /// has material slots, which slot a material ball dresses and a reset to the base look, and for one object, making a
+    /// variant of it (<see cref="VariantForm"/>).
     /// </summary>
     public sealed class SelectionSection : IPanelSection
     {
@@ -21,6 +22,7 @@ namespace Forge.EditorApp.UI
         readonly Button _drop;
         readonly DropdownField _slot;
         readonly Button _resetMaterials;
+        readonly VariantForm _variant;
         IReadOnlyList<string> _slots = Array.Empty<string>();
 
         public SelectionSection(VisualElement root, EditorContext context, EditorCommands commands)
@@ -38,6 +40,7 @@ namespace Forge.EditorApp.UI
             _slot.RegisterValueChangedCallback(_ => _context.MaterialSlot = _slot.index >= 0 && _slot.index < _slots.Count ? _slots[_slot.index] : null);
             _resetMaterials = PanelElements.Required<Button>(root, "reset-materials");
             _resetMaterials.clicked += commands.ResetSelectionMaterials;
+            _variant = new VariantForm(root, commands);
         }
 
         public void Refresh()
@@ -52,6 +55,7 @@ namespace Forge.EditorApp.UI
             _frame.SetEnabled(any);
             _drop.SetEnabled(any);
             ShowSlots(_commands.SelectionSlots());
+            _variant.Refresh();
         }
 
         void ShowSlots(IReadOnlyList<string> slots)
