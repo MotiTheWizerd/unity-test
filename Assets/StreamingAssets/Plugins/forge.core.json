@@ -273,49 +273,57 @@
       "type": "material",
       "id": "forge.core:material/cutstone",
       "displayName": "Cut Stone",
-      "assetKey": "material/cutstone"
+      "assetKey": "material/cutstone",
+      "category": "Stone"
     },
     {
       "type": "material",
       "id": "forge.core:material/darkiron",
       "displayName": "Dark Iron",
-      "assetKey": "material/darkiron"
+      "assetKey": "material/darkiron",
+      "category": "Metal"
     },
     {
       "type": "material",
       "id": "forge.core:material/oakplanks",
       "displayName": "Oak Planks",
-      "assetKey": "material/oakplanks"
+      "assetKey": "material/oakplanks",
+      "category": "Wood"
     },
     {
       "type": "material",
       "id": "forge.core:material/plaster",
       "displayName": "Plaster",
-      "assetKey": "material/plaster"
+      "assetKey": "material/plaster",
+      "category": "Plaster"
     },
     {
       "type": "material",
       "id": "forge.core:material/redbrick",
       "displayName": "Red Brick",
-      "assetKey": "material/redbrick"
+      "assetKey": "material/redbrick",
+      "category": "Brick"
     },
     {
       "type": "material",
       "id": "forge.core:material/rooftiles",
       "displayName": "Roof Tiles",
-      "assetKey": "material/rooftiles"
+      "assetKey": "material/rooftiles",
+      "category": "Roofing"
     },
     {
       "type": "material",
       "id": "forge.core:material/thatch",
       "displayName": "Thatch",
-      "assetKey": "material/thatch"
+      "assetKey": "material/thatch",
+      "category": "Roofing"
     },
     {
       "type": "material",
       "id": "forge.core:material/weatheredplanks",
       "displayName": "Weathered Planks",
-      "assetKey": "material/weatheredplanks"
+      "assetKey": "material/weatheredplanks",
+      "category": "Wood"
     },
     {
       "type": "base_object",

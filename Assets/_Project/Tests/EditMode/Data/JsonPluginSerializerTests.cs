@@ -250,6 +250,20 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesAMaterialsCategory_AndLeavesItOutWhenItHasNone()
+        {
+            var oak = new MaterialRecord(MaterialRecord.IdFor("core", "oak"), "Oak Planks", "material/oak", " Wood ");
+            var odd = new MaterialRecord(MaterialRecord.IdFor("core", "odd"), "Odd", "material/odd");
+
+            var json = Write(Plugin("core", oak, odd));
+            var copy = Read(json).Records.OfType<MaterialRecord>().ToDictionary(m => m.Id);
+
+            Assert.That(copy[oak.Id].Category, Is.EqualTo("Wood"));
+            Assert.That(copy[odd.Id].Category, Is.Null);
+            Assert.That(Regex.Matches(json, "\"category\"").Count, Is.EqualTo(1));
+        }
+
+        [Test]
         public void RoundTrip_PreservesChunkPaint_AndUnpaintedChunksHaveNoPaintField()
         {
             var grass = GroundLayerRecord.IdFor("core", "grass");

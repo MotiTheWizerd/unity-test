@@ -120,6 +120,7 @@
                     </ui:VisualElement>
                 </forge:ForgeSection>
                 <ui:Label class="forge-section__title forge-material-library__title" text="LIBRARY" />
+                <ui:VisualElement name="material-tabs" class="forge-material-library__tabs" />
                 <ui:ScrollView name="material-library" class="forge-material-library" />
             </forge:ForgeDockPage>
         </forge:ForgeSideDock>

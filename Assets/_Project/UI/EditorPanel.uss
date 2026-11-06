@@ -302,6 +302,16 @@
     margin-bottom: var(--forge-space-1);
 }
 
+/* The library's kinds of surface: tabs that wrap to a second row in the narrow dock. */
+.forge-material-library__tabs {
+    flex-shrink: 0;
+    margin-bottom: var(--forge-space-2);
+}
+
+.forge-material-library__tabs .forge-tabs {
+    flex-wrap: wrap;
+}
+
 /* The library's balls flow in rows, as the assets browser's tiles do. */
 .forge-material-library {
     flex-grow: 1;

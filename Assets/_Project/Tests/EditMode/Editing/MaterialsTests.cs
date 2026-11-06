@@ -26,6 +26,23 @@ namespace Forge.Tests.Editing
             Assert.That(Materials.Filter(all, " "), Is.SameAs(all));
         }
 
+        [Test]
+        public void Kinds_AreTheCategoryHeads_OnceEach_ByName_AndOfKindPicksThem()
+        {
+            var all = new[]
+            {
+                new MaterialRecord(MaterialRecord.IdFor("core", "oak"), "Oak", "material/oak", "Wood"),
+                new MaterialRecord(MaterialRecord.IdFor("core", "slate"), "Slate", "material/slate", "Stone/Rough"),
+                new MaterialRecord(MaterialRecord.IdFor("core", "pine"), "Pine", "material/pine", "wood"),
+                new MaterialRecord(MaterialRecord.IdFor("core", "odd"), "Odd", "material/odd"),
+            };
+
+            Assert.That(Materials.Kinds(all), Is.EqualTo(new[] { "Stone", "Wood" }), "Uncategorized gives no kind; case doesn't split one.");
+            Assert.That(Materials.OfKind(all, "Wood").Select(m => m.DisplayName), Is.EqualTo(new[] { "Oak", "Pine" }));
+            Assert.That(Materials.OfKind(all, "Stone").Single().DisplayName, Is.EqualTo("Slate"));
+            Assert.That(Materials.OfKind(all, null), Is.SameAs(all));
+        }
+
         [TestCase("Roof", "Roof")]
         [TestCase("WoodDark", "Wood Dark")]
         [TestCase("roof_tiles", "roof tiles")]

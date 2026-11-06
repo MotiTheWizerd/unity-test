@@ -38,6 +38,35 @@ namespace Forge.Editing
         }
 
         /// <summary>
+        /// The kinds of surface among <paramref name="materials"/>, a tab each: every category's first segment, once, by
+        /// name. A kind appears as soon as one material has it, so new kinds need no code. Uncategorized materials give
+        /// none (they show under All).
+        /// </summary>
+        public static IReadOnlyList<string> Kinds(IReadOnlyList<MaterialRecord> materials)
+        {
+            if (materials == null)
+                throw new ArgumentNullException(nameof(materials));
+
+            return materials
+                .Select(material => CategoryPath.Head(material.Category))
+                .Where(kind => kind.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(kind => kind, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        /// <summary>The materials of kind <paramref name="kind"/> (<see cref="Kinds"/>), in their order; null: all of them.</summary>
+        public static IReadOnlyList<MaterialRecord> OfKind(IReadOnlyList<MaterialRecord> materials, string kind)
+        {
+            if (materials == null)
+                throw new ArgumentNullException(nameof(materials));
+
+            return kind == null
+                ? materials
+                : materials.Where(material => string.Equals(CategoryPath.Head(material.Category), kind, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        /// <summary>
         /// A slot name as people read it: words split where a lower-case letter or digit meets a capital, underscores
         /// and dashes as spaces ("WoodDark" → "Wood Dark", "roof_tiles" → "roof tiles").
         /// </summary>
