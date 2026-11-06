@@ -14,6 +14,7 @@ using Forge.EditorApp.Diagnostics;
 using Forge.EditorApp.Tools;
 using Forge.EditorApp.UI;
 using Forge.Editing;
+using Forge.Editing.Modes;
 using Forge.Editing.State;
 using Forge.Streaming;
 using Forge.World;
@@ -110,6 +111,7 @@ namespace Forge.EditorApp
         [NonSerialized] GrassView _grass;
         [NonSerialized] EditorGrassSource _grassSource;
         [NonSerialized] RecordId _shownSpace;
+        [NonSerialized] Pose? _editingPose;
 
         void Start()
         {
@@ -178,6 +180,7 @@ namespace Forge.EditorApp
                 _highlighter = new SelectionHighlighter(_context.Selection, _view, _selectionOverlay, EmphasizedSlot, DropTarget);
                 _context.Session.WorldChanged += OnWorldChanged;
                 _context.Selection.Changed += _highlighter.Refresh;
+                _context.Modes.Changed += OnModeChanged;
 
                 // Not under the world root: the root moves far from zero, and the pictures would jitter with it.
                 _thumbnails = new ThumbnailRenderer(assets, null);
@@ -209,7 +212,9 @@ namespace Forge.EditorApp
             // Grass grows in a budget of its own: it is near the camera, where a missing patch shows most.
             _grass?.Tick(focus, _frameBudgetMs);
             _grass?.Draw(_focus.position);
-            _highlighter.Draw();
+            // The selection stays selected while playing, for when editing resumes, but doesn't glow in the game.
+            if (!_context.IsPlaying)
+                _highlighter.Draw();
             _state.Tick(Time.unscaledDeltaTime);
         }
 
@@ -250,6 +255,7 @@ namespace Forge.EditorApp
                 _context.Session.WorldChanged -= OnWorldChanged;
                 _context.SpaceChanged -= OnSpaceChanged;
                 _context.Selection.Changed -= _highlighter.Refresh;
+                _context.Modes.Changed -= OnModeChanged;
             }
 
             if (_frame != null)
@@ -283,8 +289,23 @@ namespace Forge.EditorApp
             _highlighter?.Refresh();
         }
 
+        // Playing starts from the editing camera and gives it back exactly where it was, wherever play went meanwhile.
+        void OnModeChanged(AppMode mode)
+        {
+            if (mode == AppMode.Playing)
+                _editingPose = CameraPose();
+            else if (_editingPose is Pose pose)
+            {
+                PlaceCamera(pose);
+                _editingPose = null;
+            }
+        }
+
         // The camera's pose, its position in world coordinates.
         Pose CameraPose() => new Pose(_frame.ToWorld(_focus.position), _focus.rotation);
+
+        // Where the editing camera is: while playing, where it was when play began (what the editor keeps between sessions).
+        Pose EditingCameraPose() => _editingPose ?? CameraPose();
 
         // Puts the camera at a pose in world coordinates. Rebased first, so a far-off view lands near the scene's
         // origin, not far from it.
@@ -318,7 +339,7 @@ namespace Forge.EditorApp
         // What the editor keeps between sessions; the context and the panel write their own parts.
         void CaptureState(EditorPrefs prefs, WorldViewState world)
         {
-            _spaceCameras.Remember(_context.ActiveSpace, CameraPose());
+            _spaceCameras.Remember(_context.ActiveSpace, EditingCameraPose());
             world.Space = _context.ActiveSpace.ToString();
             world.Cameras = world.Cameras ?? new Dictionary<string, SavedPose>();
             foreach (var pair in _spaceCameras.Poses)

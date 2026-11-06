@@ -403,6 +403,9 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
   instead of entering the history. `Accept(description)` records the whole draft as one undo step, `Discard()`
   rolls it back with no history. Undo, redo and `MarkSaved` throw while a draft is open; a failed edit inside
   a draft rolls back only itself. The agent builds into a draft.
+- **Freezing** (`EditSession.Freeze(reason)` → a handle; `IsFrozen`): the world is read-only until the handle is
+  disposed. Every edit, batch, undo, redo and new draft throws, naming the reason, so whatever runs meanwhile can read
+  the world but never write it. One freeze at a time, refused inside a batch or with a draft open. Playing freezes it.
 - **Placement rules shared by every placer** (`Forge.Editing.Placement`): `PlacementOptions` holds the user's
   settings (random turn and size, align to slope, per-object `RowGap`s) and what they mean per base object;
   `ObjectSeating` is the one seating rule (slope objects on terrain via `GroundFit.TryPose`, everything else
@@ -781,6 +784,17 @@ slopes), so results are exact and every edit goes through the edit session.
   Markdown: `Forge.Core.Text.Markdown` (engine-free) parses the subset chat uses into blocks and styled spans, and
   `MarkdownView` lays them out (a label per block, list items as marker + text, rich text wrapped in `<noparse>`
   so the words are never read as tags). Everything else in the transcript is shown exactly as written.
+- **Editing and playing** (`Forge.Editing.Modes`, engine-free, tested): the app is in one `AppMode` at a time, held by
+  `ModeSwitch` (`EditorContext.Modes`). The top bar's play button (Lucide `play`, beside the agent's) plays the world
+  from here (`EditorContext.Play`), Esc goes back (`StopPlaying`). **Playing never writes the world**: it freezes the
+  edit session (see Freezing), so not even a stray command can reach a plugin, and the context refuses edits, undo,
+  redo, saving, switching space and the editing tools with "… waits: you are playing". Playing waits while the agent's
+  draft is open. While playing, the controller rests every tool and shortcut (the selection is kept but doesn't glow,
+  and the mark hides), and the panel's root wears `is-playing` (`PlaySection`), which hides every
+  `forge-editor-chrome` element (tool strip, top bar, assets browser, side dock, status bar) and shows the play bar
+  instead. The camera returns exactly to where editing left it (`EditorAppBootstrap`), and that pose is what is kept
+  between sessions, even when the editor closes during play. The time of day keeps running. The player
+  comes next: until it does, the editor camera flies in play too.
 - **The mark** (`GroundMark`, M / the dock's Mark button, `MarkTool`): a spot (click) or an axis-aligned area (drag)
   the user puts on the ground to show the agent where "here" is. It is editor state on `EditorContext.Mark`
   (never saved, never undone), drawn by `MarkView` in every tool, and the mark tool works while a draft is open
@@ -910,7 +924,7 @@ slopes), so results are exact and every edit goes through the edit session.
   palette → Place tool (`[` / `]` rotate, hold + drag paints a row, + Shift a straight one); Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
   (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; Ctrl+A selects every loaded object, Ctrl+Shift+A deselects; Ctrl+D duplicates the selection (`ObjectEdits.Duplicate`: same kind, space, transform and materials, new ids, one undo step, set down by the caller) beside itself: the selection width plus 1 m to the camera's right (`ICameraRig.Right`), seated on the ground there (slope fit as placing, else the same height above the ground), and selects the copies; Shift or Ctrl + click or box adds to the selection; hold right mouse to look, with WASD/QE to fly (the wheel then steps the
   fly speed); otherwise the wheel dollies towards the point under the cursor; hold middle mouse to pan (the grabbed
-  point stays under the cursor); F frames the selection.
+  point stays under the cursor); F frames the selection; the top bar's play button plays the world, Esc goes back to editing.
 - **Fly speed.** `FlySpeed` (engine-free, `Forge.Editing.Geometry`, owned by `EditorContext`) is a multiplier on the
   camera's base speed, one of `Steps` (×0.25 … ×20). The wheel steps it while flying; the top bar's SPEED row offers
   `Presets` ×1 ×2 ×3 ×5 (a speed between them shows as its own label), and Shift still multiplies on top. "By height"

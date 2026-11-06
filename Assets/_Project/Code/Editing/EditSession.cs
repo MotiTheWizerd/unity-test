@@ -30,6 +30,7 @@ namespace Forge.Editing
 
         int _nextStepId = 1;
         int _savedStateId;
+        Freezing _freeze;
 
         /// <param name="masters">Plugins the active plugin builds on; sorted automatically.</param>
         /// <param name="active">The plugin that receives edits; may be empty.</param>
@@ -75,6 +76,29 @@ namespace Forge.Editing
 
         public string RedoDescription => _history.RedoDescription;
 
+        /// <summary>Whether the world is read-only now; see <see cref="Freeze"/>.</summary>
+        public bool IsFrozen => _freeze != null;
+
+        /// <summary>
+        /// Makes the world read-only until the returned handle is disposed: every edit, undo, redo and new draft throws,
+        /// so whatever runs meanwhile (playing the world) can read it but never write it. One freeze at a time, and not
+        /// while a batch or a draft is open, since those are edits in progress.
+        /// </summary>
+        /// <param name="reason">What the world is frozen for, as the refusals name it ("playing").</param>
+        public IDisposable Freeze(string reason)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+                throw new ArgumentException("A reason is required; refused edits name it.", nameof(reason));
+            if (_freeze != null)
+                throw new InvalidOperationException($"The world is already frozen for {_freeze.Reason}.");
+            if (_batchDepth > 0)
+                throw new InvalidOperationException("Cannot freeze the world while a batch is in progress.");
+            if (Draft != null)
+                throw new InvalidOperationException("Cannot freeze the world while a draft is open; accept or discard it first.");
+
+            return _freeze = new Freezing(this, reason);
+        }
+
         /// <summary>Adds a new record or overrides an existing one in the active plugin.</summary>
         public void Put(Record record, string description = null)
         {
@@ -108,6 +132,7 @@ namespace Forge.Editing
         {
             if (edits == null)
                 throw new ArgumentNullException(nameof(edits));
+            EnsureWritable();
 
             if (_batchDepth == 0)
                 _pendingDescription = description;
@@ -142,6 +167,7 @@ namespace Forge.Editing
                 throw new InvalidOperationException("Cannot begin a draft while a batch is in progress.");
             if (Draft != null)
                 throw new InvalidOperationException("A draft is already open; accept or discard it first.");
+            EnsureWritable();
 
             return Draft = new EditDraft(this);
         }
@@ -153,6 +179,7 @@ namespace Forge.Editing
                 throw new InvalidOperationException("Cannot undo while a batch is in progress.");
             if (Draft != null)
                 throw new InvalidOperationException("Cannot undo while a draft is open; accept or discard it first.");
+            EnsureWritable();
             if (!_history.CanUndo)
                 return false;
 
@@ -170,6 +197,7 @@ namespace Forge.Editing
                 throw new InvalidOperationException("Cannot redo while a batch is in progress.");
             if (Draft != null)
                 throw new InvalidOperationException("Cannot redo while a draft is open; accept or discard it first.");
+            EnsureWritable();
             if (!_history.CanRedo)
                 return false;
 
@@ -253,6 +281,32 @@ namespace Forge.Editing
                 throw new InvalidOperationException("Cannot close a draft while a batch is in progress.");
             if (!ReferenceEquals(Draft, draft))
                 throw new InvalidOperationException("This draft is not open.");
+        }
+
+        void EnsureWritable()
+        {
+            if (_freeze != null)
+                throw new InvalidOperationException($"The world is read-only while {_freeze.Reason}.");
+        }
+
+        // The handle Freeze returns; disposing it (once) thaws the world.
+        sealed class Freezing : IDisposable
+        {
+            readonly EditSession _session;
+
+            public Freezing(EditSession session, string reason)
+            {
+                _session = session;
+                Reason = reason;
+            }
+
+            public string Reason { get; }
+
+            public void Dispose()
+            {
+                if (ReferenceEquals(_session._freeze, this))
+                    _session._freeze = null;
+            }
         }
 
         EntryState GetEntry(RecordId id)

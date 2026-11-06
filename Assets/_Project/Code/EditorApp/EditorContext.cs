@@ -11,6 +11,7 @@ using Forge.Data.Sky;
 using Forge.EditorApp.Tools;
 using Forge.Editing;
 using Forge.Editing.Geometry;
+using Forge.Editing.Modes;
 using Forge.Editing.Palette;
 using Forge.Editing.Placement;
 using Forge.Editing.State;
@@ -42,11 +43,42 @@ namespace Forge.EditorApp
         {
             Session = session ?? throw new ArgumentNullException(nameof(session));
             _activeStore = activeStore ?? throw new ArgumentNullException(nameof(activeStore));
+            Modes = new ModeSwitch(session);
             SelectedBaseId = Palette.Objects.Select(r => r.Id).FirstOrDefault();
             Status = $"Loaded {session.World.LoadOrder.Count} plugin(s).";
         }
 
         public EditSession Session { get; }
+
+        /// <summary>Editing or playing; the controller, the panel and the camera follow its changes.</summary>
+        public ModeSwitch Modes { get; }
+
+        public bool IsPlaying => Modes.IsPlaying;
+
+        /// <summary>
+        /// Plays the world from here (the top bar's play button); refused while the agent's build is open. The world is
+        /// read-only until <see cref="StopPlaying"/>.
+        /// </summary>
+        public bool Play()
+        {
+            if (!Modes.TryPlay(out var refusal))
+            {
+                Report(refusal);
+                return false;
+            }
+
+            Report("Playing. Esc: back to editing");
+            return true;
+        }
+
+        /// <summary>Back to editing (Esc while playing).</summary>
+        public void StopPlaying()
+        {
+            if (!IsPlaying)
+                return;
+            Modes.Edit();
+            Report("Back to editing");
+        }
 
         /// <summary>Placement settings, shared by the place tool and the world-building commands.</summary>
         public PlacementOptions PlacementOptions { get; } = new PlacementOptions(new Random());
@@ -96,7 +128,7 @@ namespace Forge.EditorApp
         public bool SelectTool(ToolKind kind)
         {
             var tool = ToolCatalog.Of(kind);
-            if (tool.EditsWorld && RefusedForDraft(tool.Name))
+            if (tool.EditsWorld && Refused(tool.Name))
                 return false;
             if (tool.LaysPaletteObject && SelectedBaseObject == null)
             {
@@ -122,7 +154,7 @@ namespace Forge.EditorApp
         {
             if (space == ActiveSpace)
                 return true;
-            if (RefusedForDraft("Switching space"))
+            if (Refused("Switching space"))
                 return false;
             if (!(Session.World.Records.TryGet(space, out var record) && record is SpaceRecord spaceRecord))
             {
@@ -424,7 +456,7 @@ namespace Forge.EditorApp
         /// </summary>
         public bool TryEdit(string action, Action edit)
         {
-            if (RefusedForDraft(action))
+            if (Refused(action))
                 return false;
 
             try
@@ -442,7 +474,7 @@ namespace Forge.EditorApp
 
         public void Undo()
         {
-            if (RefusedForDraft("Undo"))
+            if (Refused("Undo"))
                 return;
 
             var description = Session.UndoDescription;
@@ -453,7 +485,7 @@ namespace Forge.EditorApp
 
         public void Redo()
         {
-            if (RefusedForDraft("Redo"))
+            if (Refused("Redo"))
                 return;
 
             var description = Session.RedoDescription;
@@ -462,11 +494,15 @@ namespace Forge.EditorApp
             Report(redone ? $"Redid: {description}" : "Nothing to redo");
         }
 
-        bool RefusedForDraft(string action)
+        // Edits wait while the world is played (it is read-only then) and while the agent's build is open.
+        bool Refused(string action)
         {
-            if (!IsDraftOpen)
+            if (IsPlaying)
+                Report($"{action} waits: you are playing. Esc: back to editing.");
+            else if (IsDraftOpen)
+                Report($"{action} waits: the agent's build is open. Accept or discard it first.");
+            else
                 return false;
-            Report($"{action} waits: the agent's build is open. Accept or discard it first.");
             return true;
         }
 
@@ -484,7 +520,7 @@ namespace Forge.EditorApp
         /// <summary>Saves the active plugin; failures are reported, not thrown, so any UI can call it.</summary>
         public bool Save()
         {
-            if (RefusedForDraft("Save"))
+            if (Refused("Save"))
                 return false;
 
             try

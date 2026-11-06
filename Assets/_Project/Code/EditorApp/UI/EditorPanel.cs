@@ -67,6 +67,7 @@ namespace Forge.EditorApp.UI
                 new SettingsSection(Root),
                 new PerformanceSection(Root, context, diagnostics),
                 new StatusBar(Root, context),
+                new PlaySection(Root, context),
             };
 
             var sideDock = new SideDockSection(Root);

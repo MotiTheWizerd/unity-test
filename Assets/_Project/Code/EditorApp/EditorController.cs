@@ -19,7 +19,8 @@ namespace Forge.EditorApp
     /// Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z undo/redo, 1-9 palette, [ ] brush size or placement turn, End drop to ground,
     /// F frame selection) are handled here; everything else is passed to the current tool. Pointer clicks over the
     /// UI panel are filtered out, and so are shortcuts while a UI text field has the keyboard. While the agent's
-    /// draft is open, the tools that change the world rest; select, hand and mark keep working.
+    /// draft is open, the tools that change the world rest; select, hand and mark keep working. While playing
+    /// (<see cref="EditorContext.IsPlaying"/>) every tool and shortcut rests, and Esc goes back to editing.
     /// </summary>
     public sealed class EditorController : MonoBehaviour
     {
@@ -112,17 +113,25 @@ namespace Forge.EditorApp
             if (_context == null || keyboard == null || mouse == null)
                 return;
 
-            _markView.Refresh(_context.Mark, _context.Session.World);
-
             // Keys typed into a UI text field (palette search, slider inputs) are text, not commands.
             var typing = _ui.IsKeyboardCaptured;
+            if (_context.IsPlaying)
+            {
+                Play(keyboard, typing);
+                return;
+            }
+
+            _markView.Refresh(_context.Mark, _context.Session.World);
             HoldHandWithSpace(keyboard, mouse, typing);
             if (!typing)
                 HandleShortcuts(keyboard, mouse);
 
+            // While the agent builds, or its build waits for review, nothing else edits the world: a tool that would
+            // rests until the draft is accepted or discarded. The camera still flies, F still frames the build, and the
+            // tools that edit nothing (select, hand, mark) still work.
             if (_context.IsDraftOpen && ToolCatalog.Of(_context.CurrentTool).EditsWorld)
             {
-                RestWhileDraftIsOpen();
+                RestTool();
                 return;
             }
 
@@ -231,16 +240,25 @@ namespace Forge.EditorApp
             _tools[current].Activate();
         }
 
-        // While the agent builds, or its build waits for review, nothing else edits the world: a tool that would
-        // rests (its ghosts and gizmos go away) until the draft is accepted or discarded. The camera still flies,
-        // F still frames the build, and the tools that edit nothing (select, hand, mark) still work.
-        void RestWhileDraftIsOpen()
+        // The current tool rests: its ghosts, gizmos and gesture go away, and it is activated again once it may work.
+        void RestTool()
         {
             if (_activeKind.HasValue)
             {
                 _tools[_activeKind.Value].Deactivate();
                 _activeKind = null;
             }
+        }
+
+        // While playing, the editor rests: no tool, no held hand, no mark, no editing shortcuts. Esc goes back to
+        // editing, where the tool picks up again (the next frame, so this Esc cancels nothing in it).
+        void Play(Keyboard keyboard, bool typing)
+        {
+            RestTool();
+            _context.HeldTool = null;
+            _markView.Refresh(null, _context.Session.World);
+            if (keyboard.escapeKey.wasPressedThisFrame && !typing)
+                _context.StopPlaying();
         }
 
         // The terrain at the middle of the view: where "here" is when the user asks the agent to build.
