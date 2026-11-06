@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Forge.Agent.Memory;
 using Forge.Agent.Tools;
 using Forge.Editing;
 using Forge.Editing.History;
@@ -11,8 +14,10 @@ namespace Forge.Agent
     /// <summary>
     /// The chat with the world-building agent, and what it builds. Each request runs on the backend while its
     /// edits collect in one <see cref="EditDraft"/>; the user then accepts it (one undo step), retries or discards
-    /// it, and a follow-up message refines the same draft. Call every member on the main thread: backend events and
-    /// tool calls are brought there through the <see cref="MainThreadQueue"/>.
+    /// it, and a follow-up message refines the same draft. Every turn is dressed with what the agent's memory
+    /// recalls for it, and once a request settles (accepted, discarded, or an answer with nothing to review) its
+    /// turns and the user's verdict are slept into the memory. Call every member on the main thread: backend
+    /// events and tool calls are brought there through the <see cref="MainThreadQueue"/>.
     /// </summary>
     public sealed class AgentConversation : IDisposable
     {
@@ -24,16 +29,25 @@ namespace Forge.Agent
         readonly MainThreadQueue _mainThread;
         readonly Func<string> _briefing;
         readonly string _instructions;
+        readonly IAgentMemory _memory;
         readonly List<ChatEntry> _entries = new List<ChatEntry>();
+        readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
+        // The request's turns and what they were dressed with, kept for its sleep.
+        readonly List<MemoryCall> _calls = new List<MemoryCall>();
+        readonly List<string> _recalled = new List<string>();
         CancellationTokenSource _turn;
+        TurnNotes _notes;
         string _draftRequest;
         string _conversationId;
+        string _runId;
+        bool _memoryWarned;
         bool _disposed;
 
         /// <param name="briefing">The editor's state (where the camera looks, what is selected), put in front of each message.</param>
         /// <param name="instructions">The agent's standing instructions (its system prompt).</param>
+        /// <param name="memory">The agent's long-term memory (<see cref="NoMemory.Instance"/> for none).</param>
         public AgentConversation(IAgentBackend backend, AgentToolHost tools, EditSession session, MainThreadQueue mainThread,
-            Func<string> briefing, string instructions)
+            Func<string> briefing, string instructions, IAgentMemory memory)
         {
             _backend = backend ?? throw new ArgumentNullException(nameof(backend));
             _tools = tools ?? throw new ArgumentNullException(nameof(tools));
@@ -41,6 +55,7 @@ namespace Forge.Agent
             _mainThread = mainThread ?? throw new ArgumentNullException(nameof(mainThread));
             _briefing = briefing ?? throw new ArgumentNullException(nameof(briefing));
             _instructions = instructions ?? throw new ArgumentNullException(nameof(instructions));
+            _memory = memory ?? throw new ArgumentNullException(nameof(memory));
             _tools.Called += OnToolCalled;
         }
 
@@ -107,9 +122,11 @@ namespace Forge.Agent
         public void Accept()
         {
             EnsureReviewing("accept");
+            var summary = DraftSummary;
             Draft.Accept(UndoName(_draftRequest));
             EndDraft();
             Add(ChatRole.Notice, "Accepted as one undo step.");
+            Sleep($"I accepted what you built ({summary}) and kept it.");
             Changed();
         }
 
@@ -119,6 +136,7 @@ namespace Forge.Agent
             Draft.Discard();
             EndDraft();
             Add(ChatRole.Notice, "Discarded.");
+            Sleep("I discarded what you built.");
             Changed();
         }
 
@@ -152,6 +170,8 @@ namespace Forge.Agent
             _tools.Called -= OnToolCalled;
             _tools.Close();
             _turn?.Cancel();
+            // A request still waiting for review when the editor closes is not slept, and a sleep in flight stops.
+            _lifetime.Cancel();
             _backend.Dispose();
         }
 
@@ -163,21 +183,110 @@ namespace Forge.Agent
                 _draftRequest = request;
             }
 
+            _runId = _runId ?? "forge-" + Guid.NewGuid().ToString("N");
+            _notes = new TurnNotes(prompt);
             _turn = new CancellationTokenSource();
             var cancellation = _turn.Token;
-            var turn = new AgentTurn(WithBriefing(prompt), _instructions, _conversationId);
+            // Read here, on the main thread; the memory is dressed on the way to the backend.
+            var briefed = WithBriefing(prompt);
+            var conversationId = _conversationId;
             _tools.Open();
             State = AgentState.Working;
             Changed();
 
-            Task.Run(() => _backend.RunAsync(turn, happened => _mainThread.Post(() => OnEvent(happened)), cancellation), cancellation)
+            Task.Run(() => RunTurnAsync(prompt, briefed, conversationId, cancellation), cancellation)
                 .ContinueWith(task => _mainThread.Post(() => OnTurnEnded(task)), TaskScheduler.Default);
+        }
+
+        async Task RunTurnAsync(string cue, string briefed, string conversationId, CancellationToken cancellation)
+        {
+            var dress = await DressAsync(cue, cancellation).ConfigureAwait(false);
+            var turn = new AgentTurn(WithMemory(dress.Block, briefed), _instructions, conversationId);
+            await _backend.RunAsync(turn, happened => _mainThread.Post(() => OnEvent(happened)), cancellation).ConfigureAwait(false);
+        }
+
+        // A memory that can't be reached never stops the turn: it runs without, and the user is told once.
+        async Task<MemoryDress> DressAsync(string cue, CancellationToken cancellation)
+        {
+            try
+            {
+                var dress = await _memory.DressAsync(cue, cancellation).ConfigureAwait(false);
+                _mainThread.Post(() => OnDressed(dress, null));
+                return dress;
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _mainThread.Post(() => OnDressed(null, ex));
+                return MemoryDress.None;
+            }
         }
 
         string WithBriefing(string prompt)
         {
             var briefing = _briefing();
             return string.IsNullOrWhiteSpace(briefing) ? prompt : $"<editor>\n{briefing.Trim()}\n</editor>\n\n{prompt}";
+        }
+
+        // The memory rides in the message rather than the system prompt, so a resumed conversation keeps its cache.
+        static string WithMemory(string block, string message) =>
+            string.IsNullOrWhiteSpace(block) ? message : $"{block.Trim()}\n\n{message}";
+
+        void OnDressed(MemoryDress dress, Exception failure)
+        {
+            if (_disposed)
+                return;
+
+            if (failure != null)
+            {
+                if (!_memoryWarned)
+                    Add(ChatRole.Notice, $"Working without memory: {failure.GetBaseException().Message}");
+                _memoryWarned = true;
+                return;
+            }
+
+            _memoryWarned = false;
+            foreach (var name in dress.Recalled)
+            {
+                if (!_recalled.Contains(name))
+                    _recalled.Add(name);
+            }
+        }
+
+        /// <summary>Hands the settled request to the memory, with <paramref name="verdict"/> (what the user did with the build) last.</summary>
+        void Sleep(string verdict = null)
+        {
+            if (verdict != null)
+                _calls.Add(new MemoryCall(verdict, string.Empty, null));
+            var calls = _calls.ToList();
+            var recalled = _recalled.ToList();
+            var runId = _runId;
+            _calls.Clear();
+            _recalled.Clear();
+            _runId = null;
+
+            // Only a prompt, nothing said or done (a failure before the first word): nothing to learn from.
+            if (!calls.Any(call => call.Answer.Length > 0 || call.ToolTrail.Count > 0))
+                return;
+
+            var lifetime = _lifetime.Token;
+            Task.Run(() => _memory.SleepAsync(calls, recalled, runId, lifetime), lifetime)
+                .ContinueWith(task => _mainThread.Post(() => OnSlept(task)), TaskScheduler.Default);
+        }
+
+        void OnSlept(Task<MemorySleep> sleep)
+        {
+            if (_disposed || sleep.IsCanceled)
+                return;
+
+            var line = sleep.IsFaulted
+                ? $"Memory couldn't keep this: {sleep.Exception?.GetBaseException().Message}"
+                : sleep.Result.Describe();
+            if (line != null)
+                Add(ChatRole.Notice, line);
         }
 
         void OnEvent(AgentEvent happened)
@@ -191,6 +300,7 @@ namespace Forge.Agent
                     _conversationId = happened.Text;
                     break;
                 case AgentEventKind.Text:
+                    _notes?.Said(happened.Text);
                     Add(ChatRole.Agent, happened.Text);
                     break;
                 case AgentEventKind.Notice:
@@ -207,6 +317,7 @@ namespace Forge.Agent
         {
             if (_disposed)
                 return;
+            _notes?.Used(call);
             Add(ChatRole.Activity, call.Result.IsError ? $"{call.Tool} refused: {call.Result.Summary}" : call.Result.Summary);
         }
 
@@ -218,6 +329,8 @@ namespace Forge.Agent
             _tools.Close();
             _turn.Dispose();
             _turn = null;
+            _calls.Add(_notes.ToCall());
+            _notes = null;
             if (turn.IsCanceled)
                 Add(ChatRole.Notice, "Stopped.");
             else if (turn.IsFaulted)
@@ -231,6 +344,9 @@ namespace Forge.Agent
             }
 
             State = Draft != null ? AgentState.Reviewing : AgentState.Idle;
+            // A build waits for the user's verdict; anything else is settled now.
+            if (State == AgentState.Idle)
+                Sleep();
             Changed();
         }
 
@@ -259,6 +375,28 @@ namespace Forge.Agent
         {
             var line = request.Split('\n')[0].Trim();
             return "Agent: " + (line.Length <= UndoNameLength ? line : line.Substring(0, UndoNameLength).TrimEnd() + "…");
+        }
+
+        /// <summary>One turn as its sleep reads it: the prompt without the briefing, the words, a line per tool call.</summary>
+        sealed class TurnNotes
+        {
+            readonly string _prompt;
+            readonly StringBuilder _answer = new StringBuilder();
+            readonly List<string> _trail = new List<string>();
+
+            public TurnNotes(string prompt) => _prompt = prompt;
+
+            public void Said(string text)
+            {
+                if (_answer.Length > 0)
+                    _answer.Append("\n\n");
+                _answer.Append(text);
+            }
+
+            public void Used(ToolCall call) =>
+                _trail.Add(call.Result.IsError ? $"← {call.Tool} refused: {call.Result.Summary}" : $"← {call.Tool}: {call.Result.Summary}");
+
+            public MemoryCall ToCall() => new MemoryCall(_prompt, _answer.ToString(), _trail.ToList());
         }
     }
 }

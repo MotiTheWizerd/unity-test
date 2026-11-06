@@ -66,6 +66,19 @@ namespace Forge.Tests.Agent
         }
 
         [Test]
+        public void DistillArguments_AnswerOnce_WithNothingElse()
+        {
+            var arguments = ClaudeCodeArguments.ForDistill(Settings, "C:/forge/agent/distill-1.txt");
+
+            Assert.That(ValueOf(arguments, "--setting-sources"), Is.Empty);
+            Assert.That(ValueOf(arguments, "--tools"), Is.Empty);
+            Assert.That(arguments, Does.Contain("--strict-mcp-config").And.Contain("--no-session-persistence").And.Contain("--print"));
+            Assert.That(ValueOf(arguments, "--system-prompt-file"), Is.EqualTo("C:/forge/agent/distill-1.txt"));
+            Assert.That(ValueOf(arguments, "--model"), Is.EqualTo("sonnet"), "The memory is distilled on the agent's own model.");
+            Assert.That(arguments, Has.No.Member("--mcp-config").And.No.Member("--resume").And.No.Member("--output-format"));
+        }
+
+        [Test]
         public void Stream_Init_StartsTheConversation()
         {
             var events = ClaudeStream.Parse(

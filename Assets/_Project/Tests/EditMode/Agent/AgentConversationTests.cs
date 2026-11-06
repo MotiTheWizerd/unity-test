@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Forge.Agent;
+using Forge.Agent.Memory;
 using Forge.Agent.Tools;
 using Forge.Data.Records;
 using Forge.Tests.Editing;
@@ -45,6 +46,65 @@ namespace Forge.Tests.Agent
             public void Dispose() => Disposed = true;
         }
 
+        sealed class Sleep
+        {
+            public Sleep(IReadOnlyList<MemoryCall> calls, IReadOnlyList<string> recalled, string runId)
+            {
+                Calls = calls;
+                Recalled = recalled;
+                RunId = runId;
+            }
+
+            public IReadOnlyList<MemoryCall> Calls { get; }
+
+            public IReadOnlyList<string> Recalled { get; }
+
+            public string RunId { get; }
+        }
+
+        /// <summary>A memory that dresses as told and records what it is asked; called from worker threads.</summary>
+        sealed class FakeMemory : IAgentMemory
+        {
+            readonly List<string> _cues = new List<string>();
+            readonly List<Sleep> _sleeps = new List<Sleep>();
+
+            public Func<string, MemoryDress> Dress { get; set; } = cue => MemoryDress.None;
+
+            public MemorySleep Kept { get; set; } = MemorySleep.Skip("nothing new");
+
+            public IReadOnlyList<string> Cues
+            {
+                get
+                {
+                    lock (_cues)
+                        return _cues.ToList();
+                }
+            }
+
+            public IReadOnlyList<Sleep> Sleeps
+            {
+                get
+                {
+                    lock (_sleeps)
+                        return _sleeps.ToList();
+                }
+            }
+
+            public Task<MemoryDress> DressAsync(string cue, CancellationToken cancellation)
+            {
+                lock (_cues)
+                    _cues.Add(cue);
+                return Task.FromResult(Dress(cue));
+            }
+
+            public Task<MemorySleep> SleepAsync(IReadOnlyList<MemoryCall> calls, IReadOnlyList<string> recalled, string runId, CancellationToken cancellation)
+            {
+                lock (_sleeps)
+                    _sleeps.Add(new Sleep(calls, recalled, runId));
+                return Task.FromResult(Kept);
+            }
+        }
+
         /// <summary>A conversation over the building fixture's world, with a scripted backend.</summary>
         sealed class Rig : IDisposable
         {
@@ -54,7 +114,8 @@ namespace Forge.Tests.Agent
                 Queue = new MainThreadQueue();
                 Tools = new AgentToolHost(new ToolInvoker(World.Registry), Queue);
                 Backend = new FakeBackend((turn, report, cancellation) => behaviour(turn, report, cancellation, Tools));
-                Conversation = new AgentConversation(Backend, Tools, World.Session, Queue, () => "Camera looks at (20, 20).", "Build well.");
+                Memory = new FakeMemory();
+                Conversation = new AgentConversation(Backend, Tools, World.Session, Queue, () => "Camera looks at (20, 20).", "Build well.", Memory);
             }
 
             public BuildingFixture World { get; }
@@ -64,6 +125,8 @@ namespace Forge.Tests.Agent
             public AgentToolHost Tools { get; }
 
             public FakeBackend Backend { get; }
+
+            public FakeMemory Memory { get; }
 
             public AgentConversation Conversation { get; }
 
@@ -97,6 +160,13 @@ namespace Forge.Tests.Agent
             await tools.CallAsync("place_objects", House(x));
             report(AgentEvent.Said("Built a house."));
             report(AgentEvent.Done());
+        };
+
+        static Behaviour Answers(string answer) => (turn, report, cancellation, tools) =>
+        {
+            report(AgentEvent.Said(answer));
+            report(AgentEvent.Done());
+            return Task.CompletedTask;
         };
 
         [Test]
@@ -299,6 +369,153 @@ namespace Forge.Tests.Agent
             rig.Dispose();
 
             Assert.That(rig.Backend.Disposed, Is.True);
+        }
+
+        [Test]
+        public void ATurn_WearsWhatTheMemoryRecalls_InFrontOfTheBriefing()
+        {
+            using (var rig = new Rig(Answers("Stone, as you like it.")))
+            {
+                rig.Memory.Dress = cue => new MemoryDress("<agent-memory>\nThe user likes stone.\n</agent-memory>\n\n", new[] { "likes-stone" });
+
+                rig.Conversation.Send("Build a house");
+                rig.Settle();
+
+                var prompt = rig.Backend.Turns[0].Prompt;
+                Assert.That(prompt, Does.StartWith("<agent-memory>\nThe user likes stone.\n</agent-memory>\n\n<editor>").And.EndWith("Build a house"));
+                Assert.That(rig.Memory.Cues, Is.EqualTo(new[] { "Build a house" }), "Recall is cued by the message, not the briefing.");
+                Assert.That(rig.Backend.Turns[0].Instructions, Is.EqualTo("Build well."), "The system prompt stays the same, so a resumed conversation keeps its cache.");
+            }
+        }
+
+        [Test]
+        public void AnUnreachableMemory_IsSaidOnce_AndTheAgentWorksWithoutIt()
+        {
+            using (var rig = new Rig(Answers("Done.")))
+            {
+                rig.Memory.Dress = cue => throw new SemantixException("not signed in to Semantix");
+
+                rig.Conversation.Send("Build a house");
+                rig.Settle();
+                rig.Conversation.Send("And a fence");
+                rig.Settle();
+
+                Assert.That(rig.Backend.Turns.Count, Is.EqualTo(2));
+                Assert.That(rig.Backend.Turns[0].Prompt, Does.StartWith("<editor>"));
+                Assert.That(rig.Conversation.Entries.Count(e => e.Role == ChatRole.Notice && e.Text.Contains("Working without memory: not signed in")), Is.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public void AnAnswer_IsSleptAtOnce_AsTheMessageAndWhatWasSaid()
+        {
+            using (var rig = new Rig(Answers("Three kinds.")))
+            {
+                rig.Conversation.Send("What can you place?");
+                rig.Settle();
+                rig.PumpUntil(() => rig.Memory.Sleeps.Count == 1);
+
+                var call = rig.Memory.Sleeps[0].Calls.Single();
+                Assert.That(call.Prompt, Is.EqualTo("What can you place?"), "The briefing is the editor's state, not something to remember.");
+                Assert.That(call.Answer, Is.EqualTo("Three kinds."));
+                Assert.That(call.ToolTrail, Is.Empty);
+                Assert.That(rig.Memory.Sleeps[0].RunId, Does.StartWith("forge-"));
+            }
+        }
+
+        [Test]
+        public void ABuild_IsSleptWhenAccepted_WithEveryTurnAndTheVerdict()
+        {
+            var x = 10f;
+            using (var rig = new Rig((turn, report, cancellation, tools) => BuildsAHouse(x += 20f)(turn, report, cancellation, tools)))
+            {
+                var recalls = new Queue<string[]>(new[] { new[] { "a" }, new[] { "a", "b" } });
+                rig.Memory.Dress = cue => new MemoryDress("<agent-memory>…</agent-memory>", recalls.Dequeue());
+
+                rig.Conversation.Send("Build a house");
+                rig.Settle();
+                rig.Conversation.Send("And another one");
+                rig.Settle();
+                Assert.That(rig.Memory.Sleeps, Is.Empty, "A build waits for the user's verdict.");
+
+                rig.Conversation.Accept();
+                rig.PumpUntil(() => rig.Memory.Sleeps.Count == 1);
+
+                var sleep = rig.Memory.Sleeps[0];
+                Assert.That(sleep.Calls.Select(c => c.Prompt), Is.EqualTo(new[] { "Build a house", "And another one", "I accepted what you built (2 added) and kept it." }));
+                Assert.That(sleep.Calls[0].Answer, Is.EqualTo("Built a house."));
+                Assert.That(sleep.Calls[0].ToolTrail.Single(), Does.StartWith("← place_objects: "));
+                Assert.That(sleep.Recalled, Is.EqualTo(new[] { "a", "b" }), "Each recalled memory once, so the sleep doesn't write it again.");
+            }
+        }
+
+        [Test]
+        public void ADiscardedBuild_IsSleptAsDiscarded()
+        {
+            using (var rig = new Rig(BuildsAHouse()))
+            {
+                rig.Conversation.Send("Build a house");
+                rig.Settle();
+
+                rig.Conversation.Discard();
+                rig.PumpUntil(() => rig.Memory.Sleeps.Count == 1);
+
+                Assert.That(rig.Memory.Sleeps[0].Calls.Last().Prompt, Is.EqualTo("I discarded what you built."));
+            }
+        }
+
+        [Test]
+        public void ARetry_StaysInTheSameRequest_UntilItSettles()
+        {
+            using (var rig = new Rig(BuildsAHouse()))
+            {
+                rig.Conversation.Send("Build a house");
+                rig.Settle();
+                rig.Conversation.Retry();
+                rig.Settle();
+                rig.Conversation.Accept();
+                rig.PumpUntil(() => rig.Memory.Sleeps.Count == 1);
+
+                var prompts = rig.Memory.Sleeps[0].Calls.Select(c => c.Prompt).ToList();
+                Assert.That(prompts.Count, Is.EqualTo(3));
+                Assert.That(prompts[1], Does.StartWith("I discarded what you built. Build it again"));
+                Assert.That(prompts[2], Does.StartWith("I accepted"));
+            }
+        }
+
+        [Test]
+        public void WhatTheMemoryKept_IsSaidInTheChat()
+        {
+            using (var rig = new Rig(Answers("Noted: you like stone.")))
+            {
+                rig.Memory.Kept = new MemorySleep(1, 1, new[] { "likes-stone", "village-plan" }, null, null);
+
+                rig.Conversation.Send("I like stone houses");
+                rig.Settle();
+                rig.PumpUntil(() => rig.Conversation.Entries.Last().Text == "Remembered 2 things.");
+            }
+        }
+
+        [Test]
+        public void AFailureBeforeAnyWord_IsNotSlept()
+        {
+            using (var rig = new Rig((turn, report, cancellation, tools) =>
+                   {
+                       report(AgentEvent.Failure("Claude Code stopped: overloaded"));
+                       return Task.CompletedTask;
+                   }))
+            {
+                rig.Conversation.Send("Build a house");
+                rig.Settle();
+                var clock = Stopwatch.StartNew();
+                while (clock.ElapsedMilliseconds < 100)
+                {
+                    rig.Queue.Pump();
+                    Thread.Sleep(1);
+                }
+
+                Assert.That(rig.Memory.Sleeps, Is.Empty);
+            }
         }
     }
 }

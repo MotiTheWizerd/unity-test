@@ -557,6 +557,26 @@ slopes), so results are exact and every edit goes through the edit session.
   (one undo step named after the request), **retries** (discard and ask again; the agent is told the first try
   was turned down) or **discards** it, or sends a follow-up that refines the same draft. Stop keeps what was
   built for review. A request that changed nothing needs no review.
+- **Memory** (`IAgentMemory`, `Agent/Memory`): one long-term memory for the agent, kept in Semantix as a memory
+  agent on the user's account (`SemantixMemory`, named in `AgentSettings`, "Forge"; found by name, made on first
+  use, the same agent read and written). It uses the doors Semantix's own Claude Code tasks use
+  (`semantix-tasksd` `claude_memory.rs`):
+  - **Dress**, before every turn: `POST /api/v1/memory/agents/{id}/dress`, cued by the message (not the briefing).
+    The server composes the block (standing orders, a note on how the memory works, the recalled memories) and it
+    goes in front of the `<editor>` briefing. It rides in the message, not the system prompt, so a resumed
+    conversation keeps its prompt cache. A memory that can't be reached never stops a turn: it runs without, and the
+    chat says so once.
+  - **Sleep**, once a request settles (accepted, discarded, or an answer with nothing to review): every turn
+    (`MemoryCall`: the prompt without the briefing, what the agent said, a line per tool call) plus the user's
+    verdict ("I accepted what you built (3 added)…"), in two halves around the model: `/sleep/prompt` (the server
+    writes the distill's words), the user's own Claude Code (`ClaudeCodeMemoryModel`: one isolated `--print` answer
+    on the agent's model, `--system-prompt-file`, no tools, MCP, settings or session), then `/sleep/reply` (the
+    server keeps the memories). It runs in the background; the chat says "Remembered 2 things." or why it failed.
+    A request still under review when the editor closes is not slept.
+  - The login is the Semantix app's (`SemantixCredentials`: the bearer token in `~/.semantix/USER/credentials.json`,
+    read per request). The server is `AgentSettings`' (production), unless `SEMANTIX_API_URL` is set. `SemantixHttp`
+    is the only HTTP; tests fake `ISemantixHttp` and `IMemoryModel`. Claude Code's own auto memory is off in every
+    process Forge starts (`CLAUDE_CODE_DISABLE_AUTO_MEMORY`), so the agent has exactly one memory.
 
 ## Runtime editor (Forge.EditorApp)
 
@@ -735,8 +755,8 @@ slopes), so results are exact and every edit goes through the edit session.
     the point of one that spills) re-levels it the same way. The lake last made or pressed is `EditorContext.CurrentLake`:
     the options bar shows its level and Remove, and Del removes it (`EditorCommands.RemoveCurrentLake`).
 - **The agent in the editor**: `EditorController` builds an `AgentHost` when the bootstrap has `AgentSettings`
-  (`Settings/Agent/AgentSettings.asset`: Claude Code command, model `sonnet`, effort, and the instructions as a
-  text asset, `WorldBuilderInstructions.md`). The host registers the building commands over the controller's
+  (`Settings/Agent/AgentSettings.asset`: Claude Code command, model `sonnet`, effort, the instructions as a
+  text asset, `WorldBuilderInstructions.md`, and the memory: on, its Semantix server and its name). The host registers the building commands over the controller's
   `ObjectSeating` and the context's `PlacementOptions`, pumps the agent's main-thread queue every frame, selects
   the draft's objects (so they stand out and F frames them), and keeps the app running in the background while
   the agent works. `EditorBriefing` tells the agent where the camera looks (the default site), the terrain's
@@ -963,3 +983,4 @@ and the condition for removing it, and is listed here.
 | `World/Assets/KeyedAssetCatalog.cs` | Catalog entries (prefabs, terrain layers) reference assets directly, so all content loads with the catalog at startup | A dozen placeholder prefabs and four ground layers fit in memory easily | Content outgrows memory → load prefabs by asset key through Addressables, streamed with the chunks |
 | `EditorApp/EditorController.cs`, `Tools/ToolDefinition.cs` | Input read by polling devices, not an Input Actions asset; tool keys are fixed `Key`s in `ToolCatalog` | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset, labels read from it |
 | `World/GrassView.cs` (`Grow`) | Grass patches grow on the main thread, ~10 ms for a 20k-tuft patch in the editor, so crossing into a new chunk can cost a frame | One patch a frame is a short hitch; simpler than threading while grass is new | Hitches show while flying → grow on a worker thread (`GrassScatter` is engine-free; only the buffer upload needs the main thread) |
+| `Agent/Memory/SemantixMemory.cs` (`Origin`) | The agent's Semantix memory is made with origin `user`, so Semantix Studio doesn't list it under Your Agents | The server knows no `forge` origin yet, and one memory for all of Forge needs no picker | Users make memories at will → a `forge` origin on the server and a Forge group in Your Agents |

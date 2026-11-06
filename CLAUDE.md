@@ -76,6 +76,10 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
   `EditorController.Agent.Conversation.Send(...)`; then poll `Conversation.State` and `Entries`.
   The agent host turns background running back off when the request ends. Its Claude Code
   conversations live in `<persistentDataPath>/Agent`.
+- The agent's memory is the Semantix agent "Forge" on Moti's account (production, `api.semantixstudio.com`).
+  Probe it with curl and the token from `~/.semantix/USER/credentials.json` (`GET /api/v1/memory/agents`,
+  `.../{id}/memories`). Production must serve `/sleep/prompt` and `/sleep/reply` (server commit `76bad98`, s955)
+  for the sleep to write; until then every sleep notice says HTTP 404 and only the dress works.
 - RAM: Moti's machine has 16 GB. Unity's import workers take ~1 GB each, so the desired import
   worker count is 2 on this machine (`AssetDatabase.DesiredWorkerCount`, stored in the git-ignored
   `UserSettings/EditorUserSettings.asset`; it was 7 and the PC ran out of memory). Raise it once

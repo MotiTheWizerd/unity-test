@@ -2,7 +2,6 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Forge.Agent.Mcp;
@@ -18,9 +17,6 @@ namespace Forge.Agent.ClaudeCode
     public sealed class ClaudeCodeBackend : IAgentBackend
     {
         const string ServerVersion = "0.1.0";
-        const int ErrorTailLength = 600;
-
-        static readonly Encoding Utf8 = new UTF8Encoding(false);
 
         readonly ClaudeCodeSettings _settings;
         readonly IToolHost _tools;
@@ -46,19 +42,7 @@ namespace Forge.Agent.ClaudeCode
 
             var endpoint = Endpoint();
             Directory.CreateDirectory(_settings.WorkingDirectory);
-            var start = new ProcessStartInfo
-            {
-                FileName = _settings.Executable,
-                Arguments = CommandLine.Join(ClaudeCodeArguments.For(_settings, turn.Instructions, endpoint.Url, endpoint.Token, turn.ConversationId)),
-                WorkingDirectory = _settings.WorkingDirectory,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                StandardOutputEncoding = Utf8,
-                StandardErrorEncoding = Utf8,
-            };
+            var start = ClaudeProcess.StartInfo(_settings, ClaudeCodeArguments.For(_settings, turn.Instructions, endpoint.Url, endpoint.Token, turn.ConversationId));
 
             Process process;
             try
@@ -72,10 +56,10 @@ namespace Forge.Agent.ClaudeCode
             }
 
             using (process)
-            using (cancellation.Register(() => Stop(process)))
+            using (cancellation.Register(() => ClaudeProcess.Stop(process)))
             {
                 var errors = process.StandardError.ReadToEndAsync();
-                await SendPromptAsync(process, turn.Prompt).ConfigureAwait(false);
+                await ClaudeProcess.SendAsync(process, turn.Prompt).ConfigureAwait(false);
 
                 var finished = false;
                 string line;
@@ -92,7 +76,7 @@ namespace Forge.Agent.ClaudeCode
                 var errorOutput = await errors.ConfigureAwait(false);
                 cancellation.ThrowIfCancellationRequested();
                 if (!finished)
-                    report(AgentEvent.Failure($"Claude Code exited without finishing (exit code {process.ExitCode}). {Tail(errorOutput)}".Trim()));
+                    report(AgentEvent.Failure($"Claude Code exited without finishing (exit code {process.ExitCode}). {ClaudeProcess.Tail(errorOutput)}".Trim()));
             }
         }
 
@@ -120,44 +104,6 @@ namespace Forge.Agent.ClaudeCode
 
                 return _endpoint;
             }
-        }
-
-        // The message goes in on stdin, as UTF-8, so the user's text never needs command-line quoting.
-        static async Task SendPromptAsync(Process process, string prompt)
-        {
-            var bytes = Utf8.GetBytes(prompt);
-            try
-            {
-                await process.StandardInput.BaseStream.WriteAsync(bytes, 0, bytes.Length).ConfigureAwait(false);
-                process.StandardInput.Close();
-            }
-            catch (IOException)
-            {
-                // It exited before reading (bad arguments, no login); its error output, read next, says why.
-            }
-        }
-
-        static void Stop(Process process)
-        {
-            try
-            {
-                if (!process.HasExited)
-                    process.Kill();
-            }
-            catch (InvalidOperationException)
-            {
-                // It exited between the check and the kill.
-            }
-            catch (Win32Exception)
-            {
-                // It is already exiting.
-            }
-        }
-
-        static string Tail(string text)
-        {
-            text = text?.Trim() ?? string.Empty;
-            return text.Length <= ErrorTailLength ? text : "…" + text.Substring(text.Length - ErrorTailLength);
         }
     }
 }

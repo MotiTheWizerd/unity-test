@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using Forge.Agent;
 using Forge.Agent.ClaudeCode;
+using Forge.Agent.Memory;
 using Forge.Agent.Tools;
 using Forge.Data.Records;
 using Forge.Editing;
@@ -28,6 +29,7 @@ namespace Forge.EditorApp.Agent
         readonly EditorContext _context;
         readonly MainThreadQueue _mainThread = new MainThreadQueue();
         readonly bool _runInBackground;
+        SemantixHttp _semantix;
         EditDraft _shownDraft;
         int _shownRevision;
 
@@ -46,9 +48,11 @@ namespace Forge.EditorApp.Agent
             var commands = new CommandRegistry();
             BuildingCommands.AddTo(commands, new BuildContext(context.Session, () => context.ActiveSpace, seating, context.PlacementOptions, slots.SlotsOf));
             var tools = new AgentToolHost(new ToolInvoker(commands), _mainThread);
-            var backend = new ClaudeCodeBackend(settings.ClaudeCode(Path.Combine(Application.persistentDataPath, WorkingFolder)), tools);
+            var claudeCode = settings.ClaudeCode(Path.Combine(Application.persistentDataPath, WorkingFolder));
+            var backend = new ClaudeCodeBackend(claudeCode, tools);
             backend.EndpointFailed += ex => _mainThread.Post(() => Debug.LogException(ex));
-            Conversation = new AgentConversation(backend, tools, context.Session, _mainThread, briefing.Describe, settings.Instructions);
+            Conversation = new AgentConversation(backend, tools, context.Session, _mainThread, briefing.Describe, settings.Instructions,
+                Memory(settings, claudeCode));
             _runInBackground = Application.runInBackground;
         }
 
@@ -67,7 +71,18 @@ namespace Forge.EditorApp.Agent
         public void Dispose()
         {
             Conversation.Dispose();
+            _semantix?.Dispose();
             Application.runInBackground = _runInBackground;
+        }
+
+        // One memory in the user's Semantix account, distilled on the agent's own Claude Code model.
+        IAgentMemory Memory(AgentSettings settings, ClaudeCodeSettings claudeCode)
+        {
+            if (!settings.KeepsMemory)
+                return NoMemory.Instance;
+
+            _semantix = new SemantixHttp(SemantixHttp.Server(settings.MemoryServer), () => SemantixCredentials.ReadToken(SemantixCredentials.DefaultPath));
+            return new SemantixMemory(_semantix, new ClaudeCodeMemoryModel(claudeCode), settings.MemoryName);
         }
 
         // While the draft is open, the objects it places or changes are the selection: they stand out, and F frames them.

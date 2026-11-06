@@ -45,6 +45,31 @@ namespace Forge.Agent.ClaudeCode
             return arguments;
         }
 
+        /// <summary>
+        /// The command line of one memory distill: a single answer in plain text, with no tools, no MCP servers, no
+        /// settings files and no conversation left behind. The instruction is read from a file because it is long.
+        /// </summary>
+        public static IReadOnlyList<string> ForDistill(ClaudeCodeSettings settings, string instructionFile)
+        {
+            if (settings == null)
+                throw new ArgumentNullException(nameof(settings));
+            if (string.IsNullOrEmpty(instructionFile))
+                throw new ArgumentException("The instruction file is required.", nameof(instructionFile));
+
+            var arguments = new List<string>
+            {
+                "--print",
+                "--setting-sources", string.Empty,
+                "--tools", string.Empty,
+                "--strict-mcp-config",
+                "--no-session-persistence",
+                "--system-prompt-file", instructionFile,
+            };
+            if (settings.Model.Length > 0)
+                arguments.AddRange(new[] { "--model", settings.Model });
+            return arguments;
+        }
+
         /// <summary>The --mcp-config JSON pointing Claude Code at Forge's endpoint.</summary>
         public static string McpConfig(string url, string token)
         {
