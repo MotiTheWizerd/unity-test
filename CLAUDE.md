@@ -78,8 +78,10 @@ Read `ARCHITECTURE.md` first. It is the source of truth for structure and conven
   conversations live in `<persistentDataPath>/Agent`.
 - The agent's memory is the Semantix agent "Forge" on Moti's account (production, `api.semantixstudio.com`).
   Probe it with curl and the token from `~/.semantix/USER/credentials.json` (`GET /api/v1/memory/agents`,
-  `.../{id}/memories`). Production must serve `/sleep/prompt` and `/sleep/reply` (server commit `76bad98`, s955)
-  for the sleep to write; until then every sleep notice says HTTP 404 and only the dress works.
+  `.../{id}/memories`; `DELETE .../{id}/memories` clears a probe's memories after a live test). The sleep needs the
+  server's `/sleep/prompt` and `/sleep/reply` (s955): production serves them since server `f422953` (2026-11-06).
+  Production deploys run from the laptop (`deploy/vienna/push.sh` in the server repo over Tailscale SSH
+  `motithewizerdlab@100.74.136.46`); this PC's key is not on the Vienna box.
 - RAM: Moti's machine has 16 GB. Unity's import workers take ~1 GB each, so the desired import
   worker count is 2 on this machine (`AssetDatabase.DesiredWorkerCount`, stored in the git-ignored
   `UserSettings/EditorUserSettings.asset`; it was 7 and the PC ran out of memory). Raise it once
