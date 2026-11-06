@@ -15,8 +15,9 @@ namespace Forge.Editing.Building
         public ListObjectsCommand(BuildContext context)
             : base("list_objects",
                 "Lists the objects you can place: id, name, category, size at scale 1 (width across the front, " +
-                "depth front to back, in meters) and how placing treats each one: whether it gets a random heading " +
-                "and size, and whether it tilts to the slope.")
+                "depth front to back, in meters), how placing treats each one: whether it gets a random heading " +
+                "and size, and whether it tilts to the slope, and its material slots (parts set_materials can dress, " +
+                "named after what they wear by default, e.g. \"Roof\").")
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
@@ -42,8 +43,9 @@ namespace Forge.Editing.Building
 
         public sealed class Entry
         {
-            internal Entry(BaseObjectRecord record, float width, float depth)
+            internal Entry(BaseObjectRecord record, float width, float depth, IReadOnlyList<string> slots)
             {
+                Slots = slots;
                 Id = record.Id.ToString();
                 Name = record.DisplayName;
                 Category = record.Category;
@@ -76,6 +78,9 @@ namespace Forge.Editing.Building
             public float MaxScale { get; }
 
             public bool TiltsToSlope { get; }
+
+            /// <summary>Its material slots, named after what it wears in them by default.</summary>
+            public IReadOnlyList<string> Slots { get; }
         }
 
         protected override Result Run(Arguments arguments)
@@ -86,7 +91,7 @@ namespace Forge.Editing.Building
                 .Select(record =>
                 {
                     var footprint = _context.Seating.ShapeOf(record).Footprint;
-                    return new Entry(record, footprint.SizeX, footprint.SizeZ);
+                    return new Entry(record, footprint.SizeX, footprint.SizeZ, _context.SlotsOf(record));
                 })
                 .ToList();
 

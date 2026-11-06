@@ -31,18 +31,20 @@ namespace Forge.EditorApp.Agent
         EditDraft _shownDraft;
         int _shownRevision;
 
-        public AgentHost(EditorContext context, ObjectSeating seating, EditorBriefing briefing, AgentSettings settings)
+        public AgentHost(EditorContext context, ObjectSeating seating, AssetSlots slots, EditorBriefing briefing, AgentSettings settings)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             if (seating == null)
                 throw new ArgumentNullException(nameof(seating));
+            if (slots == null)
+                throw new ArgumentNullException(nameof(slots));
             if (briefing == null)
                 throw new ArgumentNullException(nameof(briefing));
             if (settings == null)
                 throw new ArgumentNullException(nameof(settings));
 
             var commands = new CommandRegistry();
-            BuildingCommands.AddTo(commands, new BuildContext(context.Session, () => context.ActiveSpace, seating, context.PlacementOptions));
+            BuildingCommands.AddTo(commands, new BuildContext(context.Session, () => context.ActiveSpace, seating, context.PlacementOptions, slots.SlotsOf));
             var tools = new AgentToolHost(new ToolInvoker(commands), _mainThread);
             var backend = new ClaudeCodeBackend(settings.ClaudeCode(Path.Combine(Application.persistentDataPath, WorkingFolder)), tools);
             backend.EndpointFailed += ex => _mainThread.Post(() => Debug.LogException(ex));

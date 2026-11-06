@@ -20,17 +20,35 @@ namespace Forge.Editing.Building
     public sealed class BuildContext
     {
         readonly Func<RecordId> _space;
+        readonly Func<BaseObjectRecord, IReadOnlyList<string>> _slotsOf;
         ResolvedWorld _terrainWorld;
         TerrainGrid _terrain;
         WaterMap _water;
 
         /// <param name="space">The space the commands build in, read on every use (it follows the editor's view).</param>
-        public BuildContext(EditSession session, Func<RecordId> space, ObjectSeating seating, PlacementOptions options)
+        /// <param name="slotsOf">The material slots each kind of object has (they come from its asset); null: none known.</param>
+        public BuildContext(EditSession session, Func<RecordId> space, ObjectSeating seating, PlacementOptions options,
+            Func<BaseObjectRecord, IReadOnlyList<string>> slotsOf = null)
         {
             Session = session ?? throw new ArgumentNullException(nameof(session));
             _space = space ?? throw new ArgumentNullException(nameof(space));
             Seating = seating ?? throw new ArgumentNullException(nameof(seating));
             Options = options ?? throw new ArgumentNullException(nameof(options));
+            _slotsOf = slotsOf ?? (_ => Array.Empty<string>());
+        }
+
+        /// <summary>The material slots <paramref name="baseObject"/> has, named after the materials it wears in them.</summary>
+        public IReadOnlyList<string> SlotsOf(BaseObjectRecord baseObject) => _slotsOf(baseObject);
+
+        /// <summary>The material with id <paramref name="id"/>; refused, with a hint, when there is none.</summary>
+        public MaterialRecord Material(string id)
+        {
+            if (RecordId.TryParse(id, out var recordId)
+                && Session.World.Records.TryGet(recordId, out var record)
+                && record is MaterialRecord material)
+                return material;
+
+            throw new CommandException($"There is no material '{id}'. list_materials gives the ids of the materials.");
         }
 
         public EditSession Session { get; }

@@ -61,7 +61,8 @@ namespace Forge.EditorApp
             var seating = new ObjectSeating(picker.TerrainHeightAt, slopes.ShapeToAlign, shapes.ShapeOf);
             // The camera's rays are the scene's; the distance along one is the same in either frame.
             _flyCamera.Initialize(ui, ray => picker.TryPickWorld(frame.ToWorld(ray), out var hit) ? hit.Distance : (float?)null, context.FlySpeed);
-            Commands = new EditorCommands(context, view, picker, _flyCamera, slopes);
+            var slots = new AssetSlots(assets);
+            Commands = new EditorCommands(context, view, picker, _flyCamera, slopes, slots);
             var root = frame.Root;
             _tools = new Dictionary<ToolKind, IEditorTool>
             {
@@ -81,7 +82,7 @@ namespace Forge.EditorApp
             _markView = new MarkView(new TerrainSurface(picker), root);
 
             if (agent != null)
-                Agent = new AgentHost(context, seating, new EditorBriefing(context, () => GroundInView(picker)), agent);
+                Agent = new AgentHost(context, seating, slots, new EditorBriefing(context, () => GroundInView(picker)), agent);
         }
 
         void OnDestroy()

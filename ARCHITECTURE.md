@@ -432,6 +432,12 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
   - `adjust_objects`: moves, turns and resizes placed objects by id; what an item leaves out stays as it is,
     and each object is re-seated on the terrain by `ObjectSeating` at its new spot, then committed through
     `ObjectEdits.Transform` as one step. Unknown ids and spots without terrain are skipped and reported.
+  - `list_materials` (id, name; optional search) and `set_materials`: one slot of placed objects (ids) in a material,
+    or back to their own look when the material is left out, one undo step through `ObjectEdits.SetMaterial`; objects
+    without the slot are skipped with the slots they have. `list_objects` names each object's slots and
+    `PlacedObjectInfo` (inspect, adjust) what an object wears. Slots reach Editing through `BuildContext.SlotsOf`, which
+    the editor feeds from `AssetSlots` (EditorApp: each asset key's `MaterialSlots` read once from a throwaway
+    instance, the same source the selection options use, so loaded or not, every caller sees the same slots).
   - `delete_objects`: placed objects by id.
 - The editor actions that predate the registry (drop to ground, frame, undo/redo, save, the tools' gestures)
   are not commands yet; each moves into the registry when the agent needs it.
@@ -802,7 +808,7 @@ slopes), so results are exact and every edit goes through the edit session.
   copy of the catalog's material); picking one calls `EditorCommands.DressSelection`, which dresses the chosen slot of
   every selected object that has it, as one undo step, and the tile of what the selection wears there is lit. The
   slot is picked in the selection options (`SelectionSection`: a Slot dropdown listing the selection's slots,
-  `EditorCommands.SelectionSlots`, read from the shown objects' `MaterialSlots`, labelled by `Materials.SlotLabel`;
+  `EditorCommands.SelectionSlots`, read from `AssetSlots`, labelled by `Materials.SlotLabel`;
   the choice is `EditorContext.MaterialSlot`, the first slot when unset) beside a Reset look button
   (`ResetSelectionMaterials`). Every list
   is searched alike through `SearchQuery` (all terms, any field, ignoring case). Each object tile's picture comes from `ThumbnailRenderer`

@@ -26,14 +26,16 @@ namespace Forge.EditorApp
         readonly ScenePicker _picker;
         readonly ICameraRig _camera;
         readonly SlopeAlignment _slopes;
+        readonly AssetSlots _slots;
 
-        public EditorCommands(EditorContext context, WorldView view, ScenePicker picker, ICameraRig camera, SlopeAlignment slopes)
+        public EditorCommands(EditorContext context, WorldView view, ScenePicker picker, ICameraRig camera, SlopeAlignment slopes, AssetSlots slots)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _picker = picker ?? throw new ArgumentNullException(nameof(picker));
             _camera = camera ?? throw new ArgumentNullException(nameof(camera));
             _slopes = slopes ?? throw new ArgumentNullException(nameof(slopes));
+            _slots = slots ?? throw new ArgumentNullException(nameof(slots));
         }
 
         /// <summary>
@@ -88,17 +90,15 @@ namespace Forge.EditorApp
         }
 
         /// <summary>
-        /// The material slots of the selected objects shown in the scene, in the order they are first worn, each once;
-        /// empty when nothing selected has any. Slots come from the objects' assets (<see cref="MaterialSlots"/>).
+        /// The material slots of the selected objects, in the order they are first worn, each once; empty when nothing
+        /// selected has any. Slots come from the objects' assets (<see cref="AssetSlots"/>).
         /// </summary>
         public IReadOnlyList<string> SelectionSlots()
         {
             var slots = new List<string>();
             foreach (var id in _context.Selection.Ids)
             {
-                if (!(_view.TryGetObject(id, out var go) && go.TryGetComponent<MaterialSlots>(out var own)))
-                    continue;
-                foreach (var slot in own.Slots)
+                foreach (var slot in SlotsOf(id))
                 {
                     if (!slots.Contains(slot))
                         slots.Add(slot);
@@ -106,6 +106,15 @@ namespace Forge.EditorApp
             }
 
             return slots;
+        }
+
+        IReadOnlyList<string> SlotsOf(RecordId placedId)
+        {
+            var records = _context.Session.World.Records;
+            return records.TryGet(placedId, out var record) && record is PlacedObjectRecord placed
+                   && records.TryGet(placed.BaseId, out var kind) && kind is BaseObjectRecord baseObject
+                ? _slots.SlotsOf(baseObject)
+                : Array.Empty<string>();
         }
 
         /// <summary>The slot picking a material dresses: the one chosen when the selection has it, else its first; null when it has none.</summary>
@@ -161,9 +170,7 @@ namespace Forge.EditorApp
 
         // Selected objects whose asset has the slot, so dressing it never writes an override no one could see.
         List<RecordId> SelectedWithSlot(string slot) =>
-            _context.Selection.Ids
-                .Where(id => _view.TryGetObject(id, out var go) && go.TryGetComponent<MaterialSlots>(out var slots) && slots.Slots.Contains(slot))
-                .ToList();
+            _context.Selection.Ids.Where(id => SlotsOf(id).Contains(slot)).ToList();
 
         string NameOf(RecordId material) =>
             _context.Session.World.Records.TryGet(material, out var record) && record is MaterialRecord found ? found.DisplayName : material.ToString();

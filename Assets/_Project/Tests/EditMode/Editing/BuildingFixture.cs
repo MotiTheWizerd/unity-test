@@ -59,7 +59,7 @@ namespace Forge.Tests.Editing
             Options = new PlacementOptions(new Random(1));
             var terrain = new TerrainGrid(Session.World.Records, Space);
             var seating = new ObjectSeating(terrain.HeightAt, SlopeShapeOf, key => ShapesByKey[key]);
-            Context = new BuildContext(Session, () => Space, seating, Options);
+            Context = new BuildContext(Session, () => Space, seating, Options, SlotsOf);
             BuildingCommands.AddTo(Registry, Context);
         }
 
@@ -86,6 +86,12 @@ namespace Forge.Tests.Editing
             return new TerrainChunkRecord(TerrainChunkRecord.IdFor("core", Space, coord), Space, coord,
                 HeightField.FromFunction((sx, sz) => 10f + 0.1f * (x * WorldGrid.ChunkSize + sx * spacing), samples));
         }
+
+        // The material slots each asset has, standing in for the editor's AssetSlots: the house has walls and a roof.
+        static IReadOnlyList<string> SlotsOf(BaseObjectRecord baseObject) =>
+            baseObject.AssetKey == "house" ? new[] { "Plaster", "Roof" }
+            : baseObject.AssetKey == "fence" ? new[] { "Wood" }
+            : Array.Empty<string>();
 
         // What tilts, decided the way the editor's SlopeAlignment does: the rules and the toggle.
         PlacementShape? SlopeShapeOf(RecordId baseId) =>

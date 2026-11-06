@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using Forge.Data.Records;
 using Forge.Editing.Placement;
 
@@ -16,6 +18,8 @@ namespace Forge.Editing.Building
             Z = Rounding.Meters(placed.Position.Z);
             Heading = Rounding.Degrees(PlacementMath.HeadingOf(placed.Rotation));
             Scale = Rounding.Meters(placed.Scale);
+            if (placed.Materials.Count > 0)
+                Materials = placed.Materials.ToDictionary(m => m.Slot, m => m.Material.ToString());
         }
 
         public string Id { get; }
@@ -35,5 +39,8 @@ namespace Forge.Editing.Building
         public float Heading { get; }
 
         public float Scale { get; }
+
+        /// <summary>The slots it wears another material in than its kind does (slot → material id); null when none.</summary>
+        public IReadOnlyDictionary<string, string> Materials { get; }
     }
 }
