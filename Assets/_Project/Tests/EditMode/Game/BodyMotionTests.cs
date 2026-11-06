@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Forge.Game.Motion;
 using Forge.Game.Player;
 using NUnit.Framework;
 

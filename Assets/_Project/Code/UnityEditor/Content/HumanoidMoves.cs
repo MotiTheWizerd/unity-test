@@ -3,9 +3,10 @@ using System;
 namespace Forge.UnityEditor.Content
 {
     /// <summary>
-    /// The moves a humanoid's animations are made of, each one file under Content/Animations named after it
-    /// ({Move}.fbx): the ground moves blend by speed, the air moves play on top. The import (<see cref="AnimationImport"/>)
-    /// loops what repeats; the animator builder plays whichever of them are present.
+    /// The moves a humanoid's animations are made of, each one file in a move set's folder named after it
+    /// (Content/Animations/{Set}/{Move}.fbx): the ground moves blend by speed, the air moves play on top. The import
+    /// (<see cref="AnimationImport"/>) loops what repeats; the animator builder (<see cref="HumanoidAnimatorBuilder"/>)
+    /// plays whichever of them are present.
     /// </summary>
     static class HumanoidMoves
     {

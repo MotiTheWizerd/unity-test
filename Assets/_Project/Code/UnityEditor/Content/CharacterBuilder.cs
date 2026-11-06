@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -14,8 +16,9 @@ namespace Forge.UnityEditor.Content
     /// <see cref="CharacterImport"/>; feet at the origin, facing +Z, in meters), its colour {Name}_Color.png and, if it has
     /// one, its normal map {Name}_Normal.png. The tool makes a URP Lit material {Name}.mat from them and a prefab
     /// {Name}.prefab, a variant of the model (so a re-exported model updates it), wearing the material, with an Animator on
-    /// the model's humanoid avatar playing the shared humanoid animations (<see cref="HumanoidAnimatorBuilder"/>, built
-    /// first) and no root motion (the player's body moves it). Existing assets are updated in place,
+    /// the model's humanoid avatar playing its move set (<see cref="HumanoidAnimatorBuilder"/>, built first: the one an
+    /// optional {Name}.json names, else the base Humanoid set) and no root motion (the body moves it). Existing assets are
+    /// updated in place,
     /// so their GUIDs, and everything referencing them (the player profile), survive a rebuild.
     /// </summary>
     static class CharacterBuilder
@@ -25,16 +28,45 @@ namespace Forge.UnityEditor.Content
         [MenuItem("Forge/Characters/Build Characters")]
         static void Build()
         {
-            var animations = HumanoidAnimatorBuilder.Build();
+            var moveSets = HumanoidAnimatorBuilder.BuildAll();
             var built = 0;
             foreach (var folder in AssetDatabase.GetSubFolders(CharacterImport.CharactersFolder).OrderBy(f => f, System.StringComparer.Ordinal))
             {
-                if (BuildCharacter(folder, Path.GetFileName(folder), animations) != null)
+                var name = Path.GetFileName(folder);
+                if (BuildCharacter(folder, name, MoveSetOf(folder, name, moveSets)) != null)
                     built++;
             }
 
             AssetDatabase.SaveAssets();
             Debug.Log($"[Forge] Built {built} character(s) under {CharacterImport.CharactersFolder}.");
+        }
+
+        /// <summary>
+        /// The controller of the move set the character plays: the one its optional {Name}.json names
+        /// (<c>{ "moves": "Guard" }</c>), else the base set's.
+        /// </summary>
+        static RuntimeAnimatorController MoveSetOf(string folder, string name, IReadOnlyDictionary<string, AnimatorController> moveSets)
+        {
+            var set = HumanoidAnimatorBuilder.BaseSet;
+            var settingsPath = $"{folder}/{name}.json";
+            if (File.Exists(settingsPath))
+            {
+                var settings = JsonUtility.FromJson<CharacterSettings>(File.ReadAllText(settingsPath));
+                if (!string.IsNullOrWhiteSpace(settings?.moves))
+                    set = settings.moves.Trim();
+            }
+
+            if (moveSets.TryGetValue(set, out var controller))
+                return controller;
+            Debug.LogWarning($"[Forge] {name} plays move set '{set}', which has no animator under {AnimationImport.AnimationsFolder}; it plays {HumanoidAnimatorBuilder.BaseSet}.");
+            return moveSets.TryGetValue(HumanoidAnimatorBuilder.BaseSet, out var fallback) ? fallback : null;
+        }
+
+        // A character folder's optional {Name}.json.
+        [System.Serializable]
+        sealed class CharacterSettings
+        {
+            public string moves;
         }
 
         /// <summary>

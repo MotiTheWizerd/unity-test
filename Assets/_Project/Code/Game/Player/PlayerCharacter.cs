@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Forge.Core.Geometry;
+using Forge.Game.Motion;
 
 namespace Forge.Game.Player
 {

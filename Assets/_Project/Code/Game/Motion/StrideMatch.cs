@@ -1,6 +1,6 @@
 using System;
 
-namespace Forge.Game.Player
+namespace Forge.Game.Motion
 {
     /// <summary>
     /// Keeps the feet from sliding. A body's ground moves (idle, walk, run, ...) are clips each made at its own speed,

@@ -596,9 +596,10 @@ from any camera, so both cameras read the same player.
   current view, steps the player, then frames it and turns and shows (or shadows only) the model; `Despawn` takes it
   away. One per app, so the view chosen carries over to the next spawn. The editor uses it through play from here; the
   game will use it as it is.
-- **The model** (`PlayerAvatar`, Play): the profile's `_model` prefab riding on the body's object, turned to the body's
-  heading, its colliders removed (the body is the collider), on the body's layer; in first person its renderers cast
-  only shadows. The player is the **Viking hero** (`Content/Characters/VikingHero`, 1.85 m, eyes at 1.72 m), the first
+- **The model** (`PlayerAvatar`, Play): the profile's `_model` as a `CharacterModel` (any character's look on any body:
+  the prefab riding on the body's object, turned to the body's heading, its colliders removed since the body is the
+  collider, on the body's layer, animated from a `BodyMotion`; the world's characters will use it too), plus the
+  player's own extras: in first person its renderers cast only shadows, and its animator always animates. The player is the **Viking hero** (`Content/Characters/VikingHero`, 1.85 m, eyes at 1.72 m), the first
   real character, from the `blender-tests` art repo (see its CREDITS.md). Before him it wore a placeholder mannequin
   (`player_mannequin`, built from primitives by `PlaceholderCharacters` through *Forge → Generate Placeholder Player*,
   which gives it to a profile with no model); it stays as the fallback.
@@ -611,17 +612,20 @@ from any camera, so both cameras read the same player.
   stands in its animation's first frame), with an `Animator` on the avatar, no root motion (the body moves it) and
   culled transforms off screen. A new character is a folder dropped in and a rebuild. The models and textures are plain
   git objects (`.gitattributes`), as the ground's are.
-- **Animations** (`Content/Animations/Humanoid/<Move>.fbx`): one Mixamo clip per move (FBX for Unity, 30 fps, without
+- **Animations** (`Content/Animations/<Set>/<Move>.fbx`): one Mixamo clip per move (FBX for Unity, 30 fps, without
   skin, travel left in), named after its move (`HumanoidMoves`: ground moves Idle, Walk, Run, Sprint blended by speed;
   Jump, Fall, Land in the air). `AnimationImport` imports each as a humanoid clip read against one T-posed Mixamo
   skeleton (`ReferenceRig`, the hero's today: a skinless file has no rest pose and Unity would take its first frame,
   mid-stride, for one, turning the legs out), loops the repeating moves, bakes turning into the pose and keeps travel as
   root motion, which the body ignores but which gives each clip's own speed; a jump's rise is left out of its pose (the
-  body's rise shows it). *Build Characters* first builds the shared `Humanoid.controller` (`HumanoidAnimatorBuilder`)
+  body's rise shows it). *Build Characters* first builds each **move set**'s `<Set>.controller` (`HumanoidAnimatorBuilder`):
+  `Humanoid` is the base every character plays, and another set (a guard's, an elder's) holds only the moves it
+  changes, the rest coming from the base; a whole controller per set rather than an override, since its clips walk at
+  their own speeds. A character plays the set its optional `<Name>.json` names (`{ "moves": "Guard" }`). Each is built
   from the moves present: the ground moves blended at their clips' speeds; a jump when the body leaves the ground going
   up, a fall when it drops past 3 m/s, a landing when it touches down, each optional. A new move is a file dropped in
   and a rebuild.
-- **How the body moved** (`BodyMotion`, Game): `PlayerCharacter.Motion` each frame, from where the body actually went
+- **How the body moved** (`BodyMotion`, `Forge.Game.Motion`, shared by anything with a body): `PlayerCharacter.Motion` each frame, from where the body actually went
   (ground speed, vertical speed, grounded), so a run into a wall shows standing. `StrideMatch` keeps the feet planted:
   the speed in the clips' own size (the avatar's `humanScale`) picks the blend, and past the fastest clip it plays
   faster. `HumanoidAnimation` (Play) is the one thing feeding an `Animator` (Speed damped 0.1 s, Pace, Grounded,

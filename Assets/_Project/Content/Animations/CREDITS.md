@@ -1,7 +1,8 @@
 # Animations
 
-Each file under `Humanoid/` is one move (`Idle`, `Walk`, `Run`, `Jump`, ...), played by every humanoid character
-through `Humanoid/Humanoid.controller`, built by *Forge → Characters → Build Characters*.
+Each folder is a move set; each file in it is one move (`Idle`, `Walk`, `Run`, `Jump`, ...). `Humanoid/` is the base set,
+played by every character unless its `<Name>.json` names another; *Forge → Characters → Build Characters* builds each
+set's controller.
 
 | Move | Source | Made by |
 |------|--------|---------|

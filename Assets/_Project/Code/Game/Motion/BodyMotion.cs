@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Forge.Game.Player
+namespace Forge.Game.Motion
 {
     /// <summary>
     /// How the body actually moved in a frame, as its look (animations) shows it: how fast over the ground, how fast up

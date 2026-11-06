@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Forge.Play;
 using UnityEditor;
@@ -7,21 +9,24 @@ using UnityEngine;
 namespace Forge.UnityEditor.Content
 {
     /// <summary>
-    /// Builds the one animator controller every humanoid character plays (Content/Animations/Humanoid/Humanoid.controller)
-    /// from whichever <see cref="HumanoidMoves"/> are there, so a new clip dropped in joins at the next build:
+    /// Builds an animator controller per move set. A set is a folder Content/Animations/{Set} of <see cref="HumanoidMoves"/>
+    /// clips ({Move}.fbx); <see cref="BaseSet"/> (Humanoid) is every character's default, and any other set (a guard's,
+    /// an elder's) holds only the moves it changes, the rest coming from the base. Each set's {Set}.controller is built
+    /// from its moves, so a clip dropped in joins at the next build:
     /// <list type="bullet">
     /// <item>Ground: the ground moves blended by speed. Each clip sits at the speed it walks (its root motion), so the feet
     /// keep pace; past the fastest clip it plays faster (<see cref="HumanoidAnimation.Pace"/>).</item>
     /// <item>Air: a jump when the body leaves the ground going up, a fall when it drops, a landing when it touches down.
     /// Each is optional; without it the body goes straight on to the next.</item>
     /// </list>
-    /// Parameters are <see cref="HumanoidAnimation"/>'s, which feeds them. The controller is rebuilt in place, so its GUID,
-    /// and the characters wearing it, survive.
+    /// A set is a whole controller rather than an override of the base's, because its clips walk at their own speeds and
+    /// the blend has to sit at them. Parameters are <see cref="HumanoidAnimation"/>'s, which feeds them. Controllers are
+    /// rebuilt in place, so their GUIDs, and the characters wearing them, survive.
     /// </summary>
     static class HumanoidAnimatorBuilder
     {
-        public const string Folder = AnimationImport.AnimationsFolder + "/Humanoid";
-        const string ControllerPath = Folder + "/Humanoid.controller";
+        /// <summary>The move set every character plays unless it names another, and the one other sets fall back to.</summary>
+        public const string BaseSet = "Humanoid";
 
         // Seconds one move crossfades into the next.
         const float Crossfade = 0.15f;
@@ -35,19 +40,36 @@ namespace Forge.UnityEditor.Content
         // Speed (in the clips' size) past which a landing gives way to moving on.
         const float MovingOn = 0.5f;
 
-        /// <summary>The controller, built from the clips present; null when there are no ground moves to build from.</summary>
-        public static AnimatorController Build()
+        /// <summary>Every set's controller by set name; a set with no ground moves to build from (its own or the base's) is left out.</summary>
+        public static IReadOnlyDictionary<string, AnimatorController> BuildAll()
         {
-            var ground = HumanoidMoves.Ground.Select(move => (move, clip: Clip(move))).Where(m => m.clip != null).ToArray();
+            var built = new Dictionary<string, AnimatorController>(System.StringComparer.Ordinal);
+            if (!AssetDatabase.IsValidFolder(AnimationImport.AnimationsFolder))
+                return built;
+            foreach (var folder in AssetDatabase.GetSubFolders(AnimationImport.AnimationsFolder).OrderBy(f => f, System.StringComparer.Ordinal))
+            {
+                var set = Path.GetFileName(folder);
+                var controller = Build(set);
+                if (controller != null)
+                    built[set] = controller;
+            }
+            return built;
+        }
+
+        /// <summary>The set's controller, built from the clips present; null when there are no ground moves to build from.</summary>
+        public static AnimatorController Build(string set)
+        {
+            var ground = HumanoidMoves.Ground.Select(move => (move, clip: Clip(set, move))).Where(m => m.clip != null).ToArray();
             if (ground.Length == 0)
             {
-                Debug.LogWarning($"[Forge] No ground moves ({string.Join(", ", HumanoidMoves.Ground)}) under {Folder}; no animator built.");
+                Debug.LogWarning($"[Forge] Move set {set} has no ground moves ({string.Join(", ", HumanoidMoves.Ground)}), nor has {BaseSet}; no animator built.");
                 return null;
             }
 
-            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath)
-                ?? AnimatorController.CreateAnimatorControllerAtPath(ControllerPath);
-            Clear(controller);
+            var path = ControllerPath(set);
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(path)
+                ?? AnimatorController.CreateAnimatorControllerAtPath(path);
+            Clear(controller, path);
 
             var tree = new BlendTree
             {
@@ -79,16 +101,20 @@ namespace Forge.UnityEditor.Content
             moving.speedParameterActive = true;
             machine.defaultState = moving;
 
-            BuildAir(machine, moving);
+            BuildAir(set, machine, moving);
             EditorUtility.SetDirty(controller);
             return controller;
         }
 
-        static void BuildAir(AnimatorStateMachine machine, AnimatorState moving)
+        static string SetFolder(string set) => $"{AnimationImport.AnimationsFolder}/{set}";
+
+        static string ControllerPath(string set) => $"{SetFolder(set)}/{set}.controller";
+
+        static void BuildAir(string set, AnimatorStateMachine machine, AnimatorState moving)
         {
-            var jump = State(machine, HumanoidMoves.Jump);
-            var fall = State(machine, HumanoidMoves.Fall);
-            var land = State(machine, HumanoidMoves.Land);
+            var jump = State(set, machine, HumanoidMoves.Jump);
+            var fall = State(set, machine, HumanoidMoves.Fall);
+            var land = State(set, machine, HumanoidMoves.Land);
             // Touching down goes through the landing when there is one.
             var touchDown = land ?? moving;
 
@@ -123,9 +149,9 @@ namespace Forge.UnityEditor.Content
 
         static AnimatorCondition Dropping() => new AnimatorCondition { mode = AnimatorConditionMode.Less, parameter = HumanoidAnimation.VerticalSpeed, threshold = -FallSpeed };
 
-        static AnimatorState State(AnimatorStateMachine machine, string move)
+        static AnimatorState State(string set, AnimatorStateMachine machine, string move)
         {
-            var clip = Clip(move);
+            var clip = Clip(set, move);
             if (clip == null)
                 return null;
             var state = machine.AddState(move);
@@ -159,18 +185,22 @@ namespace Forge.UnityEditor.Content
         // How fast the clip walks: its root motion over the ground, in the clips' own size.
         static float ClipSpeed(AnimationClip clip) => new Vector2(clip.averageSpeed.x, clip.averageSpeed.z).magnitude;
 
-        static AnimationClip Clip(string move) =>
-            AssetDatabase.LoadAllAssetsAtPath($"{Folder}/{move}.fbx").OfType<AnimationClip>().FirstOrDefault(c => c.name == move);
+        // The set's own clip for the move, else the base set's.
+        static AnimationClip Clip(string set, string move) =>
+            OwnClip(set, move) ?? (set == BaseSet ? null : OwnClip(BaseSet, move));
+
+        static AnimationClip OwnClip(string set, string move) =>
+            AssetDatabase.LoadAllAssetsAtPath($"{SetFolder(set)}/{move}.fbx").OfType<AnimationClip>().FirstOrDefault(c => c.name == move);
 
         // Empties the controller for a rebuild: its parameters, its states and the blend trees they played.
-        static void Clear(AnimatorController controller)
+        static void Clear(AnimatorController controller, string path)
         {
             foreach (var parameter in controller.parameters)
                 controller.RemoveParameter(parameter);
             var machine = controller.layers[0].stateMachine;
             foreach (var child in machine.states)
                 machine.RemoveState(child.state);
-            foreach (var tree in AssetDatabase.LoadAllAssetsAtPath(ControllerPath).OfType<BlendTree>())
+            foreach (var tree in AssetDatabase.LoadAllAssetsAtPath(path).OfType<BlendTree>())
                 Object.DestroyImmediate(tree, true);
         }
     }
