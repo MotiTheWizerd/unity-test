@@ -68,13 +68,14 @@ Dependencies point **down** only. Cycles are impossible, because asmdefs reject 
      |      |    |              |
   Editing   | Streaming        Game
       \     |     /             |
-          Data                  |
-            |                   |
-          Core ─────────────────┘
+          Data ─────────────────┘
+            |
+          Core
 ```
 
-(EditorApp also references Editing directly; Agent references Data for record ids. `Forge.Game` needs only Core:
-the game's rules never see the editor, and `Forge.Play` is the one place they meet the engine.)
+(EditorApp also references Editing directly; Agent references Data for record ids. `Forge.Game` needs Core and
+Data, whose records its rules read (attributes); it never sees the editor, and `Forge.Play` is the one place the
+rules meet the engine.)
 
 `Forge.UnityEditor` is editor-only tooling and may reference anything below EditorApp.
 
@@ -641,6 +642,35 @@ from any camera, so both cameras read the same player.
 - Known limits: interiors have no floor to stand on yet (the floor grid has no collider), there's no swimming (water
   has no colliders, the player walks the bottom), and the gamepad's look stick is read like the mouse (per frame,
   not per second), so it turns slowly.
+
+## Attributes (Forge.Data + Forge.Game.Attributes)
+
+Skyrim's actor values, built to grow: what an actor has a number for is data, and what changes the numbers names
+where it came from.
+
+- **`AttributeRecord`** (`attribute`, `<ns>:attribute/<name>`): a `Resource` (a pool spent and refilled: health,
+  stamina, magicka) or a `Stat` (a number: carry weight, a skill, a cost); a base value, a min and an optional max;
+  `Terms`, what other attributes add to its base (`AttributeTerm`: "+0.5 per stamina", reading the other's full value);
+  and for a resource the stats holding its regen rate (points a second) and delay (seconds after being spent). A mod
+  adds an attribute with a record or retunes one by overriding it; no code.
+- **The base game's set** (`CoreAttributeSet` in the generator, ids in `CoreAttributes`, the ones the game's rules
+  read by name): Health, Stamina, Magicka (100 each; regen 1, 10 and 3 a second after 5, 1.5 and 2 s), Carry Weight
+  (250 + 0.5 per stamina), Sprint Cost (10 stamina a second), Jump Cost (10), Safe Fall Height (4 m), Fall Damage
+  (10 health a meter past it). Costs are attributes, so boots that make sprinting cheaper are just a modifier.
+- **`AttributeSet`**: the resolved attributes, checked once (every name read exists, regen reads stats, terms never
+  go round in a circle; every problem in one `DataValidationException`) and shared by every actor: slots, who reads
+  whom, and an order where each comes after what it reads.
+- **`ActorAttributes`**: one actor's numbers over the set (the player's now, any NPC's later). Value =
+  `(base + terms + adds) × (1 + percents/100) × multipliers`, within min and max. Each `AttributeModifier`
+  (`Add`, `Percent`, `Multiply`) is added under a `ModifierSource` (an item worn, an effect, a perk); `Remove(source)`
+  takes exactly its modifiers away, and a modifier given seconds wears off by itself. Values are worked out when
+  something changes, rippling in order to whatever reads them, so reading costs nothing. A resource stores the
+  damage it took, not what is left: `Current` = value − damage, so a bigger pool lifts what is left and a smaller one
+  never leaves more than it holds. `Drain` takes what there is, `TrySpend` all or nothing, `Restore` gives back; any
+  spend holds the refill back for the regen delay. `SetBase` gives the actor its own base (a level gained). Events:
+  `Changed` (value or what is left) and `Depleted` (a resource ran out), for HUDs and rules, so nothing polls.
+- **Live numbers are game state, not world data**: an actor's damage, own bases and timed effects belong to a save
+  game, never to a plugin; modifiers from equipment are rebuilt from what is worn, so each fact lives in one place.
 
 ## World-building agent (Forge.Agent)
 
