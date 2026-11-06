@@ -1,0 +1,58 @@
+/*
+ * The player's HUD while playing (Forge.Play.Hud.PlayerHud): Skyrim's three bars along the bottom, magicka, health,
+ * stamina. Each bar's fill colour is its kind's (forge-hud-bar--{kind}); a mod's new bar is one more kind here.
+ */
+
+:root {
+    --forge-hud-health: rgb(196, 58, 48);
+    --forge-hud-stamina: rgb(86, 168, 92);
+    --forge-hud-magicka: rgb(64, 118, 210);
+    --forge-hud-flash: rgb(255, 236, 200);
+}
+
+.forge-hud {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 34px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+.forge-hud-bar {
+    width: 230px;
+    height: 9px;
+    margin: 0 var(--forge-space-4);
+    padding: 1px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.28);
+    border-radius: 5px;
+    background-color: rgba(0, 0, 0, 0.55);
+    transition-property: opacity;
+    transition-duration: 0.1s;
+}
+
+.forge-hud-bar__fill {
+    height: 100%;
+    border-radius: 3px;
+    background-color: var(--forge-text-muted);
+}
+
+.forge-hud-bar--health .forge-hud-bar__fill {
+    background-color: var(--forge-hud-health);
+}
+
+.forge-hud-bar--stamina .forge-hud-bar__fill {
+    background-color: var(--forge-hud-stamina);
+}
+
+.forge-hud-bar--magicka .forge-hud-bar__fill {
+    background-color: var(--forge-hud-magicka);
+}
+
+/* Too little for a move: the frame lights up while the flash blinks on. */
+.forge-hud-bar--flash {
+    border-color: var(--forge-hud-flash);
+    background-color: rgba(120, 30, 24, 0.75);
+}

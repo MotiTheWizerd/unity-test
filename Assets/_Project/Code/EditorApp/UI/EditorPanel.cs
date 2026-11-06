@@ -7,6 +7,7 @@ using Forge.EditorApp.Diagnostics;
 using Forge.EditorApp.UI.Controls;
 using Forge.EditorApp.UI.Inspector;
 using Forge.Editing.State;
+using Forge.Play;
 using Forge.World;
 using Forge.World.Assets;
 using UnityEngine;
@@ -41,7 +42,8 @@ namespace Forge.EditorApp.UI
         /// <param name="materialLooks">Pictures for the Materials page's balls and the variants' tiles; null leaves the placeholder icons.</param>
         /// <param name="agent">The world-building agent's conversation; null hides the agent button (the side dock stays closed).</param>
         /// <param name="viewSnapshot">A picture of what the view shows, for the agent's messages.</param>
-        public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics, IAssetThumbnails thumbnails, GroundLooks groundLooks, MaterialLooks materialLooks, AgentConversation agent, Func<AgentImage> viewSnapshot)
+        /// <param name="player">The player while playing, whose HUD shows then; null for none.</param>
+        public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics, IAssetThumbnails thumbnails, GroundLooks groundLooks, MaterialLooks materialLooks, AgentConversation agent, Func<AgentImage> viewSnapshot, PlayerSession player)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             // The document root covers the whole screen; only real panel elements may catch the pointer.
@@ -71,6 +73,8 @@ namespace Forge.EditorApp.UI
                 new StatusBar(Root, context),
                 new PlaySection(Root, context),
             };
+            if (player != null)
+                _sections.Add(new HudSection(Root, player));
 
             var sideDock = new SideDockSection(Root);
             _sections.Add(sideDock);

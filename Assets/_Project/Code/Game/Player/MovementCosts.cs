@@ -39,6 +39,9 @@ namespace Forge.Game.Player
         /// <summary>Out of stamina from sprinting: no sprint until <see cref="RecoverFraction"/> of it is back.</summary>
         public bool Winded { get; private set; }
 
+        /// <summary>A move was refused for want of an attribute (stamina for a jump, or running dry mid-sprint).</summary>
+        public event Action<RecordId> ShortOf;
+
         /// <summary>
         /// The commands as the actor can afford them over <paramref name="deltaTime"/> seconds, spending the sprint's
         /// stamina: no sprint while winded, no jump without the stamina for it.
@@ -56,10 +59,17 @@ namespace Forge.Game.Player
                 {
                     Winded = true;
                     sprint = false;
+                    ShortOf?.Invoke(CoreAttributes.Stamina);
                 }
             }
 
-            var jump = commands.Jump && Attributes.Current(CoreAttributes.Stamina) >= Attributes.Value(CoreAttributes.JumpCost);
+            var jump = commands.Jump;
+            if (jump && Attributes.Current(CoreAttributes.Stamina) < Attributes.Value(CoreAttributes.JumpCost))
+            {
+                jump = false;
+                ShortOf?.Invoke(CoreAttributes.Stamina);
+            }
+
             return new PlayerCommands(commands.Move, commands.Turn, sprint, jump, commands.ToggleWalk);
         }
 

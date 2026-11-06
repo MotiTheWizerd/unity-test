@@ -676,6 +676,12 @@ where it came from.
   the actor's attributes, has the costs filter its commands and pay for the move, and ticks the attributes. At zero
   health nothing more happens yet. `PlayerSession` keeps the player's attributes from one spawn to the next, and starts
   them afresh only when the world's attribute records changed; a world without attributes plays as before.
+- **The HUD** (`PlayerHud`, Forge.Play.Hud; the game's, which the editor hosts through `HudSection` while playing):
+  Skyrim's magicka, health and stamina bars along the bottom (`AttributeBar`, styled by UI/Hud/PlayerHud.uss, imported
+  by the runtime theme; a bar's kind is a style class, so a mod's bar is a style and one layout entry). `BarFade`
+  (Game.Hud, engine-free) decides when each shows: while not full, then 2.5 s after it fills or changes, then a fade;
+  `MovementCosts.ShortOf` (a jump without the stamina, running dry mid-sprint) makes it blink. It follows whichever
+  player the session has, rebinding on a new spawn.
 - **Live numbers are game state, not world data**: an actor's damage, own bases and timed effects belong to a save
   game, never to a plugin; modifiers from equipment are rebuilt from what is worn, so each fact lives in one place.
 

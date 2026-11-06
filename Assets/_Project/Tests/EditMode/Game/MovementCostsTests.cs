@@ -114,8 +114,11 @@ namespace Forge.Tests.Game
             Run(player, PlayerCommands.None, 1f);
 
             attributes.Drain(CoreAttributes.Stamina, 85f);
+            var shortOf = new System.Collections.Generic.List<RecordId>();
+            player.Costs.ShortOf += shortOf.Add;
             player.Tick(Forward(jump: true), Frame);
             Assert.That(player.Locomotion.Jumped, Is.False, "Not enough stamina to jump.");
+            Assert.That(shortOf, Is.EqualTo(new[] { CoreAttributes.Stamina }), "Told, so the HUD can flash.");
         }
 
         [Test]
