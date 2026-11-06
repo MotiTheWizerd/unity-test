@@ -26,7 +26,8 @@ Assets/_Project/
     Streaming/   Forge.Streaming — engine-free chunk index, streaming window, scene origin, far tiles
     Game/        Forge.Game    — engine-free game rules: the player's look and movement over a motor
     World/       Forge.World   — Unity presentation: terrain chunks, far land, placed objects, streamer
-    Play/        Forge.Play    — Unity side of playing: the player's body (CharacterController), controls, profile
+    Play/        Forge.Play    — Unity side of playing: the player session, its body (CharacterController), model,
+                                 controls, camera director and profile
     EditorApp/   Forge.EditorApp — the runtime editor: bootstrap, tools, camera, UI
     UnityEditor/ Forge.UnityEditor — dev tools inside the Unity Editor (Forge menu)
   Tests/
@@ -548,8 +549,8 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
 ## The player (Forge.Game + Forge.Play)
 
 The game's rules are engine-free (`Forge.Game`, tested with a fake body); `Forge.Play` gives them the engine's body and
-controls, as Streaming and World split the streaming. Built first-person, with the look kept apart from any camera so a
-third-person camera (Skyrim's other half) reads the same player.
+controls, as Streaming and World split the streaming. First and third person, as in Skyrim: the look is kept apart
+from any camera, so both cameras read the same player.
 
 - `PlayerCharacter` is the player in the world: its `PlayerLook` (a compass heading, which also turns the body, and a
   pitch up positive, held within ±85°), its `PlayerLocomotion` and its body, an `IPlayerMotor` (feet position, `Move`
@@ -567,20 +568,45 @@ third-person camera (Skyrim's other half) reads the same player.
   0.3 m radius, 0.4 m steps, 50° slopes), its own scene object on the Ignore Raycast layer, so the editor's picks and the
   camera's probes look through it. It collides with the terrain and the placed objects' colliders.
 - `PlayerControls` (Play) read the profile's action map (`Settings/InputSystem_Actions`, map Player: Move, Look, Sprint,
-  Jump; WASD and arrows, mouse, Shift, Space, and the gamepad) into commands; the look is pointer pixels × the profile's
-  sensitivity (0.1° per pixel). No key is named in code.
+  Jump, ToggleView, Zoom; WASD and arrows, mouse, Shift, Space, F, the wheel, and the gamepad) into `PlayerCommands` and
+  `ViewCommands`; the look is pointer pixels × the profile's sensitivity (0.1° per pixel), and the wheel's binding scales
+  its steps (120 a notch) to notches with a Scale processor. No key is named in code.
 - `PlayerProfile` (`Settings/Player/PlayerProfile.asset`) holds the body, the pace and the controls, tuned in the
   Inspector.
-- **Cameras**: an `ICameraMode` (Game, engine-free) says where the camera goes each frame, a `ViewPose`;
-  `FirstPersonCamera` puts it at the eyes, turned to the heading and tilted by the pitch. `CameraDirector` (Play) puts
-  the engine's camera there while playing; third person will be another mode set on it, nothing else changes.
+- **Body facing** (`BodyFacing`, `PlayerCharacter.BodyHeading`): the body's own heading, which its model is turned to.
+  Facing the `Look` (first person) it is the look's heading; facing its `Movement` (third person) it turns toward the
+  ground velocity at `LocomotionSettings.TurnRate` (720°/s) the short way round, and keeps its heading while standing,
+  so the look orbits freely, as in Skyrim. Movement is always relative to the look, so stepping right in third
+  person runs right and the body turns to it.
+- **Cameras**: an `ICameraMode` (Game, engine-free) says where the camera goes each frame (a `ViewPose`), how the body
+  faces meanwhile and whether the body shows. `FirstPersonCamera`: at the eyes, turned to the heading and tilted by the
+  pitch, the body hidden. `ThirdPersonCamera` (`ThirdPersonSettings`: 3.5 m behind, 1.2 to 8 m on the wheel, 0.6 m a
+  notch, orbiting a pivot 1.6 m up and 0.35 m right of the body): along the look behind the pivot; an `ICameraObstacles`
+  (`PhysicsCameraObstacles`, Play: a sphere cast of the camera's 0.2 m radius against the default raycast layers, so the
+  terrain and placed objects, never the player's body) pulls it in at once when something is in the way, and once clear
+  it eases back out (6 m/s); the shoulder offset is checked too, so a wall beside the player keeps the pivot in.
+  `ViewSwitch` holds both, as Skyrim switches them: ToggleView (F) swaps them, the third-person distance kept; the wheel
+  (Zoom) moves it, one notch nearer than its closest is first person, one notch out of first person is third at its
+  closest. `CameraDirector` (Play) puts the engine's camera where the current mode says.
+- **The player while playing** (`PlayerSession`, Play): the body, the model, the controls, the rules and the view, all
+  built from the profile. `Spawn(feet, heading)` makes the body and model, stands the player, gives it the camera,
+  switches the controls on and captures the mouse; `Tick` applies the view commands, sets the body's facing from the
+  current view, steps the player, then frames it and turns and shows (or shadows only) the model; `Despawn` takes it
+  away. One per app, so the view chosen carries over to the next spawn. The editor uses it through play from here; the
+  game will use it as it is.
+- **The model** (`PlayerAvatar`, Play): the profile's `_model` prefab riding on the body's object, turned to the body's
+  heading, its colliders removed (the body is the collider), on the body's layer; in first person its renderers cast
+  only shadows. Today the placeholder mannequin (`player_mannequin`, 1.8 m: legs, tunic, arms, head and a dark band
+  across the face showing the front), built from primitives by `PlaceholderCharacters` (UnityEditor) through
+  *Forge → Generate Placeholder Player* (or the whole *Generate Placeholder Content*), which gives it to the profile
+  unless it already wears a model. A real character from Blender, with animations, replaces the prefab.
 - **Play from here** (`PlayFromHere`, EditorApp, built by the controller when the bootstrap has a `_player` profile):
-  when the app starts playing, the player stands on whatever the middle of the view shows (else the ground under the
-  camera, else it falls from the camera), facing the camera's heading; the fly camera rests (`enabled = false`), the
-  director takes the camera, the mouse is captured and the controls switched on. The controller ticks it each frame
-  while playing; Esc ends it all, and the bootstrap gives the editing camera back. The camera is the streaming's focus,
-  so the streaming and the origin follow the player; a rebase moves the player with the camera
-  (`PlayFromHere.Shift`). The world's edge is open: walking off the land falls forever (Moti's call, as it stands).
+  when the app starts playing, it spawns the player (`PlayerSession`) on whatever the middle of the view shows (else
+  the ground under the camera, else it falls from the camera), facing the camera's heading, and rests the fly camera
+  (`enabled = false`). The controller ticks it each frame while playing; Esc despawns the player and wakes the fly
+  camera, and the bootstrap gives the editing camera back. The camera is the streaming's focus, so the streaming and the
+  origin follow the player; a rebase moves the player with the camera (`PlayFromHere.Shift`). The world's edge is open:
+  walking off the land falls forever (Moti's call, as it stands).
 - Known limits: interiors have no floor to stand on yet (the floor grid has no collider), there's no swimming (water
   has no colliders, the player walks the bottom), and the gamepad's look stick is read like the mouse (per frame,
   not per second), so it turns slowly.

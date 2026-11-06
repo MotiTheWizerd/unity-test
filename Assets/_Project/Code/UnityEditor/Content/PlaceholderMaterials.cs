@@ -18,6 +18,9 @@ namespace Forge.UnityEditor.Content
         public const string Window = "Window";
         public const string LampGlow = "LampGlow";
         public const string Fire = "Fire";
+        public const string Tunic = "Tunic";
+        public const string Leather = "Leather";
+        public const string Skin = "Skin";
 
         public static IReadOnlyList<Spec> All { get; } = new[]
         {
@@ -33,6 +36,9 @@ namespace Forge.UnityEditor.Content
             new Spec(Window, new Color(0.12f, 0.16f, 0.22f), smoothness: 0.85f),
             new Spec(LampGlow, new Color(1f, 0.85f, 0.5f), emission: new Color(1f, 0.8f, 0.45f) * 2f),
             new Spec(Fire, new Color(1f, 0.45f, 0.1f), emission: new Color(1f, 0.4f, 0.08f) * 3f),
+            new Spec(Tunic, new Color(0.24f, 0.32f, 0.46f)),
+            new Spec(Leather, new Color(0.27f, 0.19f, 0.13f), smoothness: 0.35f),
+            new Spec(Skin, new Color(0.78f, 0.60f, 0.48f), smoothness: 0.3f),
         };
 
         public readonly struct Spec

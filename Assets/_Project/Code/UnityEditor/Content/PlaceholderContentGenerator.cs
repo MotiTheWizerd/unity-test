@@ -10,7 +10,8 @@ namespace Forge.UnityEditor.Content
 {
     /// <summary>
     /// Dev tool: (re)builds the placeholder materials and prefabs from <see cref="PlaceholderContent"/>
-    /// and registers them in the prefab catalog. Existing assets are updated in place, so their
+    /// and registers them in the prefab catalog, and the player's mannequin (<see cref="PlaceholderCharacters"/>), which
+    /// the player profile wears unless it has a model of its own. Existing assets are updated in place, so their
     /// GUIDs, and every reference to them, survive a regeneration. Catalog entries for other
     /// keys are left alone.
     /// </summary>
@@ -21,6 +22,8 @@ namespace Forge.UnityEditor.Content
         const string MaterialsFolder = PlaceholderFolder + "/Materials";
         const string PrefabsFolder = PlaceholderFolder + "/Prefabs";
         public const string CatalogPath = ContentFolder + "/PrefabCatalog.asset";
+        const string PlayerProfilePath = "Assets/_Project/Settings/Player/PlayerProfile.asset";
+        const string PlayerModelField = "_model";
 
         const string LitShader = "Universal Render Pipeline/Lit";
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
@@ -42,7 +45,8 @@ namespace Forge.UnityEditor.Content
             try
             {
                 foreach (var definition in PlaceholderContent.All)
-                    catalog.Set(definition.AssetKey, BuildPrefab(definition, materials, scene));
+                    catalog.Set(definition.AssetKey, BuildPrefab(definition.Name, definition.Build, materials, scene, keepColliders: true));
+                DressPlayer(BuildMannequin(materials, scene));
             }
             finally
             {
@@ -51,7 +55,52 @@ namespace Forge.UnityEditor.Content
 
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
-            Debug.Log($"[Forge] Generated {PlaceholderContent.All.Count} placeholder prefabs and {materials.Count} materials; {CatalogPath} has {catalog.Count} entries.");
+            Debug.Log($"[Forge] Generated {PlaceholderContent.All.Count} placeholder prefabs, the player's mannequin and {materials.Count} materials; {CatalogPath} has {catalog.Count} entries.");
+        }
+
+        /// <summary>Only the player's mannequin (and the materials), leaving the object prefabs as they are.</summary>
+        [MenuItem("Forge/Generate Placeholder Player")]
+        static void GeneratePlayer()
+        {
+            EnsureFolder(MaterialsFolder);
+            EnsureFolder(PrefabsFolder);
+
+            var materials = BuildMaterials();
+            var scene = EditorSceneManager.NewPreviewScene();
+            try
+            {
+                DressPlayer(BuildMannequin(materials, scene));
+            }
+            finally
+            {
+                EditorSceneManager.ClosePreviewScene(scene);
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[Forge] Generated the player's mannequin ({PrefabsFolder}/{PlaceholderCharacters.PlayerMannequin}.prefab).");
+        }
+
+        // The player's body is its own collider, so its look has none.
+        static GameObject BuildMannequin(IReadOnlyDictionary<string, Material> materials, Scene scene) =>
+            BuildPrefab(PlaceholderCharacters.PlayerMannequin, PlaceholderCharacters.Mannequin, materials, scene, keepColliders: false);
+
+        // The player profile wears the mannequin until it is given a model of its own.
+        static void DressPlayer(GameObject mannequin)
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<ScriptableObject>(PlayerProfilePath);
+            if (profile == null)
+            {
+                Debug.LogWarning($"[Forge] No player profile at {PlayerProfilePath}; the mannequin is built but nobody wears it.");
+                return;
+            }
+
+            var model = new SerializedObject(profile).FindProperty(PlayerModelField)
+                        ?? throw new System.InvalidOperationException($"The player profile has no '{PlayerModelField}' field.");
+            if (model.objectReferenceValue != null)
+                return;
+            model.objectReferenceValue = mannequin;
+            model.serializedObject.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(profile);
         }
 
         static Dictionary<string, Material> BuildMaterials()
@@ -95,16 +144,22 @@ namespace Forge.UnityEditor.Content
             return materials;
         }
 
-        static GameObject BuildPrefab(ContentDefinition definition, IReadOnlyDictionary<string, Material> materials, Scene scene)
+        static GameObject BuildPrefab(string name, System.Action<PrefabBuilder> build, IReadOnlyDictionary<string, Material> materials, Scene scene, bool keepColliders)
         {
-            var root = new GameObject(definition.Name);
+            var root = new GameObject(name);
             SceneManager.MoveGameObjectToScene(root, scene);
             try
             {
-                definition.Build(new PrefabBuilder(root, materials));
+                build(new PrefabBuilder(root, materials));
                 foreach (var renderer in root.GetComponentsInChildren<Renderer>())
                     renderer.shadowCastingMode = ShadowCastingMode.On;
-                return PrefabUtility.SaveAsPrefabAsset(root, $"{PrefabsFolder}/{definition.Name}.prefab");
+                if (!keepColliders)
+                {
+                    foreach (var collider in root.GetComponentsInChildren<Collider>())
+                        Object.DestroyImmediate(collider);
+                }
+
+                return PrefabUtility.SaveAsPrefabAsset(root, $"{PrefabsFolder}/{name}.prefab");
             }
             finally
             {

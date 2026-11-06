@@ -1,7 +1,6 @@
 using System;
 using Forge.EditorApp.Tools;
 using Forge.Editing.Modes;
-using Forge.Game.Cameras;
 using Forge.Game.Player;
 using Forge.Play;
 using Forge.World;
@@ -13,11 +12,10 @@ namespace Forge.EditorApp
 {
     /// <summary>
     /// Plays the world from where the editor looks, as the Creation Kit's play-in-place does. When the app starts
-    /// playing (<see cref="EditorContext.Modes"/>), the player is stood on whatever the middle of the view shows (else
-    /// the ground under the camera), facing the way the camera faces; the fly camera rests and the
-    /// <see cref="CameraDirector"/> takes the camera, first person; the mouse is captured and the player's controls
-    /// switched on. Going back to editing undoes all of it (the bootstrap puts the camera back where editing left it).
-    /// The streaming follows the camera, and so the player.
+    /// playing (<see cref="EditorContext.Modes"/>), the player (<see cref="PlayerSession"/>) is stood on whatever the
+    /// middle of the view shows (else the ground under the camera), facing the way the camera faces, and the fly camera
+    /// rests while the player has the camera. Going back to editing takes the player away and wakes the fly camera (the
+    /// bootstrap puts it back where editing left it). The streaming follows the camera, and so the player.
     /// </summary>
     public sealed class PlayFromHere : IDisposable
     {
@@ -29,10 +27,7 @@ namespace Forge.EditorApp
         readonly WorldFrame _frame;
         readonly Camera _camera;
         readonly FlyCamera _flyCamera;
-        readonly PlayerProfile _profile;
-        readonly PlayerControls _controls;
-        readonly CameraDirector _director;
-        CharacterControllerMotor _motor;
+        readonly PlayerSession _session;
 
         public PlayFromHere(EditorContext context, ScenePicker picker, WorldFrame frame, Camera camera, FlyCamera flyCamera, PlayerProfile profile)
         {
@@ -41,74 +36,41 @@ namespace Forge.EditorApp
             _frame = frame ?? throw new ArgumentNullException(nameof(frame));
             _camera = camera != null ? camera : throw new ArgumentNullException(nameof(camera));
             _flyCamera = flyCamera != null ? flyCamera : throw new ArgumentNullException(nameof(flyCamera));
-            _profile = profile != null ? profile : throw new ArgumentNullException(nameof(profile));
-            _controls = new PlayerControls(profile);
-            _director = new CameraDirector(camera.transform, new FirstPersonCamera());
+            _session = new PlayerSession(profile, camera.transform);
             _context.Modes.Changed += OnModeChanged;
         }
 
         /// <summary>The player while playing, else null.</summary>
-        public PlayerCharacter Player { get; private set; }
+        public PlayerCharacter Player => _session.Player;
 
-        /// <summary>Plays one frame: the controls drive the player, the camera follows it.</summary>
-        public void Tick(float deltaTime)
-        {
-            if (Player == null)
-                return;
-            Player.Tick(_controls.Read(), deltaTime);
-            _director.Tick(Player, deltaTime);
-        }
+        /// <summary>The player during play: its body, look, controls and view (first or third person).</summary>
+        public PlayerSession Session => _session;
+
+        /// <summary>Plays one frame.</summary>
+        public void Tick(float deltaTime) => _session.Tick(deltaTime);
 
         /// <summary>The scene moved by <paramref name="delta"/> under the world (a rebase); the player moves with it.</summary>
-        public void Shift(Vector3 delta)
-        {
-            if (Player != null)
-                Player.Motor.Teleport(Player.Feet + delta.ToNumerics());
-        }
+        public void Shift(Vector3 delta) => _session.Shift(delta);
 
         public void Dispose()
         {
             _context.Modes.Changed -= OnModeChanged;
-            End();
-            _controls.Dispose();
+            _session.Dispose();
         }
 
         void OnModeChanged(AppMode mode)
         {
             if (mode == AppMode.Playing)
-                Begin();
+            {
+                var view = _camera.transform;
+                _session.Spawn(SpawnFeet(view), Compass.HeadingOf(new System.Numerics.Vector2(view.forward.x, view.forward.z)));
+                _flyCamera.enabled = false;
+            }
             else
-                End();
-        }
-
-        void Begin()
-        {
-            End();
-            var view = _camera.transform;
-            var feet = SpawnFeet(view);
-            var heading = Compass.HeadingOf(new System.Numerics.Vector2(view.forward.x, view.forward.z));
-            _motor = new CharacterControllerMotor(_profile);
-            Player = new PlayerCharacter(_motor, _profile.Locomotion(), _profile.EyeHeight);
-            Player.PlaceAt(feet.ToNumerics(), heading);
-
-            _flyCamera.enabled = false;
-            _director.Tick(Player, 0f);
-            _controls.Enable();
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
-
-        void End()
-        {
-            if (Player == null)
-                return;
-            _controls.Disable();
-            _motor.Dispose();
-            _motor = null;
-            Player = null;
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-            _flyCamera.enabled = true;
+            {
+                _session.Despawn();
+                _flyCamera.enabled = true;
+            }
         }
 
         // Where the feet start, in scene coordinates: on what the middle of the view shows, else on the ground under the

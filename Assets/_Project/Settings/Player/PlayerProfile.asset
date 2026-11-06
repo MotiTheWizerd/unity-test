@@ -17,6 +17,7 @@ MonoBehaviour:
   _eyeHeight: 1.65
   _stepHeight: 0.4
   _slopeLimit: 50
+  _model: {fileID: 7124029419884558983, guid: 1ede7af33c2d7d642bdd6f3cc7593886, type: 3}
   _runSpeed: 4.5
   _sprintSpeed: 7.5
   _jumpHeight: 1.1
@@ -24,6 +25,16 @@ MonoBehaviour:
   _groundAcceleration: 45
   _airAcceleration: 6
   _coyoteTime: 0.12
+  _turnRate: 720
+  _startInThirdPerson: 0
+  _cameraDistance: 3.5
+  _cameraMinDistance: 1.2
+  _cameraMaxDistance: 8
+  _cameraZoomStep: 0.6
+  _cameraPivotHeight: 1.6
+  _cameraShoulderOffset: 0.35
+  _cameraRadius: 0.2
+  _cameraReturnSpeed: 6
   _controls: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   _controlsMap: Player
   _lookSensitivity: 0.1

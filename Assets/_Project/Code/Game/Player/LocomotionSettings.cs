@@ -18,6 +18,7 @@ namespace Forge.Game.Player
         /// <param name="airAcceleration">How much a jump or fall can still be steered.</param>
         /// <param name="maxFallSpeed">Falling never gets faster than this.</param>
         /// <param name="coyoteTime">Seconds after stepping off an edge in which a jump still counts, so it never feels missed.</param>
+        /// <param name="turnRate">Degrees per second the body turns toward where it goes, when it faces its movement.</param>
         public LocomotionSettings(
             float runSpeed = 4.5f,
             float sprintSpeed = 7.5f,
@@ -26,8 +27,10 @@ namespace Forge.Game.Player
             float groundAcceleration = 45f,
             float airAcceleration = 6f,
             float maxFallSpeed = 50f,
-            float coyoteTime = 0.12f)
+            float coyoteTime = 0.12f,
+            float turnRate = 720f)
         {
+            TurnRate = Positive(turnRate, nameof(turnRate));
             RunSpeed = Positive(runSpeed, nameof(runSpeed));
             SprintSpeed = Positive(sprintSpeed, nameof(sprintSpeed));
             JumpHeight = NotNegative(jumpHeight, nameof(jumpHeight));
@@ -53,6 +56,8 @@ namespace Forge.Game.Player
         public float MaxFallSpeed { get; }
 
         public float CoyoteTime { get; }
+
+        public float TurnRate { get; }
 
         /// <summary>The upward speed that reaches <see cref="JumpHeight"/> under <see cref="Gravity"/>.</summary>
         public float JumpSpeed => (float)Math.Sqrt(2.0 * Gravity * JumpHeight);

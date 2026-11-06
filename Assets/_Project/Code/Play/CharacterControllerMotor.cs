@@ -36,6 +36,9 @@ namespace Forge.Play
             _controller.minMoveDistance = 0f;
         }
 
+        /// <summary>The body's scene object, whose transform is the feet (what the player's model rides on).</summary>
+        public Transform Body => _body.transform;
+
         public System.Numerics.Vector3 Position => _body.transform.position.ToNumerics();
 
         public MotorContact Move(System.Numerics.Vector3 displacement)

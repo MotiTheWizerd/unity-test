@@ -8,6 +8,12 @@ namespace Forge.Game.Cameras
     /// </summary>
     public interface ICameraMode
     {
+        /// <summary>How the player's body turns while this mode frames it (<see cref="PlayerCharacter.Facing"/>).</summary>
+        BodyFacing Facing { get; }
+
+        /// <summary>Whether the player's body shows (in first person the camera is inside it).</summary>
+        bool ShowsBody { get; }
+
         /// <summary>The camera's pose this frame of <paramref name="deltaTime"/> seconds.</summary>
         ViewPose Frame(PlayerCharacter player, float deltaTime);
     }

@@ -1,4 +1,5 @@
 using System;
+using Forge.Game.Cameras;
 using Forge.Game.Player;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -6,9 +7,10 @@ using UnityEngine.InputSystem;
 namespace Forge.Play
 {
     /// <summary>
-    /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump) into <see cref="PlayerCommands"/>, the
-    /// rules' only input. Rebinding, a gamepad or another layout is the actions asset's business; nothing here names a
-    /// key. The map is on only while enabled (while playing).
+    /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump, ToggleView, Zoom) into
+    /// <see cref="PlayerCommands"/> and <see cref="ViewCommands"/>, the rules' only input. Rebinding, a gamepad or
+    /// another layout is the actions asset's business; nothing here names a key (the wheel's binding scales its steps to
+    /// notches). The map is on only while enabled (while playing).
     /// </summary>
     public sealed class PlayerControls : IDisposable
     {
@@ -17,6 +19,8 @@ namespace Forge.Play
         readonly InputAction _look;
         readonly InputAction _sprint;
         readonly InputAction _jump;
+        readonly InputAction _toggleView;
+        readonly InputAction _zoom;
         readonly float _lookSensitivity;
 
         public PlayerControls(PlayerProfile profile)
@@ -32,6 +36,8 @@ namespace Forge.Play
             _look = _map.FindAction("Look", throwIfNotFound: true);
             _sprint = _map.FindAction("Sprint", throwIfNotFound: true);
             _jump = _map.FindAction("Jump", throwIfNotFound: true);
+            _toggleView = _map.FindAction("ToggleView", throwIfNotFound: true);
+            _zoom = _map.FindAction("Zoom", throwIfNotFound: true);
             _lookSensitivity = profile.LookSensitivity;
         }
 
@@ -54,6 +60,10 @@ namespace Forge.Play
                 _sprint.IsPressed(),
                 _jump.WasPressedThisFrame());
         }
+
+        /// <summary>This frame's view commands; nothing while the map is off.</summary>
+        public ViewCommands ReadView() =>
+            _map.enabled ? new ViewCommands(_toggleView.WasPressedThisFrame(), _zoom.ReadValue<float>()) : ViewCommands.None;
 
         public void Dispose() => Disable();
     }

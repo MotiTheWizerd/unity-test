@@ -7,6 +7,10 @@ namespace Forge.Game.Cameras
     /// <summary>Seeing through the player's eyes: the camera at <see cref="PlayerCharacter.Eyes"/>, looking along its look.</summary>
     public sealed class FirstPersonCamera : ICameraMode
     {
+        public BodyFacing Facing => BodyFacing.Look;
+
+        public bool ShowsBody => false;
+
         public ViewPose Frame(PlayerCharacter player, float deltaTime) => new ViewPose(player.Eyes, Looking(player.Look));
 
         /// <summary>
