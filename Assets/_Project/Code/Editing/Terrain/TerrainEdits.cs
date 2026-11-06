@@ -44,19 +44,19 @@ namespace Forge.Editing.Terrain
             return chunks.Count;
         }
 
-        /// <summary>Writes every chunk the paint stroke changed as one undo step. Returns the number of chunks written.</summary>
-        public static int Commit(EditSession session, PaintStroke stroke)
+        /// <summary>Writes every chunk the paint edit (a stroke or painted shapes) changed as one undo step. Returns the number of chunks written.</summary>
+        public static int Commit(EditSession session, IPaintEdit paint)
         {
             if (session == null)
                 throw new ArgumentNullException(nameof(session));
-            if (stroke == null)
-                throw new ArgumentNullException(nameof(stroke));
+            if (paint == null)
+                throw new ArgumentNullException(nameof(paint));
 
-            var chunks = stroke.ChangedRecords();
+            var chunks = paint.ChangedRecords();
             if (chunks.Count == 0)
                 return 0;
 
-            session.Batch(stroke.Description, () =>
+            session.Batch(paint.Description, () =>
             {
                 foreach (var chunk in chunks)
                     session.Put(chunk);

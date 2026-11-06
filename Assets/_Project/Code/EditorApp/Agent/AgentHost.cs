@@ -49,7 +49,8 @@ namespace Forge.EditorApp.Agent
                 throw new ArgumentNullException(nameof(settings));
 
             var commands = new CommandRegistry();
-            BuildingCommands.AddTo(commands, new BuildContext(context.Session, () => context.ActiveSpace, seating, context.PlacementOptions, slots.SlotsOf));
+            BuildingCommands.AddTo(commands, new BuildContext(context.Session, () => context.ActiveSpace, seating, context.PlacementOptions, slots.SlotsOf,
+                () => context.UnpaintedGround));
             commands.Add(new LookCommand(eyes));
             var tools = new AgentToolHost(new ToolInvoker(commands), _mainThread);
             var claudeCode = settings.ClaudeCode(Path.Combine(Application.persistentDataPath, WorkingFolder));

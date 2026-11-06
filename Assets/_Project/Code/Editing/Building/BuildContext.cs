@@ -21,20 +21,49 @@ namespace Forge.Editing.Building
     {
         readonly Func<RecordId> _space;
         readonly Func<BaseObjectRecord, IReadOnlyList<string>> _slotsOf;
+        readonly Func<RecordId?> _unpaintedGround;
         ResolvedWorld _terrainWorld;
         TerrainGrid _terrain;
         WaterMap _water;
 
         /// <param name="space">The space the commands build in, read on every use (it follows the editor's view).</param>
         /// <param name="slotsOf">The material slots each kind of object has (they come from its asset); null: none known.</param>
+        /// <param name="unpaintedGround">
+        /// The ground layer unpainted ground shows (as the editor's paint tool knows it), read on every use; null, or
+        /// null from it, when there is none, and then the ground can't be painted.
+        /// </param>
         public BuildContext(EditSession session, Func<RecordId> space, ObjectSeating seating, PlacementOptions options,
-            Func<BaseObjectRecord, IReadOnlyList<string>> slotsOf = null)
+            Func<BaseObjectRecord, IReadOnlyList<string>> slotsOf = null, Func<RecordId?> unpaintedGround = null)
         {
             Session = session ?? throw new ArgumentNullException(nameof(session));
             _space = space ?? throw new ArgumentNullException(nameof(space));
             Seating = seating ?? throw new ArgumentNullException(nameof(seating));
             Options = options ?? throw new ArgumentNullException(nameof(options));
             _slotsOf = slotsOf ?? (_ => Array.Empty<string>());
+            _unpaintedGround = unpaintedGround ?? (() => null);
+        }
+
+        /// <summary>The ground layer unpainted ground shows, or null when the world has none.</summary>
+        public RecordId? UnpaintedGround => _unpaintedGround();
+
+        /// <summary>
+        /// The ground layer with id or name <paramref name="idOrName"/> (names in any case, e.g. "dirt"); refused, with
+        /// the names there are, when there is none.
+        /// </summary>
+        public GroundLayerRecord Ground(string idOrName)
+        {
+            var records = Session.World.Records;
+            if (RecordId.TryParse(idOrName, out var recordId) && records.TryGet(recordId, out var record) && record is GroundLayerRecord byId)
+                return byId;
+
+            var layers = GroundLayers.Of(records);
+            var byName = layers.FirstOrDefault(layer => string.Equals(layer.DisplayName, idOrName?.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (byName != null)
+                return byName;
+
+            throw new CommandException(layers.Count == 0
+                ? "This world has no grounds to paint with."
+                : $"There is no ground '{idOrName}'. The grounds are: {string.Join(", ", layers.Select(layer => layer.DisplayName))}.");
         }
 
         /// <summary>The material slots <paramref name="baseObject"/> has, named after the materials it wears in them.</summary>

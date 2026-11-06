@@ -26,6 +26,9 @@ namespace Forge.Editing.Building
             registry.Add(new AdjustObjectsCommand(context));
             registry.Add(new ListMaterialsCommand(context));
             registry.Add(new SetMaterialsCommand(context));
+            registry.Add(new ListGroundsCommand(context));
+            registry.Add(new PaintLineCommand(context));
+            registry.Add(new PaintAreaCommand(context));
             registry.Add(new DeleteObjectsCommand(context));
         }
     }

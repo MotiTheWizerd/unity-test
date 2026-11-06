@@ -31,6 +31,9 @@ namespace Forge.Tests.Editing
         public static readonly RecordId Fence = RecordId.Parse("core:fence");
         public static readonly RecordId House = RecordId.Parse("core:house");
 
+        /// <summary>The look unpainted ground shows; a ground layer with it is the unpainted ground.</summary>
+        public const string BaseGroundLook = "ground/grass";
+
         public static readonly PlacementShape TreeShape = new PlacementShape(new Footprint(2f, 2f), 0f);
         public static readonly PlacementShape FenceShape = new PlacementShape(new Footprint(3f, 0.2f), 0f);
         public static readonly PlacementShape HouseShape = new PlacementShape(new Footprint(4f, 5f), 0f);
@@ -59,7 +62,8 @@ namespace Forge.Tests.Editing
             Options = new PlacementOptions(new Random(1));
             var terrain = new TerrainGrid(Session.World.Records, Space);
             var seating = new ObjectSeating(terrain.HeightAt, SlopeShapeOf, key => ShapesByKey[key]);
-            Context = new BuildContext(Session, () => Space, seating, Options, SlotsOf);
+            // Unpainted ground shows the base look, as the editor's ground catalog says (with no grass layer: none).
+            Context = new BuildContext(Session, () => Space, seating, Options, SlotsOf, () => GroundLayers.WithLook(Session.World.Records, BaseGroundLook));
             BuildingCommands.AddTo(Registry, Context);
         }
 
