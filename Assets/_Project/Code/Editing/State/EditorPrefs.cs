@@ -22,6 +22,9 @@ namespace Forge.Editing.State
         /// <summary>The settings card's page (its tab key).</summary>
         public string SettingsTab { get; set; }
 
+        /// <summary>Whether the settings card is open.</summary>
+        public bool? SettingsOpen { get; set; }
+
         /// <summary>The fly speed multiplier.</summary>
         public float? FlySpeed { get; set; }
 

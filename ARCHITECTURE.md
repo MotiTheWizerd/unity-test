@@ -875,9 +875,10 @@ slopes), so results are exact and every edit goes through the edit session.
   and horizontal FOV), and the camera glides there with `SmoothDamp`.
 - **Editor state between sessions** (`EditorStateKeeper`): the editor opens where the user left off. Two documents,
   both engine-free classes in `Forge.Editing.State` with every value optional (null: never set, the default stands; ids
-  and names that no longer fit are skipped): **`EditorPrefs`**, the user's, the same in every world (side dock open and its page,
-  assets browser collapsed and height, settings tab, fly speed and by height, brush radius, strength and mode, objects
-  follow terrain, random turn & size, align to slope, whole pieces), in `<persistentDataPath>/Editor/prefs.json`; and
+  and names that no longer fit are skipped): **`EditorPrefs`**, the user's, the same in every world (side dock open and
+  its page, assets browser collapsed and height, settings card open and its tab, fly speed and by height, brush radius,
+  strength and mode, objects follow terrain, random turn & size, align to slope, whole pieces), in
+  `<persistentDataPath>/Editor/prefs.json`; and
   **`WorldViewState`**, per world (the space on show, the camera's pose per space in world coordinates, the tool, the
   assets tab and search, the object being placed, the time of day, the row gaps per object), in
   `Editor/Worlds/<edit plugin id>.json`. Editor state never goes into a plugin: plugins are shared data, this is one

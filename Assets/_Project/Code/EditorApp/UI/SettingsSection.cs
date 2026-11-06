@@ -30,15 +30,16 @@ namespace Forge.EditorApp.UI
         };
 
         readonly ForgePopup _popup;
+        readonly Button _button;
         readonly TabBar _tabs = new TabBar();
         readonly Dictionary<string, VisualElement> _pages = new Dictionary<string, VisualElement>();
 
         public SettingsSection(VisualElement root)
         {
-            var button = PanelElements.Required<Button>(root, "settings");
+            _button = PanelElements.Required<Button>(root, "settings");
             _popup = PanelElements.Required<ForgePopup>(root, "settings-popup");
-            button.clicked += () => _popup.Toggle(button);
-            _popup.OpenChanged += open => button.EnableInClassList(PanelElements.ActiveClass, open);
+            _button.clicked += () => _popup.Toggle(_button);
+            _popup.OpenChanged += open => _button.EnableInClassList(PanelElements.ActiveClass, open);
 
             foreach (var (key, _) in Tabs)
                 _pages.Add(key, PanelElements.Required<VisualElement>(root, $"settings-page-{key}"));
@@ -77,14 +78,22 @@ namespace Forge.EditorApp.UI
         {
         }
 
-        public void Capture(EditorPrefs prefs, WorldViewState world) => prefs.SettingsTab = _tabs.Current;
+        public void Capture(EditorPrefs prefs, WorldViewState world)
+        {
+            prefs.SettingsTab = _tabs.Current;
+            prefs.SettingsOpen = _popup.IsOpen;
+        }
 
         public void Restore(EditorPrefs prefs, WorldViewState world)
         {
-            if (prefs.SettingsTab == null || !_pages.ContainsKey(prefs.SettingsTab))
-                return;
-            _tabs.Select(prefs.SettingsTab);
-            ShowPage(prefs.SettingsTab);
+            if (prefs.SettingsTab != null && _pages.ContainsKey(prefs.SettingsTab))
+            {
+                _tabs.Select(prefs.SettingsTab);
+                ShowPage(prefs.SettingsTab);
+            }
+
+            if (prefs.SettingsOpen == true)
+                _popup.Open(_button);
         }
     }
 }
