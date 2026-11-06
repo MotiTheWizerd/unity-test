@@ -57,3 +57,11 @@ desktop.ini
 
 # Muninn memory marker (this machine's raven identity)
 /.muninn-agent
+
+# Local material test pack (never committed; see Tools/fetch_material_pack.py)
+/Assets/_Project/Content/MaterialPacks/TestPack/
+/Assets/_Project/Content/MaterialPacks/TestPack.meta
+# The packs folder itself, while it only holds local packs (commit it with the first shared pack)
+/Assets/_Project/Content/MaterialPacks.meta
+/Assets/StreamingAssets/Plugins/forge.testpack.json
+/Assets/StreamingAssets/Plugins/forge.testpack.json.meta

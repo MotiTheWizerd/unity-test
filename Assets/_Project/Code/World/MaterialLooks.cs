@@ -15,13 +15,37 @@ namespace Forge.World
     /// </summary>
     public sealed class MaterialLooks
     {
-        readonly MaterialCatalog _catalog;
+        readonly IReadOnlyList<MaterialCatalog> _catalogs;
         readonly HashSet<string> _warned = new HashSet<string>(StringComparer.Ordinal);
         IRecordStore _records;
 
-        public MaterialLooks(MaterialCatalog catalog)
+        /// <param name="catalogs">The base game's catalog and every material pack's (<see cref="MaterialCatalog.LoadPacks"/>); the first that knows a key wins.</param>
+        public MaterialLooks(IEnumerable<MaterialCatalog> catalogs)
         {
-            _catalog = catalog != null ? catalog : throw new ArgumentNullException(nameof(catalog));
+            if (catalogs == null)
+                throw new ArgumentNullException(nameof(catalogs));
+            var list = new List<MaterialCatalog>();
+            foreach (var catalog in catalogs)
+            {
+                if (catalog != null)
+                    list.Add(catalog);
+            }
+
+            if (list.Count == 0)
+                throw new ArgumentException("At least one material catalog is required.", nameof(catalogs));
+            _catalogs = list;
+        }
+
+        bool TryLook(string assetKey, out Material look)
+        {
+            foreach (var catalog in _catalogs)
+            {
+                if (catalog.TryGet(assetKey, out look))
+                    return true;
+            }
+
+            look = null;
+            return false;
         }
 
         /// <summary>The records materials are looked up in: the world on show.</summary>
@@ -32,7 +56,7 @@ namespace Forge.World
         {
             if (_records == null || !(_records.TryGet(material, out var record) && record is MaterialRecord found))
                 return Missing(material.ToString(), $"there is no material '{material}'");
-            return _catalog.TryGet(found.AssetKey, out var look)
+            return TryLook(found.AssetKey, out var look)
                 ? look
                 : Missing(found.AssetKey, $"the material catalog has nothing for '{found.AssetKey}' ({material})");
         }

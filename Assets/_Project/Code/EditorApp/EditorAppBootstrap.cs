@@ -375,7 +375,7 @@ namespace Forge.EditorApp
         MaterialLooks CreateMaterialLooks()
         {
             if (_materials != null)
-                return new MaterialLooks(_materials);
+                return new MaterialLooks(new[] { _materials }.Concat(MaterialCatalog.LoadPacks()));
 
             Debug.LogWarning("[Forge] EditorApp has no material catalog (EditorAppBootstrap._materials); objects keep their own materials.");
             return null;

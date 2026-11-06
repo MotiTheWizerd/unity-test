@@ -24,27 +24,43 @@ namespace Forge.UnityEditor.Content
         [MenuItem("Forge/Materials/Build Materials")]
         static void Build()
         {
-            var catalog = AssetDatabase.LoadAssetAtPath<MaterialCatalog>(CatalogPath);
-            if (catalog == null)
-            {
-                catalog = ScriptableObject.CreateInstance<MaterialCatalog>();
-                AssetDatabase.CreateAsset(catalog, CatalogPath);
-            }
+            var catalog = LoadOrCreateCatalog(CatalogPath);
+            var built = BuildFolders(MaterialsFolder, catalog, KeyFor);
+            Debug.Log($"[Forge] Built {built} materials; {CatalogPath} has {catalog.Count} entries.");
+        }
 
+        /// <summary>The catalog at <paramref name="path"/>, made there if there is none yet.</summary>
+        public static MaterialCatalog LoadOrCreateCatalog(string path)
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<MaterialCatalog>(path);
+            if (catalog != null)
+                return catalog;
+
+            catalog = ScriptableObject.CreateInstance<MaterialCatalog>();
+            AssetDatabase.CreateAsset(catalog, path);
+            return catalog;
+        }
+
+        /// <summary>
+        /// Builds a material from each texture folder directly under <paramref name="parent"/> and lists it in
+        /// <paramref name="catalog"/> under the key <paramref name="keyFor"/> gives its folder name. Returns how many were built.
+        /// </summary>
+        public static int BuildFolders(string parent, MaterialCatalog catalog, System.Func<string, string> keyFor)
+        {
             var built = 0;
-            foreach (var folder in AssetDatabase.GetSubFolders(MaterialsFolder).OrderBy(f => f, System.StringComparer.Ordinal))
+            foreach (var folder in AssetDatabase.GetSubFolders(parent).OrderBy(f => f, System.StringComparer.Ordinal))
             {
                 var name = Path.GetFileName(folder);
                 var material = BuildMaterial(folder, name);
                 if (material == null)
                     continue;
-                catalog.Set(KeyFor(name), material);
+                catalog.Set(keyFor(name), material);
                 built++;
             }
 
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
-            Debug.Log($"[Forge] Built {built} materials; {CatalogPath} has {catalog.Count} entries.");
+            return built;
         }
 
         static Material BuildMaterial(string folder, string name)

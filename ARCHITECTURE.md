@@ -118,7 +118,15 @@ one in the active plugin.
   its materials (`IAssetThumbnails.Get(assetKey, lookKey, dress)`, `MaterialLooks.Dress` / `KeyOf`).
 - `MaterialRecord` (`material/<name>`): a surface objects can wear (display name, asset key the presentation resolves
   to the look), like a ground layer: a mod restyles a material everywhere by overriding it, or adds its own.
-  `forge.core` ships eight (`CoreMaterials`).
+  `forge.core` ships eight (`CoreMaterials`). More come as **material packs** (Content/MaterialPacks/<Pack>): a
+  pack.json (plugin id; per material its folder, name, category and ambientCG source) and a Materials folder of
+  texture folders. `Tools/fetch_material_pack.py <pack>` downloads the sources; Forge → Materials → Build Material
+  Packs (`MaterialPackBuilder`, sharing `MaterialBuilder.BuildFolders`) builds each folder's material into the pack's
+  own catalog under Resources/MaterialPacks (keys "material/<pack>/<folder>", so packs never clash) and writes the
+  pack's plugin of material records to StreamingAssets/Plugins. The editor layers the base catalog with every pack
+  catalog found there (`MaterialCatalog.LoadPacks`, `MaterialLooks` takes a list), so a pack needs no reference
+  anywhere. The local TestPack (26 materials, plugin forge.testpack) is git-ignored: whether to commit or curate it
+  is still open.
 - New record types must be registered in `RecordTypeRegistry.CreateDefault()`.
 
 **Plugins** = manifest (`id`, `version`, `masters`) + records + deletions.
