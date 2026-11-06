@@ -46,6 +46,7 @@ namespace Forge.Tests.Agent
             Assert.That(ValueOf(arguments, "--allowedTools"), Is.EqualTo("mcp__forge"));
             Assert.That(ValueOf(arguments, "--permission-mode"), Is.EqualTo("dontAsk"));
             Assert.That(ValueOf(arguments, "--output-format"), Is.EqualTo("stream-json"));
+            Assert.That(ValueOf(arguments, "--input-format"), Is.EqualTo("stream-json"), "The message goes in as JSON, so it can carry pictures.");
             Assert.That(ValueOf(arguments, "--system-prompt"), Is.EqualTo("Build nicely."));
             Assert.That(ValueOf(arguments, "--model"), Is.EqualTo("sonnet"));
             Assert.That(arguments, Has.No.Member("--effort"), "Empty settings are left to Claude Code.");
@@ -76,6 +77,44 @@ namespace Forge.Tests.Agent
             Assert.That(ValueOf(arguments, "--system-prompt-file"), Is.EqualTo("C:/forge/agent/distill-1.txt"));
             Assert.That(ValueOf(arguments, "--model"), Is.EqualTo("sonnet"), "The memory is distilled on the agent's own model.");
             Assert.That(arguments, Has.No.Member("--mcp-config").And.No.Member("--resume").And.No.Member("--output-format"));
+        }
+
+        [Test]
+        public void Input_IsOneUserMessageLine_PicturesBeforeWords()
+        {
+            var png = new AgentImage("image/png", new byte[] { 1, 2, 3 });
+            var jpeg = new AgentImage("image/jpeg", new byte[] { 4, 5 });
+
+            var line = ClaudeInput.UserMessage("Build \"this\"\nplease", new[] { png, jpeg });
+
+            Assert.That(line, Does.EndWith("\n"));
+            Assert.That(line.TrimEnd('\n'), Does.Not.Contain("\n"), "One message, one line.");
+            var message = JObject.Parse(line);
+            Assert.That((string)message["type"], Is.EqualTo("user"));
+            Assert.That((string)message["message"]["role"], Is.EqualTo("user"));
+            var content = (JArray)message["message"]["content"];
+            Assert.That(content.Select(c => (string)c["type"]), Is.EqualTo(new[] { "image", "image", "text" }));
+            Assert.That((string)content[0]["source"]["type"], Is.EqualTo("base64"));
+            Assert.That((string)content[0]["source"]["media_type"], Is.EqualTo("image/png"));
+            Assert.That((string)content[0]["source"]["data"], Is.EqualTo("AQID"));
+            Assert.That((string)content[1]["source"]["media_type"], Is.EqualTo("image/jpeg"));
+            Assert.That((string)content[2]["text"], Is.EqualTo("Build \"this\"\nplease"));
+        }
+
+        [Test]
+        public void Input_WithoutPictures_IsJustTheWords()
+        {
+            var content = (JArray)JObject.Parse(ClaudeInput.UserMessage("Hi", AgentImage.None))["message"]["content"];
+
+            Assert.That(content.Single()["text"].ToString(), Is.EqualTo("Hi"));
+        }
+
+        [TestCase("image/bmp", 10)]
+        [TestCase("image/png", 0)]
+        [TestCase("image/png", AgentImage.MaxBytes + 1)]
+        public void Image_RefusesWhatTheModelCantTake(string mediaType, int size)
+        {
+            Assert.Throws<System.ArgumentException>(() => new AgentImage(mediaType, new byte[size]));
         }
 
         [Test]

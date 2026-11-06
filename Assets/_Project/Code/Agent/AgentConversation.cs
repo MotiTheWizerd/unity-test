@@ -22,6 +22,8 @@ namespace Forge.Agent
     public sealed class AgentConversation : IDisposable
     {
         const int UndoNameLength = 48;
+        // What a message of pictures alone asks.
+        const string PictureOnlyRequest = "Look at the picture.";
 
         readonly IAgentBackend _backend;
         readonly AgentToolHost _tools;
@@ -99,16 +101,20 @@ namespace Forge.Agent
             }
         }
 
-        public void Send(string message)
+        /// <param name="images">Pictures sent with the message; with one, the words may be left out.</param>
+        public void Send(string message, IReadOnlyList<AgentImage> images = null)
         {
-            var text = message?.Trim();
-            if (string.IsNullOrEmpty(text))
+            var text = message?.Trim() ?? string.Empty;
+            images = images?.ToList() ?? AgentImage.None;
+            if (text.Length == 0 && images.Count == 0)
                 throw new ArgumentException("The message is empty.", nameof(message));
             if (State == AgentState.Working)
                 throw new InvalidOperationException("The agent is still working on the last message.");
 
-            Add(ChatRole.User, text);
-            Start(text, text);
+            _entries.Add(new ChatEntry(ChatRole.User, text, images));
+            Changed();
+            var request = text.Length > 0 ? text : PictureOnlyRequest;
+            Start(request, request, images);
         }
 
         /// <summary>Stops the request being worked on; what was built so far stays for review.</summary>
@@ -148,7 +154,7 @@ namespace Forge.Agent
             Draft.Discard();
             EndDraft();
             Add(ChatRole.Notice, "Discarded; asking again.");
-            Start($"I discarded what you built. Build it again from scratch, in a different way. My request was:\n{request}", request);
+            Start($"I discarded what you built. Build it again from scratch, in a different way. My request was:\n{request}", request, AgentImage.None);
         }
 
         /// <summary>Forgets the conversation, so the next message starts afresh. The world stays as it is.</summary>
@@ -175,7 +181,7 @@ namespace Forge.Agent
             _backend.Dispose();
         }
 
-        void Start(string prompt, string request)
+        void Start(string prompt, string request, IReadOnlyList<AgentImage> images)
         {
             if (Draft == null)
             {
@@ -184,7 +190,7 @@ namespace Forge.Agent
             }
 
             _runId = _runId ?? "forge-" + Guid.NewGuid().ToString("N");
-            _notes = new TurnNotes(prompt);
+            _notes = new TurnNotes(WithPictureCount(prompt, images.Count));
             _turn = new CancellationTokenSource();
             var cancellation = _turn.Token;
             // Read here, on the main thread; the memory is dressed on the way to the backend.
@@ -194,14 +200,14 @@ namespace Forge.Agent
             State = AgentState.Working;
             Changed();
 
-            Task.Run(() => RunTurnAsync(prompt, briefed, conversationId, cancellation), cancellation)
+            Task.Run(() => RunTurnAsync(prompt, briefed, images, conversationId, cancellation), cancellation)
                 .ContinueWith(task => _mainThread.Post(() => OnTurnEnded(task)), TaskScheduler.Default);
         }
 
-        async Task RunTurnAsync(string cue, string briefed, string conversationId, CancellationToken cancellation)
+        async Task RunTurnAsync(string cue, string briefed, IReadOnlyList<AgentImage> images, string conversationId, CancellationToken cancellation)
         {
             var dress = await DressAsync(cue, cancellation).ConfigureAwait(false);
-            var turn = new AgentTurn(WithMemory(dress.Block, briefed), _instructions, conversationId);
+            var turn = new AgentTurn(WithMemory(dress.Block, briefed), _instructions, conversationId, images);
             await _backend.RunAsync(turn, happened => _mainThread.Post(() => OnEvent(happened)), cancellation).ConfigureAwait(false);
         }
 
@@ -234,6 +240,10 @@ namespace Forge.Agent
         // The memory rides in the message rather than the system prompt, so a resumed conversation keeps its cache.
         static string WithMemory(string block, string message) =>
             string.IsNullOrWhiteSpace(block) ? message : $"{block.Trim()}\n\n{message}";
+
+        // The memory keeps words only, so its notes say a picture was there rather than pretend it wasn't.
+        static string WithPictureCount(string prompt, int pictures) =>
+            pictures == 0 ? prompt : $"{prompt}\n({pictures} {(pictures == 1 ? "picture" : "pictures")} attached)";
 
         void OnDressed(MemoryDress dress, Exception failure)
         {

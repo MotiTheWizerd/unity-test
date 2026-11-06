@@ -23,6 +23,8 @@ namespace Forge.Agent.ClaudeCode
             var arguments = new List<string>
             {
                 "--print",
+                // The message goes in as JSON (ClaudeInput), so it can carry pictures.
+                "--input-format", "stream-json",
                 // Events as they happen, one JSON object per line; stream-json needs --verbose.
                 "--output-format", "stream-json",
                 "--verbose",

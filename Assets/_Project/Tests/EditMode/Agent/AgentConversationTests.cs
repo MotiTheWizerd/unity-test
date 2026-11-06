@@ -496,6 +496,65 @@ namespace Forge.Tests.Agent
             }
         }
 
+        static readonly AgentImage Picture = new AgentImage("image/png", new byte[] { 1, 2, 3 });
+
+        [Test]
+        public void Pictures_GoToTheAgent_AndStayOnTheUsersLine()
+        {
+            using (var rig = new Rig(Answers("A stone tower.")))
+            {
+                rig.Conversation.Send("Build this", new[] { Picture });
+                rig.Settle();
+
+                Assert.That(rig.Backend.Turns[0].Images, Is.EqualTo(new[] { Picture }));
+                Assert.That(rig.Conversation.Entries[0].Images, Is.EqualTo(new[] { Picture }));
+                Assert.That(rig.Conversation.Entries[1].Images, Is.Empty);
+            }
+        }
+
+        [Test]
+        public void APictureAlone_IsAMessage()
+        {
+            using (var rig = new Rig(Answers("A stone tower.")))
+            {
+                rig.Conversation.Send("  ", new[] { Picture });
+                rig.Settle();
+
+                Assert.That(rig.Conversation.Entries[0].Text, Is.Empty);
+                Assert.That(rig.Backend.Turns[0].Prompt, Does.EndWith("Look at the picture."));
+            }
+
+            using (var rig = new Rig(Answers("?")))
+                Assert.Throws<ArgumentException>(() => rig.Conversation.Send("  ", AgentImage.None));
+        }
+
+        [Test]
+        public void TheMemory_IsToldAPictureWasThere()
+        {
+            using (var rig = new Rig(Answers("A stone tower.")))
+            {
+                rig.Conversation.Send("What is this?", new[] { Picture, Picture });
+                rig.Settle();
+                rig.PumpUntil(() => rig.Memory.Sleeps.Count == 1);
+
+                Assert.That(rig.Memory.Sleeps[0].Calls[0].Prompt, Is.EqualTo("What is this?\n(2 pictures attached)"));
+            }
+        }
+
+        [Test]
+        public void ARetry_DoesNotSendThePicturesAgain()
+        {
+            using (var rig = new Rig(BuildsAHouse()))
+            {
+                rig.Conversation.Send("Build this", new[] { Picture });
+                rig.Settle();
+                rig.Conversation.Retry();
+                rig.Settle();
+
+                Assert.That(rig.Backend.Turns[1].Images, Is.Empty, "The resumed conversation already holds them.");
+            }
+        }
+
         [Test]
         public void AFailureBeforeAnyWord_IsNotSlept()
         {

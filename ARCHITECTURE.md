@@ -642,14 +642,18 @@ slopes), so results are exact and every edit goes through the edit session.
   Claude login: `--setting-sources ""` (none of the user's settings files, so their hooks and plugins stay out),
   `--tools ""` (no built-in tools), `--strict-mcp-config` with only the forge endpoint, `--allowedTools mcp__forge`,
   `--permission-mode dontAsk`, `--system-prompt` = the instructions, stream-json output (`ClaudeStream` reads it);
-  the message goes in on stdin as UTF-8 (`CommandLine` quotes the rest); follow-ups `--resume` the conversation.
+  the message goes in on stdin as one stream-json user message (`--input-format stream-json`, `ClaudeInput`: the
+  turn's pictures as base64 image blocks, then the words; `CommandLine` quotes the rest); follow-ups `--resume`
+  the conversation, which keeps the pictures already sent.
   It runs in `<persistentDataPath>/Agent`. Other providers (an API with its own tool loop) would implement
   `IAgentBackend` over the same `IToolHost`.
 - **Conversation** (`AgentConversation`, states Idle / Working / Reviewing): a request opens an `EditDraft`
   and puts the editor briefing in front of the message; the build appears live; then the user **accepts** it
   (one undo step named after the request), **retries** (discard and ask again; the agent is told the first try
   was turned down) or **discards** it, or sends a follow-up that refines the same draft. Stop keeps what was
-  built for review. A request that changed nothing needs no review.
+  built for review. A request that changed nothing needs no review. A message may carry pictures (`AgentImage`:
+  PNG, JPEG, GIF or WebP up to 3.75 MB, kept on the user's `ChatEntry`), or be pictures alone; the memory is told
+  "(N pictures attached)" since it keeps words only.
 - **Memory** (`IAgentMemory`, `Agent/Memory`): one long-term memory for the agent, kept in Semantix as a memory
   agent on the user's account (`SemantixMemory`, named in `AgentSettings`, "Forge"; found by name, made on first
   use, the same agent read and written). It uses the doors Semantix's own Claude Code tasks use

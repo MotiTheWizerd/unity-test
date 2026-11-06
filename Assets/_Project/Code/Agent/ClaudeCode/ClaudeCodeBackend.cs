@@ -59,7 +59,7 @@ namespace Forge.Agent.ClaudeCode
             using (cancellation.Register(() => ClaudeProcess.Stop(process)))
             {
                 var errors = process.StandardError.ReadToEndAsync();
-                await ClaudeProcess.SendAsync(process, turn.Prompt).ConfigureAwait(false);
+                await ClaudeProcess.SendAsync(process, ClaudeInput.UserMessage(turn.Prompt, turn.Images)).ConfigureAwait(false);
 
                 var finished = false;
                 string line;
