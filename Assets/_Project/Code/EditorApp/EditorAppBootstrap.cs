@@ -16,6 +16,7 @@ using Forge.EditorApp.UI;
 using Forge.Editing;
 using Forge.Editing.Modes;
 using Forge.Editing.State;
+using Forge.Play;
 using Forge.Streaming;
 using Forge.World;
 using Forge.World.Assets;
@@ -90,6 +91,9 @@ namespace Forge.EditorApp
 
         [SerializeField, Tooltip("How the world-building agent runs; leave empty for an editor without one.")]
         AgentSettings _agent;
+
+        [SerializeField, Tooltip("How the player is built and controlled (Settings/Player); without one, playing flies the editor camera.")]
+        PlayerProfile _player;
 
         [SerializeField] EditorController _controller;
         [SerializeField] EditorPanel _panel;
@@ -184,7 +188,7 @@ namespace Forge.EditorApp
 
                 // Not under the world root: the root moves far from zero, and the pictures would jitter with it.
                 _thumbnails = new ThumbnailRenderer(assets, null);
-                _controller.Initialize(_context, _frame, _view, _waterView, _panel, assets, _agent);
+                _controller.Initialize(_context, _frame, _view, _waterView, _panel, assets, _agent, _player);
                 _panel.Initialize(_context, _controller.Commands, diagnostics, _thumbnails, ground, materials, _controller.Agent?.Conversation);
                 _panel.Restore(_state.Prefs, _state.World);
             }
@@ -234,13 +238,14 @@ namespace Forge.EditorApp
             return commands != null && ToolCatalog.Of(_context.CurrentTool).WorksOnSelection ? commands.DressedSlot(commands.SelectionSlots()) : null;
         }
 
-        // Everything under the world root moved with it; the camera is not under it and follows by hand.
+        // Everything under the world root moved with it; the camera and the player are not under it and follow by hand.
         void OnSceneShifted(Vector3 delta)
         {
             if (_focus.TryGetComponent<FlyCamera>(out var flyCamera))
                 flyCamera.Shift(delta);
             else
                 _focus.position += delta;
+            _controller.PlayFromHere?.Shift(delta);
             Debug.Log($"[Forge] Scene rebased: {_frame.Origin}.");
         }
 

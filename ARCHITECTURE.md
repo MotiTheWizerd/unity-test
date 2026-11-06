@@ -571,6 +571,19 @@ third-person camera (Skyrim's other half) reads the same player.
   sensitivity (0.1° per pixel). No key is named in code.
 - `PlayerProfile` (`Settings/Player/PlayerProfile.asset`) holds the body, the pace and the controls, tuned in the
   Inspector.
+- **Cameras**: an `ICameraMode` (Game, engine-free) says where the camera goes each frame, a `ViewPose`;
+  `FirstPersonCamera` puts it at the eyes, turned to the heading and tilted by the pitch. `CameraDirector` (Play) puts
+  the engine's camera there while playing; third person will be another mode set on it, nothing else changes.
+- **Play from here** (`PlayFromHere`, EditorApp, built by the controller when the bootstrap has a `_player` profile):
+  when the app starts playing, the player stands on whatever the middle of the view shows (else the ground under the
+  camera, else it falls from the camera), facing the camera's heading; the fly camera rests (`enabled = false`), the
+  director takes the camera, the mouse is captured and the controls switched on. The controller ticks it each frame
+  while playing; Esc ends it all, and the bootstrap gives the editing camera back. The camera is the streaming's focus,
+  so the streaming and the origin follow the player; a rebase moves the player with the camera
+  (`PlayFromHere.Shift`). The world's edge is open: walking off the land falls forever (Moti's call, as it stands).
+- Known limits: interiors have no floor to stand on yet (the floor grid has no collider), there's no swimming (water
+  has no colliders, the player walks the bottom), and the gamepad's look stick is read like the mouse (per frame,
+  not per second), so it turns slowly.
 
 ## World-building agent (Forge.Agent)
 
@@ -825,8 +838,8 @@ slopes), so results are exact and every edit goes through the edit session.
   and the mark hides), and the panel's root wears `is-playing` (`PlaySection`), which hides every
   `forge-editor-chrome` element (tool strip, top bar, assets browser, side dock, status bar) and shows the play bar
   instead. The camera returns exactly to where editing left it (`EditorAppBootstrap`), and that pose is what is kept
-  between sessions, even when the editor closes during play. The time of day keeps running. The player
-  comes next: until it does, the editor camera flies in play too.
+  between sessions, even when the editor closes during play. The time of day keeps running. What plays is the player
+  (`PlayFromHere`, see The player); without a player profile the editor camera flies in play instead.
 - **The mark** (`GroundMark`, M / the dock's Mark button, `MarkTool`): a spot (click) or an axis-aligned area (drag)
   the user puts on the ground to show the agent where "here" is. It is editor state on `EditorContext.Mark`
   (never saved, never undone), drawn by `MarkView` in every tool, and the mark tool works while a draft is open

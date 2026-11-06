@@ -5,6 +5,7 @@ using Forge.EditorApp.Agent;
 using Forge.EditorApp.Gizmos;
 using Forge.EditorApp.Tools;
 using Forge.Editing.Placement;
+using Forge.Play;
 using Forge.World;
 using Forge.World.Assets;
 using UnityEngine;
@@ -47,12 +48,16 @@ namespace Forge.EditorApp
         /// <summary>The world-building agent, or null when the editor has no agent settings.</summary>
         public AgentHost Agent { get; private set; }
 
+        /// <summary>Playing the world as the player, or null without a player profile (then the editor camera flies in play).</summary>
+        public PlayFromHere PlayFromHere { get; private set; }
+
         /// <param name="frame">The world's frame in the scene: tools work in world coordinates, and this is where the camera's rays are converted.</param>
         /// <param name="ui">Clicks over this UI are kept from the tools; typing into it is kept from the shortcuts.</param>
         /// <param name="assets">The world's asset catalog, so tool previews look like the real objects.</param>
         /// <param name="agent">How the world-building agent runs; null leaves the editor without one.</param>
         /// <param name="water">The water on show, which the Water tool reads and previews through.</param>
-        public void Initialize(EditorContext context, WorldFrame frame, WorldView view, WaterView water, IInputBlocker ui, IAssetCatalog assets, AgentSettings agent)
+        /// <param name="player">How the player is built and controlled; null plays with the editor camera.</param>
+        public void Initialize(EditorContext context, WorldFrame frame, WorldView view, WaterView water, IInputBlocker ui, IAssetCatalog assets, AgentSettings agent, PlayerProfile player)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _frame = frame ?? throw new ArgumentNullException(nameof(frame));
@@ -85,6 +90,10 @@ namespace Forge.EditorApp
 
             if (agent != null)
                 Agent = new AgentHost(context, seating, slots, new EditorBriefing(context, () => GroundInView(picker)), agent);
+            if (player != null)
+                PlayFromHere = new PlayFromHere(context, picker, frame, _camera, _flyCamera, player);
+            else
+                Debug.LogWarning("[Forge] EditorApp has no player profile (EditorAppBootstrap._player); playing flies the editor camera.");
         }
 
         /// <summary>The world ray through the mouse pointer now (where tools aim and dragged tiles land).</summary>
@@ -96,6 +105,7 @@ namespace Forge.EditorApp
         void OnDestroy()
         {
             Agent?.Dispose();
+            PlayFromHere?.Dispose();
             _markView?.Dispose();
             if (_tools == null)
                 return;
@@ -250,15 +260,20 @@ namespace Forge.EditorApp
             }
         }
 
-        // While playing, the editor rests: no tool, no held hand, no mark, no editing shortcuts. Esc goes back to
-        // editing, where the tool picks up again (the next frame, so this Esc cancels nothing in it).
+        // While playing, the editor rests: no tool, no held hand, no mark, no editing shortcuts; the player plays. Esc
+        // goes back to editing, where the tool picks up again (the next frame, so this Esc cancels nothing in it).
         void Play(Keyboard keyboard, bool typing)
         {
             RestTool();
             _context.HeldTool = null;
             _markView.Refresh(null, _context.Session.World);
             if (keyboard.escapeKey.wasPressedThisFrame && !typing)
+            {
                 _context.StopPlaying();
+                return;
+            }
+
+            PlayFromHere?.Tick(Time.deltaTime);
         }
 
         // The terrain at the middle of the view: where "here" is when the user asks the agent to build.
