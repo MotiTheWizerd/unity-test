@@ -1,6 +1,6 @@
 /*
- * Forge runtime editor layout: the tool strip down the left edge, the editing dock beside it, the options bar
- * across the top, the agent dock on the right and a status bar. The panels, sections, fields and buttons are
+ * Forge runtime editor layout: the tool strip down the left edge, the options bar across the top, the agent dock
+ * on the right, a status bar, and the settings card (tabs over pages). The panels, sections, fields and buttons are
  * components (UI/Controls) with their own sheets; this file only places them and styles what is particular to
  * the editor. Tokens from Theme/ForgeTokens.uss.
  */
@@ -13,16 +13,30 @@
 
 .forge-dock {
     position: absolute;
-    left: 62px;
     top: 10px;
     bottom: 46px;
-    width: 300px;
 }
 
 .forge-dock--right {
-    left: auto;
     right: 10px;
     width: 340px;
+}
+
+/* While the agent dock is open (AgentDockToggle), the top bar and the assets browser stop short of it. */
+.forge-root.is-agent-open .forge-options,
+.forge-root.is-agent-open .forge-assets {
+    right: 360px;
+}
+
+/* ---- The settings card (SettingsSection): a tab bar over one page at a time ------------------------------ */
+
+.forge-settings__tabs {
+    flex-direction: row;
+    margin-bottom: var(--forge-space-3);
+}
+
+.forge-settings__page {
+    max-width: 480px;
 }
 
 .forge-plugin {
@@ -127,8 +141,8 @@
 
 .forge-options {
     position: absolute;
-    left: 372px;
-    right: 360px;
+    left: 62px;
+    right: 10px;
     top: 10px;
     padding: var(--forge-space-1) var(--forge-space-3);
 }

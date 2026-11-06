@@ -43,6 +43,18 @@ namespace Forge.EditorApp.UI.Gallery
                 tiles.Add(chosen);
                 tiles.Add(new AssetTile("Rock", 0, () => { }));
             }
+
+            var popupOpen = root.Q<Button>("popup-open");
+            var popup = root.Q<ForgePopup>("popup");
+            if (popupOpen != null && popup != null)
+                popupOpen.clicked += () => popup.Toggle(popupOpen);
+        }
+
+        void Update()
+        {
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
+                ForgePopup.CloseAll(GetComponent<UIDocument>().rootVisualElement);
         }
     }
 }

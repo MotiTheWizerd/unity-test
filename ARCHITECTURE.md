@@ -702,8 +702,10 @@ slopes), so results are exact and every edit goes through the edit session.
   the agent works. `EditorBriefing` tells the agent where the camera looks (the default site), the terrain's
   extent and the selection. **While a draft is open, editing rests**: the controller deactivates the current tool
   if it changes the world (`ToolDefinition.EditsWorld`; Select, Hand and Mark keep working, and so do the camera
-  and F), the editing dock, the options bar and the strip's editing tools are disabled, and `EditorContext`
-  refuses edits, undo, redo and saving (`IsDraftOpen`). The agent dock on the right (`AgentSection`) shows the transcript, Accept / Retry /
+  and F), the settings card's pages, the options bar and the strip's editing tools are disabled, and `EditorContext`
+  refuses edits, undo, redo and saving (`IsDraftOpen`). The agent dock on the right (`AgentSection`) starts closed; the top bar's agent
+  button beside the gear (`AgentDockToggle`) opens and closes it, and the top bar and assets browser widen into its room
+  while it is closed. It shows the transcript, Accept / Retry /
   Discard while reviewing, and a message box (Enter sends, Shift+Enter: new line). The agent's replies are
   Markdown: `Forge.Core.Text.Markdown` (engine-free) parses the subset chat uses into blocks and styled spans, and
   `MarkdownView` lays them out (a label per block, list items as marker + text, rich text wrapped in `<noparse>`
@@ -737,11 +739,18 @@ slopes), so results are exact and every edit goes through the edit session.
   `UI/EditorPanel.uss` and `UI/AssetsBrowser.uss`, which only read tokens. The font is Inter (`UI/Fonts`, OFL):
   Regular by default, Medium for small caps headers, SemiBold for titles, as real cuts, never synthesized bold.
   **Components** (`EditorApp/UI/Controls`, one C# `[UxmlElement]` class and one USS sheet each, used from UXML as
-  `<forge:…>`): `ForgePanel` (the glass card, optional title bar), `ForgeSection` (small-caps header over content,
+  `<forge:…>`): `ForgePanel` (the glass card, optional title bar), `ForgePopup` (a large `ForgePanel` card centred over
+  the editor, sized by tokens, its content scrolling; `Open`/`Close`/`Toggle(opener)`, closed by a press elsewhere, and
+  by the host on a world click or Esc via `ForgePopup.CloseAll`; place it at the document root; the editor's
+  settings card is one, with Space (the default) / Time / Camera / Performance / General tabs run by
+  `SettingsSection`, and the top bar's gear opens it; the space, time, fly speed, world and performance sections
+  live in its pages, there is no left dock), `ForgeSection` (small-caps header over content,
   collapsible with a chevron), the fields `ForgeTextInput`, `ForgeTextArea`, `ForgeNumberField` and
   `ForgeIntegerField` (delayed commit), `ForgeSlider` (number box on), `ForgeCheckbox`, `ForgeDropdown` (thin
   subclasses of Unity's controls that add the field chrome and a `unit` label, `FieldChrome`), `ForgeButton`
-  (`icon`, `variant` default / primary / ghost, `small` for toolbars; the icon is the button's background image, because a button with a
+  (`icon`, `variant` default / primary / ghost, `small` for toolbars, `busy` to pulse while something works: it flips
+  a class every `--forge-motion-pulse` and the sheet fades its opacity, UI Toolkit having no keyframes; the agent
+  button is busy while the agent works; the icon is the button's background image, because a button with a
   child is no longer measured by its text), `ForgeSeparator` (a hairline, `vertical` between the items of a row),
   `TabBar`, `AssetTile`, and `Icons.Make(name)`. The theme imports
   every component sheet, so they work in any panel. Runtime UI Toolkit shows no tooltips, so `TooltipLayer` at a

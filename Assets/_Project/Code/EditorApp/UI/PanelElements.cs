@@ -21,6 +21,20 @@ namespace Forge.EditorApp.UI
         public static void SetVisible(VisualElement element, bool visible) =>
             element.EnableInClassList(HiddenClass, !visible);
 
+        /// <summary>Whether the element is on screen: in a panel, with neither it nor any ancestor hidden.</summary>
+        public static bool IsShown(VisualElement element)
+        {
+            if (element?.panel == null)
+                return false;
+            for (var e = element; e != null; e = e.parent)
+            {
+                if (e.resolvedStyle.display == DisplayStyle.None)
+                    return false;
+            }
+
+            return true;
+        }
+
         public static void SetActive(VisualElement element, bool active) =>
             element.EnableInClassList(ActiveClass, active);
 

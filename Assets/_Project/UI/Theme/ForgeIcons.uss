@@ -46,3 +46,5 @@
 .forge-icon--layers { background-image: url("../Icons/layers.svg"); }
 .forge-icon--paint-bucket { background-image: url("../Icons/paint-bucket.svg"); }
 .forge-icon--circle-question-mark { background-image: url("../Icons/circle-question-mark.svg"); }
+.forge-icon--settings { background-image: url("../Icons/settings.svg"); }
+.forge-icon--bot { background-image: url("../Icons/bot.svg"); }

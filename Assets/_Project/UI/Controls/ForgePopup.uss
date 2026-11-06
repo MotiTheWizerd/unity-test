@@ -1,0 +1,12 @@
+/* ForgePopup: a large ForgePanel card centred over the editor. Tokens from Theme/ForgeTokens.uss. */
+
+.forge-popup {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    width: var(--forge-popup-width);
+    height: var(--forge-popup-height);
+    max-width: 90%;
+    max-height: 90%;
+}

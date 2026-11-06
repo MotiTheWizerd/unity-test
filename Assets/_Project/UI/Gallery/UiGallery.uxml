@@ -20,6 +20,7 @@
                                 <forge:ForgeButton text="Active" class="is-active" />
                                 <forge:ForgeButton icon="hand" variant="Ghost" class="is-active" tooltip="Active ghost (a chosen tool)" />
                                 <forge:ForgeButton icon="save" variant="Ghost" small="true" tooltip="Small, for toolbars" />
+                                <forge:ForgeButton icon="bot" small="true" busy="true" tooltip="Busy: pulses while something works" />
                             </ui:VisualElement>
                             <ui:VisualElement class="gallery-row forge-choices">
                                 <forge:ForgeButton text="One" class="is-active" />
@@ -76,6 +77,12 @@
                             <ui:VisualElement name="tiles" class="gallery-row" />
                         </forge:ForgeSection>
 
+                        <forge:ForgeSection title="POPUP">
+                            <ui:VisualElement class="gallery-row">
+                                <forge:ForgeButton name="popup-open" text="Open a popup" tooltip="Click again, elsewhere or Esc to close" />
+                            </ui:VisualElement>
+                        </forge:ForgeSection>
+
                         <forge:ForgeSection title="DISABLED">
                             <ui:VisualElement name="disabled">
                                 <ui:VisualElement class="gallery-row">
@@ -101,5 +108,10 @@
                 </ui:VisualElement>
             </ui:ScrollView>
         </forge:ForgePanel>
+
+        <forge:ForgePopup name="popup" title="A popup">
+            <ui:Label class="forge-wrap" text="Any content goes here, as in a panel." />
+            <forge:ForgeCheckbox label="A setting" value="true" />
+        </forge:ForgePopup>
     </ui:VisualElement>
 </ui:UXML>

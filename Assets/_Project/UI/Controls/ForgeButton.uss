@@ -19,6 +19,17 @@
     -unity-background-image-tint-color: var(--forge-text-on-accent);
 }
 
+/* Busy: breathes between full and dim, whatever its variant or state. ForgeButton flips .forge-button--pulse every
+   transition-duration, so --forge-motion-pulse sets both the fade and the beat. */
+.forge-button.forge-button--busy {
+    transition-property: background-color, border-color, color, -unity-background-image-tint-color, opacity;
+    transition-duration: var(--forge-motion-pulse);
+}
+
+.forge-button.forge-button--busy.forge-button--pulse {
+    opacity: var(--forge-pulse-dim);
+}
+
 /* Icon beside text: the text keeps its room, the icon sits in the left padding. */
 .forge-button--with-icon {
     padding-left: 30px;
@@ -29,23 +40,23 @@
 
 /* Icon only: a square with the icon centred. */
 .forge-button--icon-only {
-    width: 26px;
-    height: 26px;
+    width: var(--forge-icon-button-size);
+    height: var(--forge-icon-button-size);
     padding: 0;
-    background-size: 16px 16px;
+    background-size: var(--forge-icon-button-icon) var(--forge-icon-button-icon);
     background-position: center;
 }
 
-/* Small: toolbars. */
+/* Small: toolbars and panel headers. Sizes from ForgeTokens. */
 .forge-button--small.forge-button--icon-only {
-    width: 22px;
-    height: 22px;
-    background-size: 12px 12px;
+    width: var(--forge-icon-button-size-sm);
+    height: var(--forge-icon-button-size-sm);
+    background-size: var(--forge-icon-button-icon-sm) var(--forge-icon-button-icon-sm);
 }
 
 .forge-button--small.forge-button--with-icon {
     padding-left: 24px;
-    background-size: 12px 12px;
+    background-size: var(--forge-icon-button-icon-sm) var(--forge-icon-button-icon-sm);
     background-position-x: 7px;
 }
 

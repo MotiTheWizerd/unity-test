@@ -57,7 +57,20 @@
     --forge-space-3: 12px;
     --forge-space-4: 16px;
 
+    /* Icon buttons (ForgeButton icon-only): the square and the icon in it; small is the toolbar size */
+    --forge-icon-button-size: 26px;
+    --forge-icon-button-icon: 16px;
+    --forge-icon-button-size-sm: 22px;
+    --forge-icon-button-icon-sm: 12px;
+
+    /* Popups (ForgePopup): the centred card's size (never more than 90% of the screen) */
+    --forge-popup-width: 720px;
+    --forge-popup-height: 520px;
+
     /* Motion */
     --forge-motion-fast: 0.1s;
     --forge-motion: 0.18s;
+    /* A busy button's pulse (ForgeButton busy): one fade, and one beat, lasts this long; dim is its low point */
+    --forge-motion-pulse: 0.8s;
+    --forge-pulse-dim: 0.35;
 }

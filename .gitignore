@@ -54,3 +54,6 @@ desktop.ini
 # MCP screenshots taken during live checks
 /Assets/Screenshots/
 /Assets/Screenshots.meta
+
+# Muninn memory marker (this machine's raven identity)
+/.muninn-agent

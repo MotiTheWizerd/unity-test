@@ -27,7 +27,7 @@ namespace Forge.EditorApp.UI
 
         public void Refresh()
         {
-            if (_section.collapsed || Time.unscaledTime < _nextRefresh)
+            if (_section.collapsed || !PanelElements.IsShown(_section) || Time.unscaledTime < _nextRefresh)
                 return;
             _nextRefresh = Time.unscaledTime + RefreshInterval;
 

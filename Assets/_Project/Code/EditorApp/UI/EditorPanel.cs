@@ -12,8 +12,8 @@ using UnityEngine.UIElements;
 namespace Forge.EditorApp.UI
 {
     /// <summary>
-    /// The editor's UI Toolkit panel: the tool strip down the left edge, the editing dock beside it, the tool options
-    /// bar across the top, the assets browser along the bottom, the agent dock on the right and a status bar,
+    /// The editor's UI Toolkit panel: the tool strip down the left edge, the tool options bar across the top (its gear
+    /// opens the settings card), the assets browser along the bottom, the agent dock on the right and a status bar,
     /// laid out in EditorPanel.uxml and styled by EditorPanel.uss. A thin adapter: each section is its own
     /// presenter (<see cref="IPanelSection"/>), and this component only composes them, refreshes them every frame
     /// and answers whether the UI owns the input.
@@ -60,14 +60,21 @@ namespace Forge.EditorApp.UI
                 new AssetsBrowser(Root, context, thumbnails, groundLooks),
                 new HistorySection(Root, context),
                 new FlySpeedSection(Root, context),
+                new SettingsSection(Root),
                 new PerformanceSection(Root, context, diagnostics),
                 new StatusBar(Root, context),
             };
 
             if (agent != null)
+            {
                 _sections.Add(new AgentSection(Root, agent, context));
+                _sections.Add(new AgentDockToggle(Root, agent));
+            }
             else
+            {
                 PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "agent-dock"), false);
+                PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "agent-toggle"), false);
+            }
             Refresh();
         }
 
@@ -91,7 +98,7 @@ namespace Forge.EditorApp.UI
         /// <summary>Replaces the docks with an error box; the editor could not start.</summary>
         public void ShowFatal(string message)
         {
-            PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "dock"), false);
+            ForgePopup.CloseAll(Root);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "tool-strip"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "tool-options"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "assets"), false);
@@ -143,12 +150,14 @@ namespace Forge.EditorApp.UI
             Refresh();
         }
 
-        // Esc always hands the keyboard back to the shortcuts (sections may do more, e.g. clear a search).
+        // Esc always hands the keyboard back to the shortcuts and closes popups (sections may do more, e.g. clear a search).
         void ReleaseFocusOnEscape()
         {
             var keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
-                FocusedElement?.Blur();
+            if (keyboard == null || !keyboard.escapeKey.wasPressedThisFrame)
+                return;
+            FocusedElement?.Blur();
+            ForgePopup.CloseAll(Root);
         }
 
         // UI Toolkit keeps focus until something else in the panel takes it. Clicking the
@@ -165,6 +174,9 @@ namespace Forge.EditorApp.UI
                              && !IsPointerOverUI(mouse.position.ReadValue());
             if (worldClick || mouse.rightButton.isPressed)
                 FocusedElement?.Blur();
+            // A press on the world never reaches the panel, so popups learn of it here.
+            if (worldClick || mouse.rightButton.wasPressedThisFrame)
+                ForgePopup.CloseAll(Root);
         }
 
         void Refresh()

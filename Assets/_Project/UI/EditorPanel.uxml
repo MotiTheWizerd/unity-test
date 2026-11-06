@@ -3,68 +3,6 @@
     <Style src="AssetsBrowser.uss" />
     <ui:VisualElement name="root" class="forge-root" picking-mode="Ignore">
 
-        <forge:ForgePanel name="dock" class="forge-dock">
-            <ui:VisualElement class="forge-panel__title-bar">
-                <ui:Label name="title" class="forge-panel__title" text="Forge Editor" />
-                <ui:Label name="plugin" class="forge-plugin" tooltip="The plugin your edits are saved to" />
-            </ui:VisualElement>
-            <ui:ScrollView name="editing" class="forge-scroll">
-                <forge:ForgeSection title="SPACE">
-                    <ui:VisualElement name="space-sea" class="forge-row">
-                        <forge:ForgeCheckbox name="space-sea-on" label="Sea level" />
-                        <forge:ForgeNumberField name="space-sea-level" unit="m" />
-                    </ui:VisualElement>
-                    <forge:ForgeDropdown name="space-climate" label="Climate" />
-                    <ui:VisualElement name="space-land">
-                        <ui:Label name="space-land-size" class="forge-muted" tooltip="The land's reach in chunks of 64 m" />
-                        <ui:VisualElement class="forge-row">
-                            <ui:Label text="Extend" />
-                            <forge:ForgeIntegerField name="space-land-by" value="4" digits="2" tooltip="Chunks (64 m each) to add per press" />
-                            <forge:ForgeButton name="space-land-north" text="N" tooltip="Extend the land north (+Z)" />
-                            <forge:ForgeButton name="space-land-south" text="S" tooltip="Extend the land south (−Z)" />
-                            <forge:ForgeButton name="space-land-east" text="E" tooltip="Extend the land east (+X)" />
-                            <forge:ForgeButton name="space-land-west" text="W" tooltip="Extend the land west (−X)" />
-                            <forge:ForgeButton name="space-land-all" text="All" tooltip="Extend the land on every side at once, corners included (one undo step)" />
-                        </ui:VisualElement>
-                    </ui:VisualElement>
-                    <ui:VisualElement name="space-new-form" class="forge-indented">
-                        <forge:ForgeTextInput name="space-new-name" placeholder-text="Name, e.g. Whiterun or Bannered Mare" />
-                        <ui:VisualElement name="space-new-kinds" class="forge-row forge-choices" />
-                        <forge:ForgeDropdown name="space-new-size" label="Land" tooltip="Flat land to start with, in chunks of 64 m; extend it later" />
-                        <ui:VisualElement name="space-new-spacings" class="forge-row forge-choices" tooltip="Meters between terrain height samples: 1 m for detailed land, 2 m for open country (a quarter of the data)" />
-                        <ui:VisualElement class="forge-row forge-choices">
-                            <forge:ForgeButton name="space-create" text="Create" variant="Primary" />
-                            <forge:ForgeButton name="space-cancel" text="Cancel" />
-                        </ui:VisualElement>
-                    </ui:VisualElement>
-                </forge:ForgeSection>
-
-                <forge:ForgeSection title="TIME OF DAY">
-                    <ui:VisualElement class="forge-row">
-                        <ui:Slider name="time-hour" low-value="0" high-value="24" class="forge-grow" />
-                        <ui:Label name="time-readout" class="forge-time-readout" />
-                    </ui:VisualElement>
-                    <forge:ForgeCheckbox name="time-run" label="Run (20×)" />
-                    <forge:ForgeIntegerField name="time-day" label="Day" />
-                    <ui:Label name="time-date" class="forge-muted" />
-                    <ui:Label name="time-moons" class="forge-muted" />
-                </forge:ForgeSection>
-
-                <forge:ForgeSection title="WORLD">
-                    <ui:Label name="load-order" class="forge-muted forge-wrap" />
-                    <ui:Label name="record-counts" class="forge-muted" />
-                </forge:ForgeSection>
-
-                <forge:ForgeSection name="performance" title="PERFORMANCE" collapsible="true" collapsed="true">
-                    <ui:Label name="performance-text" class="forge-muted" />
-                </forge:ForgeSection>
-
-                <forge:ForgeSection title="CONTROLS" collapsible="true" collapsed="true">
-                    <ui:Label class="forge-muted" text="Tools: Q select · W move · E rotate · R scale · H hand&#10;P place · O outline · G fill · B sculpt · T paint · L water · M mark · Esc: back to select&#10;Outline / Fill: drag a rectangle · Shift square · [ ] turn it&#10;Click / Shift+click: select · Ctrl snaps&#10;Drag on empty space: box select (Shift adds)&#10;Move: drag objects over the ground, or the arrows&#10;Hold Space: hand in any tool&#10;Del: delete · End: drop to ground · F: frame&#10;Sculpt, Paint: hold left mouse · [ ]: brush size&#10;Water: click a hollow, drag up/down for the level · Del removes the lake&#10;1-9: place object · [ ]: rotate it (Shift: 90°)&#10;Hold + drag: paint a row · + Shift: straight line&#10;Type in Search to filter, Esc clears&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;  + wheel: fly speed (also SPEED in the top bar)&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
-                </forge:ForgeSection>
-            </ui:ScrollView>
-        </forge:ForgePanel>
-
         <ui:VisualElement name="selection-box" class="forge-selection-box forge-hidden" picking-mode="Ignore" />
 
         <forge:ForgePanel name="tool-strip" class="forge-tool-strip" />
@@ -79,11 +17,9 @@
                 <forge:ForgeButton name="redo" icon="redo-2" small="true" tooltip="Redo (Ctrl+Y)" />
                 <forge:ForgeSeparator vertical="true" />
                 <forge:ForgeButton name="save" icon="save" small="true" tooltip="Save (Ctrl+S)" />
-                <forge:ForgeSeparator vertical="true" />
-                <ui:Label class="forge-options__name" text="SPEED" tooltip="How fast the camera flies. While flying (right mouse held), the mouse wheel steps it." />
-                <ui:VisualElement name="fly-speed-presets" class="forge-row forge-choices" />
-                <ui:Label name="fly-speed-other" class="forge-options__accent" tooltip="Picked with the wheel while flying" />
-                <forge:ForgeCheckbox name="fly-speed-height" label="By height" tooltip="Fly faster the higher you are above the ground" />
+                <ui:VisualElement class="forge-grow" />
+                <forge:ForgeButton name="agent-toggle" icon="bot" small="true" tooltip="Agent" />
+                <forge:ForgeButton name="settings" icon="settings" small="true" tooltip="Settings" />
             </ui:VisualElement>
             <forge:ForgeSeparator class="forge-options__divider" />
             <ui:VisualElement class="forge-options__row">
@@ -132,12 +68,12 @@
                 <ui:VisualElement name="assets-tabs" class="forge-assets__tabs" />
                 <ui:Label name="assets-count" class="forge-muted forge-assets__count" />
                 <forge:ForgeTextInput name="assets-search" placeholder-text="Search…" class="forge-assets__search" />
-                <forge:ForgeButton name="assets-collapse" variant="Ghost" tooltip="Collapse / expand" />
+                <forge:ForgeButton name="assets-collapse" variant="Ghost" small="true" tooltip="Collapse / expand" />
             </ui:VisualElement>
             <ui:ScrollView name="assets-grid" class="forge-assets__grid" />
         </forge:ForgePanel>
 
-        <forge:ForgePanel name="agent-dock" class="forge-dock forge-dock--right">
+        <forge:ForgePanel name="agent-dock" class="forge-dock forge-dock--right forge-hidden">
             <ui:VisualElement class="forge-panel__title-bar">
                 <ui:Label class="forge-panel__title" text="Agent" />
                 <forge:ForgeButton name="agent-new" text="New chat" icon="sparkles" variant="Ghost" />
@@ -165,6 +101,88 @@
         </forge:ForgePanel>
 
         <ui:Label name="status" class="forge-panel forge-status" />
+
+        <forge:ForgePopup name="settings-popup" title="Settings">
+            <ui:VisualElement name="settings-tabs" class="forge-settings__tabs" />
+            <ui:ScrollView name="editing" class="forge-scroll">
+                <ui:VisualElement name="settings-page-general" class="forge-settings__page">
+                    <forge:ForgeSection title="WORLD">
+                        <ui:VisualElement class="forge-row">
+                            <ui:Label text="Saving to" />
+                            <ui:Label name="plugin" class="forge-plugin" tooltip="The plugin your edits are saved to" />
+                        </ui:VisualElement>
+                        <ui:Label name="load-order" class="forge-muted forge-wrap" />
+                        <ui:Label name="record-counts" class="forge-muted" />
+                    </forge:ForgeSection>
+
+                    <forge:ForgeSection title="CONTROLS">
+                        <ui:Label class="forge-muted" text="Tools: Q select · W move · E rotate · R scale · H hand&#10;P place · O outline · G fill · B sculpt · T paint · L water · M mark · Esc: back to select&#10;Outline / Fill: drag a rectangle · Shift square · [ ] turn it&#10;Click / Shift+click: select · Ctrl snaps&#10;Drag on empty space: box select (Shift adds)&#10;Move: drag objects over the ground, or the arrows&#10;Hold Space: hand in any tool&#10;Del: delete · End: drop to ground · F: frame&#10;Sculpt, Paint: hold left mouse · [ ]: brush size&#10;Water: click a hollow, drag up/down for the level · Del removes the lake&#10;1-9: place object · [ ]: rotate it (Shift: 90°)&#10;Hold + drag: paint a row · + Shift: straight line&#10;Type in Search to filter, Esc clears&#10;Ctrl+Z / Ctrl+Y: undo / redo · Ctrl+S: save&#10;Hold right mouse: look · + WASD/QE fly · Shift fast&#10;  + wheel: fly speed (also SPEED in the top bar)&#10;Wheel: zoom to cursor · Hold middle mouse: pan" />
+                    </forge:ForgeSection>
+                </ui:VisualElement>
+
+                <ui:VisualElement name="settings-page-space" class="forge-settings__page">
+                    <forge:ForgeSection title="SPACE">
+                        <ui:VisualElement name="space-sea" class="forge-row">
+                            <forge:ForgeCheckbox name="space-sea-on" label="Sea level" />
+                            <forge:ForgeNumberField name="space-sea-level" unit="m" />
+                        </ui:VisualElement>
+                        <forge:ForgeDropdown name="space-climate" label="Climate" />
+                        <ui:VisualElement name="space-land">
+                            <ui:Label name="space-land-size" class="forge-muted" tooltip="The land's reach in chunks of 64 m" />
+                            <ui:VisualElement class="forge-row">
+                                <ui:Label text="Extend" />
+                                <forge:ForgeIntegerField name="space-land-by" value="4" digits="2" tooltip="Chunks (64 m each) to add per press" />
+                                <forge:ForgeButton name="space-land-north" text="N" tooltip="Extend the land north (+Z)" />
+                                <forge:ForgeButton name="space-land-south" text="S" tooltip="Extend the land south (−Z)" />
+                                <forge:ForgeButton name="space-land-east" text="E" tooltip="Extend the land east (+X)" />
+                                <forge:ForgeButton name="space-land-west" text="W" tooltip="Extend the land west (−X)" />
+                                <forge:ForgeButton name="space-land-all" text="All" tooltip="Extend the land on every side at once, corners included (one undo step)" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="space-new-form" class="forge-indented">
+                            <forge:ForgeTextInput name="space-new-name" placeholder-text="Name, e.g. Whiterun or Bannered Mare" />
+                            <ui:VisualElement name="space-new-kinds" class="forge-row forge-choices" />
+                            <forge:ForgeDropdown name="space-new-size" label="Land" tooltip="Flat land to start with, in chunks of 64 m; extend it later" />
+                            <ui:VisualElement name="space-new-spacings" class="forge-row forge-choices" tooltip="Meters between terrain height samples: 1 m for detailed land, 2 m for open country (a quarter of the data)" />
+                            <ui:VisualElement class="forge-row forge-choices">
+                                <forge:ForgeButton name="space-create" text="Create" variant="Primary" />
+                                <forge:ForgeButton name="space-cancel" text="Cancel" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </forge:ForgeSection>
+                </ui:VisualElement>
+
+                <ui:VisualElement name="settings-page-time" class="forge-settings__page">
+                    <forge:ForgeSection title="TIME OF DAY">
+                        <ui:VisualElement class="forge-row">
+                            <ui:Slider name="time-hour" low-value="0" high-value="24" class="forge-grow" />
+                            <ui:Label name="time-readout" class="forge-time-readout" />
+                        </ui:VisualElement>
+                        <forge:ForgeCheckbox name="time-run" label="Run (20×)" />
+                        <forge:ForgeIntegerField name="time-day" label="Day" />
+                        <ui:Label name="time-date" class="forge-muted" />
+                        <ui:Label name="time-moons" class="forge-muted" />
+                    </forge:ForgeSection>
+                </ui:VisualElement>
+
+                <ui:VisualElement name="settings-page-camera" class="forge-settings__page">
+                    <forge:ForgeSection title="FLY SPEED">
+                        <ui:Label class="forge-muted forge-wrap" text="How fast the camera flies. While flying (right mouse held), the mouse wheel steps it." />
+                        <ui:VisualElement class="forge-row">
+                            <ui:VisualElement name="fly-speed-presets" class="forge-row forge-choices forge-grow" />
+                            <ui:Label name="fly-speed-other" class="forge-options__accent" tooltip="Picked with the wheel while flying" />
+                        </ui:VisualElement>
+                        <forge:ForgeCheckbox name="fly-speed-height" label="By height" tooltip="Fly faster the higher you are above the ground" />
+                    </forge:ForgeSection>
+                </ui:VisualElement>
+
+                <ui:VisualElement name="settings-page-performance" class="forge-settings__page">
+                    <forge:ForgeSection name="performance" title="PERFORMANCE">
+                        <ui:Label name="performance-text" class="forge-muted" />
+                    </forge:ForgeSection>
+                </ui:VisualElement>
+            </ui:ScrollView>
+        </forge:ForgePopup>
 
         <forge:ForgePanel name="fatal" class="forge-fatal forge-hidden" title="Forge failed to start">
             <ui:Label name="fatal-message" class="forge-wrap" />

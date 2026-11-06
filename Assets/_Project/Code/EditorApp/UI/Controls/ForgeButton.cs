@@ -18,9 +18,16 @@ namespace Forge.EditorApp.UI.Controls
         public const string IconOnlyClass = "forge-button--icon-only";
         public const string WithIconClass = "forge-button--with-icon";
         public const string SmallClass = "forge-button--small";
+        public const string BusyClass = "forge-button--busy";
+        public const string PulseClass = "forge-button--pulse";
+
+        // Used until the sheet's pulse transition has resolved (ForgeTokens --forge-motion-pulse is the real source).
+        const long FallbackPulseMilliseconds = 800;
 
         string _iconName = string.Empty;
         bool _small;
+        bool _busy;
+        IVisualElementScheduledItem _pulse;
         ForgeButtonVariant _variant = ForgeButtonVariant.Default;
 
         public ForgeButton() : this(null)
@@ -32,7 +39,12 @@ namespace Forge.EditorApp.UI.Controls
             AddToClassList(Class);
             AddToClassList(VariantClass(_variant));
             // The text may be set after the icon (UXML applies attributes in its own order), so read both on arrival.
-            RegisterCallback<AttachToPanelEvent>(_ => UpdateIconClasses());
+            RegisterCallback<AttachToPanelEvent>(_ =>
+            {
+                UpdateIconClasses();
+                UpdatePulse();
+            });
+            RegisterCallback<DetachFromPanelEvent>(_ => StopPulse());
         }
 
         /// <summary>An icon name from the set (UI/Icons); empty for none. Sits left of the text, or alone.</summary>
@@ -73,6 +85,63 @@ namespace Forge.EditorApp.UI.Controls
                 _small = value;
                 EnableInClassList(SmallClass, value);
             }
+        }
+
+        /// <summary>
+        /// Something this button stands for is at work (an agent thinking, a job running): it pulses until cleared.
+        /// UI Toolkit has no keyframes, so the button flips <see cref="PulseClass"/> on a timer and ForgeButton.uss
+        /// fades between the two looks; the timer's period is that transition's duration, so the tokens decide both.
+        /// </summary>
+        [UxmlAttribute]
+        public bool busy
+        {
+            get => _busy;
+            set
+            {
+                if (_busy == value)
+                    return;
+                _busy = value;
+                EnableInClassList(BusyClass, value);
+                UpdatePulse();
+            }
+        }
+
+        void UpdatePulse()
+        {
+            if (!_busy || panel == null)
+            {
+                StopPulse();
+                return;
+            }
+
+            if (_pulse == null)
+                SchedulePulse();
+        }
+
+        // One beat at a time, each reading the period afresh: the busy class's own transition resolves a frame late.
+        void SchedulePulse() => _pulse = schedule.Execute(() =>
+        {
+            ToggleInClassList(PulseClass);
+            SchedulePulse();
+        }).StartingIn(PulseMilliseconds());
+
+        void StopPulse()
+        {
+            _pulse?.Pause();
+            _pulse = null;
+            RemoveFromClassList(PulseClass);
+        }
+
+        long PulseMilliseconds()
+        {
+            foreach (var duration in resolvedStyle.transitionDuration)
+            {
+                var ms = duration.unit == TimeUnit.Second ? duration.value * 1000f : duration.value;
+                if (ms > 0f)
+                    return (long)ms;
+            }
+
+            return FallbackPulseMilliseconds;
         }
 
         void UpdateIconClasses()
