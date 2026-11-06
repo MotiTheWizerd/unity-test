@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26535fe233fae9f48b6056ec0896dd29, type: 3}
+  m_Name: MaterialCatalog
+  m_EditorClassIdentifier: Forge.World::Forge.World.Assets.MaterialCatalog
+  _entries:
+  - _key: material/cutstone
+    _asset: {fileID: 2100000, guid: 37d0b28bda4f75745af2f7904dd4bb51, type: 2}
+  - _key: material/darkiron
+    _asset: {fileID: 2100000, guid: 7d40af0768c0fd44f9c194109a480cfb, type: 2}
+  - _key: material/oakplanks
+    _asset: {fileID: 2100000, guid: f6ccdd80f490b7a4c8c81129c41cb50a, type: 2}
+  - _key: material/plaster
+    _asset: {fileID: 2100000, guid: 3138553e641b130498769f605d2506de, type: 2}
+  - _key: material/redbrick
+    _asset: {fileID: 2100000, guid: 9504cc92a43039540a6de866986976eb, type: 2}
+  - _key: material/rooftiles
+    _asset: {fileID: 2100000, guid: 61f9e74f8584d22429f4d61ded66b858, type: 2}
+  - _key: material/thatch
+    _asset: {fileID: 2100000, guid: c7b46793a2b197a489fe7fc08da36de4, type: 2}
+  - _key: material/weatheredplanks
+    _asset: {fileID: 2100000, guid: a74426d3b17ef8f4ca8a46cc4d6ea049, type: 2}

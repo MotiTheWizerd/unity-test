@@ -46,15 +46,17 @@ namespace Forge.Data.Serialization
                     {
                         byte[] packed;
                         ulong[] hashes;
+                        byte codec;
                         if (stored != null)
                         {
                             packed = stored.ReadRaw(key);
                             hashes = stored.HashesOf(key);
+                            codec = stored.CodecOf(key);
                         }
                         else
                         {
                             var objects = blocks.Read(key);
-                            packed = ObjectCodec.Encode(objects);
+                            packed = ObjectCodec.Encode(objects, out codec);
                             hashes = objects.Select(o => ObjectCodec.HashOf(o.Id)).ToArray();
                         }
 
@@ -76,7 +78,7 @@ namespace Forge.Data.Serialization
                         entryWriter.Write(output.Position);
                         entryWriter.Write(packed.Length);
                         entryWriter.Write(hashes.Length);
-                        entryWriter.Write(ObjectCodec.Id);
+                        entryWriter.Write(codec);
                         entryWriter.Write((byte)0);
                         foreach (var h in hashes)
                             entryWriter.Write(h);

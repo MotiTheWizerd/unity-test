@@ -77,7 +77,36 @@ namespace Forge.Editing
         /// as one undo step described with <paramref name="verb"/>. Objects whose transform
         /// doesn't change are skipped. Returns how many changed.
         /// </summary>
-        public static int Transform(EditSession session, IEnumerable<RecordId> ids, Func<PlacedObjectRecord, PlacedObjectRecord> change, string verb)
+        public static int Transform(EditSession session, IEnumerable<RecordId> ids, Func<PlacedObjectRecord, PlacedObjectRecord> change, string verb) =>
+            Change(session, ids, change, (a, b) => a.HasSameTransform(b), verb);
+
+        /// <summary>
+        /// Dresses <paramref name="slot"/> of every placed object in <paramref name="ids"/> in
+        /// <paramref name="material"/>, or gives it back its base object's look when that is null, as one undo step.
+        /// Objects already wearing it are skipped. Which objects have the slot is the caller's to know (it depends on
+        /// their assets); an object without it would keep the override harmlessly unseen. Returns how many changed.
+        /// </summary>
+        /// <exception cref="ArgumentException"><paramref name="material"/> is not a material record of the world.</exception>
+        public static int SetMaterial(EditSession session, IEnumerable<RecordId> ids, string slot, RecordId? material)
+        {
+            if (session == null)
+                throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(slot))
+                throw new ArgumentException("A slot is required.", nameof(slot));
+            if (material is RecordId id && !(session.World.Records.TryGet(id, out var record) && record is MaterialRecord))
+                throw new ArgumentException($"There is no material '{id}'.", nameof(material));
+
+            return Change(session, ids, p => p.WithMaterial(slot, material), (a, b) => a.HasSameMaterials(b),
+                material.HasValue ? "Set material of" : "Reset material of");
+        }
+
+        /// <summary>Gives every placed object in <paramref name="ids"/> back its base object's look in every slot, as one undo step.</summary>
+        public static int ResetMaterials(EditSession session, IEnumerable<RecordId> ids) =>
+            Change(session, ids, p => p.WithMaterials(null), (a, b) => a.HasSameMaterials(b), "Reset materials of");
+
+        // The one commit path for changes to existing placed objects: one undo step, unchanged objects skipped.
+        static int Change(EditSession session, IEnumerable<RecordId> ids, Func<PlacedObjectRecord, PlacedObjectRecord> change,
+            Func<PlacedObjectRecord, PlacedObjectRecord, bool> same, string verb)
         {
             if (session == null)
                 throw new ArgumentNullException(nameof(session));
@@ -88,12 +117,12 @@ namespace Forge.Editing
 
             var changes = PlacedObjects(session, ids)
                 .Select(original => (Original: original, Changed: change(original)))
-                .Where(c => !c.Original.HasSameTransform(c.Changed))
+                .Where(c => !same(c.Original, c.Changed))
                 .ToList();
             if (changes.Count == 0)
                 return 0;
             if (changes.Any(c => c.Changed.Id != c.Original.Id || c.Changed.BaseId != c.Original.BaseId))
-                throw new ArgumentException("A transform change must keep the record's id and base object.", nameof(change));
+                throw new ArgumentException("A change must keep the record's id and base object.", nameof(change));
 
             session.Batch(Describe(verb, changes.Select(c => c.Original).ToList()), () =>
             {

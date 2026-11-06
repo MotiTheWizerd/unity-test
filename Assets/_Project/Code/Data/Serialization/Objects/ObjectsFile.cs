@@ -123,7 +123,7 @@ namespace Forge.Data.Serialization
                         reader.ReadByte();
                         if (offset < HeaderSize || length < 0 || objects < 0 || offset + length > tableOffset)
                             throw Invalid(name, $"has block {i} outside its data");
-                        if (codec != ObjectCodec.Id)
+                        if (!ObjectCodec.IsKnown(codec))
                             throw Invalid(name, $"has block {i} in unknown codec {codec}");
                         var hashes = new ulong[objects];
                         for (var h = 0; h < objects; h++)
@@ -131,7 +131,7 @@ namespace Forge.Data.Serialization
                         var key = new ObjectBlockKey(space, coord);
                         if (i > 0 && entries[i - 1].Key.CompareTo(key) >= 0)
                             throw Invalid(name, "has blocks out of order");
-                        entries[i] = new Entry(key, offset, length, objects, hashes);
+                        entries[i] = new Entry(key, offset, length, objects, codec, hashes);
                     }
 
                     var overrides = new RecordId[reader.ReadInt32()];
@@ -160,7 +160,7 @@ namespace Forge.Data.Serialization
             if (!_index.TryGetValue(key, out var i))
                 return None;
             var handle = _handles[i] ?? (_handles[i] = new BlockHandle(this, i));
-            return _cache.GetOrLoad(handle, () => ObjectCodec.Decode(ReadRaw(i), key, _manifest));
+            return _cache.GetOrLoad(handle, () => ObjectCodec.Decode(ReadRaw(i), _entries[i].Codec, key, _manifest));
         }
 
         public bool TryLocate(RecordId id, out ObjectBlockKey key)
@@ -177,6 +177,9 @@ namespace Forge.Data.Serialization
 
         /// <summary>The id hashes of block <paramref name="key"/>, as stored: copied when the file is saved again.</summary>
         internal ulong[] HashesOf(ObjectBlockKey key) => _entries[_index[key]].Hashes;
+
+        /// <summary>The codec block <paramref name="key"/> is stored in, copied with it when the file is saved again.</summary>
+        internal byte CodecOf(ObjectBlockKey key) => _entries[_index[key]].Codec;
 
         /// <summary>Block <paramref name="key"/> as stored, still packed: copied as is when the file is saved again.</summary>
         internal byte[] ReadRaw(ObjectBlockKey key) => ReadRaw(_index[key]);
@@ -220,12 +223,13 @@ namespace Forge.Data.Serialization
 
         internal readonly struct Entry
         {
-            public Entry(ObjectBlockKey key, long offset, int length, int count, ulong[] hashes)
+            public Entry(ObjectBlockKey key, long offset, int length, int count, byte codec, ulong[] hashes)
             {
                 Key = key;
                 Offset = offset;
                 Length = length;
                 Count = count;
+                Codec = codec;
                 Hashes = hashes;
             }
 
@@ -236,6 +240,8 @@ namespace Forge.Data.Serialization
             public int Length { get; }
 
             public int Count { get; }
+
+            public byte Codec { get; }
 
             public ulong[] Hashes { get; }
         }

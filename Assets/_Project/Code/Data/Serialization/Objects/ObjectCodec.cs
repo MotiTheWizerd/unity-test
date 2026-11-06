@@ -11,19 +11,35 @@ namespace Forge.Data.Serialization
     /// <summary>
     /// Packs one block's placed objects into bytes and back. A block holds the objects of one chunk of one space, so
     /// the space is not repeated; namespaces and base object ids go through a string table, since a block repeats
-    /// a few of them; names are written once each. Transforms are plain floats.
+    /// a few of them; names are written once each. Transforms are plain floats. A block where some object wears other
+    /// materials (<see cref="PlacedObjectRecord.Materials"/>) is written in <see cref="WithMaterials"/>: each object
+    /// then also lists its overrides (slot, material namespace, material name, all through the string table). Every
+    /// other block stays in <see cref="Plain"/>, byte for byte what it always was.
     /// </summary>
     static class ObjectCodec
     {
-        /// <summary>The codec id stored with each block, so later codecs can sit beside this one.</summary>
-        public const byte Id = 1;
+        /// <summary>The codec of blocks whose objects all wear their base object's materials.</summary>
+        public const byte Plain = 1;
+
+        /// <summary>The codec of blocks where some object wears other materials in some of its slots.</summary>
+        public const byte WithMaterials = 2;
 
         static readonly Encoding Utf8 = new UTF8Encoding(false);
 
-        public static byte[] Encode(IReadOnlyList<PlacedObjectRecord> objects)
+        public static bool IsKnown(byte codec) => codec == Plain || codec == WithMaterials;
+
+        /// <param name="codec">Which codec the block was written in, stored beside it.</param>
+        public static byte[] Encode(IReadOnlyList<PlacedObjectRecord> objects, out byte codec)
         {
             if (objects == null)
                 throw new ArgumentNullException(nameof(objects));
+
+            codec = Plain;
+            foreach (var placed in objects)
+            {
+                if (placed.Materials.Count > 0)
+                    codec = WithMaterials;
+            }
 
             var strings = new List<string>();
             var indexOf = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -53,6 +69,15 @@ namespace Forge.Data.Serialization
                     Write(writer, placed.Position);
                     Write(writer, placed.Rotation);
                     writer.Write(placed.Scale);
+                    if (codec != WithMaterials)
+                        continue;
+                    writer.Write((byte)placed.Materials.Count);
+                    foreach (var material in placed.Materials)
+                    {
+                        writer.Write((ushort)Index(material.Slot));
+                        writer.Write((ushort)Index(material.Material.Namespace));
+                        writer.Write((ushort)Index(material.Material.Name));
+                    }
                 }
             }
 
@@ -75,8 +100,11 @@ namespace Forge.Data.Serialization
         /// <paramref name="manifest"/>'s plugin or one of its masters, sorted by id.
         /// </summary>
         /// <exception cref="DataValidationException">The block is damaged or breaks those rules.</exception>
-        public static IReadOnlyList<PlacedObjectRecord> Decode(byte[] block, ObjectBlockKey key, PluginManifest manifest)
+        public static IReadOnlyList<PlacedObjectRecord> Decode(byte[] block, byte codec, ObjectBlockKey key, PluginManifest manifest)
         {
+            if (!IsKnown(codec))
+                throw Damaged($"is in unknown codec {codec}");
+
             try
             {
                 using (var reader = new BinaryReader(new MemoryStream(block, writable: false), Utf8))
@@ -97,12 +125,13 @@ namespace Forge.Data.Serialization
                         var position = ReadVector3(reader);
                         var rotation = ReadQuaternion(reader);
                         var scale = reader.ReadSingle();
+                        var materials = codec == WithMaterials ? ReadMaterials(reader, strings) : null;
 
                         if (id.Namespace != manifest.Id && !manifest.HasMaster(id.Namespace))
                             throw new DataValidationException(new[] { $"Plugin '{manifest.Id}' writes record '{id}' but '{id.Namespace}' is neither the plugin itself nor one of its masters." });
                         if (!seen.Add(id))
                             throw new DataValidationException(new[] { $"Plugin '{manifest.Id}' contains record '{id}' more than once." });
-                        var placed = new PlacedObjectRecord(id, baseId, key.Space, position, rotation, scale);
+                        var placed = new PlacedObjectRecord(id, baseId, key.Space, position, rotation, scale, materials);
                         if (ObjectBlockKey.Of(placed) != key)
                             throw Damaged($"holds '{id}', which stands in chunk {ObjectBlockKey.Of(placed).Coord}, not {key.Coord}");
                         objects[i] = placed;
@@ -137,6 +166,18 @@ namespace Forge.Data.Serialization
             foreach (var c in id.Name)
                 hash = (hash ^ c) * prime;
             return hash;
+        }
+
+        static MaterialOverride[] ReadMaterials(BinaryReader reader, string[] strings)
+        {
+            var materials = new MaterialOverride[reader.ReadByte()];
+            for (var i = 0; i < materials.Length; i++)
+            {
+                var slot = strings[reader.ReadUInt16()];
+                materials[i] = new MaterialOverride(slot, new RecordId(strings[reader.ReadUInt16()], strings[reader.ReadUInt16()]));
+            }
+
+            return materials;
         }
 
         static DataValidationException Damaged(string problem) => new DataValidationException(new[] { $"An objects block {problem}." });

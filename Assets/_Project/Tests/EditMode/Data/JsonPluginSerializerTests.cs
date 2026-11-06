@@ -237,6 +237,19 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesMaterials()
+        {
+            var oak = new MaterialRecord(MaterialRecord.IdFor("core", "oak"), "Oak Planks", "material/oak");
+
+            var json = Write(Plugin("core", oak));
+            var copy = Read(json).Records.OfType<MaterialRecord>().Single();
+
+            Assert.That((copy.Id, copy.DisplayName, copy.AssetKey), Is.EqualTo((oak.Id, "Oak Planks", "material/oak")));
+            StringAssert.Contains("\"type\": \"material\"", json);
+            Assert.That(Write(Read(json)), Is.EqualTo(json));
+        }
+
+        [Test]
         public void RoundTrip_PreservesChunkPaint_AndUnpaintedChunksHaveNoPaintField()
         {
             var grass = GroundLayerRecord.IdFor("core", "grass");

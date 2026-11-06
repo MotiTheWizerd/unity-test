@@ -8,10 +8,9 @@ namespace Forge.UnityEditor.Content
 {
     /// <summary>
     /// Dev tool: turns each texture folder under Content/Ground into a terrain layer and lists it in the ground layer
-    /// catalog under "ground/{folder name, lower case}". A folder holds {Name}_Color, {Name}_NormalGL and, optionally,
-    /// {Name}_AmbientOcclusion, {Name}_Displacement and {Name}_Roughness (ambientCG's naming); the last three are packed
-    /// into the mask map Unity's terrain reads ({Name}_Mask.png: metallic 0, occlusion, height, smoothness =
-    /// 1 − roughness). It also records each layer's map color, the color texture's average times the layer's tint, for
+    /// catalog under "ground/{folder name, lower case}". A folder holds a scan in ambientCG's naming (see
+    /// <see cref="TextureMaps"/>); its maps are packed into the mask map Unity's terrain reads ({Name}_Mask.png:
+    /// metallic, occlusion, height, smoothness = 1 − roughness). It also records each layer's map color, the color texture's average times the layer's tint, for
     /// the far land. Existing assets are updated in place, so their GUIDs and hand-set tints survive a rebuild.
     /// </summary>
     static class GroundLayerBuilder
@@ -46,7 +45,7 @@ namespace Forge.UnityEditor.Content
                 var key = "ground/" + name.ToLowerInvariant();
                 catalog.Set(key, layer);
                 // The layer's tint (its diffuse remap, set by hand on the asset) colors the far land too.
-                catalog.SetMapColor(key, AverageColor($"{folder}/{name}_Color.jpg") * (Color)layer.diffuseRemapMax);
+                catalog.SetMapColor(key, TextureMaps.AverageColor(TextureMaps.ColorPath(folder, name)) * (Color)layer.diffuseRemapMax);
                 built++;
             }
 
@@ -58,20 +57,19 @@ namespace Forge.UnityEditor.Content
 
         static TerrainLayer BuildLayer(string folder, string name)
         {
-            var colorPath = $"{folder}/{name}_Color.jpg";
-            var normalPath = $"{folder}/{name}_NormalGL.jpg";
+            var colorPath = TextureMaps.ColorPath(folder, name);
+            var normalPath = TextureMaps.NormalPath(folder, name);
             if (!File.Exists(colorPath))
             {
                 Debug.LogWarning($"[Forge] {folder} has no {name}_Color.jpg; skipped.");
                 return null;
             }
 
-            Configure(colorPath, TextureImporterType.Default, sRGB: true);
+            TextureMaps.Configure(colorPath, TextureImporterType.Default, sRGB: true);
             var hasNormal = File.Exists(normalPath);
             if (hasNormal)
-                Configure(normalPath, TextureImporterType.NormalMap, sRGB: false);
-            var maskPath = PackMask(folder, name);
-            Configure(maskPath, TextureImporterType.Default, sRGB: false);
+                TextureMaps.Configure(normalPath, TextureImporterType.NormalMap, sRGB: false);
+            var maskPath = TextureMaps.PackMask(folder, name);
 
             var layerPath = $"{folder}/{name}.terrainlayer";
             var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
@@ -110,84 +108,6 @@ namespace Forge.UnityEditor.Content
             material.SetFloat("_Smoothness", 1f); // scales the mask map's smoothness, which is the real value
             EditorUtility.SetDirty(material);
             return material;
-        }
-
-        // Metallic 0, occlusion, height and smoothness in R, G, B, A; a missing map gives its neutral value.
-        static string PackMask(string folder, string name)
-        {
-            var occlusion = Load($"{folder}/{name}_AmbientOcclusion.jpg");
-            var height = Load($"{folder}/{name}_Displacement.jpg");
-            var roughness = Load($"{folder}/{name}_Roughness.jpg");
-            var size = Load($"{folder}/{name}_Color.jpg");
-            var width = size.width;
-            var heightPx = size.height;
-            Object.DestroyImmediate(size);
-
-            var mask = new Texture2D(width, heightPx, TextureFormat.RGBA32, false, linear: true);
-            var pixels = new Color32[width * heightPx];
-            for (var y = 0; y < heightPx; y++)
-            for (var x = 0; x < width; x++)
-            {
-                byte Sample(Texture2D map, byte neutral) =>
-                    map == null ? neutral : (byte)(map.GetPixelBilinear((x + 0.5f) / width, (y + 0.5f) / heightPx).r * 255f + 0.5f);
-
-                pixels[y * width + x] = new Color32(0, Sample(occlusion, 255), Sample(height, 128), (byte)(255 - Sample(roughness, 128)));
-            }
-
-            mask.SetPixels32(pixels);
-            var path = $"{folder}/{name}_Mask.png";
-            File.WriteAllBytes(path, mask.EncodeToPNG());
-            Object.DestroyImmediate(mask);
-            foreach (var map in new[] { occlusion, height, roughness }.Where(m => m != null))
-                Object.DestroyImmediate(map);
-
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-            return path;
-        }
-
-        // The color texture's average, linear: what the ground looks like from afar.
-        static Color AverageColor(string path)
-        {
-            var texture = Load(path);
-            var pixels = texture.GetPixels32();
-            Object.DestroyImmediate(texture);
-
-            double r = 0, g = 0, b = 0;
-            foreach (var pixel in pixels)
-            {
-                // Averaged as light (linear), not as sRGB numbers, so the result is the color the eye blends to.
-                r += Mathf.GammaToLinearSpace(pixel.r / 255f);
-                g += Mathf.GammaToLinearSpace(pixel.g / 255f);
-                b += Mathf.GammaToLinearSpace(pixel.b / 255f);
-            }
-
-            return new Color((float)(r / pixels.Length), (float)(g / pixels.Length), (float)(b / pixels.Length), 1f);
-        }
-
-        // Decodes an image file straight from disk (readable, unlike an imported texture); null when there is none.
-        static Texture2D Load(string path)
-        {
-            if (!File.Exists(path))
-                return null;
-            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false, linear: true);
-            texture.LoadImage(File.ReadAllBytes(path));
-            return texture;
-        }
-
-        static void Configure(string path, TextureImporterType type, bool sRGB)
-        {
-            if (!(AssetImporter.GetAtPath(path) is TextureImporter importer))
-            {
-                AssetDatabase.ImportAsset(path);
-                importer = (TextureImporter)AssetImporter.GetAtPath(path);
-            }
-
-            if (importer.textureType == type && importer.sRGBTexture == sRGB && importer.maxTextureSize == 1024)
-                return;
-            importer.textureType = type;
-            importer.sRGBTexture = sRGB;
-            importer.maxTextureSize = 1024;
-            importer.SaveAndReimport();
         }
     }
 }

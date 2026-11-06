@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Numerics;
 using Forge.Data;
@@ -80,6 +81,7 @@ namespace Forge.Tests.Editing
                 {
                     Plugin("core",
                         Base("core:tree"),
+                        new MaterialRecord(Oak, "Oak", "material/oak"),
                         Placed("core:ref/1", "core:tree", x: 1f),
                         Placed("core:ref/2", "core:tree", x: 3f)),
                 },
@@ -88,6 +90,65 @@ namespace Forge.Tests.Editing
         static readonly RecordId Ref1 = RecordId.Parse("core:ref/1");
         static readonly RecordId Ref2 = RecordId.Parse("core:ref/2");
         static readonly RecordId Tree = RecordId.Parse("core:tree");
+        static readonly RecordId Oak = MaterialRecord.IdFor("core", "oak");
+
+        static RecordId? MaterialOf(EditSession s, RecordId id, string slot) => s.World.Records.Get<PlacedObjectRecord>(id).MaterialIn(slot);
+
+        [Test]
+        public void SetMaterial_DressesASlotOfEachObject_InOneUndoStep_AsAnOverride()
+        {
+            var session = NewSession();
+
+            var changed = ObjectEdits.SetMaterial(session, new[] { Ref1, Ref2, Tree }, "Bark", Oak);
+
+            Assert.That(changed, Is.EqualTo(2));
+            Assert.That(MaterialOf(session, Ref1, "Bark"), Is.EqualTo(Oak));
+            Assert.That(MaterialOf(session, Ref2, "Bark"), Is.EqualTo(Oak));
+            Assert.That(session.World.Records.GetSource(Ref1), Is.EqualTo("user"));
+            Assert.That(session.UndoDescription, Is.EqualTo("Set material of 2 objects"));
+            Assert.That(ObjectEdits.SetMaterial(session, new[] { Ref1, Ref2 }, "Bark", Oak), Is.EqualTo(0), "Already wearing it.");
+
+            session.Undo();
+            Assert.That(MaterialOf(session, Ref1, "Bark"), Is.Null);
+            Assert.That(session.CanUndo, Is.False);
+        }
+
+        [Test]
+        public void SetMaterial_Null_AndResetMaterials_GiveBackTheBaseLook()
+        {
+            var session = NewSession();
+            ObjectEdits.SetMaterial(session, new[] { Ref1 }, "Bark", Oak);
+            ObjectEdits.SetMaterial(session, new[] { Ref1 }, "Leaves", Oak);
+
+            Assert.That(ObjectEdits.SetMaterial(session, new[] { Ref1 }, "Bark", null), Is.EqualTo(1));
+            Assert.That(session.UndoDescription, Is.EqualTo("Reset material of ref/1"));
+            Assert.That(MaterialOf(session, Ref1, "Leaves"), Is.EqualTo(Oak));
+
+            Assert.That(ObjectEdits.ResetMaterials(session, new[] { Ref1, Ref2 }), Is.EqualTo(1), "Ref2 wears its base look already.");
+            Assert.That(session.World.Records.Get<PlacedObjectRecord>(Ref1).Materials, Is.Empty);
+        }
+
+        [Test]
+        public void SetMaterial_RefusesWhatIsNotAMaterial()
+        {
+            var session = NewSession();
+
+            Assert.Throws<ArgumentException>(() => ObjectEdits.SetMaterial(session, new[] { Ref1 }, "Bark", Tree));
+            Assert.Throws<ArgumentException>(() => ObjectEdits.SetMaterial(session, new[] { Ref1 }, "Bark", MaterialRecord.IdFor("core", "lava")));
+            Assert.Throws<ArgumentException>(() => ObjectEdits.SetMaterial(session, new[] { Ref1 }, " ", Oak));
+            Assert.That(session.CanUndo, Is.False);
+        }
+
+        [Test]
+        public void Transform_KeepsAnObjectsMaterials()
+        {
+            var session = NewSession();
+            ObjectEdits.SetMaterial(session, new[] { Ref1 }, "Bark", Oak);
+
+            ObjectEdits.Move(session, new[] { Ref1 }, Vector3.UnitY);
+
+            Assert.That(MaterialOf(session, Ref1, "Bark"), Is.EqualTo(Oak));
+        }
 
         static Vector3 PositionOf(EditSession s, RecordId id) => s.World.Records.Get<PlacedObjectRecord>(id).Position;
 

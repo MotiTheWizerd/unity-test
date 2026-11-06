@@ -36,3 +36,7 @@
 # Ground textures (CC0, ~66 MB) are kept as plain git objects, not LFS: the account's LFS budget is used up.
 Assets/_Project/Content/Ground/**/*.jpg -filter -diff -merge binary
 Assets/_Project/Content/Ground/**/*.png -filter -diff -merge binary
+
+# Material textures (CC0) likewise: plain git objects, not LFS.
+Assets/_Project/Content/Materials/**/*.jpg -filter -diff -merge binary
+Assets/_Project/Content/Materials/**/*.png -filter -diff -merge binary

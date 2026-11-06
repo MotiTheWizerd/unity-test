@@ -46,12 +46,29 @@ namespace Forge.Tests.Data
 
         static PluginManifest Core(params string[] masters) => new PluginManifest("core", "1.0.0", masters);
 
+        static readonly RecordId Oak = MaterialRecord.IdFor("core", "oak");
+        static readonly RecordId Slate = MaterialRecord.IdFor("core", "slate");
+
+        static byte[] Encode(params PlacedObjectRecord[] objects) => ObjectCodec.Encode(objects, out _);
+
+        static System.Collections.Generic.IReadOnlyList<PlacedObjectRecord> Decode(byte[] block, ObjectBlockKey key, PluginManifest manifest) =>
+            ObjectCodec.Decode(block, ObjectCodec.Plain, key, manifest);
+
+        static System.Collections.Generic.IReadOnlyList<PlacedObjectRecord> RoundTrip(PlacedObjectRecord[] objects)
+        {
+            var block = ObjectCodec.Encode(objects, out var codec);
+            return ObjectCodec.Decode(block, codec, Key(0, 0), Core());
+        }
+
+        static PlacedObjectRecord Dressed(PlacedObjectRecord placed) =>
+            placed.WithMaterial("Roof", Slate).WithMaterial("Plaster", Oak);
+
         [Test]
         public void Codec_RoundTripsEveryField_ExactlyAndSorted()
         {
             var objects = new[] { At("core:ref/b", 3f, 4f), At("core:ref/a", 1f, 2f, "core:tree") }.OrderBy(o => o.Id).ToArray();
 
-            var copy = ObjectCodec.Decode(ObjectCodec.Encode(objects), Key(0, 0), Core());
+            var copy = RoundTrip(objects);
 
             Assert.That(copy.Select(o => o.Id), Is.EqualTo(objects.Select(o => o.Id)));
             for (var i = 0; i < objects.Length; i++)
@@ -67,13 +84,55 @@ namespace Forge.Tests.Data
         [Test]
         public void Codec_RejectsObjectsOfAnotherChunk_ForeignNamespaces_AndDamage()
         {
-            var block = ObjectCodec.Encode(new[] { At("core:ref/a", 1f, 2f) });
+            var block = Encode(At("core:ref/a", 1f, 2f));
 
-            Assert.Throws<DataValidationException>(() => ObjectCodec.Decode(block, Key(1, 0), Core()), "stands in chunk (0, 0)");
-            Assert.Throws<DataValidationException>(() => ObjectCodec.Decode(ObjectCodec.Encode(new[] { At("other:ref/a", 1f, 2f) }), Key(0, 0), Core()), "no such master");
-            Assert.DoesNotThrow(() => ObjectCodec.Decode(ObjectCodec.Encode(new[] { At("other:ref/a", 1f, 2f) }), Key(0, 0), Core("other")));
-            Assert.Throws<DataValidationException>(() => ObjectCodec.Decode(block.Take(block.Length - 5).ToArray(), Key(0, 0), Core()), "cut short");
-            Assert.Throws<DataValidationException>(() => ObjectCodec.Decode(block.Concat(new byte[] { 1 }).ToArray(), Key(0, 0), Core()), "trailing data");
+            Assert.Throws<DataValidationException>(() => Decode(block, Key(1, 0), Core()), "stands in chunk (0, 0)");
+            Assert.Throws<DataValidationException>(() => Decode(Encode(At("other:ref/a", 1f, 2f)), Key(0, 0), Core()), "no such master");
+            Assert.DoesNotThrow(() => Decode(Encode(At("other:ref/a", 1f, 2f)), Key(0, 0), Core("other")));
+            Assert.Throws<DataValidationException>(() => Decode(block.Take(block.Length - 5).ToArray(), Key(0, 0), Core()), "cut short");
+            Assert.Throws<DataValidationException>(() => Decode(block.Concat(new byte[] { 1 }).ToArray(), Key(0, 0), Core()), "trailing data");
+            Assert.Throws<DataValidationException>(() => ObjectCodec.Decode(block, 9, Key(0, 0), Core()), "unknown codec");
+        }
+
+        [Test]
+        public void Codec_BlocksWithoutMaterials_StayPlain_ByteForByte()
+        {
+            var objects = new[] { At("core:ref/a", 1f, 2f), At("core:ref/b", 3f, 4f) };
+            var plain = ObjectCodec.Encode(objects, out var codec);
+
+            Assert.That(codec, Is.EqualTo(ObjectCodec.Plain));
+            ObjectCodec.Encode(new[] { objects[0], Dressed(objects[1]) }, out var dressedCodec);
+            Assert.That(dressedCodec, Is.EqualTo(ObjectCodec.WithMaterials));
+            Assert.That(ObjectCodec.Encode(objects.Select(o => Dressed(o).WithMaterials(null)).ToArray(), out _), Is.EqualTo(plain),
+                "Clearing an object's materials writes exactly what it did before it had any.");
+        }
+
+        [Test]
+        public void Codec_RoundTripsMaterials_PerObject()
+        {
+            var objects = new[] { Dressed(At("core:ref/a", 1f, 2f)), At("core:ref/b", 3f, 4f) };
+
+            var copy = RoundTrip(objects);
+
+            Assert.That(copy[0].Materials, Is.EqualTo(objects[0].Materials));
+            Assert.That(copy[0].MaterialIn("Roof"), Is.EqualTo(Slate));
+            Assert.That(copy[1].Materials, Is.Empty);
+            Assert.That(copy[0].Position, Is.EqualTo(objects[0].Position));
+        }
+
+        [Test]
+        public void Store_SavesAndReloadsMaterials_AndCopiesTheirBlocksUnchanged()
+        {
+            _store.Save(Plugin("core", Base("core:rock"), Dressed(At("core:ref/a", 1f, 1f)), At("core:ref/b", 70f, 1f)));
+            var before = ObjectFiles().Single();
+            var store = Store();
+            var loaded = store.Load("core");
+
+            Assert.That(loaded.Objects.Read(Key(0, 0)).Single().MaterialIn("Plaster"), Is.EqualTo(Oak));
+            Assert.That(loaded.Objects.Read(Key(1, 0)).Single().Materials, Is.Empty);
+            store.Save(loaded);
+            Assert.That(ObjectFiles(), Is.EqualTo(new[] { before }), "The packed block is copied with its codec.");
+            Assert.That(Store().Load("core").Objects.Read(Key(0, 0)).Single().MaterialIn("Roof"), Is.EqualTo(Slate));
         }
 
         [Test]

@@ -114,6 +114,65 @@ namespace Forge.Tests.Data
             Assert.That(record.WithTransform(Vector3.One, Quaternion.Identity, 3f).Space, Is.EqualTo(TestRecords.OtherSpace));
         }
 
+        static readonly RecordId Oak = MaterialRecord.IdFor("forge.core", "oak");
+        static readonly RecordId Slate = MaterialRecord.IdFor("forge.core", "slate");
+
+        [Test]
+        public void PlacedObject_WearsItsBaseLook_UntilASlotIsDressed()
+        {
+            var record = new PlacedObjectRecord(PlacedId, TreeId, TestRecords.Space, Vector3.Zero, Quaternion.Identity, 1f);
+
+            Assert.That(record.Materials, Is.Empty);
+            Assert.That(record.MaterialIn("Roof"), Is.Null);
+
+            var dressed = record.WithMaterial("Roof", Slate).WithMaterial("Plaster", Oak);
+            Assert.That(dressed.Materials, Is.EqualTo(new[] { new MaterialOverride("Plaster", Oak), new MaterialOverride("Roof", Slate) }), "Sorted by slot.");
+            Assert.That(dressed.MaterialIn("Roof"), Is.EqualTo(Slate));
+            Assert.That(dressed.WithMaterial("Roof", Oak).MaterialIn("Roof"), Is.EqualTo(Oak), "Dressing a slot again replaces it.");
+            Assert.That(dressed.WithMaterial("Roof", null).Materials, Is.EqualTo(new[] { new MaterialOverride("Plaster", Oak) }));
+            Assert.That(record.Materials, Is.Empty, "Records are immutable.");
+        }
+
+        [Test]
+        public void PlacedObject_TransformsKeepTheMaterials_AndSameMaterialsCompares()
+        {
+            var dressed = new PlacedObjectRecord(PlacedId, TreeId, TestRecords.Space, Vector3.Zero, Quaternion.Identity, 1f)
+                .WithMaterial("Roof", Slate);
+
+            var moved = dressed.WithTransform(Vector3.One, Quaternion.Identity, 2f);
+
+            Assert.That(moved.MaterialIn("Roof"), Is.EqualTo(Slate));
+            Assert.That(moved.HasSameMaterials(dressed), Is.True);
+            Assert.That(moved.HasSameMaterials(dressed.WithMaterial("Roof", Oak)), Is.False);
+            Assert.That(dressed.HasSameTransform(dressed.WithMaterial("Roof", Oak)), Is.True);
+        }
+
+        [Test]
+        public void PlacedObject_RejectsASlotDressedTwice_AndBadSlots()
+        {
+            var twice = new[] { new MaterialOverride("Roof", Oak), new MaterialOverride("Roof", Slate) };
+
+            Assert.Throws<ArgumentException>(() =>
+                new PlacedObjectRecord(PlacedId, TreeId, TestRecords.Space, Vector3.Zero, Quaternion.Identity, 1f, twice));
+            Assert.Throws<ArgumentException>(() => new MaterialOverride(" ", Oak));
+            Assert.Throws<ArgumentException>(() => new MaterialOverride("Roof\n", Oak));
+            Assert.Throws<ArgumentException>(() => new MaterialOverride(new string('a', MaterialOverride.MaxSlotLength + 1), Oak));
+            Assert.Throws<ArgumentException>(() => new MaterialOverride("Roof", default));
+            Assert.Throws<ArgumentException>(() =>
+                new PlacedObjectRecord(PlacedId, TreeId, TestRecords.Space, Vector3.Zero, Quaternion.Identity, 1f, new[] { default(MaterialOverride) }));
+        }
+
+        [Test]
+        public void Material_IsNamedUnderMaterial_WithANameAndAnAssetKey()
+        {
+            var oak = new MaterialRecord(Oak, "Oak Planks", "material/oak");
+
+            Assert.That((oak.DisplayName, oak.AssetKey), Is.EqualTo(("Oak Planks", "material/oak")));
+            Assert.Throws<ArgumentException>(() => new MaterialRecord(RecordId.Parse("forge.core:oak"), "Oak", "material/oak"));
+            Assert.Throws<ArgumentException>(() => new MaterialRecord(Oak, " ", "material/oak"));
+            Assert.Throws<ArgumentException>(() => new MaterialRecord(Oak, "Oak", ""));
+        }
+
         [Test]
         public void Space_StoresValues()
         {

@@ -270,6 +270,54 @@
       "category": "Props/Lighting"
     },
     {
+      "type": "material",
+      "id": "forge.core:material/cutstone",
+      "displayName": "Cut Stone",
+      "assetKey": "material/cutstone"
+    },
+    {
+      "type": "material",
+      "id": "forge.core:material/darkiron",
+      "displayName": "Dark Iron",
+      "assetKey": "material/darkiron"
+    },
+    {
+      "type": "material",
+      "id": "forge.core:material/oakplanks",
+      "displayName": "Oak Planks",
+      "assetKey": "material/oakplanks"
+    },
+    {
+      "type": "material",
+      "id": "forge.core:material/plaster",
+      "displayName": "Plaster",
+      "assetKey": "material/plaster"
+    },
+    {
+      "type": "material",
+      "id": "forge.core:material/redbrick",
+      "displayName": "Red Brick",
+      "assetKey": "material/redbrick"
+    },
+    {
+      "type": "material",
+      "id": "forge.core:material/rooftiles",
+      "displayName": "Roof Tiles",
+      "assetKey": "material/rooftiles"
+    },
+    {
+      "type": "material",
+      "id": "forge.core:material/thatch",
+      "displayName": "Thatch",
+      "assetKey": "material/thatch"
+    },
+    {
+      "type": "material",
+      "id": "forge.core:material/weatheredplanks",
+      "displayName": "Weathered Planks",
+      "assetKey": "material/weatheredplanks"
+    },
+    {
       "type": "base_object",
       "id": "forge.core:pillar",
       "displayName": "Pillar",
