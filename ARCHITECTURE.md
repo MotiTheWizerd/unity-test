@@ -460,7 +460,11 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
   4 tiles ≈ 1 km; the fog hides everything one tile short of that, `FogReach`, so the outer ring's stepped edge never
   shows against the sky), under the world root like everything else, and `FarTerrainMesh` builds a plain
   mesh per tile with no collider (`ScenePicker` never hits far land). Tiles cover the near land too, 2 m below it, so
-  the real chunks draw over them and there is no seam to stitch at the load radius. `WorldStreamer` gives the far
+  the real chunks draw over them and there is no seam to stitch at the load radius. Where the land ends (a chunk
+  side with no chunk beyond it, `FarTile.Edges`, sampled at the chunk's own resolution) the tile hangs a skirt from
+  the real terrain's edge to 4 m under the far land, in its ground's color in shade, so the map's edge is a solid
+  slab, not two thin sheets with sky between them; `Invalidate` rebuilds the neighbouring tile on every side, so an
+  edge that stops being one (extend land) loses its skirt. `WorldStreamer` gives the far
   land whatever budget the chunks left in the frame (one tile anyway when no chunk loaded, so it never stalls);
   tiles rebuild when `WorldView.TerrainChanged` names a chunk of theirs (a sculpt commit, a paint stroke, extend land,
   undo), edge neighbours included. A tile reads its 16 chunks through the terrain cache, ~2.5 ms worst case here.

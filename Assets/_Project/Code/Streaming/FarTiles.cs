@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Forge.Data;
 using Forge.Data.Terrain;
 
@@ -25,6 +26,7 @@ namespace Forge.Streaming
         /// own sample spacing, so each far sample is one of the chunk's samples, never an interpolation.
         /// <paramref name="paintAt"/>, when given, answers a chunk's paint (null where unpainted): each sample then
         /// records the ground showing most at the paint texel under it (<see cref="FarTile.GroundAt"/>).
+        /// Each chunk's four neighbours are asked too, to find where the land ends (<see cref="FarTile.Edges"/>).
         /// </summary>
         public static FarTile Sample(ChunkCoord tile, int chunksPerTile, float step, Func<ChunkCoord, ChunkHeights> terrainAt,
             Func<ChunkCoord, ChunkPaint> paintAt = null)
@@ -77,7 +79,51 @@ namespace Forge.Streaming
                 }
             }
 
-            return new FarTile(tile, chunksPerTile, step, heights, present, ground);
+            return new FarTile(tile, chunksPerTile, step, heights, present, ground, Edges(first, chunksPerTile, present, terrainAt));
+        }
+
+        // Every side of the tile's chunks with no chunk beyond it, at the chunk's own resolution. Each edge runs with the
+        // land on its left (see LandEdge.DirectionX), so the side away from the land is always the same.
+        static List<LandEdge> Edges(ChunkCoord first, int chunksPerTile, bool[] present, Func<ChunkCoord, ChunkHeights> terrainAt)
+        {
+            var edges = new List<LandEdge>();
+            for (var cz = 0; cz < chunksPerTile; cz++)
+            for (var cx = 0; cx < chunksPerTile; cx++)
+            {
+                if (!present[cz * chunksPerTile + cx])
+                    continue;
+
+                var coord = new ChunkCoord(first.X + cx, first.Z + cz);
+                bool Open(int dx, int dz) => terrainAt(new ChunkCoord(coord.X + dx, coord.Z + dz)) == null;
+                if (!(Open(0, -1) || Open(0, 1) || Open(1, 0) || Open(-1, 0)))
+                    continue;
+
+                var field = terrainAt(coord);
+                var samples = field.Load();
+                var last = field.Resolution - 1;
+                var spacing = WorldGrid.SpacingOf(field.Resolution);
+                var size = WorldGrid.ChunkSize;
+                var x0 = cx * size;
+                var z0 = cz * size;
+                float[] Row(Func<int, float> height)
+                {
+                    var row = new float[field.Resolution];
+                    for (var i = 0; i <= last; i++)
+                        row[i] = height(i);
+                    return row;
+                }
+
+                if (Open(0, -1))
+                    edges.Add(new LandEdge(x0, z0, 1, 0, spacing, Row(i => samples[i, 0])));
+                if (Open(0, 1))
+                    edges.Add(new LandEdge(x0 + size, z0 + size, -1, 0, spacing, Row(i => samples[last - i, last])));
+                if (Open(1, 0))
+                    edges.Add(new LandEdge(x0 + size, z0, 0, 1, spacing, Row(i => samples[last, i])));
+                if (Open(-1, 0))
+                    edges.Add(new LandEdge(x0, z0 + size, 0, -1, spacing, Row(i => samples[0, last - i])));
+            }
+
+            return edges;
         }
 
         // The paint texel under a point `meters` into its chunk; the east and north edges belong to the last texel.

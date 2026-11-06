@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Forge.Data;
 using Forge.Data.Terrain;
 
@@ -16,9 +17,11 @@ namespace Forge.Streaming
         readonly bool[] _chunks;
         readonly RecordId?[] _ground;
 
-        internal FarTile(ChunkCoord coord, int chunksPerTile, float step, float[] heights, bool[] chunks, RecordId?[] ground = null)
+        internal FarTile(ChunkCoord coord, int chunksPerTile, float step, float[] heights, bool[] chunks, RecordId?[] ground = null,
+            IReadOnlyList<LandEdge> edges = null)
         {
             _ground = ground ?? new RecordId?[heights.Length];
+            Edges = edges ?? Array.Empty<LandEdge>();
             Coord = coord;
             ChunksPerTile = chunksPerTile;
             Step = step;
@@ -47,6 +50,9 @@ namespace Forge.Streaming
 
         /// <summary>Cells (quads between samples) along each edge.</summary>
         public int Cells => Resolution - 1;
+
+        /// <summary>The sides of the tile's chunks where the land ends (no chunk beyond them, in this tile or the next).</summary>
+        public IReadOnlyList<LandEdge> Edges { get; }
 
         /// <summary>True when none of the tile's chunks exist: nothing to draw.</summary>
         public bool IsEmpty => Array.IndexOf(_chunks, true) < 0;

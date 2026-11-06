@@ -88,14 +88,20 @@ namespace Forge.World
                 var tile = FarTiles.TileOf(chunk, ChunksPerTile);
                 if (_tiles.ContainsKey(tile))
                     _dirty.Add(tile);
-                // A chunk on a tile's west or south edge is also the last column or row of the neighbour there.
-                var west = new ChunkCoord(tile.X - 1, tile.Z);
-                var south = new ChunkCoord(tile.X, tile.Z - 1);
-                if (chunk.X == tile.X * ChunksPerTile && _tiles.ContainsKey(west))
-                    _dirty.Add(west);
-                if (chunk.Z == tile.Z * ChunksPerTile && _tiles.ContainsKey(south))
-                    _dirty.Add(south);
+                // A chunk on a tile's west or south edge is also the last column or row of the neighbour there; and a
+                // chunk on any edge decides whether the neighbouring tile's chunk beside it ends the land (its skirt).
+                MarkNeighbour(chunk.X == tile.X * ChunksPerTile, tile.X - 1, tile.Z);
+                MarkNeighbour(chunk.Z == tile.Z * ChunksPerTile, tile.X, tile.Z - 1);
+                MarkNeighbour(chunk.X == tile.X * ChunksPerTile + ChunksPerTile - 1, tile.X + 1, tile.Z);
+                MarkNeighbour(chunk.Z == tile.Z * ChunksPerTile + ChunksPerTile - 1, tile.X, tile.Z + 1);
             }
+        }
+
+        void MarkNeighbour(bool onThatEdge, int x, int z)
+        {
+            var neighbour = new ChunkCoord(x, z);
+            if (onThatEdge && _tiles.ContainsKey(neighbour))
+                _dirty.Add(neighbour);
         }
 
         /// <summary>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Forge.Data.Terrain;
 using Forge.Streaming;
 using NUnit.Framework;
@@ -10,6 +11,48 @@ namespace Forge.Tests.Streaming
     {
         const int ChunksPerTile = 4;
         const float Step = 8f;
+
+        [Test]
+        public void Edges_AreTheSidesWithNoLandBeyond_AtTheChunksOwnResolution_LandOnTheLeft()
+        {
+            // Two chunks side by side, (0, 0) and (1, 0); land nowhere else, so 6 sides end the land.
+            Func<ChunkCoord, ChunkHeights> terrainAt = coord =>
+                (coord.Z == 0 && (coord.X == 0 || coord.X == 1)) ? Plane(coord, 65) : null;
+
+            var edges = FarTiles.Sample(new ChunkCoord(0, 0), ChunksPerTile, Step, terrainAt).Edges;
+
+            Assert.That(edges.Count, Is.EqualTo(6));
+            Assert.That(edges.All(e => e.Heights.Length == 65 && e.Spacing == 1f), Is.True);
+            // Every sample is the land's height where it lies (the tile is at the world origin), and the land is on the left.
+            foreach (var edge in edges)
+            {
+                for (var i = 0; i < edge.Heights.Length; i++)
+                {
+                    var x = edge.StartX + edge.DirectionX * edge.Spacing * i;
+                    var z = edge.StartZ + edge.DirectionZ * edge.Spacing * i;
+                    Assert.That(edge.Heights[i], Is.EqualTo(Expected(x, z)).Within(1e-3f));
+                }
+
+                var midX = edge.StartX + edge.DirectionX * 32f - edge.OutwardX;
+                var midZ = edge.StartZ + edge.DirectionZ * 32f - edge.OutwardZ;
+                Assert.That(midX >= 0f && midX <= 128f && midZ >= 0f && midZ <= 64f, Is.True, "A step inward from the edge is on land.");
+            }
+
+            Assert.That(edges.Count(e => e.OutwardX == 1), Is.EqualTo(1), "Only chunk (1, 0) ends the land to the east.");
+        }
+
+        [Test]
+        public void Edges_SeeLandInTheNextTile()
+        {
+            // Chunk (3, 0) is the tile's east column; its neighbour (4, 0) lies in the next tile.
+            Func<ChunkCoord, ChunkHeights> terrainAt = coord =>
+                coord.Z == 0 && (coord.X == 3 || coord.X == 4) ? Plane(coord, 65) : null;
+
+            var edges = FarTiles.Sample(new ChunkCoord(0, 0), ChunksPerTile, Step, terrainAt).Edges;
+
+            Assert.That(edges.Count, Is.EqualTo(3), "South, north and west: east has land beyond, in the next tile.");
+            Assert.That(edges.Any(e => e.OutwardX == 1), Is.False);
+        }
 
         [Test]
         public void TileOf_FloorsNegativeCoordinates()
