@@ -8,6 +8,7 @@ through `Humanoid/Humanoid.controller`, built by *Forge → Characters → Build
 | Idle | Mixamo "Neutral Idle" | Adobe Mixamo |
 | Walk | Mixamo "Walking" | Adobe Mixamo |
 | Run | Mixamo "Standard Run" | Adobe Mixamo |
+| Sprint | Mixamo "Sprint" | Adobe Mixamo |
 | Jump | Mixamo "Running Jump" | Adobe Mixamo |
 
 Downloaded by Moti from mixamo.com as FBX for Unity, 30 fps, without skin, travel left in (not "in place"). Mixamo
