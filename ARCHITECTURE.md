@@ -900,7 +900,7 @@ slopes), so results are exact and every edit goes through the edit session.
   change; fine for hundreds of objects, and a virtualized `ListView` is the next step for thousands.
 - Controls: the tool keys above (Q / W / E / R / H / P / O / G / B / T / L / M) or the tool strip; hold Space → hand; 1–9 or the
   palette → Place tool (`[` / `]` rotate, hold + drag paints a row, + Shift a straight one); Esc → Select tool / deselect; Ctrl+Z / Ctrl+Y
-  (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; Ctrl+A selects every loaded object, Ctrl+Shift+A deselects; Ctrl+D duplicates the selection in place (`ObjectEdits.Duplicate`: same kind, space, transform and materials, new ids, one undo step) and selects the copies, as in Unity and the Creation Kit; Shift or Ctrl + click or box adds to the selection; hold right mouse to look, with WASD/QE to fly (the wheel then steps the
+  (or Ctrl+Shift+Z) undo/redo; Ctrl+S save; Ctrl+A selects every loaded object, Ctrl+Shift+A deselects; Ctrl+D duplicates the selection (`ObjectEdits.Duplicate`: same kind, space, transform and materials, new ids, one undo step, set down by the caller) beside itself: the selection width plus 1 m to the camera's right (`ICameraRig.Right`), seated on the ground there (slope fit as placing, else the same height above the ground), and selects the copies; Shift or Ctrl + click or box adds to the selection; hold right mouse to look, with WASD/QE to fly (the wheel then steps the
   fly speed); otherwise the wheel dollies towards the point under the cursor; hold middle mouse to pan (the grabbed
   point stays under the cursor); F frames the selection.
 - **Fly speed.** `FlySpeed` (engine-free, `Forge.Editing.Geometry`, owned by `EditorContext`) is a multiplier on the

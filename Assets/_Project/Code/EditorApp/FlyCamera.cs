@@ -60,6 +60,8 @@ namespace Forge.EditorApp
             _speed = speed ?? throw new ArgumentNullException(nameof(speed));
         }
 
+        public Vector3 Right => transform.right;
+
         public void Frame(Vector3 center, float radius)
         {
             var distance = ViewMath.FitDistance(Mathf.Max(radius, 0.5f) * _framePadding, _camera.fieldOfView, _camera.aspect);

@@ -316,9 +316,17 @@ namespace Forge.EditorApp
             _context.Report("Deselected");
         }
 
+        /// <summary>Space left between the selection and its copies.</summary>
+        const float DuplicateGap = 1f;
+
+        /// <summary>How far copies go when the selection has no drawn size yet.</summary>
+        const float DuplicateFallbackStep = 3f;
+
         /// <summary>
-        /// Copies the selected objects where they stand, materials and all (Ctrl+D, as in Unity and the Creation Kit), and
-        /// selects the copies so they can be moved straight away. One undo step.
+        /// Copies the selected objects, materials and all (Ctrl+D), and sets the copies down beside them: the whole
+        /// selection's width plus a gap to the right as the camera sees it, seated on the ground there (slope-aligned
+        /// objects fit the slope, others keep their height above the ground). The copies are selected so they can be moved
+        /// straight away. One undo step.
         /// </summary>
         public void DuplicateSelection()
         {
@@ -328,8 +336,10 @@ namespace Forge.EditorApp
                 return;
             }
 
+            var offset = DuplicateOffset();
             IReadOnlyList<PlacedObjectRecord> copies = Array.Empty<PlacedObjectRecord>();
-            if (!_context.TryEdit("Duplicate", () => copies = ObjectEdits.Duplicate(_context.Session, _context.Selection.Ids, "Duplicate")))
+            if (!_context.TryEdit("Duplicate", () => copies = ObjectEdits.Duplicate(_context.Session, _context.Selection.Ids, "Duplicate",
+                    copy => SetDownAt(copy, offset))))
                 return;
             if (copies.Count == 0)
             {
@@ -338,14 +348,53 @@ namespace Forge.EditorApp
             }
 
             _context.Selection.Replace(copies.Select(c => c.Id));
-            _context.Report($"Duplicated {copies.Count} object(s) in place; move them where you want them");
+            _context.Report($"Duplicated {copies.Count} object(s) beside the originals");
+        }
+
+        // Beside the selection on screen: the camera's right, flat on the ground, as far as the selection is wide that way.
+        System.Numerics.Vector3 DuplicateOffset()
+        {
+            var right = _camera.Right;
+            var flat = new Vector3(right.x, 0f, right.z);
+            flat = flat.sqrMagnitude > 1e-6f ? flat.normalized : Vector3.right;
+            var step = TrySelectionBounds(out var bounds)
+                ? 2f * (Mathf.Abs(flat.x) * bounds.extents.x + Mathf.Abs(flat.z) * bounds.extents.z) + DuplicateGap
+                : DuplicateFallbackStep;
+            return new System.Numerics.Vector3(flat.x * step, 0f, flat.z * step);
+        }
+
+        // A copy moved by the offset and set on the ground there: fitted to the slope as placing does, or else keeping
+        // the original's height above the ground (on it stays on it, raised stays raised).
+        PlacedObjectRecord SetDownAt(PlacedObjectRecord copy, System.Numerics.Vector3 offset)
+        {
+            var moved = copy.WithPosition(copy.Position + offset);
+            if (TrySeatOnSlope(moved, out var pose))
+                return moved.WithTransform(pose.Item1, pose.Item2, moved.Scale);
+
+            var groundThere = _picker.TerrainHeightAt(moved.Position.X, moved.Position.Z);
+            var groundHere = _picker.TerrainHeightAt(copy.Position.X, copy.Position.Z);
+            if (groundThere is float there && groundHere is float here)
+                return moved.WithPosition(new System.Numerics.Vector3(moved.Position.X, copy.Position.Y + (there - here), moved.Position.Z));
+            return moved;
         }
 
         /// <summary>Glides the camera so the whole selection fills the view (F).</summary>
         public void FrameSelection()
         {
+            if (!TrySelectionBounds(out var combined))
+            {
+                _context.Report("Frame: nothing selected");
+                return;
+            }
+
+            _camera.Frame(combined.center, combined.extents.magnitude);
+        }
+
+        // The drawn bounds of every selected object on show, in the scene; false when none is.
+        bool TrySelectionBounds(out Bounds combined)
+        {
             var found = false;
-            var combined = default(Bounds);
+            combined = default;
             foreach (var id in _context.Selection.Ids)
             {
                 if (!_view.TryGetObject(id, out var go) || !RendererBounds.TryGet(go, out var bounds))
@@ -357,13 +406,7 @@ namespace Forge.EditorApp
                 found = true;
             }
 
-            if (!found)
-            {
-                _context.Report("Frame: nothing selected");
-                return;
-            }
-
-            _camera.Frame(combined.center, combined.extents.magnitude);
+            return found;
         }
 
         /// <summary>

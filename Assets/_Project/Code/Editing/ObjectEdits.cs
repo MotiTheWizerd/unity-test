@@ -48,11 +48,13 @@ namespace Forge.Editing
         }
 
         /// <summary>
-        /// Copies every placed object in <paramref name="ids"/> where it stands: same kind, space, transform and materials,
-        /// a new id each, as one undo step described with <paramref name="description"/>. Ids that aren't placed objects
-        /// are skipped. Returns the copies, in the order of <paramref name="ids"/>.
+        /// Copies every placed object in <paramref name="ids"/>: same kind, space, transform and materials, a new id each,
+        /// then set down by <paramref name="place"/> (where the copy goes; null: where the original stands), as one undo
+        /// step described with <paramref name="description"/>. Ids that aren't placed objects are skipped. Returns the
+        /// copies, in the order of <paramref name="ids"/>.
         /// </summary>
-        public static IReadOnlyList<PlacedObjectRecord> Duplicate(EditSession session, IEnumerable<RecordId> ids, string description)
+        public static IReadOnlyList<PlacedObjectRecord> Duplicate(EditSession session, IEnumerable<RecordId> ids, string description,
+            Func<PlacedObjectRecord, PlacedObjectRecord> place = null)
         {
             if (session == null)
                 throw new ArgumentNullException(nameof(session));
@@ -75,6 +77,7 @@ namespace Forge.Editing
             var newIds = session.NewIds(PlacedIdPrefix, originals.Count);
             var copies = originals
                 .Select((p, i) => new PlacedObjectRecord(newIds[i], p.BaseId, p.Space, p.Position, p.Rotation, p.Scale, p.Materials))
+                .Select(copy => place != null ? place(copy) : copy)
                 .ToList();
             session.Batch(description, () =>
             {

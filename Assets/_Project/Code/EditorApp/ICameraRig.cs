@@ -8,6 +8,9 @@ namespace Forge.EditorApp
         /// <summary>Moves the camera, keeping its direction, so the sphere (center, radius) fills the view.</summary>
         void Frame(Vector3 center, float radius);
 
+        /// <summary>The camera's right, the way "beside" goes on screen.</summary>
+        Vector3 Right { get; }
+
         /// <summary>Grabs the world under <paramref name="screenPoint"/> (pixels from the bottom left) for <see cref="Pan"/>.</summary>
         void BeginPan(Vector2 screenPoint);
 

@@ -303,6 +303,18 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void Duplicate_SetsTheCopiesDownWhereTheCallerSays()
+        {
+            var session = NewSession();
+
+            var copies = ObjectEdits.Duplicate(session, new[] { Ref1, Ref2 }, "Duplicate", copy => copy.WithPosition(copy.Position + new Vector3(10, 0, 0)));
+
+            Assert.That(copies.Select(c => session.World.Records.Get<PlacedObjectRecord>(c.Id).Position),
+                Is.EqualTo(new[] { new Vector3(11, 0, 0), new Vector3(13, 0, 0) }));
+            Assert.That(PositionOf(session, Ref1), Is.EqualTo(new Vector3(1, 0, 0)), "The originals stay.");
+        }
+
+        [Test]
         public void Duplicate_NothingPlaced_RecordsNothing()
         {
             var session = NewSession();
