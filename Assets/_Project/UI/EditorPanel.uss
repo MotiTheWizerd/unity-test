@@ -22,8 +22,7 @@
     width: 340px;
 }
 
-/* While the agent dock is open (AgentDockToggle), the top bar and the assets browser stop short of it. */
-.forge-root.is-agent-open .forge-options,
+/* While the agent dock is open (AgentDockToggle), the assets browser stops short of it. */
 .forge-root.is-agent-open .forge-assets {
     right: 360px;
 }
@@ -139,10 +138,13 @@
 
 /* ---- The options bar across the top: a global row (the space), then the current tool's row ---------------- */
 
+/* Centred across the screen, as wide as the tokens allow; never wider than the room between the tool strip and the edge. */
 .forge-options {
     position: absolute;
-    left: 62px;
-    right: 10px;
+    left: 50%;
+    translate: -50% 0;
+    width: var(--forge-toolbar-max-width);
+    max-width: 85%;
     top: 10px;
     padding: var(--forge-space-1) var(--forge-space-3);
 }

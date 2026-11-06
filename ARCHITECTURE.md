@@ -736,8 +736,8 @@ slopes), so results are exact and every edit goes through the edit session.
   if it changes the world (`ToolDefinition.EditsWorld`; Select, Hand and Mark keep working, and so do the camera
   and F), the settings card's pages, the options bar and the strip's editing tools are disabled, and `EditorContext`
   refuses edits, undo, redo and saving (`IsDraftOpen`). The agent dock on the right (`AgentSection`) starts closed; the top bar's agent
-  button beside the gear (`AgentDockToggle`) opens and closes it, and the top bar and assets browser widen into its room
-  while it is closed. It shows the transcript, Accept / Retry /
+  button beside the gear (`AgentDockToggle`) opens and closes it, and the assets browser widens into its room while it is
+  closed. The top bar is centred, at most `--forge-toolbar-max-width` (600 px) wide. It shows the transcript, Accept / Retry /
   Discard while reviewing, and a message box (Enter sends, Shift+Enter: new line). The agent's replies are
   Markdown: `Forge.Core.Text.Markdown` (engine-free) parses the subset chat uses into blocks and styled spans, and
   `MarkdownView` lays them out (a label per block, list items as marker + text, rich text wrapped in `<noparse>`
