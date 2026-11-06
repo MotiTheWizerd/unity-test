@@ -91,17 +91,19 @@ namespace Forge.Tests.Game
         }
 
         [Test]
-        public void RunningOut_LeavesItWinded_UntilAQuarterIsBack()
+        public void RunningOut_LeavesItWalking_UntilAQuarterIsBack()
         {
             var player = Player(out var attributes);
 
             Run(player, Forward(sprint: true), 11f);
             Assert.That(player.Costs.Winded, Is.True);
-            Assert.That(GroundSpeed(player), Is.EqualTo(LocomotionSettings.Default.RunSpeed).Within(1e-3f), "Back to a run.");
+            Assert.That(GroundSpeed(player), Is.EqualTo(LocomotionSettings.Default.WalkSpeed).Within(1e-3f), "Too tired to run, sprint held or not.");
 
-            // Still holding sprint: the stamina comes back after the delay, and at a quarter the sprint does too.
+            // Still holding sprint, it walks: the stamina comes back after the delay, and at a quarter it runs again.
             Run(player, Forward(sprint: true), 1.5f + 2.6f);
             Assert.That(player.Costs.Winded, Is.False);
+            Run(player, Forward(sprint: true), 0.5f);
+            Assert.That(GroundSpeed(player), Is.EqualTo(LocomotionSettings.Default.SprintSpeed).Within(1e-3f));
         }
 
         [Test]

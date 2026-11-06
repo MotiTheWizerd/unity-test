@@ -670,7 +670,7 @@ where it came from.
   spend holds the refill back for the regen delay. `SetBase` gives the actor its own base (a level gained). Events:
   `Changed` (value or what is left) and `Depleted` (a resource ran out), for HUDs and rules, so nothing polls.
 - **What moving costs** (`MovementCosts`, Game.Player, the player's today): sprinting spends `SprintCost` stamina a
-  second while moving and running dry leaves the actor **winded** (no sprint) until a quarter of its stamina is back;
+  second while moving and running dry leaves the actor **winded**: it walks, whatever it is told, until a quarter of its stamina is back;
   a jump needs and spends `JumpCost`; a fall (`FallTracker`, Game.Motion: the highest point off the ground less where it
   touched down, moved with a rebase) past `FallSafeHeight` costs `FallDamage` health a meter. `PlayerCharacter` takes
   the actor's attributes, has the costs filter its commands and pay for the move, and ticks the attributes. At zero

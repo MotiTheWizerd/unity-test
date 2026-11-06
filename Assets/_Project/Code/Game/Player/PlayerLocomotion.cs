@@ -100,7 +100,7 @@ namespace Forge.Game.Player
             if (length > 1f)
                 move /= length;
 
-            var pace = commands.Sprint ? _settings.SprintSpeed : Walking ? _settings.WalkSpeed : _settings.RunSpeed;
+            var pace = commands.Sprint ? _settings.SprintSpeed : Walking || commands.Walk ? _settings.WalkSpeed : _settings.RunSpeed;
             return (Compass.Right(heading) * move.X + Compass.Forward(heading) * move.Y) * pace;
         }
 

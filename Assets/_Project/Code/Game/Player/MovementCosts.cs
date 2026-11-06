@@ -7,15 +7,16 @@ using Forge.Game.Motion;
 namespace Forge.Game.Player
 {
     /// <summary>
-    /// What moving costs, paid from the actor's attributes (<see cref="CoreAttributes"/>), as in Skyrim: sprinting spends
-    /// <see cref="CoreAttributes.SprintCost"/> stamina a second, and running out leaves the actor winded (no sprint) until
-    /// a quarter of its stamina is back; a jump needs and spends <see cref="CoreAttributes.JumpCost"/>; a fall past
+    /// What moving costs, paid from the actor's attributes (<see cref="CoreAttributes"/>): sprinting spends
+    /// <see cref="CoreAttributes.SprintCost"/> stamina a second, and running out leaves the actor winded, walking whatever
+    /// it is told (no run, no sprint), until a quarter of its stamina is back, so it is plainly tired while it recovers;
+    /// a jump needs and spends <see cref="CoreAttributes.JumpCost"/>; a fall past
     /// <see cref="CoreAttributes.FallSafeHeight"/> costs <see cref="CoreAttributes.FallDamage"/> health a meter. The
     /// costs are attributes, so items and effects change them through modifiers. Engine-free.
     /// </summary>
     public sealed class MovementCosts
     {
-        /// <summary>The share of its stamina a winded actor must get back before it sprints again.</summary>
+        /// <summary>The share of its stamina a winded actor must get back before it runs again.</summary>
         public const float RecoverFraction = 0.25f;
 
         readonly FallTracker _fall = new FallTracker();
@@ -36,7 +37,7 @@ namespace Forge.Game.Player
 
         public ActorAttributes Attributes { get; }
 
-        /// <summary>Out of stamina from sprinting: no sprint until <see cref="RecoverFraction"/> of it is back.</summary>
+        /// <summary>Out of stamina from sprinting: walking only until <see cref="RecoverFraction"/> of it is back.</summary>
         public bool Winded { get; private set; }
 
         /// <summary>A move was refused for want of an attribute (stamina for a jump, or running dry mid-sprint).</summary>
@@ -44,7 +45,7 @@ namespace Forge.Game.Player
 
         /// <summary>
         /// The commands as the actor can afford them over <paramref name="deltaTime"/> seconds, spending the sprint's
-        /// stamina: no sprint while winded, no jump without the stamina for it.
+        /// stamina: a walk while winded, no jump without the stamina for it.
         /// </summary>
         public PlayerCommands Afford(PlayerCommands commands, float deltaTime)
         {
@@ -70,7 +71,7 @@ namespace Forge.Game.Player
                 ShortOf?.Invoke(CoreAttributes.Stamina);
             }
 
-            return new PlayerCommands(commands.Move, commands.Turn, sprint, jump, commands.ToggleWalk);
+            return new PlayerCommands(commands.Move, commands.Turn, sprint, jump, commands.ToggleWalk, commands.Walk || Winded);
         }
 
         /// <summary>

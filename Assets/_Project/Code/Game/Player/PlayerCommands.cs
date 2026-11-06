@@ -15,13 +15,15 @@ namespace Forge.Game.Player
         /// <param name="sprint">Held to run faster.</param>
         /// <param name="jump">Pressed this frame.</param>
         /// <param name="toggleWalk">Pressed this frame: switches between walking and the everyday run, as Skyrim's Caps Lock.</param>
-        public PlayerCommands(Vector2 move, Vector2 turn, bool sprint, bool jump, bool toggleWalk = false)
+        /// <param name="walk">Walk this frame whatever was switched (held, or forced: too tired to run).</param>
+        public PlayerCommands(Vector2 move, Vector2 turn, bool sprint, bool jump, bool toggleWalk = false, bool walk = false)
         {
             Move = move;
             Turn = turn;
             Sprint = sprint;
             Jump = jump;
             ToggleWalk = toggleWalk;
+            Walk = walk;
         }
 
         public Vector2 Move { get; }
@@ -33,5 +35,7 @@ namespace Forge.Game.Player
         public bool Jump { get; }
 
         public bool ToggleWalk { get; }
+
+        public bool Walk { get; }
     }
 }
