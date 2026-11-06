@@ -64,7 +64,7 @@
     --forge-icon-button-icon-sm: 12px;
 
     /* The top bar (tool options): centred, at most this wide */
-    --forge-toolbar-max-width: 600px;
+    --forge-toolbar-max-width: 1000px;
 
     /* Popups (ForgePopup): the centred card's size (never more than 90% of the screen) */
     --forge-popup-width: 720px;
