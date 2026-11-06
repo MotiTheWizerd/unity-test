@@ -136,13 +136,17 @@ namespace Forge.EditorApp.Tools
         void PressInWorld(in ToolInput input)
         {
             var selection = _context.Selection;
-            if (!_picker.TryPickPlacedObject(input.Ray, _context.Session.World.Records, out var id, out var point))
+            if (!_picker.TryPickPlacedObject(input.Ray, _context.Session.World.Records, out var id, out var point, out var slot))
             {
                 // Empty space: a drag draws a selection box, a click clears the selection (Shift: keeps it).
                 _boxStart = input.Pointer;
                 _boxAdditive = input.Additive;
                 return;
             }
+
+            // The part clicked picks the slot a material dresses: click the roof, then a ball, and the roof changes.
+            if (slot != null)
+                _context.MaterialSlot = slot;
 
             if (input.Additive)
             {

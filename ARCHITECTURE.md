@@ -809,7 +809,9 @@ slopes), so results are exact and every edit goes through the edit session.
   every selected object that has it, as one undo step, and the tile of what the selection wears there is lit. The
   slot is picked in the selection options (`SelectionSection`: a Slot dropdown listing the selection's slots,
   `EditorCommands.SelectionSlots`, read from `AssetSlots`, labelled by `Materials.SlotLabel`;
-  the choice is `EditorContext.MaterialSlot`, the first slot when unset) beside a Reset look button
+  the choice is `EditorContext.MaterialSlot`, the first slot when unset; clicking an object with a select tool sets it
+  to the slot of the part clicked, `ScenePicker.TryPickPlacedObject` → `MaterialSlots.SlotOf(collider)`, so "click the
+  roof, then a ball" dresses the roof) beside a Reset look button
   (`ResetSelectionMaterials`). Every list
   is searched alike through `SearchQuery` (all terms, any field, ignoring case). Each object tile's picture comes from `ThumbnailRenderer`
   (`World/Assets`, behind `IAssetThumbnails`): on first request it instantiates the asset key through the same

@@ -95,10 +95,18 @@ namespace Forge.EditorApp.Tools
             TryPickPlacedObject(ray, records, out id, out _);
 
         /// <summary>The placed object under the ray, if the first world hit is one, and the point on it that was hit.</summary>
-        public bool TryPickPlacedObject(Ray ray, IRecordStore records, out RecordId id, out Vector3 point)
+        public bool TryPickPlacedObject(Ray ray, IRecordStore records, out RecordId id, out Vector3 point) =>
+            TryPickPlacedObject(ray, records, out id, out point, out _);
+
+        /// <summary>
+        /// The placed object under the ray, if the first world hit is one, the point on it that was hit, and the material
+        /// slot of the part hit (<see cref="MaterialSlots.SlotOf(Component)"/>; null when it can't be told).
+        /// </summary>
+        public bool TryPickPlacedObject(Ray ray, IRecordStore records, out RecordId id, out Vector3 point, out string slot)
         {
             id = default;
             point = default;
+            slot = null;
             if (!TryPickWorld(ray, out var hit))
                 return false;
 
@@ -108,6 +116,7 @@ namespace Forge.EditorApp.Tools
 
             id = link.RecordId;
             point = hit.Point;
+            slot = link.TryGetComponent<MaterialSlots>(out var slots) ? slots.SlotOf(hit.Collider) : null;
             return true;
         }
 

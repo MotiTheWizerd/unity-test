@@ -43,6 +43,19 @@ namespace Forge.World
             return slots;
         }
 
+        /// <summary>
+        /// The slot of the part <paramref name="part"/> belongs to (a collider of this object, as a click hits it): the slot
+        /// its renderer wears by default; null when the part has no renderer of this object.
+        /// </summary>
+        /// <remarks>A part wearing several materials answers with its first: telling which one was hit needs the hit triangle.</remarks>
+        public string SlotOf(Component part)
+        {
+            if (part == null || !part.TryGetComponent<Renderer>(out var renderer))
+                return null;
+            var index = Array.IndexOf(_renderers, renderer);
+            return index >= 0 && _defaults[index].Length > 0 ? SlotOf(_defaults[index][0]) : null;
+        }
+
         /// <summary>The slot <paramref name="material"/> stands for: its name, cut to a slot name's length; null for none.</summary>
         public static string SlotOf(Material material)
         {
