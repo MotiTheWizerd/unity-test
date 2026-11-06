@@ -886,6 +886,13 @@ slopes), so results are exact and every edit goes through the edit session.
   Markdown: `Forge.Core.Text.Markdown` (engine-free) parses the subset chat uses into blocks and styled spans, and
   `MarkdownView` lays them out (a label per block, list items as marker + text, rich text wrapped in `<noparse>`
   so the words are never read as tags). Everything else in the transcript is shown exactly as written.
+  Pictures go with the next message: the camera button beside Send attaches what the view shows
+  (`EditorController.SnapshotView` → `AgentPictures.Snapshot`: the camera rendered into a texture, so the panel isn't
+  in it) and Ctrl+V in the message box pastes one from the clipboard (`IImageClipboard`; with words on the clipboard
+  too, Ctrl+V pastes the words). They wait as thumbnails above the box (× removes one; six at most) and stay on the
+  user's line in the transcript. `AgentPictures` shrinks every picture to `AgentImage.Fit` (1568 px long edge) and
+  encodes PNG, or JPEG when the PNG is too heavy. `WindowsImageClipboard` reads the clipboard's "PNG" entry, else its
+  bitmap (CF_DIBV5 / CF_DIB, decoded by the engine-free `Forge.Core.Imaging.DeviceIndependentBitmap`).
 - **Editing and playing** (`Forge.Editing.Modes`, engine-free, tested): the app is in one `AppMode` at a time, held by
   `ModeSwitch` (`EditorContext.Modes`). The top bar's play button (Lucide `play`, beside the agent's) plays the world
   from here (`EditorContext.Play`), Esc goes back (`StopPlaying`). **Playing never writes the world**: it freezes the
@@ -1107,4 +1114,5 @@ and the condition for removing it, and is listed here.
 | `World/Assets/KeyedAssetCatalog.cs` | Catalog entries (prefabs, terrain layers) reference assets directly, so all content loads with the catalog at startup | A dozen placeholder prefabs and four ground layers fit in memory easily | Content outgrows memory → load prefabs by asset key through Addressables, streamed with the chunks |
 | `EditorApp/EditorController.cs`, `Tools/ToolDefinition.cs` | Input read by polling devices, not an Input Actions asset; tool keys are fixed `Key`s in `ToolCatalog` | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset, labels read from it |
 | `World/GrassView.cs` (`Grow`) | Grass patches grow on the main thread, ~10 ms for a 20k-tuft patch in the editor, so crossing into a new chunk can cost a frame | One patch a frame is a short hitch; simpler than threading while grass is new | Hitches show while flying → grow on a worker thread (`GrassScatter` is engine-free; only the buffer upload needs the main thread) |
+| `EditorApp/Agent/ImageClipboard.cs` (`ForThisPlatform`) | Pasting a picture into the agent's message works on Windows only; elsewhere the clipboard has no picture | Forge runs on Windows today, and Unity's clipboard carries text only | Forge ships on macOS or Linux → a clipboard reader for that platform |
 | `Agent/Memory/SemantixMemory.cs` (`Origin`) | The agent's Semantix memory is made with origin `user`, so Semantix Studio doesn't list it under Your Agents | The server knows no `forge` origin yet, and one memory for all of Forge needs no picker | Users make memories at will → a `forge` origin on the server and a Forge group in Your Agents |

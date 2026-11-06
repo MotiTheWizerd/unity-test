@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Forge.Agent;
+using Forge.EditorApp.Agent;
 using Forge.EditorApp.Diagnostics;
 using Forge.EditorApp.UI.Controls;
 using Forge.EditorApp.UI.Inspector;
@@ -39,7 +40,8 @@ namespace Forge.EditorApp.UI
         /// <param name="groundLooks">Pictures for the assets browser's ground tiles; null leaves the placeholder icons.</param>
         /// <param name="materialLooks">Pictures for the Materials page's balls and the variants' tiles; null leaves the placeholder icons.</param>
         /// <param name="agent">The world-building agent's conversation; null hides the agent button (the side dock stays closed).</param>
-        public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics, IAssetThumbnails thumbnails, GroundLooks groundLooks, MaterialLooks materialLooks, AgentConversation agent)
+        /// <param name="viewSnapshot">A picture of what the view shows, for the agent's messages.</param>
+        public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics, IAssetThumbnails thumbnails, GroundLooks groundLooks, MaterialLooks materialLooks, AgentConversation agent, Func<AgentImage> viewSnapshot)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             // The document root covers the whole screen; only real panel elements may catch the pointer.
@@ -84,7 +86,7 @@ namespace Forge.EditorApp.UI
             _sections.Add(new DockPageToggle(Root, "materials-toggle", sideDock.Dock, SideDockSection.MaterialsPage));
             if (agent != null)
             {
-                _sections.Add(new AgentSection(Root, agent, context));
+                _sections.Add(new AgentSection(Root, agent, context, viewSnapshot, ImageClipboard.ForThisPlatform()));
                 _sections.Add(new DockPageToggle(Root, "agent-toggle", sideDock.Dock, SideDockSection.AgentPage, () => agent.State == AgentState.Working));
             }
             else

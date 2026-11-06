@@ -51,6 +51,9 @@ namespace Forge.EditorApp
         /// <summary>Playing the world as the player, or null without a player profile (then the editor camera flies in play).</summary>
         public PlayFromHere PlayFromHere { get; private set; }
 
+        /// <summary>A picture of what the editor's camera shows, without the panel, for the agent.</summary>
+        public Forge.Agent.AgentImage SnapshotView() => AgentPictures.Snapshot(_camera);
+
         /// <param name="frame">The world's frame in the scene: tools work in world coordinates, and this is where the camera's rays are converted.</param>
         /// <param name="ui">Clicks over this UI are kept from the tools; typing into it is kept from the shortcuts.</param>
         /// <param name="assets">The world's asset catalog, so tool previews look like the real objects.</param>

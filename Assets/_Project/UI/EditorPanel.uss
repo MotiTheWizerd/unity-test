@@ -427,6 +427,45 @@
     margin-top: 4px;
 }
 
+/* Pictures: the ones waiting to go with the next message, and the ones on the user's lines in the transcript. */
+.forge-agent-pictures {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.forge-agent-attachments {
+    margin-top: 4px;
+}
+
+.forge-agent-picture {
+    width: 72px;
+    height: 48px;
+    margin: 0 4px 4px 0;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: var(--forge-accent-border);
+    background-color: var(--forge-input-bg);
+    -unity-background-scale-mode: scale-and-crop;
+    overflow: hidden;
+}
+
+.forge-chat .forge-agent-picture {
+    width: 120px;
+    height: 80px;
+}
+
+/* The camera button keeps its icon's size beside Send and Stop, which share the rest. */
+.forge-choices > .forge-agent-snapshot {
+    flex-grow: 0;
+    flex-basis: auto;
+}
+
+.forge-agent-picture__remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+}
+
 /* ---- Status bar and the fatal box ------------------------------------------------------------------------ */
 
 .forge-status {

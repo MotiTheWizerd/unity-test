@@ -117,6 +117,16 @@ namespace Forge.Tests.Agent
             Assert.Throws<System.ArgumentException>(() => new AgentImage(mediaType, new byte[size]));
         }
 
+        [TestCase(800, 600, 800, 600)]
+        [TestCase(1568, 10, 1568, 10)]
+        [TestCase(3136, 1764, 1568, 882)]
+        [TestCase(1000, 4000, 392, 1568)]
+        [TestCase(10000, 1, 1568, 1)]
+        public void Image_Fit_ShrinksOnlyWhatTheModelWouldShrink(int width, int height, int fittedWidth, int fittedHeight)
+        {
+            Assert.That(AgentImage.Fit(width, height), Is.EqualTo((fittedWidth, fittedHeight)));
+        }
+
         [Test]
         public void Stream_Init_StartsTheConversation()
         {

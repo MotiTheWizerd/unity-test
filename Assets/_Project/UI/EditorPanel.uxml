@@ -97,10 +97,12 @@
                     <forge:ForgeButton name="agent-mark" text="Mark" icon="map-pin" tooltip="M" />
                     <forge:ForgeButton name="agent-mark-clear" text="Clear" />
                 </ui:VisualElement>
-                <forge:ForgeTextArea name="agent-input" placeholder-text="Describe what to build…  (Enter sends, Shift+Enter: new line)" class="forge-agent-input" />
+                <ui:VisualElement name="agent-attachments" class="forge-agent-pictures forge-agent-attachments" />
+                <forge:ForgeTextArea name="agent-input" placeholder-text="Describe what to build…  (Enter sends, Shift+Enter: new line, Ctrl+V: a picture)" class="forge-agent-input" />
                 <ui:VisualElement class="forge-row forge-choices">
                     <forge:ForgeButton name="agent-send" text="Send" variant="Primary" />
                     <forge:ForgeButton name="agent-stop" text="Stop" />
+                    <forge:ForgeButton name="agent-snapshot" icon="camera" tooltip="Attach what the view shows" class="forge-agent-snapshot" />
                 </ui:VisualElement>
             </forge:ForgeDockPage>
             <forge:ForgeDockPage name="side-page-inspector" key="inspector" title="Inspector" icon="info">

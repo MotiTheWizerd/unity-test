@@ -12,6 +12,21 @@ namespace Forge.Agent
         /// <summary>The most one picture may weigh; the model refuses more than 5 MB once it is base64.</summary>
         public const int MaxBytes = 3_750_000;
 
+        /// <summary>The longest edge worth sending: the model scales anything larger down to about this.</summary>
+        public const int MaxEdge = 1568;
+
+        /// <summary>The size to send a <paramref name="width"/> × <paramref name="height"/> picture at: as it is, or shrunk to <see cref="MaxEdge"/>.</summary>
+        public static (int Width, int Height) Fit(int width, int height)
+        {
+            if (width <= 0 || height <= 0)
+                throw new ArgumentOutOfRangeException(nameof(width), "A picture has a size.");
+            var longest = Math.Max(width, height);
+            if (longest <= MaxEdge)
+                return (width, height);
+            var scale = (double)MaxEdge / longest;
+            return (Math.Max(1, (int)Math.Round(width * scale)), Math.Max(1, (int)Math.Round(height * scale)));
+        }
+
         static readonly HashSet<string> MediaTypes = new HashSet<string> { "image/png", "image/jpeg", "image/gif", "image/webp" };
 
         public AgentImage(string mediaType, byte[] bytes)
