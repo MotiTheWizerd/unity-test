@@ -149,9 +149,9 @@ namespace Forge.Editing
 
         /// <summary>
         /// Saves what placed object <paramref name="placedId"/> looks like as a new kind of object, a variant of its base
-        /// object named <paramref name="displayName"/>: the same asset, category and placement rules, wearing the base
-        /// object's materials with the placed object's own on top. The placed object becomes an instance of the variant
-        /// (its own materials now come from it). One undo step. Returns the variant's id.
+        /// object named <paramref name="displayName"/>: the same asset, category, placement rules and parts (a variant of an
+        /// item is an item), wearing the base object's materials with the placed object's own on top. The placed object
+        /// becomes an instance of the variant (its own materials now come from it). One undo step. Returns the variant's id.
         /// </summary>
         /// <exception cref="ArgumentException">There is no such placed object, its base object is missing, or the name is blank.</exception>
         public static RecordId MakeVariant(EditSession session, RecordId placedId, string displayName)
@@ -168,7 +168,7 @@ namespace Forge.Editing
 
             var name = displayName.Trim();
             var variant = new BaseObjectRecord(session.NewId(VariantIdPrefix), name, baseObject.AssetKey, baseObject.Category,
-                baseObject.Placement, MaterialOverrides.Layer(baseObject.Materials, placed.Materials));
+                baseObject.Placement, MaterialOverrides.Layer(baseObject.Materials, placed.Materials), baseObject.Item);
             session.Batch($"Make variant {name}", () =>
             {
                 session.Put(variant);

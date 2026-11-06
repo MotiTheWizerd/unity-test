@@ -59,6 +59,27 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void BaseObject_IsAnItem_OnlyWithAnItemPart()
+        {
+            var part = new ItemPart(ItemKind.Food, 0.1f, 3);
+
+            Assert.That(new BaseObjectRecord(TreeId, "Oak", "trees/oak").Item, Is.Null);
+            Assert.That(new BaseObjectRecord(TreeId, "Apple", "items/apple", item: part).Item, Is.SameAs(part));
+            Assert.That((part.Kind, part.Weight, part.Value), Is.EqualTo((ItemKind.Food, 0.1f, 3)));
+            Assert.That(new ItemPart(ItemKind.Misc, 0f, 0).Weight, Is.Zero, "Weightless, worthless things are items too.");
+        }
+
+        [TestCase(ItemKind.Misc, -0.1f, 0)]
+        [TestCase(ItemKind.Misc, float.NaN, 0)]
+        [TestCase(ItemKind.Misc, float.PositiveInfinity, 0)]
+        [TestCase(ItemKind.Misc, 1f, -1)]
+        [TestCase((ItemKind)99, 1f, 1)]
+        public void ItemPart_RejectsUnknownKinds_AndNegativeOrEndlessWeightOrValue(ItemKind kind, float weight, int value)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ItemPart(kind, weight, value));
+        }
+
+        [Test]
         public void BaseObject_RequiresFields()
         {
             Assert.Throws<ArgumentException>(() => new BaseObjectRecord(default, "Oak", "trees/oak"));

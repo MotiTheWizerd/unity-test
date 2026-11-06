@@ -45,7 +45,7 @@ namespace Forge.UnityEditor
                 BaseObject("pillar", "Pillar", "primitive/cylinder", "Architecture"),
                 BaseObject("totem", "Totem", "primitive/capsule", "Props/Decor"),
             };
-            records.AddRange(PlaceholderContent.All.Select(c => BaseObject(c.Name, c.DisplayName, c.AssetKey, c.Category, c.Placement)));
+            records.AddRange(PlaceholderContent.All.Select(c => BaseObject(c.Name, c.DisplayName, c.AssetKey, c.Category, c.Placement, c.Item)));
 
             records.AddRange(CoreClimates.All(PluginId));
             records.AddRange(CoreGroundLayers.All(PluginId));
@@ -61,8 +61,9 @@ namespace Forge.UnityEditor
             return new Plugin(new PluginManifest(PluginId, "0.1.0"), records);
         }
 
-        static BaseObjectRecord BaseObject(string name, string displayName, string assetKey, string category, PlacementRules placement = null) =>
-            new BaseObjectRecord(new RecordId(PluginId, name), displayName, assetKey, category, placement);
+        static BaseObjectRecord BaseObject(string name, string displayName, string assetKey, string category, PlacementRules placement = null,
+            ItemPart item = null) =>
+            new BaseObjectRecord(new RecordId(PluginId, name), displayName, assetKey, category, placement, item: item);
 
     }
 }

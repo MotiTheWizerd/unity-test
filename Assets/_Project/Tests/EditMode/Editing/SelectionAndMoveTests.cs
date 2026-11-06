@@ -163,6 +163,17 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void MakeVariant_OfAnItem_IsAnItem()
+        {
+            var potion = new BaseObjectRecord(RecordId.Parse("core:potion"), "Potion", "items/potion", item: new ItemPart(ItemKind.Potion, 0.5f, 15));
+            var session = new EditSession(new[] { Plugin("core", potion, Placed("core:ref/p", "core:potion")) }, Plugin("user", new[] { "core" }));
+
+            var variant = ObjectEdits.MakeVariant(session, RecordId.Parse("core:ref/p"), "Blue Potion");
+
+            Assert.That(session.World.Records.Get<BaseObjectRecord>(variant).Item, Is.SameAs(potion.Item));
+        }
+
+        [Test]
         public void MakeVariant_RefusesABlankName_AndWhatIsNotAPlacedObject()
         {
             var session = NewSession();

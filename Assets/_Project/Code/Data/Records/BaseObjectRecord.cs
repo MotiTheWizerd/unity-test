@@ -6,14 +6,16 @@ namespace Forge.Data.Records
     /// <summary>
     /// A definition of something that can be placed in the world (a tree, a rock,
     /// a chair). Placed instances reference it by id, so shared data lives once.
+    /// What it is beyond its look comes in optional parts: an <see cref="ItemPart"/> makes it something to carry.
     /// </summary>
     public sealed class BaseObjectRecord : Record
     {
         /// <param name="category">Where the palette files it ("Nature/Trees"); null or blank = uncategorized.</param>
         /// <param name="placement">How the editor places new instances; null = exactly as chosen, upright.</param>
         /// <param name="materials">Slots every instance wears another material in than its asset does (a variant's look); null or empty = none.</param>
+        /// <param name="item">What makes it an item to pick up and carry; null = not an item.</param>
         public BaseObjectRecord(RecordId id, string displayName, string assetKey, string category = null, PlacementRules placement = null,
-            IEnumerable<MaterialOverride> materials = null)
+            IEnumerable<MaterialOverride> materials = null, ItemPart item = null)
             : base(id)
         {
             if (string.IsNullOrWhiteSpace(displayName))
@@ -27,6 +29,7 @@ namespace Forge.Data.Records
             Placement = placement;
             var validated = MaterialOverrides.Validated(materials, nameof(materials));
             Materials = validated.Count > 0 ? validated : null;
+            Item = item;
         }
 
         public string DisplayName { get; }
@@ -46,5 +49,8 @@ namespace Forge.Data.Records
         /// differs from it, as in the Creation Kit.
         /// </summary>
         public IReadOnlyList<MaterialOverride> Materials { get; }
+
+        /// <summary>What makes it an item an actor can pick up and carry, or null: not an item.</summary>
+        public ItemPart Item { get; }
     }
 }

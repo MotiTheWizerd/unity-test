@@ -111,6 +111,13 @@ one in the active plugin.
   whether to tilt to the slope. Authoring data only: placed objects store their final transform.
   Absent = placed exactly as aimed, upright. Records hold no derived properties (serializers write
   every public property); helpers like `PlacementRoll.CanVary` live in Editing.
+- **Parts**: what a base object is beyond its look comes in optional parts, not in other record types, so every kind of
+  thing is placed, dressed, varied and pictured the same way, and a mod gives an existing object a part by overriding it.
+  The first is **`ItemPart`** (`BaseObjectRecord.Item`; in JSON `"item": {"kind": "potion", "weight": 0.5, "value": 15}`,
+  omitted when it is no item): something an actor picks up and carries. `ItemKind` (misc, weapon, potion, food; by name,
+  misc when left out) is where an inventory lists it, grouping only; weight (≥ 0) counts against carry weight; value
+  (≥ 0) is in gold. What using an item does (wielding, wearing, drinking) will be parts of their own; doors and
+  containers will be parts too. A variant of an item is an item (`MakeVariant` keeps the parts).
 - Optional fields are omitted from plugin JSON rather than written as `null` (`NullValueHandling.Ignore`).
 - `PlacedObjectRecord`: an instance in the world (base id, position, rotation, scale), and optionally the
   `Materials` it wears instead of its base object's in some **material slots** (`MaterialOverride`: slot, material id;
@@ -839,7 +846,10 @@ slopes), so results are exact and every edit goes through the edit session.
   shipped material has a look with its maps on. The placeholder shapes are Unity primitives with 0–1 UVs per face, so
   a material stretches over a long wall; real meshes bring proper UVs.
 - **Placeholder content** (`UnityEditor/Content`): `PlaceholderContent.All` is the one table of the base
-  game's placeable objects (record name, display name, category, asset key, how to build the prefab).
+  game's placeable objects (record name, display name, category, asset key, how to build the prefab, and the item part
+  of the first items: a healing potion, a red apple and gold, filed under `Items/…`, so the assets browser gives them
+  their own tab). A part whose primitive collider has the wrong shape (a coin's cylinder gets a ball) is left hollow
+  and a `Box` covers it.
   *Forge → Generate Placeholder Content* builds the materials and prefabs from primitives in a preview scene
   and registers them in the catalog; *Forge → Generate Core Plugin* turns the same table into base-object
   records. Regenerating keeps asset GUIDs and each prefab's root id (so references survive) but rewrites the

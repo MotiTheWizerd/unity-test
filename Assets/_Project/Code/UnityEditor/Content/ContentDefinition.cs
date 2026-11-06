@@ -9,7 +9,8 @@ namespace Forge.UnityEditor.Content
     /// </summary>
     sealed class ContentDefinition
     {
-        public ContentDefinition(string name, string displayName, string category, string assetKey, Action<PrefabBuilder> build, PlacementRules placement = null)
+        public ContentDefinition(string name, string displayName, string category, string assetKey, Action<PrefabBuilder> build, PlacementRules placement = null,
+            ItemPart item = null)
         {
             Name = name;
             DisplayName = displayName;
@@ -17,10 +18,14 @@ namespace Forge.UnityEditor.Content
             AssetKey = assetKey;
             Build = build;
             Placement = placement;
+            Item = item;
         }
 
         /// <summary>How new instances are placed: nature varies, ground-hugging things follow the slope, the rest stand upright.</summary>
         public PlacementRules Placement { get; }
+
+        /// <summary>What makes it an item to carry (a potion, gold); null for the rest of the world.</summary>
+        public ItemPart Item { get; }
 
         /// <summary>Record name inside forge.core, e.g. "tree_pine".</summary>
         public string Name { get; }

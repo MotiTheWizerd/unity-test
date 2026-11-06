@@ -432,6 +432,48 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesAnItemPart_ItsKindByName_AndOmitsItWhenAbsent()
+        {
+            var plugin = Plugin("core",
+                new BaseObjectRecord(RecordId.Parse("core:apple"), "Red Apple", "items/apple", "Items/Food", item: new ItemPart(ItemKind.Food, 0.1f, 3)),
+                new BaseObjectRecord(RecordId.Parse("core:house"), "House", "architecture/house"));
+
+            var json = Write(plugin);
+            var copy = Read(json).Records.OfType<BaseObjectRecord>().ToDictionary(r => r.Id.ToString());
+
+            var item = copy["core:apple"].Item;
+            Assert.That((item.Kind, item.Weight, item.Value), Is.EqualTo((ItemKind.Food, 0.1f, 3)));
+            Assert.That(copy["core:house"].Item, Is.Null);
+            StringAssert.Contains("\"kind\": \"food\"", json);
+            Assert.That(Regex.Matches(json, "\"item\"").Count, Is.EqualTo(1), "What is no item is written as nothing, not null.");
+            Assert.That(Write(Read(json)), Is.EqualTo(json));
+        }
+
+        [Test]
+        public void Read_AnItemNamingNoKind_IsMisc()
+        {
+            var plugin = Plugin("core", new BaseObjectRecord(RecordId.Parse("core:coin"), "Coin", "items/coin", item: new ItemPart(ItemKind.Food, 0f, 1)));
+            var json = Regex.Replace(Write(plugin), @"""kind"": ""food"",\s*", string.Empty);
+            StringAssert.DoesNotContain("kind", json);
+
+            var item = Read(json).Records.OfType<BaseObjectRecord>().Single().Item;
+
+            Assert.That((item.Kind, item.Value), Is.EqualTo((ItemKind.Misc, 1)));
+        }
+
+        [TestCase("\"weight\": 0.5", "\"weight\": -0.5", "weight")]
+        [TestCase("\"kind\": \"potion\"", "\"kind\": \"spaceship\"", "spaceship")]
+        public void Read_AnItemOfNegativeWeight_OrAnUnknownKind_IsRejected(string written, string tampered, string named)
+        {
+            var plugin = Plugin("core", new BaseObjectRecord(RecordId.Parse("core:potion"), "Potion", "items/potion", item: new ItemPart(ItemKind.Potion, 0.5f, 15)));
+            var json = Write(plugin);
+            StringAssert.Contains(written, json);
+
+            var ex = Assert.Throws<DataValidationException>(() => Read(json.Replace(written, tampered)));
+            StringAssert.Contains(named, ex.Message);
+        }
+
+        [Test]
         public void Read_UnknownRecordType_IsRejected()
         {
             var json = Write(SamplePlugin()).Replace("\"base_object\"", "\"System.Diagnostics.Process\"");

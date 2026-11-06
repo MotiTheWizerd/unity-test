@@ -21,6 +21,9 @@ namespace Forge.UnityEditor.Content
         public const string Tunic = "Tunic";
         public const string Leather = "Leather";
         public const string Skin = "Skin";
+        public const string PotionRed = "PotionRed";
+        public const string AppleRed = "AppleRed";
+        public const string Gold = "Gold";
 
         public static IReadOnlyList<Spec> All { get; } = new[]
         {
@@ -39,6 +42,9 @@ namespace Forge.UnityEditor.Content
             new Spec(Tunic, new Color(0.24f, 0.32f, 0.46f)),
             new Spec(Leather, new Color(0.27f, 0.19f, 0.13f), smoothness: 0.35f),
             new Spec(Skin, new Color(0.78f, 0.60f, 0.48f), smoothness: 0.3f),
+            new Spec(PotionRed, new Color(0.72f, 0.06f, 0.10f), smoothness: 0.9f),
+            new Spec(AppleRed, new Color(0.70f, 0.10f, 0.08f), smoothness: 0.45f),
+            new Spec(Gold, new Color(0.83f, 0.64f, 0.22f), metallic: 0.9f, smoothness: 0.65f),
         };
 
         public readonly struct Spec

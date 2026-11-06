@@ -31,6 +31,13 @@ namespace Forge.UnityEditor.Content
             new ContentDefinition("barrel", "Barrel", "Props/Containers", "props/barrel", Barrel),
             new ContentDefinition("bench", "Bench", "Props/Furniture", "props/bench", Bench),
             new ContentDefinition("signpost", "Signpost", "Props/Decor", "props/signpost", Signpost),
+            // Items, to pick up and carry; filed under Items, so the asset browser gives them their own tab.
+            new ContentDefinition("potion_healing", "Healing Potion", "Items/Potions", "items/potion_healing", HealingPotion, Loose,
+                new ItemPart(ItemKind.Potion, weight: 0.5f, value: 15)),
+            new ContentDefinition("apple_red", "Red Apple", "Items/Food", "items/apple_red", RedApple, Loose,
+                new ItemPart(ItemKind.Food, weight: 0.1f, value: 3)),
+            new ContentDefinition("gold", "Gold", "Items/Misc", "items/gold", GoldCoins, Loose,
+                new ItemPart(ItemKind.Misc, weight: 0f, value: 1)),
         };
 
         /// <summary>Natural things: any heading, a size within [min, max].</summary>
@@ -40,6 +47,9 @@ namespace Forge.UnityEditor.Content
         /// <summary>Placed exactly as aimed, but tilted to the ground (fences, walls, a campfire).</summary>
         // Computed, not a static field: `All` above is initialized first and would see a null field.
         public static PlacementRules FollowsSlope => new PlacementRules(false, 1f, 1f, true);
+
+        /// <summary>Items lie any way round, upright, at their real size (what one weighs is one of them).</summary>
+        public static PlacementRules Loose => new PlacementRules(true, 1f, 1f, false);
 
         static Vector3 V(float x, float y, float z) => new Vector3(x, y, z);
 
@@ -133,5 +143,30 @@ namespace Forge.UnityEditor.Content
             .Post(Wood, Vector3.zero, 0.1f, 2.2f)
             .Cube(Wood, V(0.4f, 1.85f, 0), V(0.9f, 0.3f, 0.05f))
             .Cube(Wood, V(-0.35f, 1.5f, 0), V(0.8f, 0.26f, 0.05f), V(0, 0, -6));
+
+        // A round flask 13 cm tall: body, neck and cork.
+        static void HealingPotion(PrefabBuilder b) => b
+            .Sphere(PotionRed, V(0, 0.045f, 0), V(0.08f, 0.09f, 0.08f))
+            .Post(PotionRed, V(0, 0.08f, 0), 0.025f, 0.035f)
+            .Post(Wood, V(0, 0.112f, 0), 0.03f, 0.02f);
+
+        // 8 cm across, with a stem and a leaf too thin to be worth colliders.
+        static void RedApple(PrefabBuilder b) => b
+            .Sphere(AppleRed, V(0, 0.0375f, 0), V(0.08f, 0.075f, 0.08f))
+            .Post(WoodDark, V(0, 0.07f, 0), 0.006f, 0.02f, solid: false)
+            .Sphere(Leaves, V(0.012f, 0.085f, 0), V(0.025f, 0.004f, 0.012f), V(0, 0, -20), solid: false);
+
+        // A stack of four coins and three strewn round it, 8 cm across. A coin's own collider would be a ball, so the
+        // coins are hollow and one box covers the pile.
+        static void GoldCoins(PrefabBuilder b)
+        {
+            const float diameter = 0.026f, thickness = 0.003f;
+            for (var i = 0; i < 4; i++)
+                b.Post(Gold, V(0.001f * i, thickness * i, -0.001f * i), diameter, thickness, solid: false);
+            b.Post(Gold, V(0.03f, 0, 0.012f), diameter, thickness, solid: false)
+                .Post(Gold, V(-0.026f, 0, 0.016f), diameter, thickness, solid: false)
+                .Post(Gold, V(0.006f, 0, -0.03f), diameter, thickness, solid: false)
+                .Box(V(0.002f, 0.006f, -0.007f), V(0.082f, 0.012f, 0.072f));
+        }
     }
 }

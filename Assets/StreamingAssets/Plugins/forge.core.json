@@ -8,6 +8,24 @@
   "terrain": "forge.core.8caffe0b36f641c1.terrain",
   "records": [
     {
+      "type": "base_object",
+      "id": "forge.core:apple_red",
+      "displayName": "Red Apple",
+      "assetKey": "items/apple_red",
+      "category": "Items/Food",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      },
+      "item": {
+        "kind": "food",
+        "weight": 0.1,
+        "value": 3
+      }
+    },
+    {
       "type": "attribute",
       "id": "forge.core:attribute/carry_weight",
       "displayName": "Carry Weight",
@@ -308,6 +326,24 @@
       "category": "Architecture/Interior"
     },
     {
+      "type": "base_object",
+      "id": "forge.core:gold",
+      "displayName": "Gold",
+      "assetKey": "items/gold",
+      "category": "Items/Misc",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      },
+      "item": {
+        "kind": "misc",
+        "weight": 0.0,
+        "value": 1
+      }
+    },
+    {
       "type": "ground_layer",
       "id": "forge.core:ground/dirt",
       "displayName": "Dirt",
@@ -455,6 +491,24 @@
       "displayName": "Pillar",
       "assetKey": "primitive/cylinder",
       "category": "Architecture"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:potion_healing",
+      "displayName": "Healing Potion",
+      "assetKey": "items/potion_healing",
+      "category": "Items/Potions",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      },
+      "item": {
+        "kind": "potion",
+        "weight": 0.5,
+        "value": 15
+      }
     },
     {
       "type": "base_object",
