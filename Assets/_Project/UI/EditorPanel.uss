@@ -1,5 +1,5 @@
 /*
- * Forge runtime editor layout: the tool strip down the left edge, the options bar across the top, the agent dock
+ * Forge runtime editor layout: the tool strip down the left edge, the options bar across the top, the side dock
  * on the right, a status bar, and the settings card (tabs over pages). The panels, sections, fields and buttons are
  * components (UI/Controls) with their own sheets; this file only places them and styles what is particular to
  * the editor. Tokens from Theme/ForgeTokens.uss.
@@ -22,8 +22,8 @@
     width: 340px;
 }
 
-/* While the agent dock is open (AgentDockToggle), the assets browser stops short of it. */
-.forge-root.is-agent-open .forge-assets {
+/* While the side dock is open (SideDockSection), the assets browser stops short of it. */
+.forge-root.is-side-dock-open .forge-assets {
     right: 360px;
 }
 
@@ -224,7 +224,7 @@
     width: auto;
 }
 
-/* ---- The agent's dock, on the right: transcript, review bar, message box -------------------------------- */
+/* ---- The side dock's Agent page: transcript, review bar, message box ------------------------------------- */
 
 .forge-agent-transcript {
     flex-grow: 1;

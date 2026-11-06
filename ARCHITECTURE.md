@@ -743,9 +743,11 @@ slopes), so results are exact and every edit goes through the edit session.
   extent and the selection. **While a draft is open, editing rests**: the controller deactivates the current tool
   if it changes the world (`ToolDefinition.EditsWorld`; Select, Hand and Mark keep working, and so do the camera
   and F), the settings card's pages, the options bar and the strip's editing tools are disabled, and `EditorContext`
-  refuses edits, undo, redo and saving (`IsDraftOpen`). The agent dock on the right (`AgentSection`) starts closed; the top bar's agent
-  button beside the gear (`AgentDockToggle`) opens and closes it, and the assets browser widens into its room while it is
-  closed. The top bar is centred, at most `--forge-toolbar-max-width` (1000 px) wide. It shows the transcript, Accept / Retry /
+  refuses edits, undo, redo and saving (`IsDraftOpen`). The agent's chat (`AgentSection`) is the **Agent** page of the
+  **side dock** on the right (`SideDockSection`, a `ForgeSideDock` with an Agent and a Materials page; Materials is empty
+  for now and will take the materials). The dock starts closed; the top bar's agent button beside the gear
+  (`AgentDockToggle`) opens it on the Agent page, turns to it from another page, or closes it (`ForgeSideDock.Toggle`),
+  and the assets browser widens into its room while it is closed (the layout root wears `is-side-dock-open`). The top bar is centred, at most `--forge-toolbar-max-width` (1000 px) wide. It shows the transcript, Accept / Retry /
   Discard while reviewing, and a message box (Enter sends, Shift+Enter: new line). The agent's replies are
   Markdown: `Forge.Core.Text.Markdown` (engine-free) parses the subset chat uses into blocks and styled spans, and
   `MarkdownView` lays them out (a label per block, list items as marker + text, rich text wrapped in `<noparse>`
@@ -796,7 +798,9 @@ slopes), so results are exact and every edit goes through the edit session.
   a class every `--forge-motion-pulse` and the sheet fades its opacity, UI Toolkit having no keyframes; the agent
   button is busy while the agent works; the icon is the button's background image, because a button with a
   child is no longer measured by its text), `ForgeSeparator` (a hairline, `vertical` between the items of a row),
-  `TabBar`, `AssetTile`, and `Icons.Make(name)`. The theme imports
+  `ForgeSideDock` (a glass card along a side: a `TabBar` over its `ForgeDockPage` children, each a `key` and a tab
+  `title`, one shown at a time; `Show(key)`, `Toggle(key)` for a page's button, `SetOpen`, `OpenChanged` / `PageChanged`;
+  where it stands is the layout's classes), `TabBar`, `AssetTile`, and `Icons.Make(name)`. The theme imports
   every component sheet, so they work in any panel. Runtime UI Toolkit shows no tooltips, so `TooltipLayer` at a
   panel's root draws its own: any element's `tooltip` (UXML or code) shows beside it after a short rest, rich text
   allowed. **The UI gallery** (Forge → UI Gallery, `Scenes/UiGallery.unity`, `UI/Gallery/UiGallery.uxml`,
@@ -870,7 +874,7 @@ slopes), so results are exact and every edit goes through the edit session.
   and horizontal FOV), and the camera glides there with `SmoothDamp`.
 - **Editor state between sessions** (`EditorStateKeeper`): the editor opens where the user left off. Two documents,
   both engine-free classes in `Forge.Editing.State` with every value optional (null: never set, the default stands; ids
-  and names that no longer fit are skipped): **`EditorPrefs`**, the user's, the same in every world (agent dock open,
+  and names that no longer fit are skipped): **`EditorPrefs`**, the user's, the same in every world (side dock open and its page,
   assets browser collapsed and height, settings tab, fly speed and by height, brush radius, strength and mode, objects
   follow terrain, random turn & size, align to slope, whole pieces), in `<persistentDataPath>/Editor/prefs.json`; and
   **`WorldViewState`**, per world (the space on show, the camera's pose per space in world coordinates, the tool, the
@@ -881,7 +885,7 @@ slopes), so results are exact and every edit goes through the edit session.
   (`AtomicFile`, shared with `PluginFileStore`) and only when its text changed; a missing or unreadable file is the
   default document, with a warning, so a lost preference never stops the editor from opening. The bootstrap reads both
   at startup (cameras and space before the first `ShowSpace`, `EditorContext.Restore`, then `EditorPanel.Restore` for
-  every `IKeptSection`: `AgentDockToggle`, `SettingsSection`, `AssetsBrowser`), captures them once a second
+  every `IKeptSection`: `SideDockSection`, `SettingsSection`, `AssetsBrowser`), captures them once a second
   (`EditorContext.Capture`, `EditorPanel.Capture`, the cameras) and once more on `OnDestroy`. The mark, the selection
   and the agent's draft are not kept. JSON is enough for a few dozen values; if the editor comes to keep growing things
   (thumbnail caches, history across sessions), a SQLite store can replace the files behind the same two documents.

@@ -1,53 +1,33 @@
 using System;
 using Forge.Agent;
-using Forge.Editing.State;
 using Forge.EditorApp.UI.Controls;
 using UnityEngine.UIElements;
 
 namespace Forge.EditorApp.UI
 {
     /// <summary>
-    /// The agent button at the end of the top bar's global row: shows and hides the agent dock on the right, and
-    /// pulses while the agent works (so a closed dock still says so). The dock starts closed; the button is lit while
-    /// it is open, and the layout root wears <see cref="OpenClass"/> so the top bar and the assets browser leave the
-    /// dock its room (EditorPanel.uss, AssetsBrowser.uss).
+    /// The agent button at the end of the top bar's global row: opens the side dock on its Agent page, turns to that page
+    /// if another is on show, and closes the dock if it already shows it (<see cref="ForgeSideDock.Toggle"/>). It is lit
+    /// while the agent's page is on show, and pulses while the agent works, so a closed dock still says so.
     /// </summary>
-    public sealed class AgentDockToggle : IPanelSection, IKeptSection
+    public sealed class AgentDockToggle : IPanelSection
     {
-        public const string OpenClass = "is-agent-open";
-
         readonly AgentConversation _conversation;
+        readonly ForgeSideDock _dock;
         readonly ForgeButton _button;
-        readonly VisualElement _dock;
-        readonly VisualElement _layout;
 
-        public AgentDockToggle(VisualElement root, AgentConversation conversation)
+        public AgentDockToggle(VisualElement root, ForgeSideDock dock, AgentConversation conversation)
         {
             _conversation = conversation ?? throw new ArgumentNullException(nameof(conversation));
+            _dock = dock ?? throw new ArgumentNullException(nameof(dock));
             _button = PanelElements.Required<ForgeButton>(root, "agent-toggle");
-            _dock = PanelElements.Required<VisualElement>(root, "agent-dock");
-            _layout = PanelElements.Required<VisualElement>(root, "root");
-            _button.clicked += () => SetOpen(!IsOpen);
-            SetOpen(false);
+            _button.clicked += () => _dock.Toggle(SideDockSection.AgentPage);
         }
 
-        public bool IsOpen => !_dock.ClassListContains(PanelElements.HiddenClass);
-
-        public void SetOpen(bool open)
+        public void Refresh()
         {
-            PanelElements.SetVisible(_dock, open);
-            PanelElements.SetActive(_button, open);
-            _layout.EnableInClassList(OpenClass, open);
-        }
-
-        public void Refresh() => _button.busy = _conversation.State == AgentState.Working;
-
-        public void Capture(EditorPrefs prefs, WorldViewState world) => prefs.AgentDockOpen = IsOpen;
-
-        public void Restore(EditorPrefs prefs, WorldViewState world)
-        {
-            if (prefs.AgentDockOpen is bool open)
-                SetOpen(open);
+            PanelElements.SetActive(_button, _dock.IsOpen && _dock.Current == SideDockSection.AgentPage);
+            _button.busy = _conversation.State == AgentState.Working;
         }
     }
 }

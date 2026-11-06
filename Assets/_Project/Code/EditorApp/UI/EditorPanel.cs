@@ -15,7 +15,7 @@ namespace Forge.EditorApp.UI
 {
     /// <summary>
     /// The editor's UI Toolkit panel: the tool strip down the left edge, the tool options bar across the top (its gear
-    /// opens the settings card), the assets browser along the bottom, the agent dock on the right and a status bar,
+    /// opens the settings card), the assets browser along the bottom, the side dock on the right and a status bar,
     /// laid out in EditorPanel.uxml and styled by EditorPanel.uss. A thin adapter: each section is its own
     /// presenter (<see cref="IPanelSection"/>), and this component only composes them, refreshes them every frame
     /// and answers whether the UI owns the input.
@@ -37,7 +37,7 @@ namespace Forge.EditorApp.UI
         /// <param name="thumbnails">Pictures for the assets browser's object tiles; null leaves the placeholder icons.</param>
         /// <param name="groundLooks">Pictures for the assets browser's ground tiles; null leaves the placeholder icons.</param>
         /// <param name="materialLooks">Pictures for the assets browser's material tiles; null leaves the placeholder icons.</param>
-        /// <param name="agent">The world-building agent's conversation; null hides the agent dock.</param>
+        /// <param name="agent">The world-building agent's conversation; null hides the agent button (the side dock stays closed).</param>
         public void Initialize(EditorContext context, EditorCommands commands, EditorDiagnostics diagnostics, IAssetThumbnails thumbnails, GroundLooks groundLooks, MaterialLooks materialLooks, AgentConversation agent)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -68,14 +68,17 @@ namespace Forge.EditorApp.UI
                 new StatusBar(Root, context),
             };
 
+            var sideDock = new SideDockSection(Root);
+            _sections.Add(sideDock);
             if (agent != null)
             {
                 _sections.Add(new AgentSection(Root, agent, context));
-                _sections.Add(new AgentDockToggle(Root, agent));
+                _sections.Add(new AgentDockToggle(Root, sideDock.Dock, agent));
             }
             else
             {
-                PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "agent-dock"), false);
+                // Without the agent nothing opens the dock yet (its Materials page is still empty).
+                sideDock.Dock.SetOpen(false);
                 PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "agent-toggle"), false);
             }
             Refresh();
@@ -121,7 +124,7 @@ namespace Forge.EditorApp.UI
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "tool-strip"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "tool-options"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "assets"), false);
-            PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "agent-dock"), false);
+            PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "side-dock"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "status"), false);
             PanelElements.SetVisible(PanelElements.Required<VisualElement>(Root, "fatal"), true);
             PanelElements.SetText(PanelElements.Required<Label>(Root, "fatal-message"), message);

@@ -83,6 +83,17 @@
                             </ui:VisualElement>
                         </forge:ForgeSection>
 
+                        <forge:ForgeSection title="SIDE DOCK">
+                            <forge:ForgeSideDock class="gallery-side-dock">
+                                <forge:ForgeDockPage key="one" title="Agent">
+                                    <ui:Label class="forge-wrap" text="A dock's pages are its ForgeDockPage children; the tabs come from their titles." />
+                                </forge:ForgeDockPage>
+                                <forge:ForgeDockPage key="two" title="Materials">
+                                    <ui:Label class="forge-muted forge-wrap" text="The second page." />
+                                </forge:ForgeDockPage>
+                            </forge:ForgeSideDock>
+                        </forge:ForgeSection>
+
                         <forge:ForgeSection title="DISABLED">
                             <ui:VisualElement name="disabled">
                                 <ui:VisualElement class="gallery-row">

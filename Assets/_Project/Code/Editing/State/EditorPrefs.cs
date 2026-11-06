@@ -7,8 +7,11 @@ namespace Forge.Editing.State
     /// </summary>
     public sealed class EditorPrefs
     {
-        /// <summary>Whether the agent dock on the right is open.</summary>
-        public bool? AgentDockOpen { get; set; }
+        /// <summary>Whether the side dock on the right is open.</summary>
+        public bool? SideDockOpen { get; set; }
+
+        /// <summary>The side dock's page (its key: agent, materials).</summary>
+        public string SideDockPage { get; set; }
 
         /// <summary>Whether the assets browser is collapsed to its header.</summary>
         public bool? AssetsCollapsed { get; set; }

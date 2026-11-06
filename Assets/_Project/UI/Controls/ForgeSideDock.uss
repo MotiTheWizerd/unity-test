@@ -1,0 +1,32 @@
+/* ForgeSideDock: a glass card along a side, a tab bar over one page at a time. Tokens from Theme/ForgeTokens.uss. */
+
+.forge-side-dock {
+    flex-direction: column;
+}
+
+.forge-side-dock__header {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-bottom: var(--forge-space-3);
+}
+
+.forge-side-dock__pages {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+/* A page fills the dock, so a page's own list can take the room left over. */
+.forge-dock-page {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+/* A page's own toolbar row (its actions), right-aligned under the tabs. */
+.forge-dock-page__bar {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    flex-shrink: 0;
+    margin-bottom: var(--forge-space-2);
+}

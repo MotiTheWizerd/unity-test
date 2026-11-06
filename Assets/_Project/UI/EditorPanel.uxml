@@ -79,32 +79,36 @@
             <ui:ScrollView name="assets-grid" class="forge-assets__grid" />
         </forge:ForgePanel>
 
-        <forge:ForgePanel name="agent-dock" class="forge-dock forge-dock--right forge-hidden">
-            <ui:VisualElement class="forge-panel__title-bar">
-                <ui:Label class="forge-panel__title" text="Agent" />
-                <forge:ForgeButton name="agent-new" text="New chat" icon="sparkles" variant="Ghost" />
-            </ui:VisualElement>
-            <ui:ScrollView name="agent-transcript" class="forge-agent-transcript" />
-            <ui:VisualElement name="agent-review" class="forge-agent-review">
-                <ui:Label name="agent-review-summary" class="forge-muted forge-wrap" />
-                <ui:VisualElement class="forge-row forge-choices">
-                    <forge:ForgeButton name="agent-accept" text="Accept" variant="Primary" />
-                    <forge:ForgeButton name="agent-retry" text="Retry" />
-                    <forge:ForgeButton name="agent-discard" text="Discard" />
+        <forge:ForgeSideDock name="side-dock" class="forge-dock forge-dock--right forge-hidden">
+            <forge:ForgeDockPage name="side-page-agent" key="agent" title="Agent">
+                <ui:VisualElement class="forge-dock-page__bar">
+                    <forge:ForgeButton name="agent-new" text="New chat" icon="sparkles" variant="Ghost" />
                 </ui:VisualElement>
-            </ui:VisualElement>
-            <ui:Label name="agent-status" class="forge-muted" />
-            <ui:VisualElement class="forge-row forge-agent-mark">
-                <ui:Label name="agent-mark-text" class="forge-muted forge-wrap forge-agent-mark-text" />
-                <forge:ForgeButton name="agent-mark" text="Mark" icon="map-pin" tooltip="M" />
-                <forge:ForgeButton name="agent-mark-clear" text="Clear" />
-            </ui:VisualElement>
-            <forge:ForgeTextArea name="agent-input" placeholder-text="Describe what to build…  (Enter sends, Shift+Enter: new line)" class="forge-agent-input" />
-            <ui:VisualElement class="forge-row forge-choices">
-                <forge:ForgeButton name="agent-send" text="Send" variant="Primary" />
-                <forge:ForgeButton name="agent-stop" text="Stop" />
-            </ui:VisualElement>
-        </forge:ForgePanel>
+                <ui:ScrollView name="agent-transcript" class="forge-agent-transcript" />
+                <ui:VisualElement name="agent-review" class="forge-agent-review">
+                    <ui:Label name="agent-review-summary" class="forge-muted forge-wrap" />
+                    <ui:VisualElement class="forge-row forge-choices">
+                        <forge:ForgeButton name="agent-accept" text="Accept" variant="Primary" />
+                        <forge:ForgeButton name="agent-retry" text="Retry" />
+                        <forge:ForgeButton name="agent-discard" text="Discard" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Label name="agent-status" class="forge-muted" />
+                <ui:VisualElement class="forge-row forge-agent-mark">
+                    <ui:Label name="agent-mark-text" class="forge-muted forge-wrap forge-agent-mark-text" />
+                    <forge:ForgeButton name="agent-mark" text="Mark" icon="map-pin" tooltip="M" />
+                    <forge:ForgeButton name="agent-mark-clear" text="Clear" />
+                </ui:VisualElement>
+                <forge:ForgeTextArea name="agent-input" placeholder-text="Describe what to build…  (Enter sends, Shift+Enter: new line)" class="forge-agent-input" />
+                <ui:VisualElement class="forge-row forge-choices">
+                    <forge:ForgeButton name="agent-send" text="Send" variant="Primary" />
+                    <forge:ForgeButton name="agent-stop" text="Stop" />
+                </ui:VisualElement>
+            </forge:ForgeDockPage>
+            <forge:ForgeDockPage name="side-page-materials" key="materials" title="Materials">
+                <ui:Label class="forge-muted forge-wrap" text="Materials will live here." />
+            </forge:ForgeDockPage>
+        </forge:ForgeSideDock>
 
         <ui:Label name="status" class="forge-panel forge-status" />
 

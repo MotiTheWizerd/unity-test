@@ -44,3 +44,7 @@
 .gallery-danger {
     color: var(--forge-danger);
 }
+
+.gallery-side-dock {
+    height: 140px;
+}

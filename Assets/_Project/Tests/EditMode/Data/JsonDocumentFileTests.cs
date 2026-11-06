@@ -68,10 +68,10 @@ namespace Forge.Tests.Data
         [Test]
         public void Save_WritesCamelCaseAndLeavesUnsetValuesOut()
         {
-            new JsonDocumentFile<EditorPrefs>(_path).Save(new EditorPrefs { AgentDockOpen = true });
+            new JsonDocumentFile<EditorPrefs>(_path).Save(new EditorPrefs { SideDockOpen = true });
 
             var text = File.ReadAllText(_path);
-            StringAssert.Contains("\"agentDockOpen\": true", text);
+            StringAssert.Contains("\"sideDockOpen\": true", text);
             StringAssert.DoesNotContain("flySpeed", text);
         }
 
