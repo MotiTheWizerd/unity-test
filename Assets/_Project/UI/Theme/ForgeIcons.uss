@@ -49,3 +49,4 @@
 .forge-icon--settings { background-image: url("../Icons/settings.svg"); }
 .forge-icon--bot { background-image: url("../Icons/bot.svg"); }
 .forge-icon--palette { background-image: url("../Icons/palette.svg"); }
+.forge-icon--info { background-image: url("../Icons/info.svg"); }

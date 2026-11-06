@@ -1,0 +1,30 @@
+/* ForgePropertyRow: a name in a fixed label column, its value beside it. Tokens from Theme/ForgeTokens.uss. */
+
+.forge-property-row {
+    flex-direction: row;
+    align-items: center;
+    min-height: 24px;
+    margin: 1px 0;
+}
+
+.forge-property-row__label {
+    width: 76px;
+    flex-shrink: 0;
+    padding: 0 2px;
+    font-size: var(--forge-font-size-sm);
+    color: var(--forge-text-muted);
+}
+
+.forge-property-row__value {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.forge-property-row__text {
+    flex-shrink: 1;
+    padding: 0;
+    white-space: normal;
+    color: var(--forge-text);
+}

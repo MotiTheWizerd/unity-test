@@ -16,6 +16,7 @@ namespace Forge.EditorApp.UI
         public const string OpenClass = "is-side-dock-open";
         public const string AgentPage = "agent";
         public const string MaterialsPage = "materials";
+        public const string InspectorPage = "inspector";
 
         readonly VisualElement _layout;
 

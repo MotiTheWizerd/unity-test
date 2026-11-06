@@ -30,6 +30,16 @@ namespace Forge.Editing.Placement
             return flat.LengthSquared() < 1e-12f ? 0f : YawAlong(Vector2.Normalize(flat));
         }
 
+        /// <summary>
+        /// <paramref name="rotation"/> turned around world +Y until its heading (<see cref="HeadingOf"/>) is
+        /// <paramref name="headingDegrees"/>, keeping any tilt it has (an object aligned to a slope stays aligned).
+        /// </summary>
+        public static Quaternion WithHeading(Quaternion rotation, float headingDegrees)
+        {
+            var turn = (headingDegrees - HeadingOf(rotation)) * DegreesToRadians;
+            return Quaternion.Normalize(Quaternion.Concatenate(rotation, Quaternion.CreateFromAxisAngle(Vector3.UnitY, turn)));
+        }
+
         public static float NormalizeDegrees(float degrees)
         {
             var wrapped = degrees % 360f;

@@ -822,6 +822,19 @@ slopes), so results are exact and every edit goes through the edit session.
   `/ground`, which no category head can be): one tile per `GroundLayerRecord`, its picture a material ball (`ThumbnailRenderer.GetBall`:
   a lit sphere wearing `GroundLooks.CreatePreviewMaterial`, a URP Lit stand-in built by `TerrainLayerPreview` from
   the layer's color, normal and mask maps and tint, destroyed once the picture is taken); picking one calls `EditorContext.SelectPaintLayer` (paint tool, that ground).
+  The side dock's **Inspector** page (`UI/Inspector/InspectorPage`, Lucide `info` tab) shows the selection as a stack
+  of sections (`IInspectorSection`: title, content built once, `Shows(Inspection)`, `Show(Inspection)` on change,
+  cheap `Refresh()` per frame), each in a collapsible `ForgeSection`, in the order `EditorPanel` gives them; a new kind
+  of thing in the game adds its own section and the page never changes. What is inspected is read once into an
+  `Inspection` (`Forge.Editing.Inspection`, engine-free, tested: the selected records of one world version, `All<T>`,
+  `Find<T>`, and `Inspection.Shared(records, read, same)` for a value they agree on or mixed) when the selection or
+  the world changes, and only while the page is on show. Sections today: `IdentitySection` (name, kind, category, id,
+  source plugin; several: how many of which kinds; any other record: its type and id), `TransformSection` (X, Y, Z,
+  Heading, Scale as `ForgeNumberField` rows in `ForgePropertyRow`s; shared values show, differing ones show mixed,
+  typing gives every selected object the value as one undo step via `EditorCommands.TransformSelection`;
+  `PlacementMath.WithHeading` turns while keeping a slope tilt; a box being typed in is never overwritten) and
+  `MaterialsSection` (the same `MaterialSlotList` as the Materials page, which builds itself into any host, plus a
+  button to the Materials page).
   **Materials are applied, not placed**, so they live on the side dock's **Materials** page (`MaterialsPage`, brought
   up to date only while on show). On top a **preview card** (`MaterialPreview` in a `Controls/PreviewCard`): a large
   ball (`IAssetThumbnails.GetBallPreview`, 512 px, key and rim light, `MaterialBalls.PreviewOf`) standing on a studio

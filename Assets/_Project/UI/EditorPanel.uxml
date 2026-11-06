@@ -100,13 +100,17 @@
                     <forge:ForgeButton name="agent-stop" text="Stop" />
                 </ui:VisualElement>
             </forge:ForgeDockPage>
+            <forge:ForgeDockPage name="side-page-inspector" key="inspector" title="Inspector" icon="info">
+                <ui:Label name="inspector-empty" class="forge-muted forge-wrap" />
+                <ui:ScrollView name="inspector-scroll" class="forge-inspector">
+                    <ui:VisualElement name="inspector-sections" />
+                </ui:ScrollView>
+            </forge:ForgeDockPage>
             <forge:ForgeDockPage name="side-page-materials" key="materials" title="Materials" icon="palette">
                 <forge:PreviewCard name="material-preview" />
                 <forge:ForgeSection title="SELECTED OBJECT">
-                    <ui:Label name="material-slots-hint" class="forge-muted forge-wrap" />
-                    <ui:VisualElement name="material-slots" class="forge-material-slots" />
+                    <ui:VisualElement name="material-parts" />
                     <ui:VisualElement class="forge-row forge-choices forge-material-actions">
-                        <forge:ForgeButton name="reset-materials" text="Reset look" tooltip="Give the selection back its own materials in every part" />
                         <forge:ForgeButton name="make-variant" text="Make variant" tooltip="Save this object's look as a new object in the assets browser, to place more of it" />
                     </ui:VisualElement>
                     <ui:VisualElement class="forge-row forge-material-actions">

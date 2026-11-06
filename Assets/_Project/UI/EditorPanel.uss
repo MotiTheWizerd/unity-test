@@ -224,6 +224,12 @@
     width: auto;
 }
 
+/* ---- The side dock's Inspector page: sections stacked, scrolling when they don't fit (InspectorPage) -------- */
+
+.forge-inspector {
+    flex-grow: 1;
+}
+
 /* ---- The side dock's Materials page: the selection's parts over the library (MaterialsPage) -------------- */
 
 .forge-material-slots {

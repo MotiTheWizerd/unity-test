@@ -21,7 +21,7 @@ namespace Forge.EditorApp.UI
         {
             _dock = dock ?? throw new ArgumentNullException(nameof(dock));
             _preview = new MaterialPreview(root, context, commands, balls);
-            _slots = new MaterialSlotList(root, context, commands, balls);
+            _slots = new MaterialSlotList(PanelElements.Required<VisualElement>(root, "material-parts"), context, commands, balls);
             _variant = new VariantForm(root, commands);
             _library = new MaterialLibrary(root, context, commands, balls);
             _library.Picked += _preview.Pick;

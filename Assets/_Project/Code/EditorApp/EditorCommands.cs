@@ -221,6 +221,19 @@ namespace Forge.EditorApp
                 _context.Report(changed > 0 ? $"Reset the materials of {changed} object(s)" : "Materials: the selection wears its own look already");
         }
 
+        /// <summary>
+        /// Applies <paramref name="change"/> to the transform of every selected object (the inspector's numbers), as one
+        /// undo step named <paramref name="verb"/>; objects it leaves as they were are skipped.
+        /// </summary>
+        public void TransformSelection(string verb, Func<PlacedObjectRecord, PlacedObjectRecord> change)
+        {
+            if (change == null)
+                throw new ArgumentNullException(nameof(change));
+            var changed = 0;
+            if (_context.TryEdit(verb, () => changed = ObjectEdits.Transform(_context.Session, _context.Selection.Ids, change, verb)))
+                _context.Report(changed > 0 ? $"{verb}: {changed} object(s)" : $"{verb}: nothing changed");
+        }
+
         // Selected objects whose asset has the slot, so dressing it never writes an override no one could see.
         List<RecordId> SelectedWithSlot(string slot) =>
             _context.Selection.Ids.Where(id => SlotsOf(id).Contains(slot)).ToList();

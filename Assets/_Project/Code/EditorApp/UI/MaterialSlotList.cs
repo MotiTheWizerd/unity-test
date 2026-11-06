@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Forge.Data;
 using Forge.Data.Records;
+using Forge.EditorApp.UI.Controls;
 using Forge.Editing;
 using UnityEngine.UIElements;
 
@@ -12,14 +13,15 @@ namespace Forge.EditorApp.UI
     /// The selection's material slots (<see cref="EditorCommands.SelectionSlots"/>), a <see cref="MaterialPartRow"/> each,
     /// showing what it wears. Clicking a row chooses the slot a material dresses (<see cref="EditorContext.MaterialSlot"/>,
     /// so its parts glow); the chosen one is lit. Below them, Reset look gives the selection back its own materials. With
-    /// no slots selected, a hint says what to do. About the selected object, not the library, so it can move to an
-    /// inspector without the library.
+    /// no slots selected, a hint says what to do. It builds itself into the element it is given, so the Materials page
+    /// and the inspector each show one.
     /// </summary>
     public sealed class MaterialSlotList
     {
         const string OwnLook = "Own look";
         const string SelectHint = "Select an object to dress its parts, or drag a ball onto any part.";
         const string NoSlotsHint = "The selection has no parts to dress.";
+        const string RowsClass = "forge-material-slots";
 
         readonly EditorContext _context;
         readonly EditorCommands _commands;
@@ -31,15 +33,30 @@ namespace Forge.EditorApp.UI
         readonly Dictionary<string, RecordId?> _worn = new Dictionary<string, RecordId?>(StringComparer.Ordinal);
         IReadOnlyList<MaterialRecord> _materials;
 
-        public MaterialSlotList(VisualElement root, EditorContext context, EditorCommands commands, MaterialBalls balls)
+        /// <param name="host">The element the list builds itself into.</param>
+        public MaterialSlotList(VisualElement host, EditorContext context, EditorCommands commands, MaterialBalls balls)
         {
+            if (host == null)
+                throw new ArgumentNullException(nameof(host));
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             _balls = balls ?? throw new ArgumentNullException(nameof(balls));
-            _rows = PanelElements.Required<VisualElement>(root, "material-slots");
-            _hint = PanelElements.Required<Label>(root, "material-slots-hint");
-            _reset = PanelElements.Required<Button>(root, "reset-materials");
-            _reset.clicked += commands.ResetSelectionMaterials;
+
+            _hint = new Label();
+            _hint.AddToClassList("forge-muted");
+            _hint.AddToClassList("forge-wrap");
+            host.Add(_hint);
+
+            _rows = new VisualElement();
+            _rows.AddToClassList(RowsClass);
+            host.Add(_rows);
+
+            _reset = new ForgeButton(commands.ResetSelectionMaterials)
+            {
+                text = "Reset look",
+                tooltip = "Give the selection back its own materials in every part",
+            };
+            host.Add(_reset);
         }
 
         public void Refresh()

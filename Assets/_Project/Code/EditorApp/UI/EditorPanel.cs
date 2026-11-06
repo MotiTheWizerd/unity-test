@@ -4,6 +4,7 @@ using System.Linq;
 using Forge.Agent;
 using Forge.EditorApp.Diagnostics;
 using Forge.EditorApp.UI.Controls;
+using Forge.EditorApp.UI.Inspector;
 using Forge.Editing.State;
 using Forge.World;
 using Forge.World.Assets;
@@ -70,7 +71,15 @@ namespace Forge.EditorApp.UI
 
             var sideDock = new SideDockSection(Root);
             _sections.Add(sideDock);
-            _sections.Add(new MaterialsPage(Root, sideDock.Dock, context, commands, new MaterialBalls(thumbnails, materialLooks)));
+            var balls = new MaterialBalls(thumbnails, materialLooks);
+            _sections.Add(new MaterialsPage(Root, sideDock.Dock, context, commands, balls));
+            // The inspector's sections, top to bottom; a new kind of thing in the game adds its own here.
+            _sections.Add(new InspectorPage(Root, sideDock.Dock, context, new IInspectorSection[]
+            {
+                new IdentitySection(),
+                new TransformSection(commands),
+                new MaterialsSection(context, commands, balls, sideDock.Dock),
+            }));
             _sections.Add(new DockPageToggle(Root, "materials-toggle", sideDock.Dock, SideDockSection.MaterialsPage));
             if (agent != null)
             {

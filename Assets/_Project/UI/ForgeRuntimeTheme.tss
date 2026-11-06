@@ -12,4 +12,5 @@
 @import url("Controls/ForgeSideDock.uss");
 @import url("Controls/AssetTile.uss");
 @import url("Controls/PreviewCard.uss");
+@import url("Controls/ForgePropertyRow.uss");
 @import url("Controls/Tooltip.uss");
