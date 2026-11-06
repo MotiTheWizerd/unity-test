@@ -61,18 +61,20 @@
             </ui:VisualElement>
         </forge:ForgePanel>
 
-        <forge:ForgePanel name="assets" class="forge-assets">
-            <ui:VisualElement name="assets-resize" class="forge-assets__resize" />
-            <ui:VisualElement class="forge-assets__header">
-                <ui:Label class="forge-section__title forge-assets__title" text="ASSETS" />
-                <ui:VisualElement name="assets-tabs" class="forge-assets__tabs" />
-                <ui:Label name="assets-count" class="forge-muted forge-assets__count" />
-                <forge:ForgeTextInput name="assets-search" placeholder-text="Search…" class="forge-assets__search" />
-                <forge:ForgeButton name="materials-toggle" icon="palette" small="true" tooltip="Materials" />
-                <forge:ForgeButton name="assets-collapse" variant="Ghost" small="true" tooltip="Collapse / expand" />
-            </ui:VisualElement>
-            <ui:ScrollView name="assets-grid" class="forge-assets__grid" />
-        </forge:ForgePanel>
+        <ui:VisualElement name="assets-room" class="forge-assets-room" picking-mode="Ignore">
+            <forge:ForgePanel name="assets" class="forge-assets">
+                <ui:VisualElement name="assets-resize" class="forge-assets__resize" />
+                <ui:VisualElement class="forge-assets__header">
+                    <ui:Label class="forge-section__title forge-assets__title" text="ASSETS" />
+                    <ui:VisualElement name="assets-tabs" class="forge-assets__tabs" />
+                    <ui:Label name="assets-count" class="forge-muted forge-assets__count" />
+                    <forge:ForgeTextInput name="assets-search" placeholder-text="Search…" class="forge-assets__search" />
+                    <forge:ForgeButton name="materials-toggle" icon="palette" small="true" tooltip="Materials" />
+                    <forge:ForgeButton name="assets-collapse" variant="Ghost" small="true" tooltip="Collapse / expand" />
+                </ui:VisualElement>
+                <ui:ScrollView name="assets-grid" class="forge-assets__grid" />
+            </forge:ForgePanel>
+        </ui:VisualElement>
 
         <forge:ForgeSideDock name="side-dock" class="forge-dock forge-dock--right forge-hidden">
             <forge:ForgeDockPage name="side-page-agent" key="agent" title="Agent" icon="bot">

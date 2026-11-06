@@ -4,11 +4,22 @@
  * their own sheets under Controls. Tokens from Theme/ForgeTokens.uss.
  */
 
-.forge-assets {
+/*
+ * The browser's room along the bottom: the middle 85% of the view, as the top bar's (or up to the side dock while
+ * it is open, EditorPanel.uss). It takes no clicks; the browser stands centred in it, never wider than the top bar,
+ * so the two line up.
+ */
+.forge-assets-room {
     position: absolute;
-    left: 62px;
-    right: 10px;
+    left: 7.5%;
+    right: 7.5%;
     bottom: 46px;
+    align-items: center;
+}
+
+.forge-assets {
+    width: 100%;
+    max-width: var(--forge-toolbar-max-width);
     height: 230px;
     padding: 6px 10px 8px 10px;
 }

@@ -776,7 +776,7 @@ slopes), so results are exact and every edit goes through the edit session.
   closed; a `DockPageToggle` button opens it on its page, turns to it from another page, or closes it
   (`ForgeSideDock.Toggle`): the top bar's agent button beside the gear (pulsing while the agent works) and the assets
   browser's palette button beside the search (Materials). Without an agent its page is removed (`RemovePage`),
-  and the assets browser widens into its room while it is closed (the layout root wears `is-side-dock-open`). The top bar is centred, at most `--forge-toolbar-max-width` (1000 px) wide. It shows the transcript, Accept / Retry /
+  and the assets browser's room stops short of the dock while it is open (the layout root wears `is-side-dock-open`). The top bar is centred, at most `--forge-toolbar-max-width` (1000 px) wide, and so is the assets browser: it stands centred in its room (`forge-assets-room`, the middle 85% of the view like the top bar's cap, click-through), so the two line up. With the dock open the room is 360 px in from both sides: still centred under the top bar, narrower on small windows. It shows the transcript, Accept / Retry /
   Discard while reviewing, and a message box (Enter sends, Shift+Enter: new line). The agent's replies are
   Markdown: `Forge.Core.Text.Markdown` (engine-free) parses the subset chat uses into blocks and styled spans, and
   `MarkdownView` lays them out (a label per block, list items as marker + text, rich text wrapped in `<noparse>`

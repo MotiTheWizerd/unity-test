@@ -22,8 +22,10 @@
     width: 340px;
 }
 
-/* While the side dock is open (SideDockSection), the assets browser stops short of it. */
-.forge-root.is-side-dock-open .forge-assets {
+/* While the side dock is open (SideDockSection), the assets browser's room stops short of it, and as short on the
+   left, so the browser stays centred under the top bar (narrower where the window can't fit both). */
+.forge-root.is-side-dock-open .forge-assets-room {
+    left: 360px;
     right: 360px;
 }
 
