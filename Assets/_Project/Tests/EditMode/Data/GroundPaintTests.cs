@@ -30,6 +30,20 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void GroundLayer_GrowsGrassOnlyWhenGivenSome_WithinSaneBounds()
+        {
+            Assert.That(new GroundLayerRecord(Rock, "Rock", "ground/rock").Grass, Is.Null);
+
+            var grass = new GroundLayerRecord(Grass, "Grass", "ground/grass", new GrassSettings(3f, 0.45f)).Grass;
+            Assert.That((grass.Density, grass.Height), Is.EqualTo((3f, 0.45f)));
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => new GrassSettings(0f, 0.5f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new GrassSettings(GrassSettings.MaxDensity + 1f, 0.5f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new GrassSettings(1f, float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new GrassSettings(1f, GrassSettings.MaxHeight + 0.1f));
+        }
+
+        [Test]
         public void Uniform_ShowsOneLayerEverywhere()
         {
             var paint = GroundPaint.Uniform(Grass);

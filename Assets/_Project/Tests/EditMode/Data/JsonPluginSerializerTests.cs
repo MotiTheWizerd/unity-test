@@ -266,6 +266,21 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void GroundLayers_KeepTheirGrass_AndBareGroundWritesNoGrassField()
+        {
+            var meadow = new GroundLayerRecord(GroundLayerRecord.IdFor("core", "grass"), "Grass", "ground/grass", new GrassSettings(3f, 0.45f));
+            var rock = new GroundLayerRecord(GroundLayerRecord.IdFor("core", "rock"), "Rock", "ground/rock");
+
+            var json = Write(Plugin("core", meadow, rock));
+            var layers = Read(json).Records.OfType<GroundLayerRecord>().ToDictionary(l => l.AssetKey);
+
+            Assert.That((layers["ground/grass"].Grass.Density, layers["ground/grass"].Grass.Height), Is.EqualTo((3f, 0.45f)));
+            Assert.That(layers["ground/rock"].Grass, Is.Null);
+            Assert.That(Regex.Matches(json, "\"grass\": ").Count, Is.EqualTo(1), "No grass is no field, not null.");
+            Assert.Throws<DataValidationException>(() => Read(json.Replace("\"density\": 3.0", "\"density\": -1.0")));
+        }
+
+        [Test]
         public void Read_UnknownSpaceKind_IsRejected()
         {
             var json = Write(Plugin("core", new SpaceRecord(Space, "Tamriel", SpaceKind.Worldspace))).Replace("\"worldspace\"", "\"dungeon\"");

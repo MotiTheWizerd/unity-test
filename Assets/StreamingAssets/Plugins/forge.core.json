@@ -193,19 +193,31 @@
       "type": "ground_layer",
       "id": "forge.core:ground/drygrass",
       "displayName": "Dry Grass",
-      "assetKey": "ground/drygrass"
+      "assetKey": "ground/drygrass",
+      "grass": {
+        "density": 1.5,
+        "height": 0.4
+      }
     },
     {
       "type": "ground_layer",
       "id": "forge.core:ground/forestfloor",
       "displayName": "Forest Floor",
-      "assetKey": "ground/forestfloor"
+      "assetKey": "ground/forestfloor",
+      "grass": {
+        "density": 0.4,
+        "height": 0.3
+      }
     },
     {
       "type": "ground_layer",
       "id": "forge.core:ground/grass",
       "displayName": "Grass",
-      "assetKey": "ground/grass"
+      "assetKey": "ground/grass",
+      "grass": {
+        "density": 3.0,
+        "height": 0.45
+      }
     },
     {
       "type": "ground_layer",

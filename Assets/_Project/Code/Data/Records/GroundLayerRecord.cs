@@ -13,7 +13,8 @@ namespace Forge.Data.Records
         /// <summary>Name prefix of ground layer records, e.g. "forge.core:ground/grass".</summary>
         public const string NamePrefix = "ground/";
 
-        public GroundLayerRecord(RecordId id, string displayName, string assetKey)
+        /// <param name="grass">The grass the layer grows where it is painted; null grows none.</param>
+        public GroundLayerRecord(RecordId id, string displayName, string assetKey, GrassSettings grass = null)
             : base(id)
         {
             if (!id.Name.StartsWith(NamePrefix, StringComparison.Ordinal))
@@ -25,12 +26,16 @@ namespace Forge.Data.Records
 
             DisplayName = displayName;
             AssetKey = assetKey;
+            Grass = grass;
         }
 
         public string DisplayName { get; }
 
         /// <summary>Engine-agnostic key the presentation resolves to the layer's look (its textures).</summary>
         public string AssetKey { get; }
+
+        /// <summary>The grass the layer grows where it is painted, or null: bare ground (rock, sand, snow).</summary>
+        public GrassSettings Grass { get; }
 
         public static RecordId IdFor(string ns, string name) => new RecordId(ns, NamePrefix + name);
     }
