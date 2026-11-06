@@ -164,7 +164,7 @@ namespace Forge.EditorApp
                 Debug.Log($"[Forge] Opened '{_profile.name}': {_context.Session.World.Records.Count} records, " +
                           $"load {loadMs:0} ms, resolve {resolveMs:0} ms, first view {viewMs:0} ms ({_view.LoadedChunks.Count} chunks, {_view.PresentedCount} presented).");
 
-                _highlighter = new SelectionHighlighter(_context.Selection, _view, _selectionOverlay, EmphasizedSlot);
+                _highlighter = new SelectionHighlighter(_context.Selection, _view, _selectionOverlay, EmphasizedSlot, DropTarget);
                 _context.Session.WorldChanged += OnWorldChanged;
                 _context.Selection.Changed += _highlighter.Refresh;
 
@@ -198,6 +198,15 @@ namespace Forge.EditorApp
             _grass?.Tick(focus, _frameBudgetMs);
             _grass?.Draw(_focus.position);
             _highlighter.Draw();
+        }
+
+        // The part a material carried from the assets browser would dress if dropped now.
+        (RecordId Id, string Slot)? DropTarget()
+        {
+            var commands = _controller.Commands;
+            if (commands == null || !(_context.Drag is AssetDrag drag) || drag.Kind != AssetDragKind.Material)
+                return null;
+            return commands.TryPartUnderPointer(out var id, out var slot) ? (id, slot) : ((RecordId, string)?)null;
         }
 
         // While a select tool is current, the parts a material ball would dress stand out from the rest of the selection.

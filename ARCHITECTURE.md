@@ -823,7 +823,13 @@ slopes), so results are exact and every edit goes through the edit session.
   the choice is `EditorContext.MaterialSlot`, the first slot when unset; clicking an object with a select tool sets it
   to the slot of the part clicked, `ScenePicker.TryPickPlacedObject` → `MaterialSlots.SlotOf(collider)`, so "click the
   roof, then a ball" dresses the roof) beside a Reset look button
-  (`ResetSelectionMaterials`). Every list
+  (`ResetSelectionMaterials`). Material and ground tiles also **drag into the world** (`Controls/TileDrag`, a
+  `PointerManipulator`: past 8 px a copy of the tile's picture follows the pointer on the panel root; letting go off
+  every panel element is a drop, and the tile's click is swallowed). While carried, `EditorContext.Drag` (`AssetDrag`)
+  says what, and the highlighter lights the part a material would land on (`EditorCommands.TryPartUnderPointer`, the
+  controller's pointer ray). A dropped material dresses that part of that one object (`DropMaterial`, and its slot
+  becomes the chosen one); a dropped ground paints one dab of the paint brush where it lands (`DropGround`, a
+  one-dab `PaintStroke`, and it becomes the paint tool's ground). Each is one undo step. Every list
   is searched alike through `SearchQuery` (all terms, any field, ignoring case). Each object tile's picture comes from `ThumbnailRenderer`
   (`World/Assets`, behind `IAssetThumbnails`): on first request it instantiates the asset key through the same
   `IAssetCatalog` the world uses, frames it whole with `ThumbnailFraming` (orthographic three-quarter view, pure

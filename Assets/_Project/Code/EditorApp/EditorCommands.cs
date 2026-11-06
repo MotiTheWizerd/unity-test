@@ -27,9 +27,12 @@ namespace Forge.EditorApp
         readonly ICameraRig _camera;
         readonly SlopeAlignment _slopes;
         readonly AssetSlots _slots;
+        readonly Func<Ray> _pointerRay;
 
-        public EditorCommands(EditorContext context, WorldView view, ScenePicker picker, ICameraRig camera, SlopeAlignment slopes, AssetSlots slots)
+        /// <param name="pointerRay">The world ray under the mouse pointer now (where a dragged tile would land).</param>
+        public EditorCommands(EditorContext context, WorldView view, ScenePicker picker, ICameraRig camera, SlopeAlignment slopes, AssetSlots slots, Func<Ray> pointerRay)
         {
+            _pointerRay = pointerRay ?? throw new ArgumentNullException(nameof(pointerRay));
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _picker = picker ?? throw new ArgumentNullException(nameof(picker));
@@ -224,6 +227,64 @@ namespace Forge.EditorApp
 
         string NameOf(RecordId material) =>
             _context.Session.World.Records.TryGet(material, out var record) && record is MaterialRecord found ? found.DisplayName : material.ToString();
+
+        /// <summary>
+        /// The placed object and material slot under the mouse pointer: where a dragged material would land. False over
+        /// anything else, or a part that wears no named material.
+        /// </summary>
+        public bool TryPartUnderPointer(out RecordId id, out string slot) =>
+            _picker.TryPickPlacedObject(_pointerRay(), _context.Session.World.Records, out id, out _, out slot) && slot != null;
+
+        /// <summary>
+        /// Dresses the part under the mouse pointer in <paramref name="material"/> (a material ball dropped on it), that one
+        /// object only, and makes its slot the chosen one. One undo step.
+        /// </summary>
+        public void DropMaterial(RecordId material)
+        {
+            if (!TryPartUnderPointer(out var id, out var slot))
+            {
+                _context.Report("Material: drop it on a part of an object");
+                return;
+            }
+
+            _context.MaterialSlot = slot;
+            var changed = 0;
+            if (_context.TryEdit("Set material", () => changed = ObjectEdits.SetMaterial(_context.Session, new[] { id }, slot, material)))
+                _context.Report(changed > 0 ? $"{NameOf(material)} on {Materials.SlotLabel(slot)}" : $"Already {NameOf(material)} on {Materials.SlotLabel(slot)}");
+        }
+
+        /// <summary>
+        /// Paints one dab of <paramref name="layer"/> where the mouse pointer meets the land (a ground tile dropped there),
+        /// with the paint brush's size and strength, and makes it the paint tool's ground. One undo step.
+        /// </summary>
+        public void DropGround(RecordId layer)
+        {
+            if (!(_context.UnpaintedGround is RecordId unpainted))
+            {
+                _context.Report("Paint: no ground layer looks like unpainted ground");
+                return;
+            }
+
+            if (!_picker.TryPickTerrain(_pointerRay(), out var hit))
+            {
+                _context.Report("Ground: drop it on the land");
+                return;
+            }
+
+            _context.PaintLayer = layer;
+            var chunks = 0;
+            if (_context.TryEdit("Paint", () =>
+                {
+                    var stroke = new Forge.Editing.Terrain.PaintStroke(_context.Session.World.Records, _context.ActiveSpace, layer,
+                        new Forge.Editing.Terrain.BrushShape(_context.BrushRadius, _context.BrushStrength), unpainted);
+                    stroke.ApplyDab(new System.Numerics.Vector2(hit.Point.x, hit.Point.z));
+                    chunks = Forge.Editing.Terrain.TerrainEdits.Commit(_context.Session, stroke);
+                }))
+                _context.Report(chunks > 0 ? $"Painted a spot of {NameOfGround(layer)}" : "Ground: nothing to paint there");
+        }
+
+        string NameOfGround(RecordId layer) =>
+            _context.Session.World.Records.TryGet(layer, out var record) && record is GroundLayerRecord ground ? ground.DisplayName : layer.ToString();
 
         /// <summary>Glides the camera so the whole selection fills the view (F).</summary>
         public void FrameSelection()

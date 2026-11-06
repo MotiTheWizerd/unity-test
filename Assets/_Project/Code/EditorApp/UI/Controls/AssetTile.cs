@@ -44,9 +44,13 @@ namespace Forge.EditorApp.UI.Controls
             }
         }
 
+        /// <summary>The picture shown, or null while the placeholder icon is.</summary>
+        public Texture2D Picture { get; private set; }
+
         /// <summary>Shows a picture in place of the placeholder icon; null brings the placeholder back.</summary>
         public void SetThumbnail(Texture2D picture)
         {
+            Picture = picture;
             var hasPicture = picture != null;
             _thumb.style.backgroundImage = hasPicture ? new StyleBackground(picture) : StyleKeyword.Null;
             _thumb.EnableInClassList(PictureClass, hasPicture);

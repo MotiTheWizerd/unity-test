@@ -404,6 +404,9 @@ namespace Forge.EditorApp
         /// </summary>
         public string MaterialSlot { get; set; }
 
+        /// <summary>The assets browser tile being dragged into the world, or null (the browser sets it, the scene shows where it would land).</summary>
+        public AssetDrag? Drag { get; set; }
+
         public string Status { get; private set; }
 
         public void Report(string message) => Status = message;

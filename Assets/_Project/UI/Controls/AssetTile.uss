@@ -83,3 +83,13 @@
     background-color: rgba(0, 0, 0, 0.55);
     border-radius: 3px;
 }
+
+/* The picture following the pointer while a tile is dragged into the world (TileDrag). */
+.forge-tile-drag {
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    border-radius: 4px;
+    opacity: 0.85;
+    -unity-background-scale-mode: scale-to-fit;
+}

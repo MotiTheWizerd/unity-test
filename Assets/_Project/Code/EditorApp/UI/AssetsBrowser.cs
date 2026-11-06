@@ -21,7 +21,9 @@ namespace Forge.EditorApp.UI
     /// spans every tab. The panel collapses to its header and its height can be dragged. Tiles are rebuilt only when what
     /// is shown changes. Picking an object tile chooses what the placing tools lay (<see cref="EditorContext.SelectPlacement"/>);
     /// picking a ground tile chooses what the paint tool lays (<see cref="EditorContext.SelectPaintLayer"/>); picking a
-    /// material dresses the selection's chosen slot in it (<see cref="EditorCommands.DressSelection"/>).
+    /// material dresses the selection's chosen slot in it (<see cref="EditorCommands.DressSelection"/>). Material and ground
+    /// tiles can also be dragged into the world (<see cref="TileDrag"/>): a material dresses the part it is dropped on, a
+    /// ground paints a spot where it lands.
     /// </summary>
     public sealed class AssetsBrowser : IPanelSection
     {
@@ -241,6 +243,7 @@ namespace Forge.EditorApp.UI
             // A material ball, keyed by the look, so layers sharing a look share a picture.
             if (_thumbnails != null && _groundLooks != null)
                 tile.SetThumbnail(_thumbnails.GetBall(layer.AssetKey, () => _groundLooks.CreatePreviewMaterial(id)));
+            tile.AddManipulator(DragOf(AssetDragKind.Ground, id, () => _commands.DropGround(id)));
             _groundTiles.Add(id, tile);
             return tile;
         }
@@ -255,9 +258,14 @@ namespace Forge.EditorApp.UI
             // Ball pictures are keyed by look, so a material and a ground of one key can't share one.
             if (_thumbnails != null && _materialLooks != null)
                 tile.SetThumbnail(_thumbnails.GetBall(material.AssetKey, () => _materialLooks.CreatePreviewMaterial(id)));
+            tile.AddManipulator(DragOf(AssetDragKind.Material, id, () => _commands.DropMaterial(id)));
             _materialTiles.Add(id, tile);
             return tile;
         }
+
+        // Dragging a tile into the world: the scene shows where it would land while it is carried (EditorContext.Drag).
+        TileDrag DragOf(AssetDragKind kind, RecordId id, Action drop) =>
+            new TileDrag(() => _context.Drag = new AssetDrag(kind, id), drop, () => _context.Drag = null);
 
         static string Tooltip(BaseObjectRecord record, int shortcut)
         {

@@ -62,7 +62,7 @@ namespace Forge.EditorApp
             // The camera's rays are the scene's; the distance along one is the same in either frame.
             _flyCamera.Initialize(ui, ray => picker.TryPickWorld(frame.ToWorld(ray), out var hit) ? hit.Distance : (float?)null, context.FlySpeed);
             var slots = new AssetSlots(assets);
-            Commands = new EditorCommands(context, view, picker, _flyCamera, slopes, slots);
+            Commands = new EditorCommands(context, view, picker, _flyCamera, slopes, slots, PointerRay);
             var root = frame.Root;
             _tools = new Dictionary<ToolKind, IEditorTool>
             {
@@ -84,6 +84,12 @@ namespace Forge.EditorApp
             if (agent != null)
                 Agent = new AgentHost(context, seating, slots, new EditorBriefing(context, () => GroundInView(picker)), agent);
         }
+
+        /// <summary>The world ray through the mouse pointer now (where tools aim and dragged tiles land).</summary>
+        Ray PointerRay() => WorldRay(Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero);
+
+        // The camera's rays are the scene's; tools, commands and drops work in the world's.
+        Ray WorldRay(Vector2 pointer) => _frame.ToWorld(_camera.ScreenPointToRay(pointer));
 
         void OnDestroy()
         {
@@ -126,7 +132,7 @@ namespace Forge.EditorApp
             var overPanel = _ui.IsPointerOverUI(pointer);
             var looking = mouse.rightButton.isPressed;
             var input = new ToolInput(
-                _frame.ToWorld(_camera.ScreenPointToRay(pointer)),
+                WorldRay(pointer),
                 pointer,
                 mouse.delta.ReadValue(),
                 pointerOverUI: overPanel,
