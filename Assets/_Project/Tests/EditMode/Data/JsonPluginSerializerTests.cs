@@ -250,6 +250,29 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesAttributes_LeavingOutWhatTheyDontHave()
+        {
+            var stamina = AttributeRecord.IdFor("core", "stamina");
+            var regen = AttributeRecord.IdFor("core", "stamina_regen");
+            var pool = new AttributeRecord(stamina, "Stamina", AttributeKind.Resource, 100f, max: 500f, regenRate: regen);
+            var carry = new AttributeRecord(AttributeRecord.IdFor("core", "carry_weight"), "Carry Weight", AttributeKind.Stat, 250f,
+                terms: new[] { new AttributeTerm(stamina, 0.5f) });
+
+            var json = Write(Plugin("core", pool, carry));
+            var copy = Read(json).Records.OfType<AttributeRecord>().ToDictionary(a => a.Id);
+
+            Assert.That((copy[stamina].Kind, copy[stamina].BaseValue, copy[stamina].Max, copy[stamina].RegenRate, copy[stamina].RegenDelay),
+                Is.EqualTo((AttributeKind.Resource, 100f, (float?)500f, (RecordId?)regen, (RecordId?)null)));
+            Assert.That(copy[carry.Id].Terms.Single().Attribute, Is.EqualTo(stamina));
+            Assert.That(copy[carry.Id].Terms.Single().Per, Is.EqualTo(0.5f));
+            Assert.That(copy[carry.Id].Max, Is.Null);
+            StringAssert.Contains("\"kind\": \"resource\"", json);
+            Assert.That(Regex.Matches(json, "\"terms\"").Count, Is.EqualTo(1));
+            Assert.That(Regex.Matches(json, "\"regenDelay\"").Count, Is.Zero);
+            Assert.That(Write(Read(json)), Is.EqualTo(json));
+        }
+
+        [Test]
         public void RoundTrip_PreservesAMaterialsCategory_AndLeavesItOutWhenItHasNone()
         {
             var oak = new MaterialRecord(MaterialRecord.IdFor("core", "oak"), "Oak Planks", "material/oak", " Wood ");

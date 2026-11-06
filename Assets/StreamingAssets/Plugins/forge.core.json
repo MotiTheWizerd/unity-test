@@ -8,6 +8,130 @@
   "terrain": "forge.core.8caffe0b36f641c1.terrain",
   "records": [
     {
+      "type": "attribute",
+      "id": "forge.core:attribute/carry_weight",
+      "displayName": "Carry Weight",
+      "kind": "stat",
+      "baseValue": 250.0,
+      "min": 0.0,
+      "terms": [
+        {
+          "attribute": "forge.core:attribute/stamina",
+          "per": 0.5
+        }
+      ]
+    },
+    {
+      "type": "attribute",
+      "id": "forge.core:attribute/fall_damage",
+      "displayName": "Fall Damage",
+      "kind": "stat",
+      "baseValue": 10.0,
+      "min": 0.0
+    },
+    {
+      "type": "attribute",
+      "id": "forge.core:attribute/fall_safe_height",
+      "displayName": "Safe Fall Height",
+      "kind": "stat",
+      "baseValue": 4.0,
+      "min": 0.0
+    },
+    {
+      "type": "attribute",
+      "id": "forge.core:attribute/health",
+      "displayName": "Health",
+      "kind": "resource",
+      "baseValue": 100.0,
+      "min": 0.0,
+      "regenRate": "forge.core:attribute/health_regen",
+      "regenDelay": "forge.core:attribute/health_regen_delay"
+    },
+    {
+      "type": "attribute",
+      "id": "forge.core:attribute/health_regen",
+      "displayName": "Health Regen",
+      "kind": "stat",
+      "baseValue": 1.0,
+      "min": 0.0
+    },
+    {
+      "type": "attribute",
+      "id": "forge.core:attribute/health_regen_delay",
+      "displayName": "Health Regen Delay",
+      "kind": "stat",
+      "baseValue": 5.0,
+      "min": 0.0
+    },
+    {
+      "type": "attribute",
+      "id": "forge.core:attribute/jump_cost",
+      "displayName": "Jump Cost",
+      "kind": "stat",
+      "baseValue": 10.0,
+      "min": 0.0
+    },
+    {
+      "type": "attribute",
+      "id": "forge.core:attribute/magicka",
+      "displayName": "Magicka",
+      "kind": "resource",
+      "baseValue": 100.0,
+      "min": 0.0,
+      "regenRate": "forge.core:attribute/magicka_regen",
+      "regenDelay": "forge.core:attribute/magicka_regen_delay"
+    },
+    {
+      "type": "attribute",
+      "id": "forge.core:attribute/magicka_regen",
+      "displayName": "Magicka Regen",
+      "kind": "stat",
+      "baseValue": 3.0,
+      "min": 0.0
+    },
+    {
+      "type": "attribute",
+      "id": "forge.core:attribute/magicka_regen_delay",
+      "displayName": "Magicka Regen Delay",
+      "kind": "stat",
+      "baseValue": 2.0,
+      "min": 0.0
+    },
+    {
+      "type": "attribute",
+      "id": "forge.core:attribute/sprint_cost",
+      "displayName": "Sprint Cost",
+      "kind": "stat",
+      "baseValue": 10.0,
+      "min": 0.0
+    },
+    {
+      "type": "attribute",
+      "id": "forge.core:attribute/stamina",
+      "displayName": "Stamina",
+      "kind": "resource",
+      "baseValue": 100.0,
+      "min": 0.0,
+      "regenRate": "forge.core:attribute/stamina_regen",
+      "regenDelay": "forge.core:attribute/stamina_regen_delay"
+    },
+    {
+      "type": "attribute",
+      "id": "forge.core:attribute/stamina_regen",
+      "displayName": "Stamina Regen",
+      "kind": "stat",
+      "baseValue": 10.0,
+      "min": 0.0
+    },
+    {
+      "type": "attribute",
+      "id": "forge.core:attribute/stamina_regen_delay",
+      "displayName": "Stamina Regen Delay",
+      "kind": "stat",
+      "baseValue": 1.5,
+      "min": 0.0
+    },
+    {
       "type": "base_object",
       "id": "forge.core:barrel",
       "displayName": "Barrel",

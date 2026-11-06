@@ -2,7 +2,8 @@
     "name": "Forge.Game",
     "rootNamespace": "Forge.Game",
     "references": [
-        "Forge.Core"
+        "Forge.Core",
+        "Forge.Data"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -26,6 +26,7 @@ namespace Forge.Data.Records
             registry.Register<ClimateRecord>("climate");
             registry.Register<GroundLayerRecord>("ground_layer");
             registry.Register<MaterialRecord>("material");
+            registry.Register<AttributeRecord>("attribute");
             return registry;
         }
 
