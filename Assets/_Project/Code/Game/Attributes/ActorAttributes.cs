@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Forge.Data;
 using Forge.Data.Records;
+using Forge.Game.Actors;
 
 namespace Forge.Game.Attributes
 {
@@ -40,9 +41,13 @@ namespace Forge.Game.Attributes
         readonly List<int> _timed = new List<int>();
         readonly bool[] _pending;
 
-        public ActorAttributes(AttributeSet set)
+        /// <param name="owner">Whose attributes they are, which what happens to them names (<see cref="AttributeEvents"/>).</param>
+        public ActorAttributes(AttributeSet set, ActorId owner)
         {
             Set = set ?? throw new ArgumentNullException(nameof(set));
+            if (owner.IsDefault)
+                throw new ArgumentException("Attributes belong to an actor.", nameof(owner));
+            Owner = owner;
             var count = set.Count;
             _base = new float[count];
             _values = new float[count];
@@ -62,11 +67,20 @@ namespace Forge.Game.Attributes
 
         public AttributeSet Set { get; }
 
-        /// <summary>An attribute's value or what a resource has left changed; with what it is now.</summary>
+        /// <summary>Whose attributes they are.</summary>
+        public ActorId Owner { get; }
+
+        /// <summary>
+        /// An attribute's value or what a resource has left changed; with what it is now. Told as it happens, often (a
+        /// refilling bar every frame), for whatever draws the numbers; happenings go on the game's stream instead.
+        /// </summary>
         public event Action<AttributeChange> Changed;
 
         /// <summary>A resource ran out (what it has left reached its min).</summary>
         public event Action<RecordId> Depleted;
+
+        /// <summary>A resource is full again (refilled or restored to its most).</summary>
+        public event Action<RecordId> Refilled;
 
         /// <summary>The attribute's value: a stat's number, a resource's most.</summary>
         public float Value(RecordId attribute) => _values[Set.SlotOf(attribute)];
@@ -269,9 +283,12 @@ namespace Forge.Game.Attributes
             var after = CurrentOf(slot);
             if (after == before)
                 return;
-            Changed?.Invoke(new AttributeChange(Set.Records[slot].Id, _values[slot], after));
+            var id = Set.Records[slot].Id;
+            Changed?.Invoke(new AttributeChange(id, _values[slot], after));
             if (after <= Set.Records[slot].Min && before > Set.Records[slot].Min)
-                Depleted?.Invoke(Set.Records[slot].Id);
+                Depleted?.Invoke(id);
+            else if (after >= _values[slot] && before < _values[slot])
+                Refilled?.Invoke(id);
         }
 
         void Recompute(int slot)

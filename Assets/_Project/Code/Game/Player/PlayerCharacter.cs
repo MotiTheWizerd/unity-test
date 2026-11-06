@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Forge.Core.Geometry;
 using Forge.Game.Attributes;
+using Forge.Game.Events;
 using Forge.Game.Motion;
 
 namespace Forge.Game.Player
@@ -22,7 +23,8 @@ namespace Forge.Game.Player
         /// <param name="eyeHeight">Meters from the feet to the eyes, where a first-person camera sits.</param>
         /// <param name="attributes">The player's attributes, which moving costs (<see cref="MovementCosts"/>) are paid from
         /// and which tick with it; null for a player whose moves cost nothing.</param>
-        public PlayerCharacter(IPlayerMotor motor, LocomotionSettings locomotion, float eyeHeight, ActorAttributes attributes = null)
+        /// <param name="events">The game's stream, told what happens to the player (exhausted, fell); null to tell no one.</param>
+        public PlayerCharacter(IPlayerMotor motor, LocomotionSettings locomotion, float eyeHeight, ActorAttributes attributes = null, GameEvents events = null)
         {
             Motor = motor ?? throw new ArgumentNullException(nameof(motor));
             if (!(eyeHeight > 0f) || float.IsInfinity(eyeHeight))
@@ -30,7 +32,7 @@ namespace Forge.Game.Player
             EyeHeight = eyeHeight;
             Locomotion = new PlayerLocomotion(locomotion);
             if (attributes != null)
-                Costs = new MovementCosts(attributes);
+                Costs = new MovementCosts(attributes, events);
         }
 
         /// <summary>What moving costs the player, paid from its attributes; null when its moves cost nothing.</summary>

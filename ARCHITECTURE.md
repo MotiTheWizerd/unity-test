@@ -24,7 +24,8 @@ Assets/_Project/
     Editing/     Forge.Editing — engine-free edit session (masters + active plugin), commands, world-building commands
     Agent/       Forge.Agent   — engine-free world-building agent: tools over the commands, MCP endpoint, Claude Code backend
     Streaming/   Forge.Streaming — engine-free chunk index, streaming window, scene origin, far tiles
-    Game/        Forge.Game    — engine-free game rules: the player's look and movement over a motor
+    Game/        Forge.Game    — engine-free game rules: the player's look and movement over a motor, attributes,
+                               the game's event stream, actors' ids, motion (animation input), HUD timing
     World/       Forge.World   — Unity presentation: terrain chunks, far land, placed objects, streamer
     Play/        Forge.Play    — Unity side of playing: the player session, its body (CharacterController), model,
                                  controls, camera director and profile
@@ -660,30 +661,57 @@ where it came from.
 - **`AttributeSet`**: the resolved attributes, checked once (every name read exists, regen reads stats, terms never
   go round in a circle; every problem in one `DataValidationException`) and shared by every actor: slots, who reads
   whom, and an order where each comes after what it reads.
-- **`ActorAttributes`**: one actor's numbers over the set (the player's now, any NPC's later). Value =
+- **`ActorAttributes`**: one actor's numbers over the set, owned by an `ActorId` (the player's now, any NPC's later). Value =
   `(base + terms + adds) × (1 + percents/100) × multipliers`, within min and max. Each `AttributeModifier`
   (`Add`, `Percent`, `Multiply`) is added under a `ModifierSource` (an item worn, an effect, a perk); `Remove(source)`
   takes exactly its modifiers away, and a modifier given seconds wears off by itself. Values are worked out when
   something changes, rippling in order to whatever reads them, so reading costs nothing. A resource stores the
   damage it took, not what is left: `Current` = value − damage, so a bigger pool lifts what is left and a smaller one
   never leaves more than it holds. `Drain` takes what there is, `TrySpend` all or nothing, `Restore` gives back; any
-  spend holds the refill back for the regen delay. `SetBase` gives the actor its own base (a level gained). Events:
-  `Changed` (value or what is left) and `Depleted` (a resource ran out), for HUDs and rules, so nothing polls.
+  spend holds the refill back for the regen delay. `SetBase` gives the actor its own base (a level gained). Its own
+  events: `Changed` (value or what is left, often: for what draws the numbers), `Depleted` and `Refilled`.
+  `AttributeEvents.Bind` puts the happenings on the game's stream as `ResourceDepleted` and `ResourceRefilled`.
 - **What moving costs** (`MovementCosts`, Game.Player, the player's today): sprinting spends `SprintCost` stamina a
   second while moving and running dry leaves the actor **winded**: it walks, whatever it is told, until a quarter of its stamina is back;
   a jump needs and spends `JumpCost`; a fall (`FallTracker`, Game.Motion: the highest point off the ground less where it
   touched down, moved with a rebase) past `FallSafeHeight` costs `FallDamage` health a meter. `PlayerCharacter` takes
-  the actor's attributes, has the costs filter its commands and pay for the move, and ticks the attributes. At zero
+  the actor's attributes, has the costs filter its commands and pay for the move, and ticks the attributes. The costs
+  tell the stream `ActorExhausted`, `ActorRecovered`, `ActorShortOf` (a jump without the stamina) and `ActorFell`
+  (only a fall that hurt: how far, how much). At zero
   health nothing more happens yet. `PlayerSession` keeps the player's attributes from one spawn to the next, and starts
   them afresh only when the world's attribute records changed; a world without attributes plays as before.
 - **The HUD** (`PlayerHud`, Forge.Play.Hud; the game's, which the editor hosts through `HudSection` while playing):
   Skyrim's magicka, health and stamina bars along the bottom (`AttributeBar`, styled by UI/Hud/PlayerHud.uss, imported
   by the runtime theme; a bar's kind is a style class, so a mod's bar is a style and one layout entry). `BarFade`
   (Game.Hud, engine-free) decides when each shows: while not full, then 2.5 s after it fills or changes, then a fade;
-  `MovementCosts.ShortOf` (a jump without the stamina, running dry mid-sprint) makes it blink. It follows whichever
-  player the session has, rebinding on a new spawn.
+  the stream's `ActorExhausted` and `ActorShortOf` make a bar blink. It follows whichever player the session has,
+  rebinding on a new spawn.
 - **Live numbers are game state, not world data**: an actor's damage, own bases and timed effects belong to a save
   game, never to a plugin; modifiers from equipment are rebuilt from what is worn, so each fact lives in one place.
+
+## Game events (Forge.Game.Events)
+
+The game's backbone for "something happened": the teller never knows who listens. `GameEvents` is one stream per
+running game (the editor's play from here owns one today; the game app will own its own).
+
+- **The rule: values stay local, happenings go on the stream.** Numbers that change every frame (a bar refilling)
+  stay on their owner's own C# events, read by the one thing that draws them. What happened, rarely and to many
+  listeners (a resource ran out, an actor fell, later an item taken, a crime seen), goes on the stream.
+- **Events are facts**, past tense (`ActorFell`, never `HurtActor`), small readonly structs implementing `IGameEvent`
+  (so telling makes no garbage), each naming its actor (`ActorId`, Game.Actors; `ActorId.Player` is the player, a
+  placed actor will be its record's id). Events live beside what tells them (`AttributeEvents.cs`,
+  `MovementEvents.cs`).
+- **`Publish` only queues; `Flush` tells**, in publish order across all types, and the loop owner flushes once a
+  frame after the frame's rules have run (`PlayFromHere.Tick`, and on entering or leaving play), so a listener never
+  runs inside a half-done step. What listeners publish is told in the same flush, after what came before it; a chain
+  that never ends stops after `MaxPerFlush` (10,000) and is reported.
+- **`Subscribe<T>`** returns a handle; disposing it stops the listener at once, even mid-flush. Listeners hear in the
+  order they subscribed; one that throws is reported (the engine's log in play; thrown together from `Flush` when no
+  reporter is given, as in tests) and the others still hear.
+- **`SubscribeAll`** hears every event, boxed, after its own listeners: for logs, recordings and, later, the memory of
+  the world's characters (what they saw happen). Not for gameplay.
+- Lookups are an array read per event type (each type gets a small index once), listener lists are copied on change,
+  queues keep their capacity: no allocation in steady play. Not thread-safe; it belongs to the game's loop.
 
 ## World-building agent (Forge.Agent)
 

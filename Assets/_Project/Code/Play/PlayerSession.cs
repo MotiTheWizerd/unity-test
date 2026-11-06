@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Forge.Data.Records;
+using Forge.Game.Actors;
 using Forge.Game.Attributes;
 using Forge.Game.Cameras;
+using Forge.Game.Events;
 using Forge.Game.Player;
 using Forge.World;
 using UnityEngine;
@@ -16,7 +18,9 @@ namespace Forge.Play
     /// (<see cref="PlayerCharacter"/>) and its camera (first or third person, <see cref="ViewSwitch"/>, put in place by the
     /// <see cref="CameraDirector"/>). <see cref="Spawn"/> stands it somewhere, takes the camera and captures the mouse;
     /// <see cref="Despawn"/> takes it all away again. It lives as long as the app, so the view chosen carries over to
-    /// the next spawn. Whatever plays the world uses it: the editor's play from here today, the game itself later.
+    /// the next spawn. What happens to the player is told on the game's stream (<see cref="Events"/>), which whoever
+    /// runs the game's loop flushes. Whatever plays the world uses it: the editor's play from here today, the game itself
+    /// later.
     /// </summary>
     public sealed class PlayerSession : IDisposable
     {
@@ -26,11 +30,14 @@ namespace Forge.Play
         CharacterControllerMotor _motor;
         PlayerAvatar _avatar;
         AttributeRecord[] _attributeRecords;
+        IDisposable _attributeEvents;
 
         /// <param name="camera">The camera the player sees through while spawned.</param>
-        public PlayerSession(PlayerProfile profile, Transform camera)
+        /// <param name="events">The game's stream, told what happens to the player.</param>
+        public PlayerSession(PlayerProfile profile, Transform camera, GameEvents events)
         {
             _profile = profile != null ? profile : throw new ArgumentNullException(nameof(profile));
+            Events = events ?? throw new ArgumentNullException(nameof(events));
             _controls = new PlayerControls(profile);
             Views = new ViewSwitch(
                 new FirstPersonCamera(),
@@ -41,6 +48,9 @@ namespace Forge.Play
 
         /// <summary>First or third person; kept between spawns.</summary>
         public ViewSwitch Views { get; }
+
+        /// <summary>The game's stream, which the player's happenings go on (named <see cref="ActorId.Player"/>).</summary>
+        public GameEvents Events { get; }
 
         /// <summary>The player while spawned, else null.</summary>
         public PlayerCharacter Player { get; private set; }
@@ -63,7 +73,7 @@ namespace Forge.Play
             _motor = new CharacterControllerMotor(_profile);
             if (_profile.Model != null)
                 _avatar = new PlayerAvatar(_motor.Body, _profile.Model);
-            Player = new PlayerCharacter(_motor, _profile.Locomotion(), _profile.EyeHeight, Attributes);
+            Player = new PlayerCharacter(_motor, _profile.Locomotion(), _profile.EyeHeight, Attributes, Events);
             Player.PlaceAt(feet.ToNumerics(), heading);
             Views.ThirdPerson.Begin();
             Frame(0f);
@@ -97,8 +107,12 @@ namespace Forge.Play
             if (_attributeRecords != null && records.Length == _attributeRecords.Length && !records.Except(_attributeRecords).Any())
                 return;
             _attributeRecords = records;
+            _attributeEvents?.Dispose();
+            _attributeEvents = null;
             // A world without attributes (one made before them) plays as before: moving costs nothing.
-            Attributes = records.Length > 0 ? new ActorAttributes(AttributeSet.From(records)) : null;
+            Attributes = records.Length > 0 ? new ActorAttributes(AttributeSet.From(records), ActorId.Player) : null;
+            if (Attributes != null)
+                _attributeEvents = AttributeEvents.Bind(Attributes, Events);
         }
 
         /// <summary>Takes the player away and gives the mouse back; the camera is the caller's again.</summary>
@@ -119,6 +133,7 @@ namespace Forge.Play
         public void Dispose()
         {
             Despawn();
+            _attributeEvents?.Dispose();
             _controls.Dispose();
         }
 

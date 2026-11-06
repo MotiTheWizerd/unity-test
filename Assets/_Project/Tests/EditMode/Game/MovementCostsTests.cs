@@ -1,7 +1,11 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using Forge.Data;
 using Forge.Data.Records;
+using Forge.Game.Actors;
 using Forge.Game.Attributes;
+using Forge.Game.Events;
 using Forge.Game.Motion;
 using Forge.Game.Player;
 using NUnit.Framework;
@@ -47,10 +51,10 @@ namespace Forge.Tests.Game
 
         static AttributeRecord Stat(RecordId id, float value) => new AttributeRecord(id, id.Name, AttributeKind.Stat, value);
 
-        static PlayerCharacter Player(out ActorAttributes attributes, float height = 0f)
+        static PlayerCharacter Player(out ActorAttributes attributes, float height = 0f, GameEvents events = null)
         {
-            attributes = new ActorAttributes(CoreSet());
-            var player = new PlayerCharacter(new FlatGround(), LocomotionSettings.Default, 1.65f, attributes);
+            attributes = new ActorAttributes(CoreSet(), ActorId.Player);
+            var player = new PlayerCharacter(new FlatGround(), LocomotionSettings.Default, 1.65f, attributes, events);
             player.PlaceAt(new Vector3(0f, height, 0f), 0f);
             player.Tick(PlayerCommands.None, Frame);
             return player;
@@ -109,18 +113,21 @@ namespace Forge.Tests.Game
         [Test]
         public void AJump_SpendsItsCost_AndNeedsIt()
         {
-            var player = Player(out var attributes);
+            var events = new GameEvents();
+            var player = Player(out var attributes, events: events);
 
             player.Tick(Forward(jump: true), Frame);
             Assert.That(attributes.Current(CoreAttributes.Stamina), Is.EqualTo(90f));
             Run(player, PlayerCommands.None, 1f);
 
             attributes.Drain(CoreAttributes.Stamina, 85f);
-            var shortOf = new System.Collections.Generic.List<RecordId>();
-            player.Costs.ShortOf += shortOf.Add;
+            var shortOf = new List<ActorShortOf>();
+            events.Subscribe<ActorShortOf>(shortOf.Add);
             player.Tick(Forward(jump: true), Frame);
+            events.Flush();
             Assert.That(player.Locomotion.Jumped, Is.False, "Not enough stamina to jump.");
-            Assert.That(shortOf, Is.EqualTo(new[] { CoreAttributes.Stamina }), "Told, so the HUD can flash.");
+            Assert.That(shortOf.Select(e => (e.Actor, e.Attribute)), Is.EqualTo(new[] { (ActorId.Player, CoreAttributes.Stamina) }),
+                "Told on the stream, so the HUD can flash.");
         }
 
         [Test]
@@ -168,6 +175,56 @@ namespace Forge.Tests.Game
 
         [Test]
         public void TheRules_NeedTheirAttributes() =>
-            Assert.Throws<DataValidationException>(() => new MovementCosts(new ActorAttributes(AttributeSet.From(new[] { Stat(CoreAttributes.JumpCost, 1f) }))));
+            Assert.Throws<DataValidationException>(() => new MovementCosts(new ActorAttributes(AttributeSet.From(new[] { Stat(CoreAttributes.JumpCost, 1f) }), ActorId.Player)));
+
+        [Test]
+        public void RunningDry_AndGettingTheBreathBack_AreToldOnceEach()
+        {
+            var events = new GameEvents();
+            var heard = new List<string>();
+            events.Subscribe<ActorExhausted>(e => heard.Add(e.ToString()));
+            events.Subscribe<ActorRecovered>(e => heard.Add(e.ToString()));
+            var player = Player(out _, events: events);
+
+            Run(player, Forward(sprint: true), 11f + 1.5f + 2.6f);
+            events.Flush();
+
+            Assert.That(heard, Is.EqualTo(new[]
+            {
+                new ActorExhausted(ActorId.Player).ToString(),
+                new ActorRecovered(ActorId.Player).ToString(),
+            }));
+        }
+
+        [Test]
+        public void AFallThatHurts_IsTold_WithHowFarAndHowMuch()
+        {
+            var events = new GameEvents();
+            var falls = new List<ActorFell>();
+            events.Subscribe<ActorFell>(falls.Add);
+            var player = Player(out _, height: 10f, events: events);
+
+            Run(player, PlayerCommands.None, 3f);
+            events.Flush();
+
+            var fall = falls.Single();
+            Assert.That(fall.Actor, Is.EqualTo(ActorId.Player));
+            Assert.That(fall.Meters, Is.EqualTo(10f).Within(0.05f));
+            Assert.That(fall.Damage, Is.EqualTo(60f).Within(0.5f));
+        }
+
+        [Test]
+        public void AFallThatDoesNotHurt_IsNotTold()
+        {
+            var events = new GameEvents();
+            var falls = 0;
+            events.Subscribe<ActorFell>(_ => falls++);
+            var player = Player(out _, height: 3f, events: events);
+
+            Run(player, PlayerCommands.None, 2f);
+            events.Flush();
+
+            Assert.That(falls, Is.Zero);
+        }
     }
 }

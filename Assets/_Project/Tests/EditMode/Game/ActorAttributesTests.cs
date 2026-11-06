@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Forge.Data;
 using Forge.Data.Records;
+using Forge.Game.Actors;
 using Forge.Game.Attributes;
+using Forge.Game.Events;
 using NUnit.Framework;
 
 namespace Forge.Tests.Game
@@ -15,6 +17,8 @@ namespace Forge.Tests.Game
         static readonly RecordId Delay = Id("stamina_regen_delay");
         static readonly RecordId Carry = Id("carry_weight");
         static readonly RecordId Armor = Id("armor");
+
+        static readonly ActorId Owner = new ActorId("guard");
 
         static readonly ModifierSource Helmet = new ModifierSource("item:helmet");
         static readonly ModifierSource Potion = new ModifierSource("effect:potion");
@@ -31,7 +35,7 @@ namespace Forge.Tests.Game
             new AttributeRecord(Armor, "Armor", AttributeKind.Stat, 0f, max: 100f),
         };
 
-        static ActorAttributes Actor() => new ActorAttributes(AttributeSet.From(Records()));
+        static ActorAttributes Actor() => new ActorAttributes(AttributeSet.From(Records()), Owner);
 
         [Test]
         public void StartsFromTheBase_PlusItsTerms()
@@ -236,13 +240,59 @@ namespace Forge.Tests.Game
         public void ManyActors_ShareOneSet_EachWithItsOwnNumbers()
         {
             var set = AttributeSet.From(Records());
-            var tired = new ActorAttributes(set);
-            var fresh = new ActorAttributes(set);
+            var tired = new ActorAttributes(set, new ActorId("tired"));
+            var fresh = new ActorAttributes(set, new ActorId("fresh"));
 
             tired.Drain(Stamina, 60f);
 
             Assert.That(fresh.Current(Stamina), Is.EqualTo(100f));
             Assert.That(tired.Current(Stamina), Is.EqualTo(40f));
+        }
+
+        [Test]
+        public void FillingUp_IsToldOnce_WhenItReachesTheMost()
+        {
+            var actor = Actor();
+            var refilled = new List<RecordId>();
+            actor.Refilled += refilled.Add;
+            actor.Drain(Stamina, 30f);
+
+            actor.Restore(Stamina, 20f);
+            Assert.That(refilled, Is.Empty);
+
+            actor.Restore(Stamina, 50f);
+            actor.Restore(Stamina, 50f);
+            Assert.That(refilled, Is.EqualTo(new[] { Stamina }));
+        }
+
+        [Test]
+        public void AttributesBelongToAnActor() =>
+            Assert.Throws<ArgumentException>(() => new ActorAttributes(AttributeSet.From(Records()), default));
+
+        [Test]
+        public void TheStream_HearsWhatHappens_NamedByTheOwner_NotEveryNumber()
+        {
+            var actor = Actor();
+            var events = new GameEvents();
+            var heard = new List<string>();
+            events.SubscribeAll(e => heard.Add(e.ToString()));
+            var binding = AttributeEvents.Bind(actor, events);
+
+            actor.Drain(Stamina, 40f);
+            actor.Drain(Stamina, 60f);
+            actor.Tick(20f);
+            events.Flush();
+
+            Assert.That(heard, Is.EqualTo(new[]
+            {
+                new ResourceDepleted(Owner, Stamina).ToString(),
+                new ResourceRefilled(Owner, Stamina).ToString(),
+            }), "Two happenings; the refill's many small steps stay off the stream.");
+
+            binding.Dispose();
+            actor.Drain(Stamina, 100f);
+            events.Flush();
+            Assert.That(heard, Has.Count.EqualTo(2), "Unbound, it tells no more.");
         }
     }
 }

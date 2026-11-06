@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Forge.Data;
 using Forge.Game.Attributes;
+using Forge.Game.Events;
 using Forge.Game.Motion;
 
 namespace Forge.Game.Player
@@ -12,14 +13,14 @@ namespace Forge.Game.Player
     /// it is told (no run, no sprint), until a quarter of its stamina is back, so it is plainly tired while it recovers;
     /// a jump needs and spends <see cref="CoreAttributes.JumpCost"/>; a fall past
     /// <see cref="CoreAttributes.FallSafeHeight"/> costs <see cref="CoreAttributes.FallDamage"/> health a meter. The
-    /// costs are attributes, so items and effects change them through modifiers. Engine-free.
+    /// costs are attributes, so items and effects change them through modifiers. What happens is told on the game's
+    /// stream (<see cref="ActorExhausted"/>, <see cref="ActorRecovered"/>, <see cref="ActorShortOf"/>,
+    /// <see cref="ActorFell"/>), named by the attributes' owner. Engine-free.
     /// </summary>
     public sealed class MovementCosts
     {
         /// <summary>The share of its stamina a winded actor must get back before it runs again.</summary>
         public const float RecoverFraction = 0.25f;
-
-        readonly FallTracker _fall = new FallTracker();
 
         static readonly RecordId[] Needs =
         {
@@ -27,12 +28,17 @@ namespace Forge.Game.Player
             CoreAttributes.FallSafeHeight, CoreAttributes.FallDamage,
         };
 
-        public MovementCosts(ActorAttributes attributes)
+        readonly FallTracker _fall = new FallTracker();
+        readonly GameEvents _events;
+
+        /// <param name="events">The game's stream, told what happens; null to tell no one.</param>
+        public MovementCosts(ActorAttributes attributes, GameEvents events = null)
         {
             Attributes = attributes ?? throw new ArgumentNullException(nameof(attributes));
             var missing = Needs.Where(id => !attributes.Set.Contains(id)).Select(id => $"Moving costs need the attribute {id}, which the world lacks.").ToArray();
             if (missing.Length > 0)
                 throw new DataValidationException(missing);
+            _events = events;
         }
 
         public ActorAttributes Attributes { get; }
@@ -40,17 +46,18 @@ namespace Forge.Game.Player
         /// <summary>Out of stamina from sprinting: walking only until <see cref="RecoverFraction"/> of it is back.</summary>
         public bool Winded { get; private set; }
 
-        /// <summary>A move was refused for want of an attribute (stamina for a jump, or running dry mid-sprint).</summary>
-        public event Action<RecordId> ShortOf;
-
         /// <summary>
         /// The commands as the actor can afford them over <paramref name="deltaTime"/> seconds, spending the sprint's
         /// stamina: a walk while winded, no jump without the stamina for it.
         /// </summary>
         public PlayerCommands Afford(PlayerCommands commands, float deltaTime)
         {
+            var actor = Attributes.Owner;
             if (Winded && Attributes.Fraction(CoreAttributes.Stamina) >= RecoverFraction)
+            {
                 Winded = false;
+                _events?.Publish(new ActorRecovered(actor));
+            }
 
             var sprint = commands.Sprint && !Winded && commands.Move.LengthSquared() > 1e-6f;
             if (sprint && deltaTime > 0f)
@@ -60,7 +67,7 @@ namespace Forge.Game.Player
                 {
                     Winded = true;
                     sprint = false;
-                    ShortOf?.Invoke(CoreAttributes.Stamina);
+                    _events?.Publish(new ActorExhausted(actor));
                 }
             }
 
@@ -68,7 +75,7 @@ namespace Forge.Game.Player
             if (jump && Attributes.Current(CoreAttributes.Stamina) < Attributes.Value(CoreAttributes.JumpCost))
             {
                 jump = false;
-                ShortOf?.Invoke(CoreAttributes.Stamina);
+                _events?.Publish(new ActorShortOf(actor, CoreAttributes.Stamina));
             }
 
             return new PlayerCommands(commands.Move, commands.Turn, sprint, jump, commands.ToggleWalk, commands.Walk || Winded);
@@ -85,8 +92,10 @@ namespace Forge.Game.Player
 
             var fell = _fall.Step(grounded, height);
             var past = fell - Attributes.Value(CoreAttributes.FallSafeHeight);
-            if (past > 0f)
-                Attributes.Drain(CoreAttributes.Health, past * Attributes.Value(CoreAttributes.FallDamage));
+            if (past <= 0f)
+                return;
+            var damage = Attributes.Drain(CoreAttributes.Health, past * Attributes.Value(CoreAttributes.FallDamage));
+            _events?.Publish(new ActorFell(Attributes.Owner, fell, damage));
         }
 
         /// <summary>The world moved under the actor by <paramref name="dy"/> (a rebase).</summary>

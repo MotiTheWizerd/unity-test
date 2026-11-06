@@ -3,6 +3,7 @@ using System.Linq;
 using Forge.Data.Records;
 using Forge.EditorApp.Tools;
 using Forge.Editing.Modes;
+using Forge.Game.Events;
 using Forge.Game.Player;
 using Forge.Play;
 using Forge.World;
@@ -38,9 +39,14 @@ namespace Forge.EditorApp
             _frame = frame ?? throw new ArgumentNullException(nameof(frame));
             _camera = camera != null ? camera : throw new ArgumentNullException(nameof(camera));
             _flyCamera = flyCamera != null ? flyCamera : throw new ArgumentNullException(nameof(flyCamera));
-            _session = new PlayerSession(profile, camera.transform);
+            // A listener that fails is logged, and the others still hear.
+            Events = new GameEvents(Debug.LogException);
+            _session = new PlayerSession(profile, camera.transform, Events);
             _context.Modes.Changed += OnModeChanged;
         }
+
+        /// <summary>The game's stream while playing from here; this loop flushes it once a frame.</summary>
+        public GameEvents Events { get; }
 
         /// <summary>The player while playing, else null.</summary>
         public PlayerCharacter Player => _session.Player;
@@ -48,8 +54,12 @@ namespace Forge.EditorApp
         /// <summary>The player during play: its body, look, controls and view (first or third person).</summary>
         public PlayerSession Session => _session;
 
-        /// <summary>Plays one frame.</summary>
-        public void Tick(float deltaTime) => _session.Tick(deltaTime);
+        /// <summary>Plays one frame, then tells what happened in it.</summary>
+        public void Tick(float deltaTime)
+        {
+            _session.Tick(deltaTime);
+            Events.Flush();
+        }
 
         /// <summary>The scene moved by <paramref name="delta"/> under the world (a rebase); the player moves with it.</summary>
         public void Shift(Vector3 delta) => _session.Shift(delta);
@@ -76,6 +86,8 @@ namespace Forge.EditorApp
                 _session.Despawn();
                 _flyCamera.enabled = true;
             }
+
+            Events.Flush();
         }
 
         // Where the feet start, in scene coordinates: on what the middle of the view shows, else on the ground under the

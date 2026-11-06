@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Forge.Data;
+using Forge.Game.Actors;
 using Forge.Game.Attributes;
 using Forge.Game.Hud;
 using Forge.Game.Player;
@@ -10,8 +11,10 @@ namespace Forge.Play.Hud
 {
     /// <summary>
     /// The player's HUD while playing, as Skyrim's: magicka, health and stamina bars along the bottom (PlayerHud.uss),
-    /// each shown while not full and for a moment after it changes, then faded (<see cref="BarFade"/>), and blinking when
-    /// it held too little for a move (<see cref="MovementCosts.ShortOf"/>). It follows whichever player the
+    /// each shown while not full and for a moment after it changes, then faded (<see cref="BarFade"/>). The bars read the
+    /// player's numbers as they change (<see cref="ActorAttributes.Changed"/>); what happens to the player comes from the
+    /// game's stream: the stamina bar blinks when the player is exhausted (<see cref="ActorExhausted"/>) and a bar blinks
+    /// when it held too little for a move (<see cref="ActorShortOf"/>). It follows whichever player the
     /// <see cref="PlayerSession"/> has, so whatever plays the world (the editor's play, the game later) hosts it the same.
     /// </summary>
     public sealed class PlayerHud : IDisposable
@@ -36,8 +39,8 @@ namespace Forge.Play.Hud
         readonly PlayerSession _session;
         readonly VisualElement _root;
         readonly List<Bar> _bars = new List<Bar>();
+        readonly IDisposable[] _subscriptions;
         ActorAttributes _attributes;
-        MovementCosts _costs;
 
         /// <param name="parent">Where the HUD goes: a full-screen element of the panel that plays.</param>
         public PlayerHud(PlayerSession session, VisualElement parent)
@@ -57,6 +60,12 @@ namespace Forge.Play.Hud
 
             parent.Add(_root);
             _root.style.display = DisplayStyle.None;
+
+            _subscriptions = new[]
+            {
+                session.Events.Subscribe<ActorExhausted>(e => Flash(e.Actor, CoreAttributes.Stamina)),
+                session.Events.Subscribe<ActorShortOf>(e => Flash(e.Actor, e.Attribute)),
+            };
         }
 
         /// <summary>Follows the player for <paramref name="deltaTime"/> seconds; hidden while there is none.</summary>
@@ -64,7 +73,7 @@ namespace Forge.Play.Hud
         {
             var player = _session.Player;
             var attributes = player != null ? player.Attributes : null;
-            Bind(attributes, player?.Costs);
+            Bind(attributes);
             _root.style.display = attributes != null ? DisplayStyle.Flex : DisplayStyle.None;
             if (attributes == null)
                 return;
@@ -85,35 +94,31 @@ namespace Forge.Play.Hud
 
         public void Dispose()
         {
-            Bind(null, null);
+            Bind(null);
+            foreach (var subscription in _subscriptions)
+                subscription.Dispose();
             _root.RemoveFromHierarchy();
         }
 
-        // Listens to the player's attributes and moving costs, which a new spawn may replace.
-        void Bind(ActorAttributes attributes, MovementCosts costs)
+        // Reads the player's numbers as they change; a new world's attributes replace them.
+        void Bind(ActorAttributes attributes)
         {
-            if (attributes != _attributes)
-            {
-                if (_attributes != null)
-                    _attributes.Changed -= OnChanged;
-                _attributes = attributes;
-                if (_attributes != null)
-                    _attributes.Changed += OnChanged;
-            }
-
-            if (costs != _costs)
-            {
-                if (_costs != null)
-                    _costs.ShortOf -= OnShortOf;
-                _costs = costs;
-                if (_costs != null)
-                    _costs.ShortOf += OnShortOf;
-            }
+            if (attributes == _attributes)
+                return;
+            if (_attributes != null)
+                _attributes.Changed -= OnChanged;
+            _attributes = attributes;
+            if (_attributes != null)
+                _attributes.Changed += OnChanged;
         }
 
         void OnChanged(AttributeChange change) => Find(change.Attribute)?.Fade.Show();
 
-        void OnShortOf(RecordId attribute) => Find(attribute)?.Fade.Flash();
+        void Flash(ActorId actor, RecordId attribute)
+        {
+            if (actor == ActorId.Player)
+                Find(attribute)?.Fade.Flash();
+        }
 
         Bar Find(RecordId attribute) => _bars.Find(bar => bar.Attribute == attribute);
     }
