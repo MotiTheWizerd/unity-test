@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Forge.Data;
+using Forge.Data.Plugins;
 
 namespace Forge.Game.Items
 {
@@ -30,12 +31,28 @@ namespace Forge.Game.Items
     {
         readonly List<ItemStack> _stacks = new List<ItemStack>();
 
+        /// <summary>Something was added or removed.</summary>
+        public event Action Changed;
+
         public IReadOnlyList<ItemStack> Stacks => _stacks;
 
         public int CountOf(RecordId item)
         {
             var index = IndexOf(item);
             return index < 0 ? 0 : _stacks[index].Count;
+        }
+
+        /// <summary>What it all weighs, by the items' records in <paramref name="records"/>; what is no item there weighs nothing.</summary>
+        public float Weight(IRecordStore records)
+        {
+            var weight = 0f;
+            foreach (var stack in _stacks)
+            {
+                if (ItemRecords.TryGet(records, stack.Item, out var item))
+                    weight += item.Item.Weight * stack.Count;
+            }
+
+            return weight;
         }
 
         public void Add(RecordId item, int count = 1)
@@ -50,6 +67,7 @@ namespace Forge.Game.Items
                 _stacks.Add(new ItemStack(item, count));
             else
                 _stacks[index] = new ItemStack(item, checked(_stacks[index].Count + count));
+            Changed?.Invoke();
         }
 
         /// <summary>Takes <paramref name="count"/> of <paramref name="item"/> out; false, and nothing taken, when fewer are carried.</summary>
@@ -65,6 +83,7 @@ namespace Forge.Game.Items
                 _stacks.RemoveAt(index);
             else
                 _stacks[index] = new ItemStack(item, _stacks[index].Count - count);
+            Changed?.Invoke();
             return true;
         }
 

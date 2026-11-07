@@ -41,5 +41,9 @@ namespace Forge.Game.Player
         public bool Walk { get; }
 
         public bool Activate { get; }
+
+        /// <summary>These commands as a rule lets them through (too tired to sprint, too laden to run): the rest unchanged.</summary>
+        public PlayerCommands Allowing(bool sprint, bool jump, bool walk) =>
+            new PlayerCommands(Move, Turn, sprint, jump, ToggleWalk, walk, Activate);
     }
 }

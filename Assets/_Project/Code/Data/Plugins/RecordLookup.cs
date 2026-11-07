@@ -4,8 +4,8 @@ using Forge.Data.Records;
 
 namespace Forge.Data.Plugins
 {
-    /// <summary>Lookup behaviour shared by every <see cref="IRecordStore"/> implementation.</summary>
-    static class RecordLookup
+    /// <summary>Lookup behaviour shared by every <see cref="IRecordStore"/> implementation, in this assembly or another.</summary>
+    public static class RecordLookup
     {
         public static T Get<T>(IRecordStore store, RecordId id) where T : Record
         {

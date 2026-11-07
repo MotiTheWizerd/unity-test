@@ -771,12 +771,28 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
   is its weight and value. It leaves the world (`WorldChanges`), joins the actor's `Inventory`, and the stream hears
   `ItemTaken` (who, the item, the placed object it was, how many).
 - **`WorldChanges`** (Game.World): what playing changed in the world, beside it, as a saved game keeps changes over the
-  load order: for now the placed objects taken out of it (`Removed`, `Cleared`). The records stay as built; whatever
-  shows the world while playing lays the changes on top. Dropped items, opened doors and emptied containers will join
-  it, and the save game will write it.
+  load order: the world's placed objects taken out of it (`Removed`) and the ones playing put in (`Added`: a dropped
+  item, ids `forge.play:placed/N` from `NewId`, never given twice). Taking an added one simply ends it; `Clear` lets
+  everything go. The records stay as built; opened doors and emptied containers will join it, and the save game will
+  write it.
+- **`PlayedWorld`** (Game.World): an `IRecordStore` over the world as built with the changes on top, live: what was taken
+  is gone from it, what was dropped is in it, an unchanged block is handed on as built. Whatever asks about the world
+  while playing (what is in sight; later the AI and the save) reads this, so a dropped item is takeable again.
 - **`Inventory`** (Game.Items): a stack per item (`ItemStack`: base object id and count) in the order first taken; one per
-  actor. Weights and values are read from the items' records when asked, so they are never stale.
-- `PlayerCommands.Activate` is the key, pressed this frame.
+  actor; `Changed` on every add and remove. `Weight(records)` and the listing are read from the items' records when
+  asked (`ItemRecords.TryGet`: a base object with an item part), so they are never stale; an item the world has no
+  record of stays carried but is neither weighed nor listed.
+- **`InventoryList`** (Game.Items): an inventory as a screen lists it, by name, all kinds or one (a tab): `InventoryEntry`
+  rows with name, kind, count, weight and value each, and the stack's total weight.
+- **Carrying** (`Encumbrance`, Game.Items): what an actor carries against its `CarryWeight`, worked out again only when
+  the inventory or the carry weight changes. Past it the actor is overburdened, as Skyrim's over-encumbered: it walks
+  whatever it is told (no run, no sprint; jumps still go), and the stream hears `ActorOverburdened` / `ActorUnburdened`.
+  It is an `IMovementLimit` (Game.Player): `PlayerCharacter.Limits` let each frame's commands through, in order, before
+  moving costs are paid, so the player's rules never know what holds it back (a spell's root, a wound, later).
+- **Dropping** (`ItemDropper`): one item leaves the actor's inventory and stands in the world as an added placed object
+  where the caller says (the engine finds the ground), and the stream hears `ItemDropped`. The record is made before
+  the item leaves the pack, so a bad place loses nothing.
+- `PlayerCommands.Activate` is the key, pressed this frame; `Allowing(sprint, jump, walk)` is a command as a rule lets it through.
 
 ## World-building agent (Forge.Agent)
 

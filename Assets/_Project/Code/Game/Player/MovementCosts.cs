@@ -78,7 +78,7 @@ namespace Forge.Game.Player
                 _events?.Publish(new ActorShortOf(actor, CoreAttributes.Stamina));
             }
 
-            return new PlayerCommands(commands.Move, commands.Turn, sprint, jump, commands.ToggleWalk, commands.Walk || Winded, commands.Activate);
+            return commands.Allowing(sprint, jump, commands.Walk || Winded);
         }
 
         /// <summary>

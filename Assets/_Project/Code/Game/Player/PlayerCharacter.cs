@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Forge.Core.Geometry;
 using Forge.Game.Attributes;
@@ -34,6 +35,9 @@ namespace Forge.Game.Player
             if (attributes != null)
                 Costs = new MovementCosts(attributes, events);
         }
+
+        /// <summary>What holds the player back whatever it is told (carrying too much), in order, before moving costs are paid.</summary>
+        public IList<IMovementLimit> Limits { get; } = new List<IMovementLimit>();
 
         /// <summary>What moving costs the player, paid from its attributes; null when its moves cost nothing.</summary>
         public MovementCosts Costs { get; }
@@ -71,6 +75,8 @@ namespace Forge.Game.Player
         public void Tick(PlayerCommands commands, float deltaTime)
         {
             Look.Turn(commands.Turn);
+            foreach (var limit in Limits)
+                commands = limit.Allow(commands);
             if (Costs != null)
                 commands = Costs.Afford(commands, deltaTime);
             var from = Motor.Position;
