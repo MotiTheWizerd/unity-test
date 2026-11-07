@@ -47,17 +47,13 @@ namespace Forge.EditorApp
         /// </summary>
         public void AutoPaintSpace()
         {
-            var records = _context.Session.World.Records;
             if (!(_context.UnpaintedGround is RecordId flat))
             {
                 _context.Report("Auto paint: no ground layer looks like unpainted ground");
                 return;
             }
 
-            // SHORTCUT: the roles are the base game's looks; per-world rules (a climate's or worldspace's) become data
-            // when worlds need their own ground (see ARCHITECTURE.md).
-            RecordId? Look(string assetKey) => Forge.Editing.Terrain.GroundLayers.WithLook(records, assetKey);
-            var rules = new Forge.Editing.Terrain.AutoPaintRules(flat, Look("ground/dirt"), Look("ground/rock"), Look("ground/sand"));
+            var rules = Forge.Editing.Terrain.AutoPaintRules.OfBaseLooks(_context.Session.World.Records, flat);
 
             var painted = 0;
             if (_context.TryEdit("Auto paint", () => painted = Forge.Editing.Terrain.AutoPaint.Apply(_context.Session, _context.ActiveSpace, rules)))

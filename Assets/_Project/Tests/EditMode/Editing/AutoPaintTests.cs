@@ -72,6 +72,49 @@ namespace Forge.Tests.Editing
             Assert.That(paint.Layers, Is.EqualTo(new[] { Grass }));
         }
 
+        static readonly RecordId Snow = GroundLayerRecord.IdFor("core", "snow");
+
+        static GroundPaint SnowyPaintOf(TerrainChunkRecord chunk) =>
+            AutoPaint.Paint(new EditSession(new[] { Plugin("core", chunk) }, Plugin("user", new[] { "core" })).World.Records, Space,
+                    new AutoPaintRules(Grass, slope: Dirt, steep: Rock, shore: Sand, snow: Snow) { SnowLine = 58f }, null)
+                .Single().Paint.Load();
+
+        [Test]
+        public void AboveTheSnowLine_IsSnow_BelowItTheLand()
+        {
+            Assert.That(SnowyPaintOf(Chunk(0, HeightField.Flat(75f))).DominantAt(30, 30), Is.EqualTo(Snow));
+            Assert.That(SnowyPaintOf(Chunk(0, HeightField.Flat(40f))).Layers, Has.No.Member(Snow));
+        }
+
+        [Test]
+        public void TheSnowLine_Blends_AndWanders()
+        {
+            var paint = SnowyPaintOf(Chunk(0, HeightField.Flat(58f)));
+            var snow = paint.IndexOf(Snow);
+
+            var shares = Enumerable.Range(0, 64).Select(x => (int)paint[snow, x, 30]).ToList();
+            Assert.That(shares.Count(share => share > 0 && share < 255), Is.GreaterThan(48), "On the line, mostly part snow.");
+            Assert.That(shares.Max() - shares.Min(), Is.GreaterThan(30), "The line wanders across level ground.");
+        }
+
+        [Test]
+        public void Snow_HoldsOnSteepGround_UntilItIsTooSteep()
+        {
+            // 40° would be rock below the snow line, but snow holds on it; at 60° it slides off and the rock shows.
+            Assert.That(SnowyPaintOf(Chunk(0, Incline(40f))).DominantAt(40, 30), Is.EqualTo(Snow));
+            Assert.That(SnowyPaintOf(Chunk(0, Incline(60f))).DominantAt(40, 30), Is.EqualTo(Rock));
+        }
+
+        [Test]
+        public void NoSnowLine_NoSnow()
+        {
+            var store = new EditSession(new[] { Plugin("core", Chunk(0, HeightField.Flat(150f))) }, Plugin("user", new[] { "core" })).World.Records;
+
+            var paint = AutoPaint.Paint(store, Space, new AutoPaintRules(Grass, snow: Snow), null).Single().Paint.Load();
+
+            Assert.That(paint.Layers, Is.EqualTo(new[] { Grass }));
+        }
+
         [Test]
         public void Apply_RepaintsEveryChunk_KeepsHeights_AsOneUndoStep()
         {

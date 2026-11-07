@@ -88,12 +88,16 @@ namespace Forge.Editing.Terrain
         public float? HeightAt(Vector2 ground) => Bilinear(ground, Spacing, SampleHeight);
 
         /// <summary>Every terrain sample in the square of half-edge <paramref name="reach"/> around <paramref name="center"/>.</summary>
-        public IEnumerable<(int Gx, int Gz, Vector2 Ground, float Height)> SamplesAround(Vector2 center, float reach)
+        public IEnumerable<(int Gx, int Gz, Vector2 Ground, float Height)> SamplesAround(Vector2 center, float reach) =>
+            SamplesIn(center - new Vector2(reach), center + new Vector2(reach));
+
+        /// <summary>Every terrain sample in the box from <paramref name="min"/> (south-west) to <paramref name="max"/> (north-east).</summary>
+        public IEnumerable<(int Gx, int Gz, Vector2 Ground, float Height)> SamplesIn(Vector2 min, Vector2 max)
         {
-            var firstX = (int)Math.Ceiling((center.X - reach) / Spacing);
-            var lastX = (int)Math.Floor((center.X + reach) / Spacing);
-            var firstZ = (int)Math.Ceiling((center.Y - reach) / Spacing);
-            var lastZ = (int)Math.Floor((center.Y + reach) / Spacing);
+            var firstX = (int)Math.Ceiling(min.X / Spacing);
+            var lastX = (int)Math.Floor(max.X / Spacing);
+            var firstZ = (int)Math.Ceiling(min.Y / Spacing);
+            var lastZ = (int)Math.Floor(max.Y / Spacing);
             for (var gz = firstZ; gz <= lastZ; gz++)
             for (var gx = firstX; gx <= lastX; gx++)
             {

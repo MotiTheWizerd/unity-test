@@ -409,11 +409,25 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
   the **global sample grid**. Subclasses compute every new height from the state before the write, then
   `Write` puts each sample into *every* chunk that shares it. That's why chunk seams can't open.
   `TerrainEdits.Commit` writes the changed chunks as one undo step named by the edit, as overrides of the
-  master's chunk records. Two edits exist:
+  master's chunk records. The edits:
   - `SculptStroke`: brush dabs (`BrushSettings`: Raise / Lower / Flatten / Smooth, radius, strength).
   - `AreaFlattening`: levels a `GroundRect` (center, width across its front, depth, heading, like a placed
     object) to one height and eases back to the natural ground over a blend.
-  Both use the same smoothstep edge (`Falloff.Smooth`).
+  - `LandformSculpting`: adds a landform to the ground along a spine (one point: a hill or, with a negative height,
+    a hollow; a path: a ridge or a valley). The rise is `height × Fall(profile, t)`, `t` from 0 at the spine to 1 at
+    the foot (width / 2 away, through `GroundShape.Band`'s signed distance): `Round` smoothstep, `Peak` (1 − t)²
+    (concave sides, sharp top), `Plateau` flat over the inner half. Roughness (0..1) lets the slope wander in and
+    out by `TerrainNoise` (never at the foot, so it still meets the land) and varies the height (fading with the
+    profile), sized to the landform. It reports the highest and lowest ground after, and whether some hit the
+    terrain's range (0..200 m).
+  - `GroundSmoothing`: over a `GroundShape`, moves each sample toward a three-pass box blur (close to a Gaussian)
+    of about `size` meters, over land samples only, full inside and easing out over a blend; moves under 0.1 mm
+    aren't written, so even ground stays untouched.
+  They share the smoothstep edge (`Falloff.Smooth`). `TerrainNoise` (engine-free) is octaves of value noise,
+  the same for a position every time, so an edit computed twice comes out the same.
+- **Ground shapes** (`Editing/Geometry/GroundShape`): a band along a path (one point: a disc), a rectangle
+  (`GroundRect`) or a polygon (even-odd), each a signed distance (negative inside) and a bounding box. Painting,
+  sculpting, smoothing and area auto paint all read shapes through it, so a shape means the same to each.
 - **Objects follow edited terrain** (`TerrainFollower`; for the sculpt tool the toggle "Objects follow
   terrain", on by default; `flatten_area` always). Each placed object on a touched chunk moves vertically by
   `TerrainEdit.HeightChangeAt` its position, so its clearance above the ground is kept (resting,
@@ -466,6 +480,12 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
   - `flatten_area`: levels a rectangle (`AreaFlattening`) to a height, by default the average ground height
     inside it (as much dug away as filled in), with a soft edge (default 4 m); objects on the reshaped ground
     follow it (`BuildContext.FollowTerrain`). The agent levels sloped building sites before placing on them.
+  - `sculpt_hill` (x, z) and `sculpt_ridge` (points, `closed` for a ring): a `LandformSculpting` by width across
+    the foot, height (negative digs: a hollow, a valley), profile by name (`round`, `peak`, `plateau`) and
+    roughness (default 0.3), through `LandformRun`; one undo step with the objects on the ground following. The
+    reply (`SculptResult`) gives the new highest and lowest ground, which is where the agent puts a snow line.
+  - `smooth_ground`: a `GroundSmoothing` over a rectangle or corners (`size` default 6 m, blend 4 m, strength);
+    no land under it is refused.
   - `place_objects`: objects at ground positions, seated on the terrain; heading and scale default to the
     object's natural variation. Unknown ids refuse the whole call; positions without terrain are skipped.
   - `place_line`: one object end to end along a path, stretch by stretch, exactly like the place tool's
@@ -490,7 +510,14 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
     through one `PaintCanvas` (working copies of the touched chunks' paint) and commit through
     `TerrainEdits.Commit(session, IPaintEdit)`. The unpainted ground reaches Editing through
     `BuildContext.UnpaintedGround` (the editor's `EditorContext.UnpaintedGround`); without one, painting is refused,
-    as the paint tool refuses.
+    as the paint tool refuses. The area commands (`paint_area`, `smooth_ground`, `auto_paint`) read their rectangle
+    or corners through `GroundArea`, which also words them for the reply.
+  - `auto_paint`: an area painted by the land's shape through `AutoPainting` (Editing/Terrain): per texel the same
+    role shares as the space-wide Auto (`AutoPaint.Shares`, from the chunk's own samples), blended into the paint
+    already there by the area's coverage (`PaintCanvas.Blend`, a soft edge centered on the outline, default 8 m), so
+    nothing outside changes. Rules are `AutoPaintRules.OfBaseLooks` with an optional `snow_line` and any role's
+    ground swapped by name (flat, slope, steep, snow); a snow line in a world without snow ground is refused. The
+    reply gives each ground's share of what was painted.
   - `delete_objects`: placed objects by id.
 - The editor actions that predate the registry (drop to ground, frame, undo/redo, save, the tools' gestures)
   are not commands yet; each moves into the registry when the agent needs it.
@@ -1070,7 +1097,9 @@ slopes), so results are exact and every edit goes through the edit session.
     → `AutoPaint`, engine-free) repaints the whole space by its shape, one undo step: each texel's height and slope come
     from its chunk's own samples (fast: 729 chunks in 0.7 s), and `AutoPaintRules` give steep ground (from 34°) rock,
     slopes (from 20°) dirt, ground under the sea or up to 1.5 m above it sand, and the rest unpainted ground's layer,
-    every change blended. Lakes don't make a shore yet.
+    every change blended. With a `SnowLine` (the button has none; the agent's `auto_paint` sets one), ground above it
+    is snow, blending over 12 m with the line wandering by `TerrainNoise`, and holding on slopes up to 52° (steeper
+    stays rock), so a mountain's top is white with bare faces. Lakes don't make a shore yet.
   - `WaterTool` (L), a paint bucket for lakes: a press in a hollow surveys it and previews a full lake; dragging up
     or down sets the level (50 px per meter, Ctrl half meters), clamped between just above the ground and the brim,
     so it can't spill; release places it (`WaterEdits`, one undo step). A press on a lake (`WaterMap.LakeAt`, or near
@@ -1320,7 +1349,7 @@ and the condition for removing it, and is listed here.
 | Where | What | Why | Remove when |
 |-------|------|-----|-------------|
 | `Packages/manifest.json` | MCP for Unity tracks the git default branch, not a release tag | Fast setup. The exact commit is locked in `packages-lock.json` | Pin to a release tag on the next package update |
-| `EditorApp/EditorCommands.cs` (`AutoPaintSpace`) | Auto paint's roles (slope, steep, shore) are the base game's ground looks by asset key (`ground/dirt`, `ground/rock`, `ground/sand`) | The base game's four layers are the only ground | Worlds need their own ground → the rules become data (a climate's or worldspace's `AutoPaintRules`) |
+| `Editing/Terrain/AutoPaint.cs` (`AutoPaintRules.OfBaseLooks`, used by Auto and `auto_paint`) | Auto paint's roles (slope, steep, shore, snow) are the base game's ground looks by asset key (`ground/dirt`, `ground/rock`, `ground/sand`, `ground/snow`) | The base game's four layers are the only ground | Worlds need their own ground → the rules become data (a climate's or worldspace's `AutoPaintRules`) |
 | `World/Assets/KeyedAssetCatalog.cs` | Catalog entries (prefabs, terrain layers) reference assets directly, so all content loads with the catalog at startup | A dozen placeholder prefabs and four ground layers fit in memory easily | Content outgrows memory → load prefabs by asset key through Addressables, streamed with the chunks |
 | `EditorApp/EditorController.cs`, `Tools/ToolDefinition.cs` | Input read by polling devices, not an Input Actions asset; tool keys are fixed `Key`s in `ToolCatalog` | Skeleton has few fixed bindings | Rebindable controls are needed → Input Actions asset, labels read from it |
 | `World/GrassView.cs` (`Grow`) | Grass patches grow on the main thread, ~10 ms for a 20k-tuft patch in the editor, so crossing into a new chunk can cost a frame | One patch a frame is a short hitch; simpler than threading while grass is new | Hitches show while flying → grow on a worker thread (`GrassScatter` is engine-free; only the buffer upload needs the main thread) |

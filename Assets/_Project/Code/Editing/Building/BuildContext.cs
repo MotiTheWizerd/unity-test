@@ -182,6 +182,12 @@ namespace Forge.Editing.Building
                 ? baseObject.DisplayName
                 : baseId.ToString();
 
+        /// <summary>The display name of ground layer <paramref name="layerId"/>, or its id if it is missing.</summary>
+        public string NameOfGround(RecordId layerId) =>
+            Session.World.Records.TryGet(layerId, out var record) && record is GroundLayerRecord layer
+                ? layer.DisplayName
+                : layerId.ToString();
+
         /// <summary>How many of each kind, most first, e.g. "8 Pine Tree, 4 Bush".</summary>
         public string CountByName(IEnumerable<PlacedObjectRecord> placed) =>
             string.Join(", ", placed

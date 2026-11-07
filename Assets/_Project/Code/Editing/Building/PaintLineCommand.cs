@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Forge.Editing.Commands;
+using Forge.Editing.Geometry;
 using Forge.Editing.Terrain;
 
 namespace Forge.Editing.Building
@@ -75,7 +76,7 @@ namespace Forge.Editing.Building
             var width = arguments.Width ?? DefaultWidth;
             var edge = arguments.Edge ?? GroundPaintRun.DefaultEdge;
             var (painting, chunks) = GroundPaintRun.Paint(_context, arguments.Ground,
-                shape => shape.PaintPath(path, width, edge, arguments.Strength ?? 1f));
+                shape => shape.Paint(GroundShape.Band(path, width), edge, arguments.Strength ?? 1f));
 
             var length = Length(path);
             var summary = FormattableString.Invariant(

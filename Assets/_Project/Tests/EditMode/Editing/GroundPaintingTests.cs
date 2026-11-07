@@ -55,7 +55,7 @@ namespace Forge.Tests.Editing
         {
             var painting = Painting(NewSession());
 
-            var painted = painting.PaintPath(Points((2f, 10f), (30f, 10f)), width: 4f, edge: 0f, strength: 1f);
+            var painted = painting.Paint(GroundShape.Band(Points((2f, 10f), (30f, 10f)), 4f), edge: 0f, strength: 1f);
 
             // Texel rows 8-11 are centered within 2 m of z = 10; rows 7 and 12 are 2.5 m away.
             Assert.That(Enumerable.Range(8, 4).Select(z => RockAt(painting, 15, z)), Is.All.EqualTo(GroundPaint.Full));
@@ -70,7 +70,7 @@ namespace Forge.Tests.Editing
             var painting = Painting(NewSession());
 
             // The band's sides run along z = 8.5 and z = 12.5, through texel centers.
-            painting.PaintPath(Points((2f, 10.5f), (30f, 10.5f)), width: 4f, edge: 2f, strength: 1f);
+            painting.Paint(GroundShape.Band(Points((2f, 10.5f), (30f, 10.5f)), 4f), edge: 2f, strength: 1f);
 
             Assert.That(RockAt(painting, 15, 10), Is.EqualTo(GroundPaint.Full), "The middle.");
             Assert.That(RockAt(painting, 15, 11), Is.EqualTo(GroundPaint.Full), "Half an edge inside the side: still full.");
@@ -82,9 +82,9 @@ namespace Forge.Tests.Editing
         public void ARectangle_TurnsWithItsHeading()
         {
             var facingNorth = Painting(NewSession());
-            facingNorth.PaintRect(new GroundRect(new Vector2(20f, 20f), 10f, 4f, 0f), 0f, 1f);
+            facingNorth.Paint(GroundShape.Rect(new GroundRect(new Vector2(20f, 20f), 10f, 4f, 0f)), 0f, 1f);
             var facingEast = Painting(NewSession());
-            facingEast.PaintRect(new GroundRect(new Vector2(20f, 20f), 10f, 4f, 90f), 0f, 1f);
+            facingEast.Paint(GroundShape.Rect(new GroundRect(new Vector2(20f, 20f), 10f, 4f, 90f)), 0f, 1f);
 
             // Facing north the width runs east-west; facing east it runs north-south.
             Assert.That((RockAt(facingNorth, 24, 20), RockAt(facingNorth, 20, 24)), Is.EqualTo((Full, 0)));
@@ -96,9 +96,9 @@ namespace Forge.Tests.Editing
         {
             // The same 10 m square twice, its sides along x and z = 15.5 and 25.5, through texel centers.
             var rect = Painting(NewSession());
-            rect.PaintRect(new GroundRect(new Vector2(20.5f, 20.5f), 10f, 10f), edge: 2f, strength: 1f);
+            rect.Paint(GroundShape.Rect(new GroundRect(new Vector2(20.5f, 20.5f), 10f, 10f)), edge: 2f, strength: 1f);
             var polygon = Painting(NewSession());
-            polygon.PaintPolygon(Points((15.5f, 15.5f), (25.5f, 15.5f), (25.5f, 25.5f), (15.5f, 25.5f)), edge: 2f, strength: 1f);
+            polygon.Paint(GroundShape.Polygon(Points((15.5f, 15.5f), (25.5f, 15.5f), (25.5f, 25.5f), (15.5f, 25.5f))), edge: 2f, strength: 1f);
 
             foreach (var painting in new[] { rect, polygon })
             {
@@ -115,7 +115,7 @@ namespace Forge.Tests.Editing
             var painting = Painting(NewSession());
 
             // An L: a 20 m square without its north-east quarter.
-            painting.PaintPolygon(Points((0f, 0f), (20f, 0f), (20f, 10f), (10f, 10f), (10f, 20f), (0f, 20f)), 0f, 1f);
+            painting.Paint(GroundShape.Polygon(Points((0f, 0f), (20f, 0f), (20f, 10f), (10f, 10f), (10f, 20f), (0f, 20f))), 0f, 1f);
 
             Assert.That(RockAt(painting, 5, 15), Is.EqualTo(GroundPaint.Full));
             Assert.That(RockAt(painting, 15, 5), Is.EqualTo(GroundPaint.Full));
@@ -129,7 +129,7 @@ namespace Forge.Tests.Editing
             var painting = Painting(NewSession());
 
             // There and back along the same line: the band overlaps itself, but a shape paints each texel once.
-            painting.PaintPath(Points((2f, 10f), (30f, 10f), (2f, 10f)), width: 4f, edge: 0f, strength: 0.5f);
+            painting.Paint(GroundShape.Band(Points((2f, 10f), (30f, 10f), (2f, 10f)), 4f), edge: 0f, strength: 0.5f);
 
             Assert.That(RockAt(painting, 15, 10), Is.InRange(125, 130));
         }
@@ -139,20 +139,20 @@ namespace Forge.Tests.Editing
         {
             var painting = Painting(NewSession());
 
-            painting.PaintPath(Points((-10f, 10f), (10f, 10f)), width: 4f, edge: 0f, strength: 1f);
+            painting.Paint(GroundShape.Band(Points((-10f, 10f), (10f, 10f)), 4f), edge: 0f, strength: 1f);
 
             Assert.That(painting.TouchedChunks, Is.EquivalentTo(new[] { new ChunkCoord(-1, 0), new ChunkCoord(0, 0) }));
             Assert.That((RockAt(painting, -1, 10), RockAt(painting, 0, 10)), Is.EqualTo((Full, Full)));
 
             var offTheLand = Painting(NewSession());
-            Assert.That(offTheLand.PaintRect(new GroundRect(new Vector2(500f, 500f), 10f, 10f), 1f, 1f), Is.Zero);
+            Assert.That(offTheLand.Paint(GroundShape.Rect(new GroundRect(new Vector2(500f, 500f), 10f, 10f)), 1f, 1f), Is.Zero);
             Assert.That(offTheLand.ChangedRecords(), Is.Empty);
         }
 
         [Test]
         public void ShapesWiderThanTheSpan_AreRefused()
         {
-            Assert.Throws<ArgumentException>(() => Painting(NewSession()).PaintRect(new GroundRect(Vector2.Zero, 300f, 10f), 0f, 1f));
+            Assert.Throws<ArgumentException>(() => Painting(NewSession()).Paint(GroundShape.Rect(new GroundRect(Vector2.Zero, 300f, 10f)), 0f, 1f));
         }
 
         [Test]
@@ -160,8 +160,8 @@ namespace Forge.Tests.Editing
         {
             var session = NewSession();
             var painting = Painting(session);
-            painting.PaintPath(Points((2f, 10f), (30f, 10f)), 4f, 1f, 1f);
-            painting.PaintRect(new GroundRect(new Vector2(-20f, -20f), 6f, 6f), 1f, 1f);
+            painting.Paint(GroundShape.Band(Points((2f, 10f), (30f, 10f)), 4f), 1f, 1f);
+            painting.Paint(GroundShape.Rect(new GroundRect(new Vector2(-20f, -20f), 6f, 6f)), 1f, 1f);
 
             var chunks = TerrainEdits.Commit(session, painting);
 

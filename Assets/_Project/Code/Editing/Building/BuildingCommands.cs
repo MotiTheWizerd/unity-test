@@ -14,6 +14,9 @@ namespace Forge.Editing.Building
             registry.Add(new ListObjectsCommand(context));
             registry.Add(new InspectAreaCommand(context));
             registry.Add(new FlattenAreaCommand(context));
+            registry.Add(new SculptHillCommand(context));
+            registry.Add(new SculptRidgeCommand(context));
+            registry.Add(new SmoothGroundCommand(context));
             registry.Add(new ExtendLandCommand(context));
             registry.Add(new SetSeaLevelCommand(context));
             registry.Add(new SetClimateCommand(context));
@@ -29,6 +32,7 @@ namespace Forge.Editing.Building
             registry.Add(new ListGroundsCommand(context));
             registry.Add(new PaintLineCommand(context));
             registry.Add(new PaintAreaCommand(context));
+            registry.Add(new AutoPaintCommand(context));
             registry.Add(new DeleteObjectsCommand(context));
         }
     }

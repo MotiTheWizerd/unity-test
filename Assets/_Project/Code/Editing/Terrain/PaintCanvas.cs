@@ -1,17 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Data.Terrain;
+using Forge.Editing.Geometry;
 
 namespace Forge.Editing.Terrain
 {
     /// <summary>
     /// Working copies of the ground paint of the chunks a paint edit touches, addressed by world texel (one per meter,
     /// texel (gx, gz) covering gx..gx+1, gz..gz+1 m), each started from its chunk's paint on first touch, on land only.
-    /// The brush (<see cref="PaintStroke"/>) and shape painting (<see cref="GroundPainting"/>) both paint through one.
+    /// The brush (<see cref="PaintStroke"/>), shape painting (<see cref="GroundPainting"/>) and area auto paint
+    /// (<see cref="AutoPainting"/>) all paint through one.
     /// </summary>
     sealed class PaintCanvas
     {
@@ -20,6 +23,9 @@ namespace Forge.Editing.Terrain
 
         /// <summary>Meters per texel.</summary>
         public const float TexelSize = WorldGrid.ChunkSize / Resolution;
+
+        /// <summary>The most a painted shape may span, east-west or north-south, in meters (its soft edge may reach past it).</summary>
+        public const float MaxSpan = 256f;
 
         readonly TerrainGrid _terrain;
         readonly RecordId _unpainted;
@@ -41,11 +47,38 @@ namespace Forge.Editing.Terrain
         /// <summary>Chunks painted so far.</summary>
         public IReadOnlyCollection<ChunkCoord> TouchedChunks => _working.Keys;
 
+        /// <summary>The land painted, as it was when the canvas was made.</summary>
+        public TerrainGrid Terrain => _terrain;
+
         /// <summary>The world texel, along one axis, that holds the position <paramref name="meters"/>.</summary>
         public static int TexelOf(float meters) => (int)Math.Floor(meters / TexelSize);
 
         /// <summary>The middle of world texel <paramref name="texel"/> along one axis, in meters.</summary>
         public static float CenterOf(int texel) => (texel + 0.5f) * TexelSize;
+
+        /// <summary>
+        /// Every world texel in the box around <paramref name="shape"/> grown by <paramref name="grow"/> meters, with its
+        /// center's signed distance to the shape's outline (negative inside). Refuses a shape wider than <see cref="MaxSpan"/>
+        /// (its outline; the soft edge may reach past it).
+        /// </summary>
+        public static IEnumerable<(int Gx, int Gz, float Outside)> TexelsOf(GroundShape shape, float grow)
+        {
+            if (shape.Span.X > MaxSpan || shape.Span.Y > MaxSpan)
+                throw new ArgumentException(FormattableString.Invariant(
+                    $"That shape spans {shape.Span.X:0} × {shape.Span.Y:0} m; paint at most {MaxSpan:0} m across at a time."));
+
+            var min = shape.Min - new Vector2(grow);
+            var max = shape.Max + new Vector2(grow);
+
+            return Walk();
+
+            IEnumerable<(int, int, float)> Walk()
+            {
+                for (var gz = TexelOf(min.Y); gz <= TexelOf(max.Y); gz++)
+                for (var gx = TexelOf(min.X); gx <= TexelOf(max.X); gx++)
+                    yield return (gx, gz, shape.SignedDistance(new Vector2(CenterOf(gx), CenterOf(gz))));
+            }
+        }
 
         /// <summary>
         /// Moves world texel (<paramref name="gx"/>, <paramref name="gz"/>) toward <paramref name="layer"/> by
@@ -60,6 +93,23 @@ namespace Forge.Editing.Terrain
                 return null;
 
             working.Paint(gx - coord.X * Resolution, gz - coord.Z * Resolution, working.IndexOf(layer), amount);
+            return coord;
+        }
+
+        /// <summary>
+        /// Moves world texel (<paramref name="gx"/>, <paramref name="gz"/>) toward a mix of <paramref name="layers"/>
+        /// (their <paramref name="shares"/>, adding up to 1) by <paramref name="amount"/> (0..1): every layer keeps
+        /// (1 − amount) of its share and the mix's layers gain the rest by their shares. Returns the texel's chunk, or
+        /// null off the land, where nothing is painted.
+        /// </summary>
+        public ChunkCoord? Blend(int gx, int gz, IReadOnlyList<RecordId> layers, IReadOnlyList<float> shares, float amount)
+        {
+            var coord = new ChunkCoord(FloorDiv(gx, Resolution), FloorDiv(gz, Resolution));
+            var working = WorkingFor(coord);
+            if (working == null)
+                return null;
+
+            working.Blend(gx - coord.X * Resolution, gz - coord.Z * Resolution, layers, shares, amount);
             return coord;
         }
 
@@ -139,6 +189,21 @@ namespace Forge.Editing.Terrain
                 for (var i = 0; i < _planes.Count; i++)
                     _planes[i][texel] *= 1f - amount;
                 _planes[layer][texel] += amount;
+                _result = null;
+            }
+
+            // The same toward a mix of layers, each gaining its share of `amount`.
+            public void Blend(int x, int z, IReadOnlyList<RecordId> layers, IReadOnlyList<float> shares, float amount)
+            {
+                var texel = z * Resolution + x;
+                for (var i = 0; i < _planes.Count; i++)
+                    _planes[i][texel] *= 1f - amount;
+                for (var i = 0; i < layers.Count; i++)
+                {
+                    if (shares[i] > 0f)
+                        _planes[IndexOf(layers[i])][texel] += amount * shares[i];
+                }
+
                 _result = null;
             }
 

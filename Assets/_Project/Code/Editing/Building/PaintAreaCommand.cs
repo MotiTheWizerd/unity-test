@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
 using Forge.Editing.Commands;
-using Forge.Editing.Geometry;
 using Forge.Editing.Terrain;
 
 namespace Forge.Editing.Building
@@ -72,40 +69,10 @@ namespace Forge.Editing.Building
 
         protected override Result Run(Arguments arguments)
         {
+            var (area, words) = GroundArea.Of(arguments.X, arguments.Z, arguments.Width, arguments.Depth, arguments.Heading, arguments.Points);
             var edge = arguments.Edge ?? GroundPaintRun.DefaultEdge;
-            var strength = arguments.Strength ?? 1f;
-            var rectangle = arguments.X.HasValue || arguments.Z.HasValue || arguments.Width.HasValue || arguments.Depth.HasValue;
-            if (rectangle == (arguments.Points != null))
-                throw new CommandException("Give either a rectangle (x, z, width and depth) or points, not both and not neither.");
-
-            if (arguments.Points != null)
-            {
-                var corners = arguments.Points.Select(p => p.ToVector()).ToList();
-                var (polygon, polygonChunks) = GroundPaintRun.Paint(_context, arguments.Ground,
-                    shape => shape.PaintPolygon(corners, edge, strength));
-                return new Result(FormattableString.Invariant(
-                    $"Painted {polygon.LayerName} over a {corners.Count}-cornered area of about {Area(corners):0} m², on {polygonChunks} chunk(s)."),
-                    polygon.PaintedTexels);
-            }
-
-            if (!(arguments.X.HasValue && arguments.Z.HasValue && arguments.Width.HasValue && arguments.Depth.HasValue))
-                throw new CommandException("A rectangle needs x, z, width and depth.");
-
-            var area = new GroundRect(new Vector2(arguments.X.Value, arguments.Z.Value), arguments.Width.Value, arguments.Depth.Value, arguments.Heading ?? 0f);
-            var (painting, chunks) = GroundPaintRun.Paint(_context, arguments.Ground, shape => shape.PaintRect(area, edge, strength));
-            return new Result(
-                FormattableString.Invariant($"Painted {painting.LayerName} over a {area.Width:0.#} × {area.Depth:0.#} m area ") +
-                FormattableString.Invariant($"around ({area.Center.X:0.#}, {area.Center.Y:0.#}), heading {area.HeadingDegrees:0}°, on {chunks} chunk(s)."),
-                painting.PaintedTexels);
-        }
-
-        // The shoelace formula: the area the corners enclose, however they wind.
-        static float Area(IReadOnlyList<Vector2> corners)
-        {
-            var twice = 0f;
-            for (int i = 0, j = corners.Count - 1; i < corners.Count; j = i++)
-                twice += corners[j].X * corners[i].Y - corners[i].X * corners[j].Y;
-            return Math.Abs(twice) / 2f;
+            var (painting, chunks) = GroundPaintRun.Paint(_context, arguments.Ground, shape => shape.Paint(area, edge, arguments.Strength ?? 1f));
+            return new Result($"Painted {painting.LayerName} over {words}, on {chunks} chunk(s).", painting.PaintedTexels);
         }
     }
 }
