@@ -75,6 +75,9 @@ namespace Forge.Play
         [SerializeField, Min(0.01f), Tooltip("Meters per wheel notch.")]
         float _cameraZoomStep = 0.6f;
 
+        [SerializeField, Min(0f), Tooltip("Seconds the camera takes to glide most of the way to where the wheel sent it (0: it jumps).")]
+        float _cameraZoomEase = 0.12f;
+
         [SerializeField, Min(0.1f), Tooltip("Height above the feet the camera orbits around (about the shoulders).")]
         float _cameraPivotHeight = 1.6f;
 
@@ -152,6 +155,7 @@ namespace Forge.Play
                 pivotHeight: _cameraPivotHeight,
                 shoulderOffset: _cameraShoulderOffset,
                 radius: _cameraRadius,
-                returnSpeed: _cameraReturnSpeed);
+                returnSpeed: _cameraReturnSpeed,
+                zoomEase: _cameraZoomEase);
     }
 }

@@ -15,6 +15,7 @@ namespace Forge.Game.Cameras
         /// <param name="shoulderOffset">Meters to the right of the body it sits, so the player doesn't hide what's ahead.</param>
         /// <param name="radius">How thick the camera is to walls: it stops this far short of them.</param>
         /// <param name="returnSpeed">Meters per second it eases back out once a wall stops blocking it (it pulls in at once).</param>
+        /// <param name="zoomEase">Seconds the camera takes to glide most of the way (two thirds) to where the wheel sent it; zero jumps there.</param>
         public ThirdPersonSettings(
             float distance = 3.5f,
             float minDistance = 1.2f,
@@ -23,8 +24,12 @@ namespace Forge.Game.Cameras
             float pivotHeight = 1.6f,
             float shoulderOffset = 0.35f,
             float radius = 0.2f,
-            float returnSpeed = 6f)
+            float returnSpeed = 6f,
+            float zoomEase = 0.12f)
         {
+            if (!(zoomEase >= 0f) || float.IsInfinity(zoomEase))
+                throw new ArgumentOutOfRangeException(nameof(zoomEase), zoomEase, "Must be a number of seconds, zero or more.");
+            ZoomEase = zoomEase;
             MinDistance = Positive(minDistance, nameof(minDistance));
             MaxDistance = Positive(maxDistance, nameof(maxDistance));
             if (MaxDistance < MinDistance)
@@ -52,6 +57,9 @@ namespace Forge.Game.Cameras
         public float Radius { get; }
 
         public float ReturnSpeed { get; }
+
+        /// <summary>Seconds the camera takes to glide two thirds of the way to where the wheel sent it; zero jumps.</summary>
+        public float ZoomEase { get; }
 
         /// <summary><paramref name="distance"/> held within [min, max].</summary>
         public float Clamp(float distance) => Math.Max(MinDistance, Math.Min(MaxDistance, distance));

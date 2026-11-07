@@ -8,13 +8,15 @@ namespace Forge.Game.Cameras
     /// <summary>
     /// Over the shoulder, as in Skyrim's third person: the camera orbits a pivot at the shoulders (a little to the right)
     /// along the look, <see cref="Distance"/> behind it. Something in the way (a wall, a slope, a tree) pulls it in at once,
-    /// so it never looks through; once clear it eases back out. The body turns toward where it goes, and the look orbits
-    /// freely while it stands.
+    /// so it never looks through; once clear it eases back out. The wheel sets <see cref="Distance"/>, and the camera
+    /// glides there (<see cref="ThirdPersonSettings.ZoomEase"/>) rather than jumping. The body turns toward where it goes,
+    /// and the look orbits freely while it stands.
     /// </summary>
     public sealed class ThirdPersonCamera : ICameraMode
     {
         readonly ThirdPersonSettings _settings;
         readonly ICameraObstacles _obstacles;
+        float _zoomed = float.NaN;
         float _shown = float.NaN;
 
         /// <param name="obstacles">What the camera can't pass through; null for nothing (it never pulls in).</param>
@@ -34,7 +36,7 @@ namespace Forge.Game.Cameras
         /// <summary>How far behind the pivot the camera wants to be, in meters (the wheel sets it).</summary>
         public float Distance { get; private set; }
 
-        /// <summary>How far behind the pivot it was last framed, after anything in the way (at most <see cref="Distance"/>).</summary>
+        /// <summary>How far behind the pivot it was last framed: as far as the zoom has glided, less anything in the way.</summary>
         public float ShownDistance => float.IsNaN(_shown) ? Distance : _shown;
 
         /// <summary>Whether the wheel has brought it as close as it comes.</summary>
@@ -52,6 +54,7 @@ namespace Forge.Game.Cameras
         {
             if (distance.HasValue)
                 Distance = _settings.Clamp(distance.Value);
+            _zoomed = float.NaN;
             _shown = float.NaN;
         }
 
@@ -66,7 +69,11 @@ namespace Forge.Game.Cameras
             var shoulder = head + new Vector3(shoulderSide.X, 0f, shoulderSide.Y) * _settings.ShoulderOffset;
             var pivot = Toward(head, shoulder);
 
-            var free = Free(pivot, pivot + back * Distance, Distance);
+            // The wheel's distance glides in (ZoomEase); walls still pull the camera in at once.
+            _zoomed = float.IsNaN(_zoomed) || !(deltaTime > 0f) || _settings.ZoomEase <= 0f
+                ? Distance
+                : _zoomed + (Distance - _zoomed) * (1f - (float)Math.Exp(-deltaTime / _settings.ZoomEase));
+            var free = Free(pivot, pivot + back * _zoomed, _zoomed);
             _shown = float.IsNaN(_shown) || free < _shown || !(deltaTime > 0f)
                 ? free
                 : Math.Min(free, _shown + _settings.ReturnSpeed * deltaTime);

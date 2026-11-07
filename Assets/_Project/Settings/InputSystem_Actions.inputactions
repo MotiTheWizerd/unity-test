@@ -235,7 +235,7 @@
                     "id": "3a9ac05c-1db1-4857-91c6-89000235be2a",
                     "path": "<Mouse>/scroll/y",
                     "interactions": "",
-                    "processors": "Scale(factor=0.008333333)",
+                    "processors": "",
                     "groups": ";Keyboard&Mouse",
                     "action": "Zoom",
                     "isComposite": false,

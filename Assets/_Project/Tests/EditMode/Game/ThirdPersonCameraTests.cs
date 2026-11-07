@@ -97,6 +97,23 @@ namespace Forge.Tests.Game
         }
 
         [Test]
+        public void Zoom_GlidesToWhereTheWheelSentIt_RatherThanJumping()
+        {
+            var camera = new ThirdPersonCamera(new ThirdPersonSettings(distance: 4f, shoulderOffset: 0f, zoomEase: 0.1f));
+            var player = PlayerAt(Vector3.Zero);
+            camera.Frame(player, Frame);
+
+            camera.Zoom(2f);
+            var first = camera.Frame(player, Frame);
+
+            Assert.That(camera.ShownDistance, Is.LessThan(4f).And.GreaterThan(4f - 1.2f), "On its way, not there yet.");
+            for (var i = 0; i < 120; i++)
+                camera.Frame(player, Frame);
+            Assert.That(camera.ShownDistance, Is.EqualTo(4f - 1.2f).Within(1e-3f), "There after a moment.");
+            Assert.That(first.Position.Z, Is.LessThan(-(4f - 1.2f)));
+        }
+
+        [Test]
         public void Zoom_StaysWithinItsRange()
         {
             var camera = new ThirdPersonCamera(Centred);
