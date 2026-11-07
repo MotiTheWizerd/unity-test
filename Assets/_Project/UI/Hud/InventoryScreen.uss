@@ -5,7 +5,7 @@
  */
 
 :root {
-    --forge-inventory-backdrop: rgba(0, 0, 0, 0.78);
+    --forge-inventory-backdrop: rgba(0, 0, 0, 0.88);
     --forge-inventory-line: rgba(244, 238, 226, 0.18);
     --forge-inventory-chosen: rgba(212, 175, 55, 0.18);
     --forge-inventory-over: rgb(226, 84, 70);
@@ -100,10 +100,26 @@
     color: var(--forge-hud-text-muted);
 }
 
+/* The chosen item's side: the item turning large in 3D (drag to turn, wheel to zoom), its card under it. */
+.forge-inventory__aside {
+    flex-grow: 1;
+    flex-direction: column;
+    align-items: center;
+}
+
+.forge-inventory__item-view {
+    flex-grow: 1;
+    align-self: stretch;
+    min-height: 220px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
 /* The chosen item: its name, its kind, what one weighs and is worth, how many, and Drop. */
 .forge-inventory__card {
-    width: 300px;
-    align-self: flex-start;
+    width: 100%;
+    max-width: 420px;
     padding: 20px;
     border-width: 1px;
     border-color: var(--forge-inventory-line);

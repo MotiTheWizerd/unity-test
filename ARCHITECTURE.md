@@ -631,9 +631,18 @@ from any camera, so both cameras read the same player.
   screen and `Tick` steps nothing (no move, no look, no regen), as Skyrim pauses for its menus; `GameSession.Back` (Esc)
   closes it first, and only Esc with nothing open leaves play. `InventoryScreen` (Play.Hud, InventoryScreen.uss, hosted
   beside the HUD by `HudSection`; the HUD hides meanwhile) draws `InventoryList`: tabs down the left (All, then each
-  `ItemKind`, Misc last), the tab's items by name with their counts, the chosen item's card (kind, weight, value, how many)
-  with Drop, and the weight against the carry weight along the bottom, red when overburdened. It reads again only when
-  the inventory, the tab or the choice changes, or it opens, and draws on the next tick, never inside the click.
+  `ItemKind`, Misc last), the tab's items by name with their counts, the chosen item turning large in 3D (a
+  `TurntableView`) over its card (kind, weight, value, how many) with Drop, and the weight against the carry weight along
+  the bottom, red when overburdened. It reads again only when the inventory, the tab or the choice changes, or it opens,
+  and draws on the next tick, never inside the click; the item is drawn only while the screen is open.
+- **Turntables** (`TurntablePreview`, World/Assets; `TurntableView`, Play.Hud): a thing of the world shown live in a
+  `PreviewStudio`, as Skyrim shows the chosen item, built from its asset key through the world's `IAssetCatalog`
+  (`GameSession.Assets`, the `WorldView`'s). It turns by itself at 25°/s; a drag turns it by hand (held still meanwhile),
+  the wheel zooms (0.6 to 3×). `TurntableFraming` (pure math, tested) fits the cylinder it sweeps turning, its reach
+  around the axis and its half height, to the view's width and, seen from 30° above, its height, so a long flat sword
+  and a tall bottle both fill the view. A perspective camera with a 30° lens draws it every tick into a render texture
+  (4× MSAA) as large as the element on screen, on a transparent background; the subject is active only inside its own
+  render, so no other camera sees it. The character view will be one more turntable.
 - **The use key in play**: the Player map's `Interact` (E, the gamepad's north button; a tap) is
   `PlayerCommands.Activate`, and `PlayerControls.InteractKey` names it for the prompt (its binding in the actions' first
   control scheme, the keyboard's). `PhysicsInteractionProbe` is the line of sight: a ray, then a ball of the profile's
@@ -1211,10 +1220,11 @@ slopes), so results are exact and every edit goes through the edit session.
   is searched alike through `SearchQuery` (all terms, any field, ignoring case). Each object tile's picture comes from `ThumbnailRenderer`
   (`World/Assets`, behind `IAssetThumbnails`): on first request it instantiates the asset key through the same
   `IAssetCatalog` the world uses, frames it whole with `ThumbnailFraming` (orthographic three-quarter view, pure
-  math, tested), renders it with a private camera on the `ForgePreview` layer into a 128 px texture with a
-  transparent background, and keeps it for the session. The rig brings its own light and a flat ambient and
-  silences the scene's lights for that one render, so pictures look the same at any time of day; the instance is
-  destroyed immediately after, because the next picture may be rendered in the same frame. The **tool options bar** (across the top of the view) shows the current
+  math, tested), renders it with the orthographic camera of its `PreviewStudio` into a 128 px texture with a
+  transparent background, and keeps it for the session. The studio (shared with the turntables) is a rig of its own on
+  the `ForgePreview` layer: a camera that draws only that layer and renders only on request, a key and a rim light and
+  a stage; for each render it silences the scene's lights and sets a flat ambient, so pictures look the same at any
+  time of day. The instance is destroyed immediately after, because the next picture may be rendered in the same frame. The **tool options bar** (across the top of the view) shows the current
   tool's name and hint, and each tool's settings are their own section inside it, shown while that tool is
   current: `SelectionSection` (count, Frame, Drop, material Slot, Reset look) for Select/Move/Rotate/Scale, `RectangleSection` (whole pieces)
   for Outline and Fill, `PlacementSection` (turn, random turn & size, align to slope, gaps) for Place, Outline and Fill, `SculptSection` (brush) for Sculpt, `WaterSection` (the current lake's level, Remove) for Water. Each presenter

@@ -46,6 +46,9 @@ namespace Forge.World
 
         public int PresentedCount => _presented.Count;
 
+        /// <summary>The looks of the world's things, by asset key: what the view builds them from, and what previews show.</summary>
+        public IAssetCatalog Assets => _catalog;
+
         /// <summary>The space shown.</summary>
         public RecordId Space => _index.Space;
 

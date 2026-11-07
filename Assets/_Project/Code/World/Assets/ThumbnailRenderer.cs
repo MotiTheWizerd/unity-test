@@ -1,83 +1,32 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace Forge.World.Assets
 {
     /// <summary>
     /// Pictures of assets for the UI: each asset key is instantiated once through the same catalog the world uses,
-    /// framed whole (<see cref="ThumbnailFraming"/>) and drawn by a private camera into a small texture with a
-    /// transparent background, then kept for the session. Rendering happens on first request, so only shown tiles
-    /// cost anything. Material balls come small, for tiles, or large and lit like a product shot (a key light and a rim
-    /// light), for a preview card.
+    /// framed whole (<see cref="ThumbnailFraming"/>) and drawn by an orthographic camera in a <see cref="PreviewStudio"/>
+    /// into a small texture with a transparent background, then kept for the session. Rendering happens on first
+    /// request, so only shown tiles cost anything. Material balls come small, for tiles, or large and lit like a product
+    /// shot (the key and the rim light), for a preview card.
     /// </summary>
-    /// <remarks>
-    /// The rig lives on the ForgePreview layer so the camera draws nothing of the world, and the instance exists
-    /// only inside the synchronous render, so no other camera ever sees it. Lighting is the rig's own: the scene's
-    /// lights are switched off for the one render so a picture looks the same at noon and at midnight.
-    /// </remarks>
+    /// <remarks>The instance exists only inside the synchronous render, so no other camera ever sees it.</remarks>
     public sealed class ThumbnailRenderer : IAssetThumbnails, IDisposable
     {
-        public const string LayerName = "ForgePreview";
         public const int Size = 128;
         public const int PreviewSize = 512;
-
-        static readonly Color Transparent = new Color(0f, 0f, 0f, 0f);
-        static readonly Color Ambient = new Color(0.35f, 0.35f, 0.38f);
 
         readonly IAssetCatalog _assets;
         readonly Dictionary<string, Texture2D> _cache = new Dictionary<string, Texture2D>(StringComparer.Ordinal);
         readonly Dictionary<int, RenderTexture> _targets = new Dictionary<int, RenderTexture>();
-        readonly GameObject _rig;
-        readonly Camera _camera;
-        readonly Transform _stage;
-        readonly Light _light;
-        readonly Light _rim;
-        readonly int _layer;
+        readonly PreviewStudio _studio;
 
         public ThumbnailRenderer(IAssetCatalog assets, Transform parent)
         {
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
-            _layer = LayerMask.NameToLayer(LayerName);
-            if (_layer < 0)
-                Debug.LogError($"[Forge] Layer '{LayerName}' is missing from the project's tag manager; asset thumbnails will show the world behind them.");
-
-            _rig = new GameObject("Thumbnails");
-            _rig.transform.SetParent(parent, false);
-
-            _camera = new GameObject("Camera").AddComponent<Camera>();
-            _camera.transform.SetParent(_rig.transform, false);
-            _camera.enabled = false; // renders only on request
-            _camera.orthographic = true;
-            _camera.clearFlags = CameraClearFlags.SolidColor;
-            _camera.backgroundColor = Transparent;
-            _camera.cullingMask = _layer >= 0 ? 1 << _layer : ~0;
-            _camera.allowHDR = false;
-            _camera.allowMSAA = false;
-            _camera.useOcclusionCulling = false;
-
-            _light = CreateLight("Light", Quaternion.Euler(40f, -30f, 0f), 1.1f, Color.white);
-            // From behind and above, for previews: a cool bright edge that lifts the ball off its backdrop.
-            _rim = CreateLight("Rim", Quaternion.Euler(25f, 150f, 0f), 0.9f, new Color(0.85f, 0.9f, 1f));
-
-            _stage = new GameObject("Stage").transform;
-            _stage.SetParent(_rig.transform, false);
-        }
-
-        // A directional light of the rig, lighting only what the camera draws; on only while rendering.
-        Light CreateLight(string name, Quaternion rotation, float intensity, Color color)
-        {
-            var light = new GameObject(name).AddComponent<Light>();
-            light.transform.SetParent(_rig.transform, false);
-            light.transform.rotation = rotation;
-            light.type = LightType.Directional;
-            light.intensity = intensity;
-            light.color = color;
-            light.shadows = LightShadows.None;
-            light.cullingMask = _camera.cullingMask;
-            light.enabled = false;
-            return light;
+            _studio = new PreviewStudio("Thumbnails", parent);
+            _studio.Camera.orthographic = true;
         }
 
         /// <summary>How a picture is taken: its size in pixels, and whether the rim light joins the key light.</summary>
@@ -104,11 +53,11 @@ namespace Forge.World.Assets
         {
             if (string.IsNullOrEmpty(assetKey)) throw new ArgumentException("Asset key is required.", nameof(assetKey));
             if (string.IsNullOrEmpty(lookKey) || dress == null)
-                return Cached(assetKey, Tile, () => _assets.Instantiate(assetKey, _stage));
+                return Cached(assetKey, Tile, () => _assets.Instantiate(assetKey, _studio.Stage));
 
             return Cached(assetKey + LookSeparator + lookKey, Tile, () =>
             {
-                var instance = _assets.Instantiate(assetKey, _stage);
+                var instance = _assets.Instantiate(assetKey, _studio.Stage);
                 dress(instance);
                 return instance;
             });
@@ -161,7 +110,7 @@ namespace Forge.World.Assets
         {
             var ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             UnityEngine.Object.DestroyImmediate(ball.GetComponent<Collider>());
-            ball.transform.SetParent(_stage, false);
+            ball.transform.SetParent(_studio.Stage, false);
             if (material != null)
             {
                 material.mainTextureScale = BallTiling;
@@ -185,21 +134,17 @@ namespace Forge.World.Assets
         Texture2D Render(string key, Shot shot, Func<GameObject> stage)
         {
             var target = TargetOf(shot.Size);
-            _camera.targetTexture = target;
             var instance = stage();
             try
             {
-                SetLayerRecursively(instance.transform, _layer);
-                var pose = ThumbnailFraming.CameraPose(BoundsOf(instance), out var size, out var near, out var far);
-                _camera.transform.SetPositionAndRotation(pose.position, pose.rotation);
-                _camera.orthographicSize = size;
-                _camera.nearClipPlane = near;
-                _camera.farClipPlane = far;
-
-                using (new PreviewLighting(_light, shot.Rim ? _rim : null, Ambient))
-                using (SyncShaderCompilation.Begin())
-                    _camera.Render();
-
+                _studio.PutOnLayer(instance);
+                var camera = _studio.Camera;
+                var pose = ThumbnailFraming.CameraPose(PreviewStudio.BoundsOf(instance), out var size, out var near, out var far);
+                camera.transform.SetPositionAndRotation(pose.position, pose.rotation);
+                camera.orthographicSize = size;
+                camera.nearClipPlane = near;
+                camera.farClipPlane = far;
+                _studio.Render(target, shot.Rim);
                 return ReadBack(key, target);
             }
             finally
@@ -233,33 +178,12 @@ namespace Forge.World.Assets
             return texture;
         }
 
-        static Bounds BoundsOf(GameObject instance)
-        {
-            var renderers = instance.GetComponentsInChildren<Renderer>();
-            if (renderers.Length == 0)
-                return new Bounds(instance.transform.position, Vector3.one);
-            var bounds = renderers[0].bounds;
-            for (var i = 1; i < renderers.Length; i++)
-                bounds.Encapsulate(renderers[i].bounds);
-            return bounds;
-        }
-
-        static void SetLayerRecursively(Transform root, int layer)
-        {
-            if (layer < 0)
-                return;
-            root.gameObject.layer = layer;
-            for (var i = 0; i < root.childCount; i++)
-                SetLayerRecursively(root.GetChild(i), layer);
-        }
-
         public void Dispose()
         {
             foreach (var texture in _cache.Values)
                 UnityEngine.Object.Destroy(texture);
             _cache.Clear();
-            if (_camera != null)
-                _camera.targetTexture = null;
+            _studio.Dispose();
             foreach (var target in _targets.Values)
             {
                 target.Release();
@@ -267,82 +191,6 @@ namespace Forge.World.Assets
             }
 
             _targets.Clear();
-            if (_rig != null)
-                UnityEngine.Object.Destroy(_rig);
-        }
-
-        /// <summary>
-        /// For one render, in the Unity editor: shaders compile before drawing instead of in the background. A picture
-        /// is taken once and kept, so drawing with the editor's cyan stand-in for a still-compiling shader would keep
-        /// that for the session. Builds compile shaders ahead, so this does nothing there.
-        /// </summary>
-        readonly struct SyncShaderCompilation : IDisposable
-        {
-#if UNITY_EDITOR
-            readonly bool _wasAsync;
-
-            SyncShaderCompilation(bool wasAsync) => _wasAsync = wasAsync;
-
-            public static SyncShaderCompilation Begin()
-            {
-                var scope = new SyncShaderCompilation(UnityEditor.ShaderUtil.allowAsyncCompilation);
-                UnityEditor.ShaderUtil.allowAsyncCompilation = false;
-                return scope;
-            }
-
-            public void Dispose() => UnityEditor.ShaderUtil.allowAsyncCompilation = _wasAsync;
-#else
-            public static SyncShaderCompilation Begin() => default;
-
-            public void Dispose() { }
-#endif
-        }
-
-        /// <summary>
-        /// For one render: the rig's lights on (the key light, and the rim light when given), every other light off,
-        /// and a flat ambient instead of the sky's. Restores everything after.
-        /// </summary>
-        readonly struct PreviewLighting : IDisposable
-        {
-            readonly Light _own;
-            readonly Light _rim;
-            readonly List<Light> _silenced;
-            readonly AmbientMode _ambientMode;
-            readonly Color _ambientColor;
-
-            public PreviewLighting(Light own, Light rim, Color ambient)
-            {
-                _own = own;
-                _rim = rim;
-                _silenced = new List<Light>();
-                foreach (var light in UnityEngine.Object.FindObjectsByType<Light>())
-                {
-                    if (light != own && light != rim && light.enabled)
-                    {
-                        light.enabled = false;
-                        _silenced.Add(light);
-                    }
-                }
-
-                _ambientMode = RenderSettings.ambientMode;
-                _ambientColor = RenderSettings.ambientLight;
-                RenderSettings.ambientMode = AmbientMode.Flat;
-                RenderSettings.ambientLight = ambient;
-                own.enabled = true;
-                if (rim != null)
-                    rim.enabled = true;
-            }
-
-            public void Dispose()
-            {
-                _own.enabled = false;
-                if (_rim != null)
-                    _rim.enabled = false;
-                foreach (var light in _silenced)
-                    light.enabled = true;
-                RenderSettings.ambientMode = _ambientMode;
-                RenderSettings.ambientLight = _ambientColor;
-            }
         }
     }
 }

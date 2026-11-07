@@ -29,7 +29,7 @@ namespace Forge.EditorApp.UI
         public void Refresh()
         {
             _hud.Tick(Time.deltaTime);
-            _inventory.Tick();
+            _inventory.Tick(Time.deltaTime);
         }
     }
 }

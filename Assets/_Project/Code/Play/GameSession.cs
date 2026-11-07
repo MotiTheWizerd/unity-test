@@ -8,6 +8,7 @@ using Forge.Game.Interaction;
 using Forge.Game.Items;
 using Forge.Game.World;
 using Forge.World;
+using Forge.World.Assets;
 using UnityEngine;
 // Not UnityEngine.Compass, the device's magnetometer.
 using Compass = Forge.Core.Geometry.Compass;
@@ -62,6 +63,9 @@ namespace Forge.Play
 
         /// <summary>The world as played (as built, with <see cref="Changes"/> on top) while playing; else null.</summary>
         public IRecordStore World { get; private set; }
+
+        /// <summary>The looks of the world's things, by asset key, for whatever shows them apart from the world (the inventory's preview).</summary>
+        public IAssetCatalog Assets => _view.Assets;
 
         /// <summary>What actors can do with the use key, in order.</summary>
         public Interactions Interactions { get; }

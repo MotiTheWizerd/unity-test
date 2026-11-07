@@ -11,10 +11,11 @@ namespace Forge.Play.Hud
     /// <summary>
     /// The player's inventory while it is open (<see cref="PlayerSession.InventoryOpen"/>), as Skyrim's item menu: a tab
     /// per kind of item down the left (All first; a new <see cref="ItemKind"/> gets its own), what the player carries in
-    /// that tab by name (<see cref="InventoryList"/>), the chosen item's card with a Drop button, and along the bottom what
-    /// it all weighs against the carry weight, red when overburdened. Drawn by InventoryScreen.uss. The list is read
-    /// again only when the inventory changes, the tab does, or the screen opens. Whatever plays the world hosts it beside
-    /// the HUD.
+    /// that tab by name (<see cref="InventoryList"/>), the chosen item turning large in 3D (a <see cref="TurntableView"/>:
+    /// drag to turn it, the wheel to zoom) over its card with a Drop button, and along the bottom what it all weighs
+    /// against the carry weight, red when overburdened. Drawn by InventoryScreen.uss. The list is read again only when the
+    /// inventory changes, the tab does, or the screen opens; the item is drawn only while the screen is open. Whatever
+    /// plays the world hosts it beside the HUD.
     /// </summary>
     public sealed class InventoryScreen : IDisposable
     {
@@ -29,6 +30,8 @@ namespace Forge.Play.Hud
         public const string RowNameClass = UssClass + "__row-name";
         public const string RowCountClass = UssClass + "__row-count";
         public const string EmptyClass = UssClass + "__empty";
+        public const string AsideClass = UssClass + "__aside";
+        public const string ItemViewClass = UssClass + "__item-view";
         public const string CardClass = UssClass + "__card";
         public const string CardNameClass = UssClass + "__card-name";
         public const string CardKindClass = UssClass + "__card-kind";
@@ -51,6 +54,7 @@ namespace Forge.Play.Hud
         readonly VisualElement _root;
         readonly List<Tab> _tabs = new List<Tab>();
         readonly ScrollView _list;
+        readonly TurntableView _itemView;
         readonly VisualElement _card;
         readonly Label _cardName;
         readonly Label _cardKind;
@@ -62,6 +66,7 @@ namespace Forge.Play.Hud
         readonly Label _hint;
         Tab _tab;
         RecordId _selected;
+        string _selectedLook;
         bool _shown;
         bool _dirty = true;
 
@@ -89,7 +94,11 @@ namespace Forge.Play.Hud
             _list.AddToClassList(ListClass);
             frame.Add(_list);
 
-            _card = Part<VisualElement>(frame, CardClass);
+            var aside = Part<VisualElement>(frame, AsideClass);
+            _itemView = new TurntableView(game.Assets);
+            _itemView.AddToClassList(ItemViewClass);
+            aside.Add(_itemView);
+            _card = Part<VisualElement>(aside, CardClass);
             _cardName = Part<Label>(_card, CardNameClass);
             _cardKind = Part<Label>(_card, CardKindClass);
             _weight = Stat(_card, "Weight");
@@ -108,8 +117,11 @@ namespace Forge.Play.Hud
             _game.Player.Inventory.Changed += MarkDirty;
         }
 
-        /// <summary>Shows the screen while the inventory is open, and brings it up to date when something changed.</summary>
-        public void Tick()
+        /// <summary>
+        /// Shows the screen while the inventory is open, brings it up to date when something changed, and turns the
+        /// chosen item <paramref name="deltaTime"/> seconds' worth.
+        /// </summary>
+        public void Tick(float deltaTime)
         {
             var open = _game.Player.InventoryOpen;
             if (open != _shown)
@@ -119,13 +131,18 @@ namespace Forge.Play.Hud
                 _dirty |= open;
             }
 
-            if (open && _dirty)
+            if (!open)
+                return;
+            if (_dirty)
                 Draw();
+            _itemView.Show(_selectedLook);
+            _itemView.Tick(deltaTime);
         }
 
         public void Dispose()
         {
             _game.Player.Inventory.Changed -= MarkDirty;
+            _itemView.Dispose();
             _root.RemoveFromHierarchy();
         }
 
@@ -212,6 +229,7 @@ namespace Forge.Play.Hud
         {
             var any = entry.Record != null;
             _card.style.visibility = any ? Visibility.Visible : Visibility.Hidden;
+            _selectedLook = any ? entry.Record.AssetKey : null;
             if (!any)
                 return;
 
