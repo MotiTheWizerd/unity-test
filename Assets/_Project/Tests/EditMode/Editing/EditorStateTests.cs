@@ -1,8 +1,10 @@
 using System;
 using System.Numerics;
 using Forge.Data.Sky;
+using Forge.Data.Terrain;
 using Forge.Editing.Placement;
 using Forge.Editing.State;
+using Forge.Editing.Terrain;
 using NUnit.Framework;
 
 namespace Forge.Tests.Editing
@@ -68,6 +70,32 @@ namespace Forge.Tests.Editing
             Assert.That(gap.Gap, Is.EqualTo(0f));
             Assert.That(gap.RandomExtra, Is.EqualTo(RowGap.Max));
             Assert.That(new SavedGap { Gap = float.NaN }.ToRowGap().Gap, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void AutoSnowLine_GivesALineOnlyWhileOn_AndKeepsItsHeightWhileOff()
+        {
+            var snow = new AutoSnowLine { Height = 80f };
+
+            Assert.That(snow.Line, Is.Null, "Off by default: Auto lays no snow.");
+            snow.On = true;
+            Assert.That(snow.Line, Is.EqualTo(80f));
+            snow.On = false;
+            snow.On = true;
+            Assert.That(snow.Line, Is.EqualTo(80f), "Turned back on, the line is where it was.");
+        }
+
+        [Test]
+        public void AutoSnowLine_HeightIsClampedToLandHeights_AndANonNumberIsIgnored()
+        {
+            var snow = new AutoSnowLine { Height = 500f };
+            Assert.That(snow.Height, Is.EqualTo(WorldGrid.MaxTerrainHeight));
+
+            snow.Height = -3f;
+            Assert.That(snow.Height, Is.EqualTo(0f));
+
+            snow.Height = float.NaN;
+            Assert.That(snow.Height, Is.EqualTo(0f));
         }
 
         [Test]

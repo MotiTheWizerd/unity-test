@@ -52,7 +52,9 @@
                 <ui:Label name="paint-ground" class="forge-options__readout" tooltip="The ground to paint; pick another in the assets browser's Ground tab" />
                 <forge:ForgeSlider name="paint-radius" label="Radius" unit="m" class="forge-options__slider" />
                 <forge:ForgeSlider name="paint-strength" label="Strength" class="forge-options__slider" />
-                <forge:ForgeButton name="paint-auto" text="Auto" icon="sparkles" tooltip="Paint this whole space by its shape: rock on steep ground, dirt on slopes, sand at the shore, grass elsewhere. Replaces its paint; one undo step." />
+                <forge:ForgeCheckbox name="paint-snow" label="Snow" tooltip="Auto lays snow above the snow line, except where it is too steep to hold" />
+                <forge:ForgeNumberField name="paint-snow-line" label="Snow line" unit="m" tooltip="The height snow lies from; the line wanders a little and blends over about 12 m" />
+                <forge:ForgeButton name="paint-auto" text="Auto" icon="sparkles" tooltip="Paint this whole space by its shape: rock on steep ground, dirt on slopes, sand at the shore, snow above the snow line, grass elsewhere. Replaces its paint; one undo step." />
             </ui:VisualElement>
             <ui:VisualElement name="options-water" class="forge-options__group">
                 <ui:Label name="water-lake" />

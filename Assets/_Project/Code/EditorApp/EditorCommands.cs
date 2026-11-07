@@ -43,7 +43,8 @@ namespace Forge.EditorApp
 
         /// <summary>
         /// Repaints the whole space on show by its shape (the Paint tool's Auto button): rock on steep ground, dirt on
-        /// slopes, sand at the shore, unpainted ground's layer elsewhere. One undo step.
+        /// slopes, sand at the shore, snow above the snow line while it is on (<see cref="EditorContext.AutoSnow"/>),
+        /// unpainted ground's layer elsewhere. One undo step.
         /// </summary>
         public void AutoPaintSpace()
         {
@@ -53,11 +54,19 @@ namespace Forge.EditorApp
                 return;
             }
 
-            var rules = Forge.Editing.Terrain.AutoPaintRules.OfBaseLooks(_context.Session.World.Records, flat);
+            var snowLine = _context.AutoSnow.Line;
+            var rules = Forge.Editing.Terrain.AutoPaintRules.OfBaseLooks(_context.Session.World.Records, flat, snowLine);
+            if (snowLine.HasValue && rules.Snow == null)
+            {
+                _context.Report("Auto paint: this world has no snow ground; turn Snow off to paint without it");
+                return;
+            }
 
             var painted = 0;
-            if (_context.TryEdit("Auto paint", () => painted = Forge.Editing.Terrain.AutoPaint.Apply(_context.Session, _context.ActiveSpace, rules)))
-                _context.Report(painted > 0 ? $"Auto painted {painted} chunk(s) by their shape" : "Auto paint: this space has no land");
+            if (!_context.TryEdit("Auto paint", () => painted = Forge.Editing.Terrain.AutoPaint.Apply(_context.Session, _context.ActiveSpace, rules)))
+                return;
+            var snow = snowLine is float line ? FormattableString.Invariant($", snow from {line:0.#} m") : "";
+            _context.Report(painted > 0 ? $"Auto painted {painted} chunk(s) by their shape{snow}" : "Auto paint: this space has no land");
         }
 
         /// <summary>Moves the current lake's surface to <paramref name="level"/> (the Water tool's level field).</summary>

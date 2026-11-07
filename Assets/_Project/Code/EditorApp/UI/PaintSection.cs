@@ -7,7 +7,7 @@ namespace Forge.EditorApp.UI
 {
     /// <summary>
     /// The paint tool's options: the ground being painted (picked in the assets browser's Ground tab), the brush's
-    /// radius and strength, and Auto (paint the space by its shape).
+    /// radius and strength, and Auto (paint the space by its shape), with or without snow above a snow line.
     /// </summary>
     public sealed class PaintSection : IPanelSection
     {
@@ -17,6 +17,8 @@ namespace Forge.EditorApp.UI
         readonly VisualElement _group;
         readonly Label _ground;
         readonly BrushSliders _brush;
+        readonly Toggle _snow;
+        readonly FloatField _snowLine;
 
         public PaintSection(VisualElement root, EditorContext context, EditorCommands commands)
         {
@@ -26,6 +28,10 @@ namespace Forge.EditorApp.UI
             _group = PanelElements.Required<VisualElement>(root, "options-paint");
             _ground = PanelElements.Required<Label>(root, "paint-ground");
             _brush = new BrushSliders(root, context, "paint-radius", "paint-strength");
+            _snow = PanelElements.Required<Toggle>(root, "paint-snow");
+            _snow.RegisterValueChangedCallback(change => _context.AutoSnow.On = change.newValue);
+            _snowLine = PanelElements.Required<FloatField>(root, "paint-snow-line");
+            _snowLine.RegisterValueChangedCallback(change => _context.AutoSnow.Height = change.newValue);
             PanelElements.Required<Button>(root, "paint-auto").clicked += commands.AutoPaintSpace;
         }
 
@@ -40,6 +46,15 @@ namespace Forge.EditorApp.UI
             var record = layer.HasValue ? _context.GroundLayers.FirstOrDefault(l => l.Id == layer.Value) : null;
             PanelElements.SetText(_ground, record?.DisplayName ?? NoGround);
             _brush.Refresh();
+
+            // The height shown is the kept one, clamped; a value being typed isn't the field's until committed.
+            var snow = _context.AutoSnow;
+            if (_snow.value != snow.On)
+                _snow.SetValueWithoutNotify(snow.On);
+            if (_snowLine.enabledSelf != snow.On)
+                _snowLine.SetEnabled(snow.On);
+            if (_snowLine.value != snow.Height)
+                _snowLine.SetValueWithoutNotify(snow.Height);
         }
     }
 }

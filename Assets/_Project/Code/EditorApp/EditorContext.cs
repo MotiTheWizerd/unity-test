@@ -348,6 +348,9 @@ namespace Forge.EditorApp
 
         public BrushSettings CurrentBrush() => new BrushSettings(BrushMode, BrushRadius, BrushStrength);
 
+        /// <summary>The paint tool's snow line: whether its Auto lays snow, and from what height.</summary>
+        public Forge.Editing.Terrain.AutoSnowLine AutoSnow { get; } = new Forge.Editing.Terrain.AutoSnowLine();
+
         /// <summary>
         /// The look (asset key) unpainted ground shows, from the ground layer catalog; null when the world is drawn
         /// unpainted. Painting names it in the data as the ground layer with that look (<see cref="UnpaintedGround"/>).
@@ -554,6 +557,8 @@ namespace Forge.EditorApp
             world.Tool = ActiveTool.ToString();
             world.Placing = SelectedBaseObject != null ? SelectedBaseId.ToString() : null;
             world.Clock = SavedClock.Of(Clock);
+            world.Snow = AutoSnow.On;
+            world.SnowLine = AutoSnow.Height;
             world.Gaps = world.Gaps ?? new Dictionary<string, SavedGap>();
             foreach (var pair in PlacementOptions.Gaps)
                 world.Gaps[pair.Key.ToString()] = SavedGap.Of(pair.Value);
@@ -585,6 +590,10 @@ namespace Forge.EditorApp
                 RectangleSnapToPieces = wholePieces;
 
             world.Clock?.ApplyTo(Clock);
+            if (world.Snow is bool snow)
+                AutoSnow.On = snow;
+            if (world.SnowLine is float snowLine)
+                AutoSnow.Height = snowLine;
             if (world.Gaps != null)
             {
                 foreach (var pair in world.Gaps)
