@@ -163,7 +163,7 @@ namespace Forge.Play
             UpdateAttributes(world.OfType<AttributeRecord>());
             _motor = new CharacterControllerMotor(_profile);
             if (_profile.Model != null)
-                _avatar = new PlayerAvatar(_motor.Body, _profile.Model);
+                _avatar = new PlayerAvatar(_motor.Body, _profile.Model, _motor.Hover);
             Player = new PlayerCharacter(_motor, _profile.Locomotion(), _profile.EyeHeight, Attributes, Events);
             World = world;
             // A world made before carrying weighed anything (no carry weight) lets the player carry anything.

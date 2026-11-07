@@ -26,6 +26,8 @@ namespace Forge.Play
         public const string Grounded = "Grounded";
         public const string VerticalSpeed = "VerticalSpeed";
         public const string Drawn = "Drawn";
+        /// <summary>The move it stands still in, which every set has.</summary>
+        public const string IdleMove = "Idle";
         public const string DrawTrigger = "Draw";
         public const string SheatheTrigger = "Sheathe";
         public const string ArmsLayer = "Arms";

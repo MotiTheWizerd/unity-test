@@ -12,9 +12,10 @@ namespace Forge.Play
     public sealed class PlayerAvatar : IDisposable
     {
         /// <param name="body">The player's body object, which the model rides on.</param>
-        public PlayerAvatar(Transform body, GameObject prefab)
+        /// <param name="hover">How far the body's feet stay above the ground (its controller's skin).</param>
+        public PlayerAvatar(Transform body, GameObject prefab, float hover = 0f)
         {
-            Model = new CharacterModel(body, prefab);
+            Model = new CharacterModel(body, prefab, hover);
             foreach (var animator in Model.Animators)
                 animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
         }

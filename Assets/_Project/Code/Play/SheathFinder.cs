@@ -106,7 +106,7 @@ namespace Forge.Play
                 if (!sampler.TryGripAt(moment * clip.length + PullSeconds, true, out var pulled) ||
                     !sampler.TryGripAt(moment * clip.length, true, out var grip))
                     return null;
-                var right = Hang(Local(root, grip), root.InverseTransformPoint(pulled.position), BodyPoints(root.gameObject, root),
+                var right = Hang(Local(root, grip), root.InverseTransformPoint(pulled.position), sampler.MeshPoints(),
                     Vector3.Distance(hip.position, knee.position), Vector3.left);
 
                 // The left sheath is the right one across the character's middle.
@@ -145,39 +145,6 @@ namespace Forge.Play
 
             var flats = Vector3.ProjectOnPlane(outward, blade).normalized;
             return new Pose(grip.position + outward * push, Quaternion.LookRotation(flats, blade));
-        }
-
-        // Every vertex of the character as it stands now, skinned meshes posed, in root's frame.
-        static List<Vector3> BodyPoints(GameObject character, Transform root)
-        {
-            var points = new List<Vector3>();
-            var baked = new Mesh();
-            try
-            {
-                foreach (var skinned in character.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-                {
-                    skinned.BakeMesh(baked, false);
-                    AddPoints(points, baked, skinned.transform, root);
-                }
-
-                foreach (var filter in character.GetComponentsInChildren<MeshFilter>(true))
-                {
-                    if (filter.sharedMesh != null && filter.sharedMesh.isReadable)
-                        AddPoints(points, filter.sharedMesh, filter.transform, root);
-                }
-            }
-            finally
-            {
-                Object.DestroyImmediate(baked);
-            }
-
-            return points;
-        }
-
-        static void AddPoints(List<Vector3> points, Mesh mesh, Transform from, Transform root)
-        {
-            foreach (var vertex in mesh.vertices)
-                points.Add(root.InverseTransformPoint(from.TransformPoint(vertex)));
         }
 
         static Pose Local(Transform root, Pose pose) =>

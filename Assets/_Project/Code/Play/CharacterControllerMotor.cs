@@ -36,6 +36,9 @@ namespace Forge.Play
             _controller.minMoveDistance = 0f;
         }
 
+        /// <summary>How far the feet stay above the ground they stand on: the controller's skin, meters.</summary>
+        public float Hover => _controller.skinWidth;
+
         /// <summary>The body's scene object, whose transform is the feet (what the player's model rides on).</summary>
         public Transform Body => _body.transform;
 

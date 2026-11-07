@@ -9,7 +9,8 @@ using UnityEngine.Rendering;
 namespace Forge.Play
 {
     /// <summary>
-    /// A character's look riding on its body: the character prefab (Content/Characters) standing on the body's feet,
+    /// A character's look riding on its body: the character prefab (Content/Characters) standing on the body's feet (its
+    /// soles on the ground: sunk by the body's hover and by how high its idle carries them, <see cref="SoleFinder"/>),
     /// turned to the body's heading and animated as the body moves (<see cref="HumanoidAnimation"/>). The body is the
     /// collider, so the model's own colliders go, and the model shares the body's layer. Whoever has a body uses it: the
     /// player (<see cref="PlayerAvatar"/>), and characters of the world later. A model without animations just rides along.
@@ -33,7 +34,8 @@ namespace Forge.Play
         bool _inHand;
 
         /// <param name="body">The body object the model rides on.</param>
-        public CharacterModel(Transform body, GameObject prefab)
+        /// <param name="hover">How far the body's feet stay above what they stand on (a character controller's skin), meters.</param>
+        public CharacterModel(Transform body, GameObject prefab, float hover = 0f)
         {
             if (body == null)
                 throw new ArgumentNullException(nameof(body));
@@ -57,6 +59,9 @@ namespace Forge.Play
             }
 
             _animation = HumanoidAnimation.On(Root);
+            // Standing on what the body stands on: down by the body's hover and by how high its idle carries its soles.
+            var soles = _animation != null && SoleFinder.TryFind(prefab, _animation.Clip(HumanoidAnimation.IdleMove), out var height) ? height : 0f;
+            Root.transform.localPosition = Vector3.down * (hover + soles);
         }
 
         /// <summary>

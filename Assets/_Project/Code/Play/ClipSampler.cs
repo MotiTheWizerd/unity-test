@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -72,6 +73,39 @@ namespace Forge.Play
         {
             PoseAt(seconds);
             return HumanoidHands.TryGrip(Animator, right, out grip);
+        }
+
+        /// <summary>Every vertex of the copy as it is posed now (skinned meshes baked), in its root's frame.</summary>
+        public List<Vector3> MeshPoints()
+        {
+            var points = new List<Vector3>();
+            var baked = new Mesh();
+            try
+            {
+                foreach (var skinned in _copy.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    skinned.BakeMesh(baked, false);
+                    AddPoints(points, baked, skinned.transform);
+                }
+
+                foreach (var filter in _copy.GetComponentsInChildren<MeshFilter>(true))
+                {
+                    if (filter.sharedMesh != null && filter.sharedMesh.isReadable)
+                        AddPoints(points, filter.sharedMesh, filter.transform);
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(baked);
+            }
+
+            return points;
+        }
+
+        void AddPoints(List<Vector3> points, Mesh mesh, Transform from)
+        {
+            foreach (var vertex in mesh.vertices)
+                points.Add(Root.InverseTransformPoint(from.TransformPoint(vertex)));
         }
 
         public void Dispose()
