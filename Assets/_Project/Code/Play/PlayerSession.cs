@@ -6,6 +6,7 @@ using Forge.Data.Records;
 using Forge.Game.Actors;
 using Forge.Game.Attributes;
 using Forge.Game.Cameras;
+using Forge.Game.Equipment;
 using Forge.Game.Events;
 using Forge.Game.Interaction;
 using Forge.Game.Items;
@@ -37,6 +38,7 @@ namespace Forge.Play
         PlayerAvatar _avatar;
         AttributeRecord[] _attributeRecords;
         IDisposable _attributeEvents;
+        EquipmentModifiers _equipmentModifiers;
 
         /// <param name="camera">The camera the player sees through while spawned.</param>
         /// <param name="events">The game's stream, told what happens to the player.</param>
@@ -51,6 +53,7 @@ namespace Forge.Play
                 profile.StartInThirdPerson);
             _director = new CameraDirector(camera, Views.Current);
             _probe = new PhysicsInteractionProbe(profile.AimRadius);
+            Equipment = new ActorEquipment(ActorId.Player, Inventory, events);
         }
 
         /// <summary>First or third person; kept between spawns.</summary>
@@ -70,6 +73,12 @@ namespace Forge.Play
 
         /// <summary>What the player carries, kept from one spawn to the next; the game empties it when it puts the world back (<see cref="GameSession.End"/>).</summary>
         public Inventory Inventory { get; } = new Inventory();
+
+        /// <summary>
+        /// What the player has equipped, from what it carries (one-handed things in either hand, or both); kept from one
+        /// spawn to the next with the pack; what it does to the player's attributes applies while spawned.
+        /// </summary>
+        public ActorEquipment Equipment { get; }
 
         /// <summary>
         /// What the player carries against what it can, while spawned in a world with a carry weight; else null (it carries
@@ -138,6 +147,9 @@ namespace Forge.Play
                 Burden = new Encumbrance(Inventory, world, Attributes, Events);
                 Player.Limits.Add(Burden);
             }
+
+            if (Attributes != null)
+                _equipmentModifiers = new EquipmentModifiers(Equipment, Attributes);
 
             Player.PlaceAt(feet.ToNumerics(), heading);
             Focus = new InteractionFocus(ActorId.Player, world, interactions, _probe, _profile.Reach);
@@ -212,6 +224,8 @@ namespace Forge.Play
             _motor = null;
             Burden?.Dispose();
             Burden = null;
+            _equipmentModifiers?.Dispose();
+            _equipmentModifiers = null;
             Player = null;
             World = null;
             Focus = null;
@@ -221,6 +235,7 @@ namespace Forge.Play
         public void Dispose()
         {
             Despawn();
+            Equipment.Dispose();
             _attributeEvents?.Dispose();
             _controls.Dispose();
         }

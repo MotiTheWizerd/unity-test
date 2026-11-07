@@ -891,6 +891,20 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
 - **Dropping** (`ItemDropper`): one item leaves the actor's inventory and stands in the world as an added placed object
   where the caller says (the engine finds the ground), and the stream hears `ItemDropped`. The record is made before
   the item leaves the pack, so a bad place loses nothing.
+- **Equipping** (`ActorEquipment`, Game.Equipment; one per actor, the player's on `PlayerSession.Equipment`): each equip
+  slot holds one thing, and a thing takes the slots of one of its `EquippablePart.Fits` (`EquippedItem`: the record as
+  equipped, and its fit). `TryEquip(item, slot?)` takes the slot asked for (by the first fit taking it), else the first
+  fit that is free, else the first; whatever held those slots comes off (`Replaced`). One-handed things go in either
+  hand, so two swords are one in each; a two-handed one takes both, and a one-hander in either hand takes it off whole.
+  An actor equips no more of an item than it carries: with one sword, asking for the other hand moves it (`Moved`), and
+  asking again is `AlreadyEquipped`. When the pack holds fewer than are equipped (a drop, `Inventory.Clear` when play
+  ends), the extra comes off by itself (`NoLongerCarried`), the copy in its later fit first (the left hand). Outcomes
+  are `EquipOutcome`s, never exceptions. Each change is told twice: the C# events `Equipped` / `Unequipped` / `Changed`
+  as it happens, for what is bound to the actor, and the stream's `ItemEquipped` / `ItemUnequipped` (with the fit, and
+  the `UnequipReason`) for the rest of the world. **`EquipmentModifiers`** binds equipment to the actor's attributes (the
+  player's while spawned): each thing equipped adds its modifiers under its own `ModifierSource` (`equipped/<first
+  slot>`), so two rings add twice and losing one leaves the other's; a modifier for an attribute the world lacks does
+  nothing. `GameSession.Equip(item, slot?)` / `Unequip(slot)` are the player's, as `Drop` is.
 - `PlayerCommands.Activate` is the key, pressed this frame; `Allowing(sprint, jump, walk)` is a command as a rule lets it through.
 
 ## World-building agent (Forge.Agent)

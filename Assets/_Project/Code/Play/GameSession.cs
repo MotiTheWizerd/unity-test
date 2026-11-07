@@ -3,6 +3,7 @@ using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Game.Actors;
+using Forge.Game.Equipment;
 using Forge.Game.Events;
 using Forge.Game.Interaction;
 using Forge.Game.Items;
@@ -127,8 +128,32 @@ namespace Forge.Play
         }
 
         /// <summary>
+        /// The player equips <paramref name="item"/>, from what it carries: in <paramref name="slot"/> when given (a
+        /// sword in the left hand), else wherever it fits best (<see cref="ActorEquipment.TryEquip"/>).
+        /// </summary>
+        public EquipOutcome Equip(RecordId item, RecordId? slot = null)
+        {
+            if (Player.Player == null)
+                return EquipOutcome.NotCarried;
+            if (!ItemRecords.TryGet(World, item, out var record))
+                return EquipOutcome.NotEquippable;
+            var outcome = Player.Equipment.TryEquip(record, slot);
+            Events.Flush();
+            return outcome;
+        }
+
+        /// <summary>The player takes off what <paramref name="slot"/> holds; false when it held nothing.</summary>
+        public bool Unequip(RecordId slot)
+        {
+            var unequipped = Player.Equipment.Unequip(slot);
+            Events.Flush();
+            return unequipped;
+        }
+
+        /// <summary>
         /// Stops playing: the player goes, and the world is as built again, as the Creation Kit's test play leaves it.
-        /// What the player took goes back with it, so playing again never finds an item both in the pack and on the ground.
+        /// What the player took goes back with it, so playing again never finds an item both in the pack and on the ground;
+        /// what it had equipped comes off with it.
         /// </summary>
         public void End()
         {
