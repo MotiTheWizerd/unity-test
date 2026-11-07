@@ -41,6 +41,12 @@ namespace Forge.UnityEditor.Content
             Array.IndexOf(Ground, move) < 0 && Array.IndexOf(DrawnGround, move) < 0 &&
             move != Jump && move != Fall && move != Land;
 
+        /// <summary>
+        /// Whether action <paramref name="move"/> plays on the arms alone (drawing and sheathing: the body walks or runs on
+        /// unchanged) rather than the whole upper body (a slash: the torso turns into the cut, the legs still walk).
+        /// </summary>
+        public static bool ArmsOnly(string move) => move == Draw || move == Sheathe;
+
         /// <summary>Whether <paramref name="move"/> repeats while it lasts (standing, walking, falling) rather than playing once (a jump, a landing).</summary>
         public static bool Loops(string move) =>
             Array.IndexOf(Ground, move) >= 0 || Array.IndexOf(DrawnGround, move) >= 0 || string.Equals(move, Fall, StringComparison.Ordinal);

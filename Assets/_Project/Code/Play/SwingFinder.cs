@@ -89,20 +89,19 @@ namespace Forge.Play
             }
         }
 
-        // How fast the tip of a blade held in the hand moves between each pair of samples, meters a second, seen from the
-        // chest: actions play on the arms only (HumanoidAnimation's arms layer), so the clip's own twist of the body is
-        // not part of the swing the game shows.
+        // How fast the tip of a blade held in the hand moves between each pair of samples, meters a second, in the
+        // character's own frame: a combat move plays on the whole upper body (HumanoidAnimation's upper-body layer), the
+        // body's turn into the cut included, as the clip has it.
         static bool TrySpeeds(ClipSampler sampler, bool right, out float[] speeds)
         {
             speeds = new float[Samples - 1];
             var step = sampler.Clip.length / (Samples - 1);
-            var chest = sampler.Animator.GetBoneTransform(HumanBodyBones.Chest) ?? sampler.Animator.GetBoneTransform(HumanBodyBones.Spine) ?? sampler.Root;
             Vector3 last = default;
             for (var i = 0; i < Samples; i++)
             {
                 if (!sampler.TryGripAt(i * step, right, out var grip))
                     return false;
-                var now = chest.InverseTransformPoint(grip.position + grip.rotation * Vector3.up * BladeLength) * chest.lossyScale.x;
+                var now = sampler.Root.InverseTransformPoint(grip.position + grip.rotation * Vector3.up * BladeLength);
                 if (i > 0)
                     speeds[i - 1] = Vector3.Distance(now, last) / step;
                 last = now;

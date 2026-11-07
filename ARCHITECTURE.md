@@ -780,9 +780,12 @@ from any camera, so both cameras read the same player.
   up, a fall when it drops past 3 m/s, a landing when it touches down, each optional. With any drawn ground move
   (`DrawnIdle`, `DrawnWalk`, `DrawnRun`, `DrawnSprint`) a second ground state plays while `Drawn`, each missing drawn
   move falling back to its plain one. Every other clip is an **action** (`HumanoidMoves.IsAction`: `Draw`, `Sheathe`,
-  a combat style's `SwordSlash`): an **Arms** layer masked to the arms and fingers (`<Set> Arms.mask`) plays each on a
-  trigger named after it over whatever the legs do, `HumanoidAnimation.Play(move)` weighing it in for as long as the
-  clip lasts. The draw and sheathe clips' lengths are the rules' draw and sheathe times (`ReadinessView` binds a
+  a combat style's `SwordSlash`), played on a trigger named after it over whatever the legs do: a draw or a sheathe
+  on an **Arms** layer (`<Set> Arms.mask`: arms and fingers, `HumanoidMoves.ArmsOnly`), anything else on an **Upper
+  Body** layer (`<Set> Upper Body.mask`: also the body and head, so the torso turns into a cut). `HumanoidAnimation.Play`
+  finds the layer holding the action and weighs it in for as long as the clip lasts: in as it starts, out by its end.
+  The layer's own states change at once (no crossfade into its empty rest state, which would pull the limbs toward the
+  rig's neutral pose). The draw and sheathe clips' lengths are the rules' draw and sheathe times (`ReadinessView` binds a
   `WeaponReadiness` to a `CharacterModel`). A new move is a file dropped in and a rebuild.
 - **How the body moved** (`BodyMotion`, `Forge.Game.Motion`, shared by anything with a body): `PlayerCharacter.Motion` each frame, from where the body actually went
   (ground speed, vertical speed, grounded), so a run into a wall shows standing. `StrideMatch` keeps the feet planted:
@@ -968,9 +971,9 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
     object names an `ActorRecord` (`BaseObjectRecord.Actor`; forge.core's **Training Dummy**, which stands past the
     items at the start) joins the first time a blow finds it, as `placed:<placed id>`, with the world's attributes at
     their base values, and stays hurt until the game ends.
-  - **Look** (Play): `CombatView` times each move from the clip (`SwingFinder`: on the hidden copy, the hand that moves
-    fastest swings, and the hit window is the run around its fastest moment where it keeps half that speed; the move
-    lasts the clip) and plays it on the arms. `BladeSweep` finds the hits: each frame in the window, rays from where
+  - **Look** (Play): `CombatView` times each move from the clip (`SwingFinder`: on the hidden copy each hand holds a
+    0.9 m blade, the hand whose tip moves fastest swings, and the hit window is the run around its fastest moment where
+    the tip keeps a third of that speed; the move lasts the clip) and plays it on the upper body. `BladeSweep` finds the hits: each frame in the window, rays from where
     points along the blade were the frame before to where they are now, and along the blade itself
     (`CharacterModel.TryGetBlade`: from the grip out along +Y to the held thing's farthest point), so no fast swing
     skips a target; a collider is a placed actor by its `RecordLink`. The Player map's `AttackRight` (left mouse button,

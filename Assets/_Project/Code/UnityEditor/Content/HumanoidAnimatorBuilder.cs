@@ -97,7 +97,7 @@ namespace Forge.UnityEditor.Content
             }
 
             BuildAir(set, machine, moving, grounds);
-            BuildArms(set, controller);
+            BuildActions(set, controller);
             EditorUtility.SetDirty(controller);
             return controller;
         }
@@ -134,23 +134,37 @@ namespace Forge.UnityEditor.Content
             return state;
         }
 
-        // The set's actions (a draw, a sheathe, a slash: HumanoidMoves.IsAction) on the arms only (a layer masked to
-        // them, which HumanoidAnimation weighs in while one plays), so the legs walk or run on underneath; each starts
-        // by a trigger named after it. Left out when the set has none.
-        static void BuildArms(string set, AnimatorController controller)
+        // The set's actions (HumanoidMoves.IsAction), each on a layer of its own body parts, which HumanoidAnimation
+        // weighs in while one plays: a draw or a sheathe on the arms (HumanoidMoves.ArmsOnly), so the body walks or runs
+        // on unchanged; any other (a slash) on the upper body, so the torso turns into it while the legs still walk.
+        // Each starts by a trigger named after it. A layer is left out when the set has no action for it.
+        static void BuildActions(string set, AnimatorController controller)
         {
             var actions = Actions(set).Select(move => Clip(set, move)).Where(clip => clip != null).ToArray();
+            BuildActionLayer(set, controller, HumanoidAnimation.ArmsLayer, ArmsParts,
+                actions.Where(clip => HumanoidMoves.ArmsOnly(clip.name)));
+            BuildActionLayer(set, controller, HumanoidAnimation.UpperBodyLayer, UpperBodyParts,
+                actions.Where(clip => !HumanoidMoves.ArmsOnly(clip.name)));
+        }
+
+        // A layer masked to parts, resting until a trigger starts one of its clips. The layer's weight does the
+        // blending in and out (HumanoidAnimation), so its states change at once: a crossfade into the empty rest state
+        // would draw the limbs toward the rig's neutral pose on the way out.
+        static void BuildActionLayer(string set, AnimatorController controller, string name, AvatarMaskBodyPart[] parts,
+            IEnumerable<AnimationClip> clips)
+        {
+            var actions = clips.ToArray();
             if (actions.Length == 0)
                 return;
 
-            controller.AddLayer(HumanoidAnimation.ArmsLayer);
+            controller.AddLayer(name);
             var layers = controller.layers;
-            var arms = layers[layers.Length - 1];
-            arms.defaultWeight = 0f;
-            arms.avatarMask = ArmsMask(set, controller);
+            var layer = layers[layers.Length - 1];
+            layer.defaultWeight = 0f;
+            layer.avatarMask = Mask(set, name, parts);
             controller.layers = layers;
 
-            var machine = arms.stateMachine;
+            var machine = layer.stateMachine;
             var rest = machine.AddState("Rest");
             rest.writeDefaultValues = false;
             machine.defaultState = rest;
@@ -161,18 +175,29 @@ namespace Forge.UnityEditor.Content
                 var state = machine.AddState(clip.name);
                 state.motion = clip;
                 var start = machine.AddAnyStateTransition(state);
-                start.duration = Crossfade;
+                start.duration = 0f;
                 start.hasFixedDuration = true;
                 start.canTransitionToSelf = false;
                 start.conditions = new[] { new AnimatorCondition { mode = AnimatorConditionMode.If, parameter = trigger } };
-                AtEnd(state, rest);
+                var end = state.AddTransition(rest);
+                end.hasExitTime = true;
+                end.exitTime = 1f;
+                end.duration = 0f;
+                end.hasFixedDuration = true;
             }
         }
 
-        // The set's mask of the arms and fingers, made once and kept (rebuilt in place) beside its controller.
-        static AvatarMask ArmsMask(string set, AnimatorController controller)
+        static readonly AvatarMaskBodyPart[] ArmsParts =
         {
-            var path = $"{SetFolder(set)}/{set} Arms.mask";
+            AvatarMaskBodyPart.LeftArm, AvatarMaskBodyPart.RightArm, AvatarMaskBodyPart.LeftFingers, AvatarMaskBodyPart.RightFingers,
+        };
+
+        static readonly AvatarMaskBodyPart[] UpperBodyParts = ArmsParts.Concat(new[] { AvatarMaskBodyPart.Body, AvatarMaskBodyPart.Head }).ToArray();
+
+        // The set's mask of a layer's parts, made once and kept (rebuilt in place) beside its controller.
+        static AvatarMask Mask(string set, string layer, AvatarMaskBodyPart[] parts)
+        {
+            var path = $"{SetFolder(set)}/{set} {layer}.mask";
             var mask = AssetDatabase.LoadAssetAtPath<AvatarMask>(path);
             if (mask == null)
             {
@@ -181,12 +206,7 @@ namespace Forge.UnityEditor.Content
             }
 
             for (var part = AvatarMaskBodyPart.Root; part < AvatarMaskBodyPart.LastBodyPart; part++)
-            {
-                var arm = part == AvatarMaskBodyPart.LeftArm || part == AvatarMaskBodyPart.RightArm ||
-                    part == AvatarMaskBodyPart.LeftFingers || part == AvatarMaskBodyPart.RightFingers;
-                mask.SetHumanoidBodyPartActive(part, arm);
-            }
-
+                mask.SetHumanoidBodyPartActive(part, System.Array.IndexOf(parts, part) >= 0);
             EditorUtility.SetDirty(mask);
             return mask;
         }
