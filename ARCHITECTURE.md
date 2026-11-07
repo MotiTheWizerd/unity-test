@@ -532,7 +532,11 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
     Painted shapes may span 512 m (their soft edge, up to 32 m, reaching past it).
   - `look` from a pose of its own renders without the distance haze (`AgentEyes.From` turns `RenderSettings.fog`
     off for that one render); the user's own view keeps it.
-  - `delete_objects`: placed objects by id.
+  - `delete_objects`: placed objects by id, or everything standing inside an area (a rectangle or corners); `objects`
+    narrows either way to some kinds. `move_objects` carries them the same way by an offset (dx, dz), each re-seated
+    by `ObjectSeating` at its new spot with its heading and size kept, one undo step; those whose new spot has no
+    ground stay. Both pick through `ObjectPick` (ids or `GroundArea`, kinds checked first so a typo acts on nothing;
+    only the space being built in).
   - `undo_last` (`steps`, default 1): takes back the agent's latest commands in its open draft
     (`EditDraft.UndoLast`); with no draft, or an empty one, it is refused, so the user's own edits and accepted builds
     are out of its reach.

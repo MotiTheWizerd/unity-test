@@ -29,6 +29,7 @@ namespace Forge.Editing.Building
             registry.Add(new PlaceOutlineCommand(context));
             registry.Add(new ScatterObjectsCommand(context));
             registry.Add(new AdjustObjectsCommand(context));
+            registry.Add(new MoveObjectsCommand(context));
             registry.Add(new ListMaterialsCommand(context));
             registry.Add(new SetMaterialsCommand(context));
             registry.Add(new ListGroundsCommand(context));

@@ -273,6 +273,61 @@ namespace Forge.Tests.Editing
                 .Execute(new DeleteObjectsCommand.Arguments { Ids = new List<string> { "core:tree" } }));
         }
 
+        [Test]
+        public void DeleteObjects_ByArea_RemovesWhatStandsInside_OfTheKindsAsked()
+        {
+            var world = BuildingFixture.Create(Elsewhere(20f, 20f));
+            Place(world, Item(BuildingFixture.House, 20f, 20f), Item(BuildingFixture.Tree, 22f, 24f), Item(BuildingFixture.Tree, 60f, 20f));
+            var delete = new DeleteObjectsCommand(world.Context);
+
+            var trees = delete.Execute(new DeleteObjectsCommand.Arguments
+            {
+                X = 20f, Z = 20f, Width = 20f, Depth = 20f, Objects = new List<string> { BuildingFixture.Tree.ToString() },
+            });
+
+            Assert.That(trees.Summary, Is.EqualTo("Removed 1 object(s) in a 20 × 20 m area around (20, 20), heading 0°: 1 Pine Tree."));
+            Assert.That(Placed(world).Where(p => p.Space == BuildingFixture.Space).Select(p => p.BaseId), Is.EquivalentTo(new[] { BuildingFixture.House, BuildingFixture.Tree }),
+                "The house inside and the tree outside stay.");
+            Assert.That(world.Session.World.Records.Contains(ElsewhereId), Is.True, "Another space's house at the same spot is untouched.");
+            Assert.That(() => delete.Execute(new DeleteObjectsCommand.Arguments { X = 100f, Z = 100f, Width = 5f, Depth = 5f }),
+                Throws.TypeOf<CommandException>().With.Message.StartsWith("Nothing of those kinds stands in a 5 × 5 m area"));
+            Assert.That(() => delete.Execute(new DeleteObjectsCommand.Arguments { Ids = new List<string> { "x" }, X = 1f, Z = 1f, Width = 1f, Depth = 1f }),
+                Throws.TypeOf<CommandException>().With.Message.Contains("not both"));
+        }
+
+        [Test]
+        public void MoveObjects_ByArea_CarriesThemTogether_SeatedOnTheGround()
+        {
+            var world = BuildingFixture.Create();
+            Place(world, Item(BuildingFixture.House, 20f, 20f), Item(BuildingFixture.House, 26f, 20f), Item(BuildingFixture.House, 80f, 20f));
+
+            var result = new MoveObjectsCommand(world.Context).Execute(new MoveObjectsCommand.Arguments
+            {
+                Dx = 30f, Dz = 10f, X = 23f, Z = 20f, Width = 20f, Depth = 10f,
+            });
+
+            Assert.That(result.Moved, Is.EqualTo(2));
+            Assert.That(result.Summary, Does.StartWith("Moved 2 object(s) in a 20 × 10 m area around (23, 20), heading 0° by (30, 10) m: 2 Small House."));
+            var positions = Placed(world).Select(p => (p.Position.X, p.Position.Z)).OrderBy(p => p.X).ToList();
+            Assert.That(positions, Is.EqualTo(new[] { (50f, 30f), (56f, 30f), (80f, 20f) }));
+            Assert.That(Placed(world).Where(p => p.Position.X < 60f).Select(p => p.Position.Y), Is.All.GreaterThan(14f),
+                "Set down on the higher ground they moved to (15 m at x = 50).");
+            Assert.That(world.Session.UndoDescription, Does.StartWith("Move"));
+        }
+
+        [Test]
+        public void MoveObjects_OffTheLand_StaysAndSaysSo()
+        {
+            var world = BuildingFixture.Create();
+            var placed = Place(world, Item(BuildingFixture.House, 20f, 20f));
+
+            Assert.That(() => new MoveObjectsCommand(world.Context).Execute(new MoveObjectsCommand.Arguments
+                {
+                    Dx = 500f, Dz = 0f, Ids = new List<string> { placed.Placed[0].Id },
+                }),
+                Throws.TypeOf<CommandException>().With.Message.Contains("there is no ground"));
+        }
+
         static readonly RecordId ElsewhereId = RecordId.Parse("core:ref/elsewhere");
 
         // A house standing in another space, at a spot that also has ground in the fixture's space.
