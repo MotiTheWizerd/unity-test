@@ -1,6 +1,7 @@
 using System;
 using Forge.Play;
 using Forge.Play.Hud;
+using Forge.World.Assets;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -16,13 +17,14 @@ namespace Forge.EditorApp.UI
         readonly PlayerHud _hud;
         readonly InventoryScreen _inventory;
 
-        public HudSection(VisualElement root, GameSession game)
+        /// <param name="thumbnails">The editor's pictures of assets, which the inventory's rows share with the assets browser.</param>
+        public HudSection(VisualElement root, GameSession game, IAssetThumbnails thumbnails)
         {
             if (game == null)
                 throw new ArgumentNullException(nameof(game));
             var parent = PanelElements.Required<VisualElement>(root, "root");
             _hud = new PlayerHud(game.Player, parent);
-            _inventory = new InventoryScreen(game, parent);
+            _inventory = new InventoryScreen(game, parent, thumbnails);
         }
 
         // The panel lives as long as the app, and the HUD with it; nothing to let go of sooner.

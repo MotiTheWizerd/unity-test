@@ -13,7 +13,7 @@ namespace Forge.Play.Hud
     /// The player's inventory while it is open (<see cref="PlayerSession.InventoryOpen"/>), as Skyrim's item menu: the
     /// player's character standing full length on the far left (a <see cref="TurntableView"/> that a drag spins), a tab
     /// per kind of item beside it (All first; a new <see cref="ItemKind"/> gets its own), what the player carries in
-    /// that tab by name (<see cref="InventoryList"/>), the chosen item turning large in 3D (a <see cref="TurntableView"/>:
+    /// that tab (<see cref="InventoryList"/>), each by its picture (<see cref="IAssetThumbnails"/>) and name, the chosen item turning large in 3D (a <see cref="TurntableView"/>:
     /// drag to turn it, the wheel to zoom) over its card with a Drop button, and along the bottom what it all weighs
     /// against the carry weight, red when overburdened. Drawn by InventoryScreen.uss. The list is read again only when the
     /// inventory changes, the tab does, or the screen opens; the character and the item are drawn only while the screen
@@ -31,6 +31,7 @@ namespace Forge.Play.Hud
         public const string ListClass = UssClass + "__list";
         public const string RowClass = UssClass + "__row";
         public const string RowSelectedClass = RowClass + "--selected";
+        public const string RowIconClass = UssClass + "__row-icon";
         public const string RowNameClass = UssClass + "__row-name";
         public const string RowCountClass = UssClass + "__row-count";
         public const string EmptyClass = UssClass + "__empty";
@@ -55,6 +56,7 @@ namespace Forge.Play.Hud
         }
 
         readonly GameSession _game;
+        readonly IAssetThumbnails _thumbnails;
         readonly VisualElement _root;
         readonly List<Tab> _tabs = new List<Tab>();
         readonly ScrollView _list;
@@ -75,9 +77,11 @@ namespace Forge.Play.Hud
         bool _dirty = true;
 
         /// <param name="parent">Where the screen goes: a full-screen element of the panel that plays.</param>
-        public InventoryScreen(GameSession game, VisualElement parent)
+        /// <param name="thumbnails">Pictures of the items for the rows, made once each and kept by whoever hosts the game.</param>
+        public InventoryScreen(GameSession game, VisualElement parent, IAssetThumbnails thumbnails)
         {
             _game = game ?? throw new ArgumentNullException(nameof(game));
+            _thumbnails = thumbnails ?? throw new ArgumentNullException(nameof(thumbnails));
             if (parent == null)
                 throw new ArgumentNullException(nameof(parent));
 
@@ -235,6 +239,10 @@ namespace Forge.Play.Hud
             var row = new VisualElement();
             row.AddToClassList(RowClass);
             row.EnableInClassList(RowSelectedClass, entry.Item == _selected);
+            var icon = Part<VisualElement>(row, RowIconClass);
+            var look = entry.Record?.AssetKey;
+            if (!string.IsNullOrEmpty(look))
+                icon.style.backgroundImage = _thumbnails.Get(look);
             Part<Label>(row, RowNameClass).text = entry.Name;
             Part<Label>(row, RowCountClass).text = entry.Count > 1 ? $"({entry.Count})" : string.Empty;
             var item = entry.Item;

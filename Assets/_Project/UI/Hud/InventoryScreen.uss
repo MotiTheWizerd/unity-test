@@ -87,6 +87,15 @@
     background-color: var(--forge-inventory-chosen);
 }
 
+/* The item's picture, square, before its name. */
+.forge-inventory__row-icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    margin-right: 12px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
 .forge-inventory Label.forge-inventory__row-name {
     flex-grow: 1;
     font-size: 16px;

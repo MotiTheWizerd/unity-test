@@ -74,7 +74,7 @@ namespace Forge.EditorApp.UI
                 new PlaySection(Root, context),
             };
             if (game != null)
-                _sections.Add(new HudSection(Root, game));
+                _sections.Add(new HudSection(Root, game, thumbnails));
 
             var sideDock = new SideDockSection(Root);
             _sections.Add(sideDock);
