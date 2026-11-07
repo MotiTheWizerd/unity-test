@@ -242,7 +242,7 @@ namespace Forge.Play.Hud
             var icon = Part<VisualElement>(row, RowIconClass);
             var look = entry.Record?.AssetKey;
             if (!string.IsNullOrEmpty(look))
-                icon.style.backgroundImage = _thumbnails.Get(look);
+                icon.style.backgroundImage = _thumbnails.GetIcon(look);
             Part<Label>(row, RowNameClass).text = entry.Name;
             Part<Label>(row, RowCountClass).text = entry.Count > 1 ? $"({entry.Count})" : string.Empty;
             var item = entry.Item;

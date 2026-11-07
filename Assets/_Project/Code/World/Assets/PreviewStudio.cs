@@ -10,7 +10,9 @@ namespace Forge.World.Assets
     /// ForgePreview layer, a key light and a rim light, and a stage to stand things on. Whatever takes pictures with it
     /// (still thumbnails, a live turntable) sets the camera up, puts its subject on the <see cref="Stage"/> and calls
     /// <see cref="Render"/>. The camera never renders by itself, and the lighting is the studio's own: for each render the
-    /// scene's lights are switched off and the ambient is flat, so a picture looks the same at noon and at midnight.
+    /// scene's lights are switched off, the ambient is flat and what polished metal mirrors is the studio's surroundings
+    /// (a bright ceiling, a grey horizon, a dark floor) rather than the sky, so a picture looks the same at noon and at
+    /// midnight and a blade shines rather than going black.
     /// </summary>
     public sealed class PreviewStudio : IDisposable
     {
@@ -19,9 +21,16 @@ namespace Forge.World.Assets
         static readonly Color Transparent = new Color(0f, 0f, 0f, 0f);
         static readonly Color Ambient = new Color(0.35f, 0.35f, 0.38f);
 
+        // The studio's surroundings, as polished metal mirrors them: a bright ceiling, a soft grey horizon, a dark floor.
+        static readonly Color Ceiling = new Color(0.95f, 0.95f, 0.97f);
+        static readonly Color Horizon = new Color(0.45f, 0.45f, 0.48f);
+        static readonly Color Floor = new Color(0.08f, 0.08f, 0.09f);
+        const int EnvironmentSize = 32;
+
         readonly GameObject _rig;
         readonly Light _key;
         readonly Light _rim;
+        readonly Cubemap _environment;
 
         /// <param name="name">The rig's name in the scene ("Thumbnails").</param>
         /// <param name="parent">What the rig hangs under; null for the scene's root.</param>
@@ -48,6 +57,10 @@ namespace Forge.World.Assets
             // From behind and above: a cool bright edge that lifts the subject off its backdrop.
             _rim = CreateLight("Rim", Quaternion.Euler(25f, 150f, 0f), 0.9f, new Color(0.85f, 0.9f, 1f));
 
+            // What metal mirrors here instead of the world's sky. The scene's own reflection, swapped in for each render:
+            // the pipeline ignores a reflection probe switched on just for one.
+            _environment = CreateEnvironment();
+
             Stage = new GameObject("Stage").transform;
             Stage.SetParent(_rig.transform, false);
         }
@@ -68,7 +81,7 @@ namespace Forge.World.Assets
         public void Render(RenderTexture target, bool rim)
         {
             Camera.targetTexture = target;
-            using (new StudioLighting(_key, rim ? _rim : null, Ambient))
+            using (new StudioLighting(_key, rim ? _rim : null, _environment, Ambient))
             using (SyncShaderCompilation.Begin())
                 Camera.Render();
         }
@@ -93,7 +106,33 @@ namespace Forge.World.Assets
                 Camera.targetTexture = null;
             if (_rig != null)
                 UnityEngine.Object.Destroy(_rig);
+            if (_environment != null)
+                UnityEngine.Object.Destroy(_environment);
         }
+
+        // The surroundings as a small cube map: each texel's colour by how far up its direction points.
+        static Cubemap CreateEnvironment()
+        {
+            var cube = new Cubemap(EnvironmentSize, TextureFormat.RGBA32, true) { name = "Studio environment" };
+            var pixels = new Color[EnvironmentSize * EnvironmentSize];
+            foreach (CubemapFace face in new[] { CubemapFace.PositiveX, CubemapFace.NegativeX, CubemapFace.PositiveY, CubemapFace.NegativeY, CubemapFace.PositiveZ, CubemapFace.NegativeZ })
+            {
+                for (var row = 0; row < EnvironmentSize; row++)
+                {
+                    for (var column = 0; column < EnvironmentSize; column++)
+                        pixels[row * EnvironmentSize + column] = EnvironmentColor(StudioEnvironment.Up(face, column, row, EnvironmentSize));
+                }
+
+                cube.SetPixels(pixels, face);
+            }
+
+            cube.Apply(true, true);
+            return cube;
+        }
+
+        // Dark floor up to the horizon, then up to the bright ceiling.
+        static Color EnvironmentColor(float up) =>
+            up < 0f ? Color.Lerp(Horizon, Floor, Mathf.SmoothStep(0f, 1f, -up)) : Color.Lerp(Horizon, Ceiling, Mathf.SmoothStep(0f, 1f, up));
 
         // A directional light of the rig, lighting only what the camera draws; on only while rendering.
         Light CreateLight(string name, Quaternion rotation, float intensity, Color color)
@@ -146,7 +185,8 @@ namespace Forge.World.Assets
 
         /// <summary>
         /// For one render: the studio's lights on (the key light, and the rim light when given), every other light off,
-        /// and a flat ambient instead of the sky's. Restores everything after.
+        /// a flat ambient instead of the sky's, and the studio's surroundings as the scene's reflection, for metal to mirror.
+        /// Restores everything after.
         /// </summary>
         readonly struct StudioLighting : IDisposable
         {
@@ -155,8 +195,10 @@ namespace Forge.World.Assets
             readonly List<Light> _silenced;
             readonly AmbientMode _ambientMode;
             readonly Color _ambientColor;
+            readonly DefaultReflectionMode _reflectionMode;
+            readonly Texture _reflection;
 
-            public StudioLighting(Light key, Light rim, Color ambient)
+            public StudioLighting(Light key, Light rim, Cubemap surroundings, Color ambient)
             {
                 _key = key;
                 _rim = rim;
@@ -174,6 +216,10 @@ namespace Forge.World.Assets
                 _ambientColor = RenderSettings.ambientLight;
                 RenderSettings.ambientMode = AmbientMode.Flat;
                 RenderSettings.ambientLight = ambient;
+                _reflectionMode = RenderSettings.defaultReflectionMode;
+                _reflection = RenderSettings.customReflectionTexture;
+                RenderSettings.defaultReflectionMode = DefaultReflectionMode.Custom;
+                RenderSettings.customReflectionTexture = surroundings;
                 key.enabled = true;
                 if (rim != null)
                     rim.enabled = true;
@@ -188,6 +234,8 @@ namespace Forge.World.Assets
                     light.enabled = true;
                 RenderSettings.ambientMode = _ambientMode;
                 RenderSettings.ambientLight = _ambientColor;
+                RenderSettings.defaultReflectionMode = _reflectionMode;
+                RenderSettings.customReflectionTexture = _reflection;
             }
         }
     }

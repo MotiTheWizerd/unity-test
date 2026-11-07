@@ -17,6 +17,12 @@ namespace Forge.World.Assets
         Texture2D Get(string assetKey, string lookKey, Action<GameObject> dress);
 
         /// <summary>
+        /// A small icon of <paramref name="assetKey"/> for a list of items: turned to show what it is (a flat thing from
+        /// above, a long one along the diagonal), filling its square, lit like a product shot; never null.
+        /// </summary>
+        Texture2D GetIcon(string assetKey);
+
+        /// <summary>
         /// A material ball for <paramref name="key"/>: a sphere wearing what <paramref name="createMaterial"/> makes
         /// (called only when the picture isn't cached yet; the material is destroyed after). Never null.
         /// </summary>

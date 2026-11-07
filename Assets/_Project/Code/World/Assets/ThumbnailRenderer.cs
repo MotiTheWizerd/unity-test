@@ -29,24 +29,45 @@ namespace Forge.World.Assets
             _studio.Camera.orthographic = true;
         }
 
-        /// <summary>How a picture is taken: its size in pixels, and whether the rim light joins the key light.</summary>
+        /// <summary>Where the camera stands to show <paramref name="bounds"/> whole (<see cref="ThumbnailFraming"/>, <see cref="IconFraming"/>).</summary>
+        delegate Pose Framing(Bounds bounds, out float orthographicSize, out float nearPlane, out float farPlane);
+
+        /// <summary>
+        /// How a picture is taken: its size in pixels, whether the rim light joins the key light, how it is framed, and
+        /// whether it keeps smaller copies of itself (mipmaps) for being shown much smaller than it was drawn.
+        /// </summary>
         readonly struct Shot
         {
-            public Shot(int size, bool rim)
+            public Shot(int size, bool rim, Framing framing, bool mipmaps)
             {
                 Size = size;
                 Rim = rim;
+                Frame = framing;
+                Mipmaps = mipmaps;
             }
 
             public int Size { get; }
             public bool Rim { get; }
+            public Framing Frame { get; }
+            public bool Mipmaps { get; }
         }
 
-        static readonly Shot Tile = new Shot(Size, false);
-        static readonly Shot Preview = new Shot(PreviewSize, true);
+        static readonly Shot Tile = new Shot(Size, false, ThumbnailFraming.CameraPose, false);
+        static readonly Shot Preview = new Shot(PreviewSize, true, ThumbnailFraming.CameraPose, false);
+        static readonly Shot Icon = new Shot(Size, true, IconFraming.CameraPose, true);
 
         /// <summary>The picture for <paramref name="assetKey"/>, rendered on first request.</summary>
         public Texture2D Get(string assetKey) => Get(assetKey, null, null);
+
+        /// <summary>
+        /// An icon of <paramref name="assetKey"/> for a list (<see cref="IconFraming"/>: its telling face, a long thing on
+        /// the diagonal, lit like a product shot), rendered on first request.
+        /// </summary>
+        public Texture2D GetIcon(string assetKey)
+        {
+            if (string.IsNullOrEmpty(assetKey)) throw new ArgumentException("Asset key is required.", nameof(assetKey));
+            return Cached(IconPrefix + assetKey, Icon, () => _assets.Instantiate(assetKey, _studio.Stage));
+        }
 
         /// <summary>The picture for <paramref name="assetKey"/> dressed by <paramref name="dress"/>, rendered on first request.</summary>
         public Texture2D Get(string assetKey, string lookKey, Action<GameObject> dress)
@@ -78,9 +99,11 @@ namespace Forge.World.Assets
         /// </summary>
         public Texture2D GetBallPreview(string key, Func<Material> createMaterial) => Ball(PreviewPrefix, key, Preview, createMaterial);
 
-        // Balls share the cache with assets; the prefixes keep a ball, its preview and an asset of the same key apart.
+        // Balls and icons share the cache with assets; the prefixes keep a ball, its preview, an icon and an asset of the
+        // same key apart.
         const string BallPrefix = "ball:";
         const string PreviewPrefix = "preview:";
+        const string IconPrefix = "icon:";
 
         Texture2D Ball(string prefix, string key, Shot shot, Func<Material> createMaterial)
         {
@@ -139,13 +162,13 @@ namespace Forge.World.Assets
             {
                 _studio.PutOnLayer(instance);
                 var camera = _studio.Camera;
-                var pose = ThumbnailFraming.CameraPose(PreviewStudio.BoundsOf(instance), out var size, out var near, out var far);
+                var pose = shot.Frame(PreviewStudio.BoundsOf(instance), out var size, out var near, out var far);
                 camera.transform.SetPositionAndRotation(pose.position, pose.rotation);
                 camera.orthographicSize = size;
                 camera.nearClipPlane = near;
                 camera.farClipPlane = far;
                 _studio.Render(target, shot.Rim);
-                return ReadBack(key, target);
+                return ReadBack(key, target, shot.Mipmaps);
             }
             finally
             {
@@ -166,14 +189,16 @@ namespace Forge.World.Assets
             return target;
         }
 
-        static Texture2D ReadBack(string key, RenderTexture target)
+        static Texture2D ReadBack(string key, RenderTexture target, bool mipmaps)
         {
             var size = target.width;
             var previous = RenderTexture.active;
             RenderTexture.active = target;
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = $"Thumbnail {key}" };
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, mipmaps) { name = $"Thumbnail {key}" };
+            if (mipmaps)
+                texture.filterMode = FilterMode.Trilinear;
             texture.ReadPixels(new Rect(0, 0, size, size), 0, 0);
-            texture.Apply(false, true);
+            texture.Apply(mipmaps, true);
             RenderTexture.active = previous;
             return texture;
         }

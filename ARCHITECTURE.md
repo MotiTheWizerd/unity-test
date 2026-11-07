@@ -678,7 +678,7 @@ from any camera, so both cameras read the same player.
   beside the HUD by `HudSection`; the HUD hides meanwhile) draws `InventoryList`: the player's character standing full
   length on the far left (a `TurntableView` of `PlayerSession.Model`, built by `CharacterModel.StandingStill`), tabs
   beside it (All, then each `ItemKind`, Misc last), the tab's items by picture and name with their counts (the
-  pictures are the host's `IAssetThumbnails`, in the editor the assets browser's `ThumbnailRenderer`, so each is
+  pictures are the host's `IAssetThumbnails.GetIcon`, in the editor the assets browser's `ThumbnailRenderer`, so each is
   rendered once and shared; `HudSection` hands it in), the chosen item turning
   large in 3D (a `TurntableView`) over its card (kind, weight, value, how many) with Drop, and the weight against the
   carry weight along the bottom, red when overburdened. It reads again only when the inventory, the tab or the choice
@@ -1283,8 +1283,14 @@ slopes), so results are exact and every edit goes through the edit session.
   math, tested), renders it with the orthographic camera of its `PreviewStudio` into a 128 px texture with a
   transparent background, and keeps it for the session. The studio (shared with the turntables) is a rig of its own on
   the `ForgePreview` layer: a camera that draws only that layer and renders only on request, a key and a rim light and
-  a stage; for each render it silences the scene's lights and sets a flat ambient, so pictures look the same at any
-  time of day. The instance is destroyed immediately after, because the next picture may be rendered in the same frame. The **tool options bar** (across the top of the view) shows the current
+  a stage; for each render it silences the scene's lights, sets a flat ambient and makes its own surroundings (a small
+  cube map: bright ceiling, grey horizon, dark floor, painted by `StudioEnvironment`, tested) the scene's reflection, so
+  pictures look the same at any time of day and polished metal shines instead of mirroring black. A reflection probe
+  switched on for one render is ignored by the pipeline (Forward+), hence the scene setting, restored after. The
+  instance is destroyed immediately after, because the next picture may be rendered in the same frame. A list's
+  **icon** (`GetIcon`, the inventory's rows) is its own shot: `IconFraming` (pure math, tested) looks down on what lies
+  flat (65°), sees what stands three-quarter on (20°), lays a long thing along the square's diagonal, and fits the box
+  by its corners as seen; it has the rim light and mipmaps, since it is shown much smaller than its 128 px. The **tool options bar** (across the top of the view) shows the current
   tool's name and hint, and each tool's settings are their own section inside it, shown while that tool is
   current: `SelectionSection` (count, Frame, Drop, material Slot, Reset look) for Select/Move/Rotate/Scale, `RectangleSection` (whole pieces)
   for Outline and Fill, `PlacementSection` (turn, random turn & size, align to slope, gaps) for Place, Outline and Fill, `SculptSection` (brush) for Sculpt, `WaterSection` (the current lake's level, Remove) for Water. Each presenter
