@@ -689,8 +689,10 @@ from any camera, so both cameras read the same player.
   closes it first, and only Esc with nothing open leaves play. `InventoryScreen` (Play.Hud, InventoryScreen.uss, hosted
   beside the HUD by `HudSection`; the HUD hides meanwhile) draws `InventoryList`: the player's character standing full
   length on the far left (a `TurntableView` of `PlayerSession.Model`, built by `CharacterModel.StandingStill`), tabs
-  beside it (All, then each `ItemKind`, Misc last), the tab's items by picture and name with their counts (the
-  pictures are the host's `IAssetThumbnails.GetIcon`, in the editor the assets browser's `ThumbnailRenderer`, so each is
+  beside it (All, then each `ItemKind`, Misc last), the tab's items by picture and name with their counts and, in gold
+  with a gold edge, where an equipped one is held ("Left Hand"; a double click equips another where it fits best, or
+  with none to spare takes every one off), the chosen item's card with an Equip / Unequip button for each of its fits,
+  named by its slots (`GameSession.Equip(item, slot)` / `Unequip(slot)`) (the pictures are the host's `IAssetThumbnails.GetIcon`, in the editor the assets browser's `ThumbnailRenderer`, so each is
   rendered once and shared; `HudSection` hands it in), the chosen item turning
   large in 3D (a `TurntableView`) over its card (kind, weight, value, how many) with Drop, and the weight against the
   carry weight along the bottom, red when overburdened. It reads again only when the inventory, the tab or the choice

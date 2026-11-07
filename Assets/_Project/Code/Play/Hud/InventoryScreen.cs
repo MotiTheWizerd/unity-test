@@ -4,6 +4,7 @@ using System.Linq;
 using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
+using Forge.Game.Equipment;
 using Forge.Game.Items;
 using Forge.World.Assets;
 using UnityEngine;
@@ -15,8 +16,10 @@ namespace Forge.Play.Hud
     /// The player's inventory while it is open (<see cref="PlayerSession.InventoryOpen"/>), as Skyrim's item menu: the
     /// player's character standing full length on the far left (a <see cref="TurntableView"/> that a drag spins), a tab
     /// per kind of item beside it (All first; a new <see cref="ItemKind"/> gets its own), what the player carries in
-    /// that tab (<see cref="InventoryList"/>), each by its picture (<see cref="IAssetThumbnails"/>) and name, the chosen item turning large in 3D (a <see cref="TurntableView"/>:
-    /// drag to turn it, the wheel to zoom) over its card with a Drop button, and along the bottom what it all weighs
+    /// that tab (<see cref="InventoryList"/>), each by its picture (<see cref="IAssetThumbnails"/>) and name, and in gold
+    /// where it is held when equipped (a double click equips it, or takes it off), the chosen item turning large in 3D (a <see cref="TurntableView"/>:
+    /// drag to turn it, the wheel to zoom) over its card with an Equip or Unequip button for each way it can be held (by
+    /// its slots' names: Right Hand, Left Hand) and a Drop button, and along the bottom what it all weighs
     /// against the carry weight, red when overburdened. Drawn by InventoryScreen.uss. The list is read again only when the
     /// inventory changes, the tab does, or the screen opens; the character and the item are drawn only while the screen
     /// is open. Whatever
@@ -36,6 +39,8 @@ namespace Forge.Play.Hud
         public const string RowIconClass = UssClass + "__row-icon";
         public const string RowNameClass = UssClass + "__row-name";
         public const string RowCountClass = UssClass + "__row-count";
+        public const string RowEquippedClass = RowClass + "--equipped";
+        public const string RowHeldClass = UssClass + "__row-held";
         public const string EmptyClass = UssClass + "__empty";
         public const string AsideClass = UssClass + "__aside";
         public const string ItemViewClass = UssClass + "__item-view";
@@ -45,6 +50,9 @@ namespace Forge.Play.Hud
         public const string StatClass = UssClass + "__stat";
         public const string StatLabelClass = UssClass + "__stat-label";
         public const string StatValueClass = UssClass + "__stat-value";
+        public const string EquipsClass = UssClass + "__equips";
+        public const string EquipClass = UssClass + "__equip";
+        public const string EquipHeldClass = EquipClass + "--held";
         public const string DropClass = UssClass + "__drop";
         public const string FooterClass = UssClass + "__footer";
         public const string WeightClass = UssClass + "__weight";
@@ -70,6 +78,7 @@ namespace Forge.Play.Hud
         readonly Label _weight;
         readonly Label _value;
         readonly Label _count;
+        readonly VisualElement _equips;
         readonly Button _drop;
         readonly Label _carried;
         readonly Label _hint;
@@ -119,6 +128,7 @@ namespace Forge.Play.Hud
             _weight = Stat(_card, "Weight");
             _value = Stat(_card, "Value");
             _count = Stat(_card, "Carried");
+            _equips = Part<VisualElement>(_card, EquipsClass);
             _drop = new Button(DropSelected) { text = "Drop" };
             _drop.AddToClassList(DropClass);
             _card.Add(_drop);
@@ -217,6 +227,23 @@ namespace Forge.Play.Hud
                 _game.Drop(_selected);
         }
 
+        // A double click: equips another of it where it fits best; with none to spare, takes every one off.
+        void ToggleEquip(RecordId item)
+        {
+            if (_game.Equip(item) != EquipOutcome.AlreadyEquipped)
+                return;
+            foreach (var equipped in _game.Player.Equipment.All.Where(e => e.Item == item).ToArray())
+                _game.Unequip(equipped.Fit.Slots[0]);
+        }
+
+        // One way of holding it, by its slots' names ("Right Hand", "Right Hand + Left Hand").
+        string FitName(EquipFit fit)
+        {
+            var world = _game.Player.World;
+            return string.Join(" + ", fit.Slots.Select(slot =>
+                world != null && world.TryGet(slot, out var record) && record is EquipSlotRecord named ? named.DisplayName : slot.Name));
+        }
+
         void Draw()
         {
             _dirty = false;
@@ -272,9 +299,17 @@ namespace Forge.Play.Hud
             if (!string.IsNullOrEmpty(look))
                 icon.style.backgroundImage = _thumbnails.GetIcon(look);
             Part<Label>(row, RowNameClass).text = entry.Name;
-            Part<Label>(row, RowCountClass).text = entry.Count > 1 ? $"({entry.Count})" : string.Empty;
             var item = entry.Item;
-            row.RegisterCallback<ClickEvent>(_ => Select(item));
+            var held = _game.Player.Equipment.All.Where(e => e.Item == item).Select(e => FitName(e.Fit)).ToArray();
+            row.EnableInClassList(RowEquippedClass, held.Length > 0);
+            Part<Label>(row, RowHeldClass).text = string.Join(", ", held);
+            Part<Label>(row, RowCountClass).text = entry.Count > 1 ? $"({entry.Count})" : string.Empty;
+            row.RegisterCallback<ClickEvent>(e =>
+            {
+                Select(item);
+                if (e.clickCount == 2)
+                    ToggleEquip(item);
+            });
             return row;
         }
 
@@ -291,6 +326,37 @@ namespace Forge.Play.Hud
             _weight.text = Number(entry.Weight);
             _value.text = entry.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
             _count.text = entry.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            DrawEquips(entry);
+        }
+
+        // A button for each way it can be held: Equip there, or Unequip where it is.
+        void DrawEquips(InventoryEntry entry)
+        {
+            _equips.Clear();
+            var part = entry.Record.Equippable;
+            _equips.style.display = part != null ? DisplayStyle.Flex : DisplayStyle.None;
+            if (part == null)
+                return;
+
+            var item = entry.Item;
+            foreach (var fit in part.Fits)
+            {
+                var slot = fit.Slots[0];
+                var held = _game.Player.Equipment.All.Any(e => e.Item == item && e.Fit.SameAs(fit));
+                var button = new Button(() =>
+                {
+                    if (held)
+                        _game.Unequip(slot);
+                    else
+                        _game.Equip(item, slot);
+                })
+                {
+                    text = (held ? "Unequip  " : "Equip  ") + FitName(fit),
+                };
+                button.AddToClassList(EquipClass);
+                button.EnableInClassList(EquipHeldClass, held);
+                _equips.Add(button);
+            }
         }
 
         void DrawFooter()
@@ -302,7 +368,7 @@ namespace Forge.Play.Hud
             else
                 _carried.text = $"Weight  {Number(world != null ? _game.Player.Inventory.Weight(world) : 0f)}";
             _carried.EnableInClassList(OverburdenedClass, burden != null && burden.Overburdened);
-            _hint.text = $"{_game.Player.InventoryKey}  Close";
+            _hint.text = $"Double-click: Equip   ·   {_game.Player.InventoryKey}: Close";
         }
 
         static Label Stat(VisualElement parent, string name)

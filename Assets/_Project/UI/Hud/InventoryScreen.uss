@@ -105,6 +105,19 @@
     color: var(--forge-accent);
 }
 
+/* Where an equipped item is held ("Right Hand, Left Hand"), in gold, and a gold edge on its row. */
+.forge-inventory__row--equipped {
+    border-left-width: 2px;
+    border-color: var(--forge-accent);
+}
+
+.forge-inventory Label.forge-inventory__row-held {
+    margin-right: 10px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--forge-accent);
+}
+
 .forge-inventory Label.forge-inventory__row-count {
     font-size: 14px;
     color: var(--forge-hud-text-muted);
@@ -174,8 +187,43 @@
     -unity-font-style: bold;
 }
 
+/* A button for each way the item can be held: Equip there, or (gold) Unequip where it is. */
+.forge-inventory__equips {
+    flex-direction: row;
+    margin-top: 18px;
+}
+
+.forge-inventory__equip {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin: 0 4px 0 0;
+    height: 30px;
+    border-width: 1px;
+    border-color: var(--forge-inventory-line);
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.45);
+    color: var(--forge-hud-text);
+    font-size: 13px;
+    letter-spacing: 1px;
+}
+
+.forge-inventory__equip:last-child {
+    margin-right: 0;
+}
+
+.forge-inventory__equip:hover {
+    background-color: var(--forge-inventory-chosen);
+    color: var(--forge-accent);
+}
+
+.forge-inventory__equip--held {
+    border-color: var(--forge-accent-border);
+    background-color: var(--forge-inventory-chosen);
+    color: var(--forge-accent);
+}
+
 .forge-inventory__drop {
-    margin: 18px 0 0 0;
+    margin: 10px 0 0 0;
     height: 30px;
     border-width: 1px;
     border-color: var(--forge-accent-border);
