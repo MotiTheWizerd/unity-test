@@ -732,7 +732,18 @@ from any camera, so both cameras read the same player.
 - **The model** (`PlayerAvatar`, Play): the profile's `_model` as a `CharacterModel` (any character's look on any body:
   the prefab riding on the body's object, turned to the body's heading, its colliders removed since the body is the
   collider, on the body's layer, animated from a `BodyMotion`; the world's characters will use it too), plus the
-  player's own extras: in first person its renderers cast only shadows, and its animator always animates. The player is the **Viking hero** (`Content/Characters/VikingHero`, 1.85 m, eyes at 1.72 m), the first
+  player's own extras: in first person its renderers cast only shadows (`CharacterModel.ShadowsOnly`, what it holds
+  included), and its animator always animates. **Holding**: `CharacterModel.Attach(look, grip, bone)` hangs a look
+  from a humanoid bone (`HumanBodyBones` by name, as `EquipSlotRecord.Bone` writes it) at an attach point made once
+  per bone; a hand's point is its grip, worked out from the hand's bones by `GripFrame` (tested) rather than tuned per
+  rig: the hand, a knuckle (middle, else index) and the thumb give the fingers' way, the side the blade leaves the
+  fist by (+Y), and the palm (+Z, mirrored for the left hand), the grip sitting in the palm past the knuckles. What is
+  held is turned and moved so its grip (a model asset's inner model's pivot, else the look's root) lies on the point,
+  at its own size whatever the skeleton's scale, without colliders, on the model's layer. `HeldItems` shows equipped
+  things on a model at the first slot of their fit (a two-hander in the right hand; a slot with no bone shows
+  nothing); `EquipmentView` keeps that in step with an `ActorEquipment` (the player's while spawned), and the
+  inventory's character is dressed anew whenever the equipment changes (turned as it was: `TurntablePreview.Show`
+  with `keepTurn`). The player is the **Viking hero** (`Content/Characters/VikingHero`, 1.85 m, eyes at 1.72 m), the first
   real character, from the `blender-tests` art repo (see its CREDITS.md). Before him it wore a placeholder mannequin
   (`player_mannequin`, built from primitives by `PlaceholderCharacters` through *Forge → Generate Placeholder Player*,
   which gives it to a profile with no model); it stays as the fallback.

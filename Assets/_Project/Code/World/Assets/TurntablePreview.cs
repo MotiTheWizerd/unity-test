@@ -61,13 +61,15 @@ namespace Forge.World.Assets
 
         /// <summary>
         /// Shows <paramref name="subject"/>, made by <paramref name="build"/> under the parent it is given, upright and at
-        /// its start (<see cref="PreviewTurn.Reset"/>); null clears it. The same subject again keeps how it was turned.
+        /// its start (<see cref="PreviewTurn.Reset"/>), or as it was turned when <paramref name="keepTurn"/> (the same
+        /// character, dressed anew); null clears it. The same subject again changes nothing.
         /// </summary>
-        public void Show(object subject, Func<Transform, GameObject> build)
+        public void Show(object subject, Func<Transform, GameObject> build, bool keepTurn = false)
         {
             if (Equals(subject, Shown))
                 return;
 
+            var wasShown = _subject != null;
             Clear();
             if (subject == null)
                 return;
@@ -85,7 +87,8 @@ namespace Forge.World.Assets
             var bounds = PreviewStudio.BoundsOf(_subject);
             _subject.transform.localPosition -= _turntable.InverseTransformPoint(bounds.center);
             _extents = bounds.extents;
-            Turn.Reset();
+            if (!(keepTurn && wasShown))
+                Turn.Reset();
         }
 
         /// <summary>Draws at <paramref name="width"/> × <paramref name="height"/> pixels from now on (the UI's size).</summary>

@@ -47,7 +47,7 @@ namespace Forge.Play
             _placement = placement ?? throw new ArgumentNullException(nameof(placement));
             Events = new GameEvents(onError);
             Changes = new WorldChanges();
-            Player = new PlayerSession(profile, camera, Events);
+            Player = new PlayerSession(profile, camera, Events, view.Assets);
             Interactions = new Interactions()
                 .Add(new TakeInteraction(Changes, InventoryOf, Events));
             _dropper = new ItemDropper(Changes, InventoryOf, Events);

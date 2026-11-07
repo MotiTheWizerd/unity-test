@@ -12,6 +12,7 @@ using Forge.Game.Interaction;
 using Forge.Game.Items;
 using Forge.Game.Player;
 using Forge.World;
+using Forge.World.Assets;
 using UnityEngine;
 
 namespace Forge.Play
@@ -39,13 +40,17 @@ namespace Forge.Play
         AttributeRecord[] _attributeRecords;
         IDisposable _attributeEvents;
         EquipmentModifiers _equipmentModifiers;
+        EquipmentView _equipmentView;
+        readonly IAssetCatalog _assets;
 
         /// <param name="camera">The camera the player sees through while spawned.</param>
         /// <param name="events">The game's stream, told what happens to the player.</param>
-        public PlayerSession(PlayerProfile profile, Transform camera, GameEvents events)
+        /// <param name="assets">The looks of the world's things, for what the player holds.</param>
+        public PlayerSession(PlayerProfile profile, Transform camera, GameEvents events, IAssetCatalog assets)
         {
             _profile = profile != null ? profile : throw new ArgumentNullException(nameof(profile));
             Events = events ?? throw new ArgumentNullException(nameof(events));
+            _assets = assets ?? throw new ArgumentNullException(nameof(assets));
             _controls = new PlayerControls(profile);
             Views = new ViewSwitch(
                 new FirstPersonCamera(),
@@ -150,6 +155,8 @@ namespace Forge.Play
 
             if (Attributes != null)
                 _equipmentModifiers = new EquipmentModifiers(Equipment, Attributes);
+            if (_avatar != null)
+                _equipmentView = new EquipmentView(Equipment, _avatar.Model, world, _assets);
 
             Player.PlaceAt(feet.ToNumerics(), heading);
             Focus = new InteractionFocus(ActorId.Player, world, interactions, _probe, _profile.Reach);
@@ -218,6 +225,8 @@ namespace Forge.Play
                 return;
             InventoryOpen = false;
             _controls.Disable();
+            _equipmentView?.Dispose();
+            _equipmentView = null;
             _avatar?.Dispose();
             _avatar = null;
             _motor.Dispose();

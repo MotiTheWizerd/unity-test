@@ -28,8 +28,11 @@ namespace Forge.Play.Hud
         /// <summary>Shows <paramref name="assetKey"/>'s asset from <paramref name="assets"/>; null shows nothing.</summary>
         public void Show(IAssetCatalog assets, string assetKey) => _preview.Show(assets, assetKey);
 
-        /// <summary>Shows <paramref name="subject"/>, made by <paramref name="build"/>; null shows nothing.</summary>
-        public void Show(object subject, Func<Transform, GameObject> build) => _preview.Show(subject, build);
+        /// <summary>
+        /// Shows <paramref name="subject"/>, made by <paramref name="build"/>, turned as before when <paramref name="keepTurn"/>;
+        /// null shows nothing.
+        /// </summary>
+        public void Show(object subject, Func<Transform, GameObject> build, bool keepTurn = false) => _preview.Show(subject, build, keepTurn);
 
         /// <summary>Turns and draws the picture for <paramref name="deltaTime"/> seconds; call it each frame it is on screen.</summary>
         public void Tick(float deltaTime)

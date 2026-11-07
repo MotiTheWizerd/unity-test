@@ -11,7 +11,8 @@
         "Forge.Agent",
         "Forge.Streaming",
         "Forge.World",
-        "Forge.Game"
+        "Forge.Game",
+        "Forge.Play"
     ],
     "includePlatforms": [
         "Editor"

@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Forge.Data;
+using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Game.Items;
 using Forge.World.Assets;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Forge.Play.Hud
@@ -75,6 +77,7 @@ namespace Forge.Play.Hud
         RecordId _selected;
         bool _shown;
         bool _dirty = true;
+        int _dressed;
 
         /// <param name="parent">Where the screen goes: a full-screen element of the panel that plays.</param>
         /// <param name="thumbnails">Pictures of the items for the rows, made once each and kept by whoever hosts the game.</param>
@@ -127,6 +130,7 @@ namespace Forge.Play.Hud
             _tab = _tabs[0];
             _root.style.display = DisplayStyle.None;
             _game.Player.Inventory.Changed += MarkDirty;
+            _game.Player.Equipment.Changed += Redress;
         }
 
         /// <summary>
@@ -154,6 +158,7 @@ namespace Forge.Play.Hud
         public void Dispose()
         {
             _game.Player.Inventory.Changed -= MarkDirty;
+            _game.Player.Equipment.Changed -= Redress;
             _characterView.Dispose();
             _itemView.Dispose();
             _root.RemoveFromHierarchy();
@@ -185,6 +190,13 @@ namespace Forge.Play.Hud
         }
 
         void MarkDirty() => _dirty = true;
+
+        // What the player holds changed: the character is dressed anew at the next draw.
+        void Redress()
+        {
+            _dressed++;
+            _dirty = true;
+        }
 
         // Drawn at the next tick, never inside the click that asked: the row clicked is one the drawing replaces.
         void Choose(Tab tab)
@@ -227,11 +239,27 @@ namespace Forge.Play.Hud
             DrawFooter();
         }
 
-        // The player as it looks, standing still; drawn again only when its look is another (equipment, later).
+        // The player as it looks, standing still with what it holds; built again only when that changes, turned as it was.
         void DrawCharacter()
         {
             var model = _game.Player.Model;
-            _characterView.Show(model, parent => CharacterModel.StandingStill(parent, model));
+            var world = _game.Player.World;
+            var subject = model != null ? (object)(model, _dressed) : null;
+            _characterView.Show(subject, parent => Dressed(parent, model, world), keepTurn: true);
+        }
+
+        // The looks of what it holds hang from the character's model and go with it.
+        GameObject Dressed(Transform parent, GameObject prefab, IRecordStore world)
+        {
+            var character = CharacterModel.StandingStill(parent, prefab);
+            if (world != null)
+            {
+                var held = new HeldItems(character, world, _game.Assets);
+                foreach (var equipped in _game.Player.Equipment.All)
+                    held.Hold(equipped);
+            }
+
+            return character.Root;
         }
 
         VisualElement Row(InventoryEntry entry)
