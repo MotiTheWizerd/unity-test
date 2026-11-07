@@ -85,11 +85,11 @@ namespace Forge.Play.Hud
             };
         }
 
-        /// <summary>Follows the player for <paramref name="deltaTime"/> seconds; hidden while there is none.</summary>
+        /// <summary>Follows the player for <paramref name="deltaTime"/> seconds; hidden while there is none, or its inventory is open.</summary>
         public void Tick(float deltaTime)
         {
             var player = _session.Player;
-            _root.style.display = player != null ? DisplayStyle.Flex : DisplayStyle.None;
+            _root.style.display = player != null && !_session.InventoryOpen ? DisplayStyle.Flex : DisplayStyle.None;
             var offer = _session.Focus?.Offer;
             _prompt.Show(offer, _session.InteractKey);
             _crosshair.EnableInClassList(CrosshairOnClass, offer != null);

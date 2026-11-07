@@ -1,0 +1,184 @@
+/*
+ * The player's inventory while it is open (Forge.Play.Hud.InventoryScreen), as Skyrim's item menu: the world dimmed
+ * behind, the kinds down the left, the items in the chosen kind, the chosen item's card, and the weight carried along
+ * the bottom. Colours are the HUD's (PlayerHud.uss) and the editor's gold accent for what is chosen.
+ */
+
+:root {
+    --forge-inventory-backdrop: rgba(0, 0, 0, 0.78);
+    --forge-inventory-line: rgba(244, 238, 226, 0.18);
+    --forge-inventory-chosen: rgba(212, 175, 55, 0.18);
+    --forge-inventory-over: rgb(226, 84, 70);
+}
+
+.forge-inventory {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    padding: 64px 96px 40px 96px;
+    background-color: var(--forge-inventory-backdrop);
+}
+
+.forge-inventory Label {
+    margin: 0;
+    padding: 0;
+    color: var(--forge-hud-text);
+    text-shadow: 1px 1px 3px var(--forge-hud-shadow);
+}
+
+.forge-inventory__frame {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+/* The kinds, a column of words; the chosen one gold. */
+.forge-inventory__tabs {
+    width: 160px;
+    padding-right: 24px;
+    border-right-width: 1px;
+    border-color: var(--forge-inventory-line);
+}
+
+.forge-inventory Label.forge-inventory__tab {
+    padding: 6px 0;
+    font-size: 18px;
+    letter-spacing: 1px;
+    color: var(--forge-hud-text-muted);
+}
+
+.forge-inventory Label.forge-inventory__tab:hover {
+    color: var(--forge-hud-text);
+}
+
+.forge-inventory Label.forge-inventory__tab--active {
+    color: var(--forge-accent);
+    -unity-font-style: bold;
+}
+
+/* The items in the chosen kind, by name. */
+.forge-inventory__list {
+    width: 380px;
+    margin: 0 24px;
+}
+
+.forge-inventory__row {
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 4px;
+}
+
+.forge-inventory__row:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.forge-inventory__row--selected,
+.forge-inventory__row--selected:hover {
+    background-color: var(--forge-inventory-chosen);
+}
+
+.forge-inventory Label.forge-inventory__row-name {
+    flex-grow: 1;
+    font-size: 16px;
+}
+
+.forge-inventory__row--selected Label.forge-inventory__row-name {
+    color: var(--forge-accent);
+}
+
+.forge-inventory Label.forge-inventory__row-count {
+    font-size: 14px;
+    color: var(--forge-hud-text-muted);
+}
+
+.forge-inventory Label.forge-inventory__empty {
+    padding: 6px 12px;
+    font-size: 14px;
+    -unity-font-style: italic;
+    color: var(--forge-hud-text-muted);
+}
+
+/* The chosen item: its name, its kind, what one weighs and is worth, how many, and Drop. */
+.forge-inventory__card {
+    width: 300px;
+    align-self: flex-start;
+    padding: 20px;
+    border-width: 1px;
+    border-color: var(--forge-inventory-line);
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.45);
+}
+
+.forge-inventory Label.forge-inventory__card-name {
+    font-size: 22px;
+    -unity-font-style: bold;
+}
+
+.forge-inventory Label.forge-inventory__card-kind {
+    margin-bottom: 14px;
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--forge-hud-text-muted);
+}
+
+.forge-inventory__stat {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom-width: 1px;
+    border-color: var(--forge-inventory-line);
+}
+
+.forge-inventory Label.forge-inventory__stat-label {
+    font-size: 14px;
+    color: var(--forge-hud-text-muted);
+}
+
+.forge-inventory Label.forge-inventory__stat-value {
+    font-size: 14px;
+    -unity-font-style: bold;
+}
+
+.forge-inventory__drop {
+    margin: 18px 0 0 0;
+    height: 30px;
+    border-width: 1px;
+    border-color: var(--forge-accent-border);
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.45);
+    color: var(--forge-hud-text);
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+.forge-inventory__drop:hover {
+    background-color: var(--forge-inventory-chosen);
+    color: var(--forge-accent);
+}
+
+/* What it all weighs against the carry weight, red when overburdened; the key that closes. */
+.forge-inventory__footer {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 14px;
+    border-top-width: 1px;
+    border-color: var(--forge-inventory-line);
+}
+
+.forge-inventory Label.forge-inventory__weight {
+    font-size: 16px;
+    letter-spacing: 1px;
+}
+
+.forge-inventory Label.forge-inventory__weight--over {
+    color: var(--forge-inventory-over);
+    -unity-font-style: bold;
+}
+
+.forge-inventory Label.forge-inventory__hint {
+    font-size: 13px;
+    color: var(--forge-hud-text-muted);
+}

@@ -618,19 +618,32 @@ from any camera, so both cameras read the same player.
   view, steps the player, then frames it and turns and shows (or shadows only) the model, and last looks for what is in
   sight from where the camera now is (`CameraDirector.Pose`), so the prompt and the use key go by what the frame shows,
   and uses it if the key was pressed; `Despawn` takes it away. One per app, so the view chosen, the attributes and what
-  it carries carry over to the next spawn.
+  it carries carry over to the next spawn. While spawned in a world with a carry weight it has a `Burden`
+  (`Encumbrance`, one of the player's `Limits`) and keeps the `World` (as played) its items are read from.
+- **The inventory in play**: the Player map's `Inventory` (I or Tab, the gamepad's select) opens and closes it
+  (`PlayerSession.InventoryOpen`; `PlayerControls.InventoryKey` names it). While it is open the mouse is freed for the
+  screen and `Tick` steps nothing (no move, no look, no regen), as Skyrim pauses for its menus; `GameSession.Back` (Esc)
+  closes it first, and only Esc with nothing open leaves play. `InventoryScreen` (Play.Hud, InventoryScreen.uss, hosted
+  beside the HUD by `HudSection`; the HUD hides meanwhile) draws `InventoryList`: tabs down the left (All, then each
+  `ItemKind`, Misc last), the tab's items by name with their counts, the chosen item's card (kind, weight, value, how many)
+  with Drop, and the weight against the carry weight along the bottom, red when overburdened. It reads again only when
+  the inventory, the tab or the choice changes, or it opens, and draws on the next tick, never inside the click.
 - **The use key in play**: the Player map's `Interact` (E, the gamepad's north button; a tap) is
   `PlayerCommands.Activate`, and `PlayerControls.InteractKey` names it for the prompt (its binding in the actions' first
   control scheme, the keyboard's). `PhysicsInteractionProbe` is the line of sight: a ray, then a ball of the profile's
   `AimRadius` (0.1 m) along it, on the default raycast layers (never the player's body), triggers ignored, a placed
   object known by its `RecordLink`. The profile's `Reach` is 2.5 m from the eyes.
 - **The game while playing** (`GameSession`, Play): one running game: the stream (`GameEvents`), what playing changed in
-  the world (`WorldChanges`), what the use key can do (`Interactions`: take) and the player (`PlayerSession`).
-  `Begin(feet, heading, world)` spawns the player, `Tick` plays a frame and then flushes the stream, `End` takes the
-  player away and lets the world's changes go. A placed object taken out of the world leaves the scene
-  (`WorldView.Hide`, which also keeps it out when its chunk streams in again) and the focus looks again; when the
-  changes are let go, `WorldView.ShowHidden` puts everything back. The editor's play from here runs one; the game app
-  will run one as it is.
+  the world (`WorldChanges`) and the world as played (`World`, a `PlayedWorld` the player's focus and inventory read),
+  what the use key can do (`Interactions`: take) and the player (`PlayerSession`). `Begin(feet, heading, world)` spawns
+  the player, `Tick` plays a frame and then flushes the stream, `End` takes the player away and lets the world's
+  changes go. A placed object taken out of the world leaves the scene (`WorldView.Hide`, which also keeps it out when its
+  chunk streams in again) and the focus looks again; one dropped joins it (`WorldView.ShowAdded`: streamed with its
+  chunk like the world's own); when the changes are let go, `WorldView.ShowAsBuilt` puts the world back as built.
+  `Drop(item)` sets one down 0.9 m ahead of the player's feet, turned the way it faces: an `IItemPlacement` (Game.Items)
+  finds where it rests, in the editor `SeatedItemPlacement` (the first thing below, seated by the editor's own
+  `ObjectSeating`, so a dropped item lies as a placed one), else at the feet. The editor's play from here runs one; the
+  game app will run one as it is, with its own placement.
 - **The model** (`PlayerAvatar`, Play): the profile's `_model` as a `CharacterModel` (any character's look on any body:
   the prefab riding on the body's object, turned to the body's heading, its colliders removed since the body is the
   collider, on the body's layer, animated from a `BodyMotion`; the world's characters will use it too), plus the

@@ -95,7 +95,7 @@ namespace Forge.EditorApp
                 Agent = new AgentHost(context, seating, slots, new EditorBriefing(context, () => GroundInView(picker)),
                     new AgentEyes(_camera, frame, picker.TerrainHeightAt), agent);
             if (player != null)
-                PlayFromHere = new PlayFromHere(context, picker, frame, view, _camera, _flyCamera, player);
+                PlayFromHere = new PlayFromHere(context, picker, seating, frame, view, _camera, _flyCamera, player);
             else
                 Debug.LogWarning("[Forge] EditorApp has no player profile (EditorAppBootstrap._player); playing flies the editor camera.");
         }
@@ -265,7 +265,8 @@ namespace Forge.EditorApp
         }
 
         // While playing, the editor rests: no tool, no held hand, no mark, no editing shortcuts; the player plays. Esc
-        // goes back to editing, where the tool picks up again (the next frame, so this Esc cancels nothing in it).
+        // closes what the game has open (the inventory), else goes back to editing, where the tool picks up again (the
+        // next frame, so this Esc cancels nothing in it).
         void Play(Keyboard keyboard, bool typing)
         {
             RestTool();
@@ -273,7 +274,8 @@ namespace Forge.EditorApp
             _markView.Refresh(null, _context.Session.World);
             if (keyboard.escapeKey.wasPressedThisFrame && !typing)
             {
-                _context.StopPlaying();
+                if (PlayFromHere?.Game.Back() != true)
+                    _context.StopPlaying();
                 return;
             }
 

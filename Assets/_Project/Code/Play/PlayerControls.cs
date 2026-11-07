@@ -7,8 +7,8 @@ using UnityEngine.InputSystem;
 namespace Forge.Play
 {
     /// <summary>
-    /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump, ToggleWalk, ToggleView, Zoom, Interact) into
-    /// <see cref="PlayerCommands"/> and <see cref="ViewCommands"/>, the rules' only input. Rebinding, a gamepad or
+    /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump, ToggleWalk, ToggleView, Zoom, Interact,
+    /// Inventory) into <see cref="PlayerCommands"/>, <see cref="ViewCommands"/> and the menu key, the rules' only input. Rebinding, a gamepad or
     /// another layout is the actions asset's business; nothing here names a key (the wheel's binding scales its steps to
     /// notches). The map is on only while enabled (while playing).
     /// </summary>
@@ -23,6 +23,7 @@ namespace Forge.Play
         readonly InputAction _toggleView;
         readonly InputAction _zoom;
         readonly InputAction _interact;
+        readonly InputAction _inventory;
         readonly float _lookSensitivity;
 
         public PlayerControls(PlayerProfile profile)
@@ -42,17 +43,24 @@ namespace Forge.Play
             _toggleView = _map.FindAction("ToggleView", throwIfNotFound: true);
             _zoom = _map.FindAction("Zoom", throwIfNotFound: true);
             _interact = _map.FindAction("Interact", throwIfNotFound: true);
+            _inventory = _map.FindAction("Inventory", throwIfNotFound: true);
             _lookSensitivity = profile.LookSensitivity;
 
-            // The prompt names the key the way the actions bind it in their first control scheme (the keyboard's).
+            // Prompts name a key the way the actions bind it in their first control scheme (the keyboard's).
             var schemes = profile.Controls.controlSchemes;
-            InteractKey = schemes.Count > 0
-                ? _interact.GetBindingDisplayString(InputBinding.MaskByGroup(schemes[0].bindingGroup))
-                : _interact.GetBindingDisplayString();
+            var mask = schemes.Count > 0 ? InputBinding.MaskByGroup(schemes[0].bindingGroup) : (InputBinding?)null;
+            InteractKey = KeyOf(_interact, mask);
+            InventoryKey = KeyOf(_inventory, mask);
         }
 
         /// <summary>The use key as a prompt shows it ("E").</summary>
         public string InteractKey { get; }
+
+        /// <summary>The inventory's key as a prompt shows it ("I").</summary>
+        public string InventoryKey { get; }
+
+        /// <summary>Whether the inventory's key was pressed this frame (open or close it); never while the map is off.</summary>
+        public bool ReadInventory() => _map.enabled && _inventory.WasPressedThisFrame();
 
         public void Enable() => _map.Enable();
 
@@ -81,5 +89,13 @@ namespace Forge.Play
             _map.enabled ? new ViewCommands(_toggleView.WasPressedThisFrame(), _zoom.ReadValue<float>()) : ViewCommands.None;
 
         public void Dispose() => Disable();
+
+        // An action's first binding, as the keyboard's scheme shows it ("E"; "I" of "I | Tab").
+        static string KeyOf(InputAction action, InputBinding? mask)
+        {
+            var shown = mask.HasValue ? action.GetBindingDisplayString(mask.Value) : action.GetBindingDisplayString();
+            var split = shown.IndexOf(" | ", StringComparison.Ordinal);
+            return split < 0 ? shown : shown.Substring(0, split);
+        }
     }
 }

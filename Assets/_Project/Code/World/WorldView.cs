@@ -28,6 +28,7 @@ namespace Forge.World
         readonly Dictionary<RecordId, Presented> _presented = new Dictionary<RecordId, Presented>();
         readonly HashSet<ChunkCoord> _loaded = new HashSet<ChunkCoord>();
         readonly HashSet<RecordId> _hidden = new HashSet<RecordId>();
+        readonly Dictionary<RecordId, PlacedObjectRecord> _added = new Dictionary<RecordId, PlacedObjectRecord>();
         ResolvedWorld _world;
         ChunkIndex _index = new ChunkIndex();
 
@@ -91,19 +92,36 @@ namespace Forge.World
         }
 
         /// <summary>
-        /// Takes placed object <paramref name="id"/> out of the scene until <see cref="ShowHidden"/>, whether it is loaded
+        /// Shows <paramref name="placed"/>, a placed object that is no record of the world (an item dropped while
+        /// playing), until <see cref="Hide"/> or <see cref="ShowAsBuilt"/>; it streams in and out with its chunk like the
+        /// world's own.
+        /// </summary>
+        public void ShowAdded(PlacedObjectRecord placed)
+        {
+            if (placed == null)
+                throw new ArgumentNullException(nameof(placed));
+            _added[placed.Id] = placed;
+            if (placed.Space == Space && _loaded.Contains(ChunkIndex.ChunkOf(placed)))
+                PresentPlaced(placed);
+        }
+
+        /// <summary>
+        /// Takes placed object <paramref name="id"/> out of the scene until <see cref="ShowAsBuilt"/>, whether it is loaded
         /// now or streams in later, without touching its record: what playing changed (an item taken) shown over the world
-        /// as built.
+        /// as built. One <see cref="ShowAdded"/> showed is simply gone.
         /// </summary>
         public void Hide(RecordId id)
         {
-            if (_hidden.Add(id))
+            if (_added.Remove(id) || _hidden.Add(id))
                 Remove(id);
         }
 
-        /// <summary>Puts back everything <see cref="Hide"/> took out of the scene.</summary>
-        public void ShowHidden()
+        /// <summary>The world as built again: everything <see cref="Hide"/> took out is back, and what <see cref="ShowAdded"/> showed is gone.</summary>
+        public void ShowAsBuilt()
         {
+            foreach (var id in _added.Keys)
+                Remove(id);
+            _added.Clear();
             if (_hidden.Count == 0)
                 return;
 
@@ -276,7 +294,14 @@ namespace Forge.World
                 yield return chunk.Id;
             foreach (var placed in _index.ObjectsIn(coord))
                 yield return placed.Id;
+            foreach (var placed in AddedIn(coord))
+                yield return placed.Id;
         }
+
+        IEnumerable<PlacedObjectRecord> AddedIn(ChunkCoord coord) =>
+            _added.Count == 0
+                ? Enumerable.Empty<PlacedObjectRecord>()
+                : _added.Values.Where(p => p.Space == Space && ChunkIndex.ChunkOf(p) == coord);
 
         int PresentChunk(ChunkCoord coord)
         {
@@ -299,21 +324,32 @@ namespace Forge.World
             {
                 if (_hidden.Contains(placed.Id))
                     continue;
-                _world.Records.TryGet(placed.BaseId, out var baseRecord);
-                var shown = _presented.TryGetValue(placed.Id, out var current) ? current.Record as PlacedObjectRecord : null;
-                Present(placed, baseRecord,
-                    () => BuildPlaced(placed, baseRecord as BaseObjectRecord),
-                    go =>
-                    {
-                        ApplyTransform(go.transform, placed);
-                        // A base object's change rebuilds the object, so only its own materials can differ here.
-                        if (!placed.HasSameMaterials(shown))
-                            Dress(go, placed, baseRecord as BaseObjectRecord);
-                    });
+                PresentPlaced(placed);
+                count++;
+            }
+
+            foreach (var placed in AddedIn(coord))
+            {
+                PresentPlaced(placed);
                 count++;
             }
 
             return count;
+        }
+
+        void PresentPlaced(PlacedObjectRecord placed)
+        {
+            _world.Records.TryGet(placed.BaseId, out var baseRecord);
+            var shown = _presented.TryGetValue(placed.Id, out var current) ? current.Record as PlacedObjectRecord : null;
+            Present(placed, baseRecord,
+                () => BuildPlaced(placed, baseRecord as BaseObjectRecord),
+                go =>
+                {
+                    ApplyTransform(go.transform, placed);
+                    // A base object's change rebuilds the object, so only its own materials can differ here.
+                    if (!placed.HasSameMaterials(shown))
+                        Dress(go, placed, baseRecord as BaseObjectRecord);
+                });
         }
 
         bool TryGetPresentedTerrain(ChunkCoord coord, out Presented presented)

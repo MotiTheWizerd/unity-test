@@ -81,7 +81,8 @@ namespace Forge.EditorApp.Tools
             return found;
         }
 
-        static bool IsGround(Collider collider) => collider is TerrainCollider || collider.GetComponent<InteriorFloor>() != null;
+        /// <summary>Whether <paramref name="collider"/> is the ground: the terrain, or an interior's floor grid.</summary>
+        public static bool IsGround(Collider collider) => collider is TerrainCollider || collider.GetComponent<InteriorFloor>() != null;
 
         /// <summary>Ground height straight below world (x, z), looking through objects; null where there is no ground.</summary>
         public float? TerrainHeightAt(float x, float z) =>

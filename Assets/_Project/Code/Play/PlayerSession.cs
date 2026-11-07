@@ -20,10 +20,12 @@ namespace Forge.Play
     /// (<see cref="CharacterControllerMotor"/>), its look (<see cref="PlayerAvatar"/>), its controls, its rules
     /// (<see cref="PlayerCharacter"/>), its camera (first or third person, <see cref="ViewSwitch"/>, put in place by the
     /// <see cref="CameraDirector"/>), what it has in sight (<see cref="Focus"/>) and what it carries
-    /// (<see cref="Inventory"/>). <see cref="Spawn"/> stands it somewhere, takes the camera and captures the mouse;
-    /// <see cref="Despawn"/> takes it all away again. It lives as long as the app, so the view chosen, the attributes and
-    /// what it carries carry over to the next spawn. What happens to the player is told on the game's stream
-    /// (<see cref="Events"/>), which whoever runs the game's loop flushes (<see cref="GameSession"/>).
+    /// (<see cref="Inventory"/>, weighed against its carry weight by <see cref="Burden"/>). <see cref="Spawn"/> stands it
+    /// somewhere, takes the camera and captures the mouse; <see cref="Despawn"/> takes it all away again. The inventory's
+    /// key opens and closes the inventory (<see cref="InventoryOpen"/>): while it is open the mouse is free for the
+    /// screen and the player's world waits, as Skyrim pauses for its menus. It lives as long as the app, so the view
+    /// chosen, the attributes and what it carries carry over to the next spawn. What happens to the player is told on the
+    /// game's stream (<see cref="Events"/>), which whoever runs the game's loop flushes (<see cref="GameSession"/>).
     /// </summary>
     public sealed class PlayerSession : IDisposable
     {
@@ -69,11 +71,45 @@ namespace Forge.Play
         /// <summary>What the player carries, kept from one spawn to the next, so it keeps what it took when the world resets.</summary>
         public Inventory Inventory { get; } = new Inventory();
 
+        /// <summary>
+        /// What the player carries against what it can, while spawned in a world with a carry weight; else null (it carries
+        /// whatever it takes, unslowed).
+        /// </summary>
+        public Encumbrance Burden { get; private set; }
+
+        /// <summary>The world the player is spawned in (as played), which its items are read from; else null.</summary>
+        public IRecordStore World { get; private set; }
+
         /// <summary>What the player has in sight and what the use key would do, while spawned; else null.</summary>
         public InteractionFocus Focus { get; private set; }
 
+        /// <summary>Whether the inventory is open: the mouse is the screen's and the player waits.</summary>
+        public bool InventoryOpen { get; private set; }
+
         /// <summary>The use key as a prompt shows it ("E").</summary>
         public string InteractKey => _controls.InteractKey;
+
+        /// <summary>The inventory's key as a prompt shows it ("I").</summary>
+        public string InventoryKey => _controls.InventoryKey;
+
+        /// <summary>Opens the inventory, while spawned: the mouse is freed for it and the player waits.</summary>
+        public void OpenInventory()
+        {
+            if (Player == null || InventoryOpen)
+                return;
+            InventoryOpen = true;
+            CaptureMouse(false);
+        }
+
+        /// <summary>Closes the inventory: the mouse looks again and the player plays on.</summary>
+        public void CloseInventory()
+        {
+            if (!InventoryOpen)
+                return;
+            InventoryOpen = false;
+            if (Player != null)
+                CaptureMouse(true);
+        }
 
         /// <summary>
         /// Stands the player in <paramref name="world"/> at <paramref name="feet"/> (scene coordinates), facing
@@ -92,24 +128,43 @@ namespace Forge.Play
             if (_profile.Model != null)
                 _avatar = new PlayerAvatar(_motor.Body, _profile.Model);
             Player = new PlayerCharacter(_motor, _profile.Locomotion(), _profile.EyeHeight, Attributes, Events);
+            World = world;
+            // A world made before carrying weighed anything (no carry weight) lets the player carry anything.
+            if (Attributes != null && Attributes.Set.Contains(CoreAttributes.CarryWeight))
+            {
+                Burden = new Encumbrance(Inventory, world, Attributes, Events);
+                Player.Limits.Add(Burden);
+            }
+
             Player.PlaceAt(feet.ToNumerics(), heading);
             Focus = new InteractionFocus(ActorId.Player, world, interactions, _probe, _profile.Reach);
             Views.ThirdPerson.Begin();
             Frame(0f);
 
             _controls.Enable();
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            CaptureMouse(true);
         }
 
         /// <summary>
-        /// Plays one frame: the view and the player take their commands, the camera and the model follow, then what is in
-        /// sight is looked for from where the camera now is, so the prompt and the use key go by what this frame shows.
+        /// Plays one frame: the inventory's key opens or closes the inventory, and while it is open the player waits.
+        /// Otherwise the view and the player take their commands, the camera and the model follow, then what is in sight is
+        /// looked for from where the camera now is, so the prompt and the use key go by what this frame shows.
         /// </summary>
         public void Tick(float deltaTime)
         {
             if (Player == null)
                 return;
+            if (_controls.ReadInventory())
+            {
+                if (InventoryOpen)
+                    CloseInventory();
+                else
+                    OpenInventory();
+            }
+
+            if (InventoryOpen)
+                return;
+
             Views.Apply(_controls.ReadView());
             Player.Facing = Views.Current.Facing;
             var commands = _controls.Read();
@@ -146,15 +201,18 @@ namespace Forge.Play
         {
             if (Player == null)
                 return;
+            InventoryOpen = false;
             _controls.Disable();
             _avatar?.Dispose();
             _avatar = null;
             _motor.Dispose();
             _motor = null;
+            Burden?.Dispose();
+            Burden = null;
             Player = null;
+            World = null;
             Focus = null;
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            CaptureMouse(false);
         }
 
         public void Dispose()
@@ -162,6 +220,13 @@ namespace Forge.Play
             Despawn();
             _attributeEvents?.Dispose();
             _controls.Dispose();
+        }
+
+        // Captured, the mouse turns the look and hides; freed, it points at the screen.
+        static void CaptureMouse(bool captured)
+        {
+            Cursor.lockState = captured ? CursorLockMode.Locked : CursorLockMode.None;
+            Cursor.visible = !captured;
         }
 
         // The camera frames the player as the current view says; the model turns with the body, shows unless the camera is inside it, and animates as the body moved.
