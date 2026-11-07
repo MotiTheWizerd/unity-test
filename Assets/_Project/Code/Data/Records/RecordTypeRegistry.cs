@@ -28,6 +28,7 @@ namespace Forge.Data.Records
             registry.Register<MaterialRecord>("material");
             registry.Register<AttributeRecord>("attribute");
             registry.Register<EquipSlotRecord>("equip_slot");
+            registry.Register<ActorRecord>("actor");
             return registry;
         }
 

@@ -9,6 +9,20 @@
   "objects": "forge.core.f5abd702bba701c3.objects",
   "records": [
     {
+      "type": "actor",
+      "id": "forge.core:actor/player",
+      "displayName": "Player",
+      "items": [
+        {
+          "item": "forge.core:viking_sword",
+          "count": 1,
+          "equip": [
+            "forge.core:equip_slot/right_hand"
+          ]
+        }
+      ]
+    },
+    {
       "type": "base_object",
       "id": "forge.core:apple_red",
       "displayName": "Red Apple",

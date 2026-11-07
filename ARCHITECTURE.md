@@ -128,6 +128,13 @@ one in the active plugin.
   none for a slot that shows nothing), so a mod adds one; forge.core ships the two hands (`CoreEquipSlotSet`). The rules
   read no slot by name, only content does. Drinking, doors and containers will be parts too. A variant of an item is an
   item (`MakeVariant` keeps the parts).
+- `ActorRecord` (`actor/…`, like a Bethesda NPC record): an actor as the game begins it, its display name and the
+  `Items` it starts with, each an `ActorItem` (item, count ≥ 1, and optionally the slots copies start `Equip`ped in, a
+  copy each, so two swords may start one per hand; each item listed once). forge.core ships the player's
+  (`CoreActors.Player`, `CoreActorSet`): the Viking Sword in the right hand. `StartingItems.Give` (Forge.Game) puts them
+  in a pack and equips them, leaving out what the world has no item for; equipped is not drawn, so weapons start
+  sheathed. `GameSession.Begin` gives the player its record's items before spawning it, so a mod changes the starting
+  kit by overriding the record. Look and attributes join the record when the world's characters come.
 - Optional fields are omitted from plugin JSON rather than written as `null` (`NullValueHandling.Ignore`).
 - `PlacedObjectRecord`: an instance in the world (base id, position, rotation, scale), and optionally the
   `Materials` it wears instead of its base object's in some **material slots** (`MaterialOverride`: slot, material id;
@@ -680,7 +687,8 @@ from any camera, so both cameras read the same player.
   view, steps the player, then frames it and turns and shows (or shadows only) the model, and last looks for what is in
   sight from where the camera now is (`CameraDirector.Pose`), so the prompt and the use key go by what the frame shows,
   and uses it if the key was pressed; `Despawn` takes it away. One per app, so the view chosen and the attributes carry
-  over to the next spawn; what it carries is emptied when play ends (`GameSession.End`), since the world is put back as
+  over to the next spawn; what it carries is emptied when play ends (`GameSession.End`) and given afresh from its
+  `ActorRecord` when the next begins, since the world is put back as
   built too, so an item is never both in the pack and on the ground. While spawned in a world with a carry weight it has a `Burden`
   (`Encumbrance`, one of the player's `Limits`) and keeps the `World` (as played) its items are read from.
 - **The inventory in play**: the Player map's `Inventory` (I or Tab, the gamepad's select) opens and closes it

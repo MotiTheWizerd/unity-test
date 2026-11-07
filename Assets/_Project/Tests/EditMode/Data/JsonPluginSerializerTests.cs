@@ -496,6 +496,27 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesAnActorsItems_AndWhatOfThemIsEquipped()
+        {
+            var right = EquipSlotRecord.IdFor("core", "right_hand");
+            var left = EquipSlotRecord.IdFor("core", "left_hand");
+            var plugin = Plugin("core", new ActorRecord(ActorRecord.IdFor("core", "player"), "Player", new[]
+            {
+                new ActorItem(RecordId.Parse("core:sword"), 2, new[] { right, left }),
+                new ActorItem(RecordId.Parse("core:apple"), 3),
+            }));
+
+            var json = Write(plugin);
+            var items = Read(json).Records.OfType<ActorRecord>().Single().Items;
+
+            Assert.That(items.Select(i => (i.Item.ToString(), i.Count)), Is.EqualTo(new[] { ("core:sword", 2), ("core:apple", 3) }));
+            Assert.That(items[0].Equip, Is.EqualTo(new[] { right, left }));
+            Assert.That(items[1].Equip, Is.Null);
+            Assert.That(Regex.Matches(json, "\"equip\"").Count, Is.EqualTo(1), "What starts unequipped is written as nothing.");
+            Assert.That(Write(Read(json)), Is.EqualTo(json));
+        }
+
+        [Test]
         public void Read_AnEquippableThatIsNoItem_IsRejected()
         {
             var right = EquipSlotRecord.IdFor("core", "right_hand");

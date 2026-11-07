@@ -18,7 +18,7 @@ namespace Forge.EditorApp
     /// whatever the middle of the view shows (else the ground under the camera), facing the way the camera faces, and the
     /// fly camera rests while the player has the camera. Going back to editing ends the game: the player goes, the world
     /// is as built again (what was taken is back), and the fly camera wakes (the bootstrap puts it back where editing
-    /// left it). The player keeps what it carries for the next play. The streaming follows the camera, and so the player.
+    /// left it). Each play starts the player afresh with its starting items. The streaming follows the camera, and so the player.
     /// </summary>
     public sealed class PlayFromHere : IDisposable
     {

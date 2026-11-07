@@ -20,7 +20,7 @@ namespace Forge.Play
     /// One running game beside the world it plays: its stream (<see cref="Events"/>), what playing changed in the world
     /// (<see cref="Changes"/>, shown over the scene: what was taken leaves it, what was dropped joins it), the world as
     /// played (<see cref="World"/>), what actors can do with the use key (<see cref="Interactions"/>: take items) and the
-    /// player (<see cref="Player"/>). <see cref="Begin"/> stands the player in the world, <see cref="Tick"/> plays a frame
+    /// player (<see cref="Player"/>). <see cref="Begin"/> gives the player its starting items and stands it in the world, <see cref="Tick"/> plays a frame
     /// and then tells what happened in it, <see cref="End"/> takes the player away and puts the world back as built, with
     /// what the player took from it. Whatever plays the world runs one: the editor's play from
     /// here today, the game itself later.
@@ -74,12 +74,20 @@ namespace Forge.Play
         public PlayerSession Player { get; }
 
         /// <summary>
-        /// Starts playing <paramref name="world"/>: the player stands at <paramref name="feet"/> (scene coordinates), facing
-        /// <paramref name="heading"/>.
+        /// Starts a game of <paramref name="world"/> (ending one already running): the player starts with what its record
+        /// gives it (<see cref="CoreActors.Player"/>: carried, some of it equipped, weapons sheathed) and stands at
+        /// <paramref name="feet"/> (scene coordinates), facing <paramref name="heading"/>.
         /// </summary>
         public void Begin(Vector3 feet, float heading, IRecordStore world)
         {
-            World = new PlayedWorld(world ?? throw new ArgumentNullException(nameof(world)), Changes);
+            if (world == null)
+                throw new ArgumentNullException(nameof(world));
+            if (World != null)
+                End();
+
+            World = new PlayedWorld(world, Changes);
+            if (World.TryGet(CoreActors.Player, out var record) && record is ActorRecord player)
+                StartingItems.Give(player, World, Player.Inventory, Player.Equipment);
             Player.Spawn(feet, heading, World, Interactions);
             Events.Flush();
         }
