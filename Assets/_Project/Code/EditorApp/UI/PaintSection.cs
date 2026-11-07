@@ -19,6 +19,7 @@ namespace Forge.EditorApp.UI
         readonly BrushSliders _brush;
         readonly Toggle _snow;
         readonly FloatField _snowLine;
+        readonly Label _land;
 
         public PaintSection(VisualElement root, EditorContext context, EditorCommands commands)
         {
@@ -32,6 +33,7 @@ namespace Forge.EditorApp.UI
             _snow.RegisterValueChangedCallback(change => _context.AutoSnow.On = change.newValue);
             _snowLine = PanelElements.Required<FloatField>(root, "paint-snow-line");
             _snowLine.RegisterValueChangedCallback(change => _context.AutoSnow.Height = change.newValue);
+            _land = PanelElements.Required<Label>(root, "paint-land");
             PanelElements.Required<Button>(root, "paint-auto").clicked += commands.AutoPaintSpace;
         }
 
@@ -55,6 +57,8 @@ namespace Forge.EditorApp.UI
                 _snowLine.SetEnabled(snow.On);
             if (_snowLine.value != snow.Height)
                 _snowLine.SetValueWithoutNotify(snow.Height);
+            var highest = _context.HighestLand;
+            PanelElements.SetText(_land, highest is float top ? FormattableString.Invariant($"Land to {top:0} m") : "No land");
         }
     }
 }

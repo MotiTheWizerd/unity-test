@@ -54,6 +54,7 @@
                 <forge:ForgeSlider name="paint-strength" label="Strength" class="forge-options__slider" />
                 <forge:ForgeCheckbox name="paint-snow" label="Snow" tooltip="Auto lays snow above the snow line, except where it is too steep to hold" />
                 <forge:ForgeNumberField name="paint-snow-line" label="Snow line" unit="m" tooltip="The height snow lies from; the line wanders a little and blends over about 12 m" />
+                <ui:Label name="paint-land" class="forge-options__readout" tooltip="How high this space's land reaches: set the snow line below it" />
                 <forge:ForgeButton name="paint-auto" text="Auto" icon="sparkles" tooltip="Paint this whole space by its shape: rock on steep ground, dirt on slopes, sand at the shore, snow above the snow line, grass elsewhere. Replaces its paint; one undo step." />
             </ui:VisualElement>
             <ui:VisualElement name="options-water" class="forge-options__group">

@@ -38,6 +38,9 @@ namespace Forge.EditorApp
         string _baseGroundLook;
         ResolvedWorld _materialWorld;
         IReadOnlyList<MaterialRecord> _materials;
+        ResolvedWorld _highestWorld;
+        RecordId _highestSpace;
+        float? _highestLand;
 
         public EditorContext(EditSession session, PluginFileStore activeStore)
         {
@@ -350,6 +353,22 @@ namespace Forge.EditorApp
 
         /// <summary>The paint tool's snow line: whether its Auto lays snow, and from what height.</summary>
         public Forge.Editing.Terrain.AutoSnowLine AutoSnow { get; } = new Forge.Editing.Terrain.AutoSnowLine();
+
+        /// <summary>How high the land of the space on show reaches, in meters; null when it has no land. Cached per world version.</summary>
+        public float? HighestLand
+        {
+            get
+            {
+                if (!ReferenceEquals(_highestWorld, Session.World) || _highestSpace != ActiveSpace)
+                {
+                    _highestWorld = Session.World;
+                    _highestSpace = ActiveSpace;
+                    _highestLand = Forge.Editing.Terrain.LandHeights.HighestIn(_highestWorld.Records, ActiveSpace);
+                }
+
+                return _highestLand;
+            }
+        }
 
         /// <summary>
         /// The look (asset key) unpainted ground shows, from the ground layer catalog; null when the world is drawn
