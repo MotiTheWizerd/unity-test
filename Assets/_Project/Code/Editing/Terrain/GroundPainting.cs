@@ -20,7 +20,7 @@ namespace Forge.Editing.Terrain
         public const float MaxSpan = PaintCanvas.MaxSpan;
 
         /// <summary>The widest soft edge, in meters.</summary>
-        public const float MaxEdge = 16f;
+        public const float MaxEdge = 32f;
 
         readonly PaintCanvas _canvas;
 

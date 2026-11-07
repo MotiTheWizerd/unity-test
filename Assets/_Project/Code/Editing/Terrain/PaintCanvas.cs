@@ -25,7 +25,7 @@ namespace Forge.Editing.Terrain
         public const float TexelSize = WorldGrid.ChunkSize / Resolution;
 
         /// <summary>The most a painted shape may span, east-west or north-south, in meters (its soft edge may reach past it).</summary>
-        public const float MaxSpan = 256f;
+        public const float MaxSpan = 512f;
 
         readonly TerrainGrid _terrain;
         readonly RecordId _unpainted;

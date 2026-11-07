@@ -516,8 +516,11 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
     role shares as the space-wide Auto (`AutoPaint.Shares`, from the chunk's own samples), blended into the paint
     already there by the area's coverage (`PaintCanvas.Blend`, a soft edge centered on the outline, default 8 m), so
     nothing outside changes. Rules are `AutoPaintRules.OfBaseLooks` with an optional `snow_line` and any role's
-    ground swapped by name (flat, slope, steep, snow); a snow line in a world without snow ground is refused. The
-    reply gives each ground's share of what was painted.
+    ground swapped by name (flat, slope, steep, snow) and `snow_holds_to` (default 52°, 90 for snow on every slope);
+    a snow line in a world without snow ground is refused. The reply gives each ground's share of what was painted.
+    Painted shapes may span 512 m (their soft edge, up to 32 m, reaching past it).
+  - `look` from a pose of its own renders without the distance haze (`AgentEyes.From` turns `RenderSettings.fog`
+    off for that one render); the user's own view keeps it.
   - `delete_objects`: placed objects by id.
 - The editor actions that predate the registry (drop to ground, frame, undo/redo, save, the tools' gestures)
   are not commands yet; each moves into the registry when the agent needs it.

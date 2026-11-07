@@ -67,6 +67,20 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void SnowHoldsTo90_CoversTheSteepFaces_Too()
+        {
+            var world = NewWorld();
+            Mountain(world);
+
+            new AutoPaintCommand(world.Context).Execute(new AutoPaintCommand.Arguments
+            {
+                X = 64f, Z = 64f, Width = 120f, Depth = 120f, SnowLine = 20f, SnowHoldsTo = 90f,
+            });
+
+            Assert.That(DominantAt(world, 64, 29), Is.EqualTo(Snow), "The 50° side at 35 m is snow now.");
+        }
+
+        [Test]
         public void AutoPaint_RepaintsInsideItsArea_AndKeepsThePaintOutside()
         {
             var world = NewWorld();

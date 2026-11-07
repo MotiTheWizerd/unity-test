@@ -46,19 +46,25 @@ namespace Forge.EditorApp.Agent
         /// <summary>What the user sees now.</summary>
         public AgentImage View() => AgentPictures.Snapshot(_camera);
 
-        /// <summary>The view from a world <paramref name="position"/>, facing <paramref name="heading"/> and down by <paramref name="pitch"/> degrees.</summary>
+        /// <summary>
+        /// The view from a world <paramref name="position"/>, facing <paramref name="heading"/> and down by
+        /// <paramref name="pitch"/> degrees, without the distance haze, so a build seen from afar shows its detail.
+        /// </summary>
         public AgentImage From(Vector3 position, float heading, float pitch)
         {
             var view = _camera.transform;
             var keptPosition = view.position;
             var keptRotation = view.rotation;
+            var keptFog = RenderSettings.fog;
             try
             {
                 view.SetPositionAndRotation(_frame.ToScene(position), Quaternion.Euler(pitch, heading, 0f));
+                RenderSettings.fog = false;
                 return AgentPictures.Snapshot(_camera);
             }
             finally
             {
+                RenderSettings.fog = keptFog;
                 view.SetPositionAndRotation(keptPosition, keptRotation);
             }
         }

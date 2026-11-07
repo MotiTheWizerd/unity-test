@@ -24,7 +24,7 @@ namespace Forge.EditorApp.Agent
             : base("look",
                 "Takes a picture of the world and shows it to you. With no arguments it shows exactly what the user sees " +
                 "(the editor's view, without its panels). With x and z it looks at that ground point from a camera standing " +
-                "distance meters away, facing heading (0 north, 90 east, 180 south, 270 west; the user's heading when left " +
+                "distance meters away, without the distance haze, facing heading (0 north, 90 east, 180 south, 270 west; the user's heading when left " +
                 "out) and looking down by pitch degrees (90 is straight down, a plan view). The objects of the build waiting " +
                 "for review are highlighted. Use it after building to check the result (gaps in a fence, objects floating " +
                 "or sunk, overlaps, how it looks from where the user stands) and fix what's wrong before you finish. " +

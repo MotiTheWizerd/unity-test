@@ -152,7 +152,7 @@ namespace Forge.Tests.Editing
         [Test]
         public void ShapesWiderThanTheSpan_AreRefused()
         {
-            Assert.Throws<ArgumentException>(() => Painting(NewSession()).Paint(GroundShape.Rect(new GroundRect(Vector2.Zero, 300f, 10f)), 0f, 1f));
+            Assert.Throws<ArgumentException>(() => Painting(NewSession()).Paint(GroundShape.Rect(new GroundRect(Vector2.Zero, 600f, 10f)), 0f, 1f));
         }
 
         [Test]

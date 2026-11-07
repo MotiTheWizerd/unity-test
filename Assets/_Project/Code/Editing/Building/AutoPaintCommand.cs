@@ -54,6 +54,11 @@ namespace Forge.Editing.Building
                    "wanders a little and blends over about 12 m. Default: no snow.", Optional = true, Minimum = 0, Maximum = WorldGrid.MaxTerrainHeight)]
             public float? SnowLine { get; set; }
 
+            [Param("The steepest ground snow lies on, in degrees. Default 52: cliffs and the steepest faces stay bare " +
+                   "rock. 90 covers everything above the line, for a mountain that reads white from afar.",
+                Optional = true, Minimum = 0, Maximum = 90)]
+            public float? SnowHoldsTo { get; set; }
+
             [Param("Ground for flat land, from list_grounds. Default: the unpainted ground's.", Optional = true)]
             public string Flat { get; set; }
 
@@ -66,7 +71,8 @@ namespace Forge.Editing.Building
             [Param("Ground above the snow line. Default Snow.", Optional = true)]
             public string Snow { get; set; }
 
-            [Param("Width of the soft edge around the area, in meters, centered on its outline; 0 for a hard edge. Default 8.",
+            [Param("Width of the soft edge around the area, in meters, centered on its outline; 0 for a hard edge. Default " +
+                   "8; 16 to 32 for land that fades slowly into what is around it.",
                 Optional = true, Minimum = 0, Maximum = AutoPainting.MaxEdge)]
             public float? Edge { get; set; }
         }
@@ -138,6 +144,9 @@ namespace Forge.Editing.Building
             {
                 SnowLine = arguments.SnowLine,
             };
+            // At 90 the blend still lets go a few degrees early; past it, snow holds on any slope.
+            if (arguments.SnowHoldsTo is float holds)
+                rules.SnowHoldsTo = holds >= 90f ? 90f + rules.Blend : holds;
             if (rules.SnowLine.HasValue && rules.Snow == null)
                 throw new CommandException("This world has no snow ground; name the ground to lay above the snow line with snow.");
             return rules;
