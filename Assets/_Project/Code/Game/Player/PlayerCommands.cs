@@ -16,7 +16,8 @@ namespace Forge.Game.Player
         /// <param name="jump">Pressed this frame.</param>
         /// <param name="toggleWalk">Pressed this frame: switches between walking and the everyday run, as Skyrim's Caps Lock.</param>
         /// <param name="walk">Walk this frame whatever was switched (held, or forced: too tired to run).</param>
-        public PlayerCommands(Vector2 move, Vector2 turn, bool sprint, bool jump, bool toggleWalk = false, bool walk = false)
+        /// <param name="activate">Pressed this frame: use what is in sight (take it, later open it, talk), Skyrim's Activate.</param>
+        public PlayerCommands(Vector2 move, Vector2 turn, bool sprint, bool jump, bool toggleWalk = false, bool walk = false, bool activate = false)
         {
             Move = move;
             Turn = turn;
@@ -24,6 +25,7 @@ namespace Forge.Game.Player
             Jump = jump;
             ToggleWalk = toggleWalk;
             Walk = walk;
+            Activate = activate;
         }
 
         public Vector2 Move { get; }
@@ -37,5 +39,7 @@ namespace Forge.Game.Player
         public bool ToggleWalk { get; }
 
         public bool Walk { get; }
+
+        public bool Activate { get; }
     }
 }

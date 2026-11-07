@@ -25,7 +25,8 @@ Assets/_Project/
     Agent/       Forge.Agent   — engine-free world-building agent: tools over the commands, MCP endpoint, Claude Code backend
     Streaming/   Forge.Streaming — engine-free chunk index, streaming window, scene origin, far tiles
     Game/        Forge.Game    — engine-free game rules: the player's look and movement over a motor, attributes,
-                               the game's event stream, actors' ids, motion (animation input), HUD timing
+                               the game's event stream, actors' ids, motion (animation input), HUD timing,
+                               interaction (the use key), items and inventories, what playing changes in the world
     World/       Forge.World   — Unity presentation: terrain chunks, far land, placed objects, streamer
     Play/        Forge.Play    — Unity side of playing: the player session, its body (CharacterController), model,
                                  controls, camera director and profile
@@ -730,6 +731,34 @@ running game (the editor's play from here owns one today; the game app will own 
   the world's characters (what they saw happen). Not for gameplay.
 - Lookups are an array read per event type (each type gets a small index once), listener lists are copied on change,
   queues keep their capacity: no allocation in steady play. Not thread-safe; it belongs to the game's loop.
+
+## Interaction and items (Forge.Game.Interaction, .Items, .World)
+
+Skyrim's use key: look at something within reach, a prompt says what it is and what the key does, and the key does it.
+Engine-free and tested with a fake probe; the doing is the same for the player and, later, the world's characters.
+
+- **What the key can do** is an `IInteraction`: it makes an `InteractionOffer` for an `InteractionTarget` (a placed object
+  and its base object) or passes, and `Perform`s what it offered. `Interactions` holds them in order, one per running
+  game, and the first to offer is what the key does (one verb per thing). Each reads its own part of the base object, so
+  doors, containers and talking will be one interaction (and part) each; nothing else changes. An offer is what the
+  prompt shows: the target's name, the verb, an optional detail line.
+- **What is in sight** (`InteractionFocus`, one per actor): each frame it takes the stretch of the view's middle line the
+  actor can reach (`ReachRay`: from level with its eyes, so nothing between a third-person camera and the actor counts,
+  out to where the line leaves the reach of its eyes; in first person simply the first meters of the view), asks an
+  `IInteractionProbe` what that stretch could mean (the object it hits, then one it grazes, so a coin needn't be hit
+  dead on; nothing behind the first thing in the way) and keeps the first some interaction offers for. It asks again only
+  when what is in sight changes (records are immutable: a changed record is another one) or on `Refresh`, so steady
+  looking costs nothing. `Activate` does what is on offer and lets go of it.
+- **Taking** (`TakeInteraction`, verb "Take"): a placed object whose base object has an `ItemPart`; the prompt's detail
+  is its weight and value. It leaves the world (`WorldChanges`), joins the actor's `Inventory`, and the stream hears
+  `ItemTaken` (who, the item, the placed object it was, how many).
+- **`WorldChanges`** (Game.World): what playing changed in the world, beside it, as a saved game keeps changes over the
+  load order: for now the placed objects taken out of it (`Removed`, `Cleared`). The records stay as built; whatever
+  shows the world while playing lays the changes on top. Dropped items, opened doors and emptied containers will join
+  it, and the save game will write it.
+- **`Inventory`** (Game.Items): a stack per item (`ItemStack`: base object id and count) in the order first taken; one per
+  actor. Weights and values are read from the items' records when asked, so they are never stale.
+- `PlayerCommands.Activate` is the key, pressed this frame.
 
 ## World-building agent (Forge.Agent)
 
