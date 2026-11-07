@@ -27,11 +27,14 @@ namespace Forge.Play
             set => _mode = value ?? throw new ArgumentNullException(nameof(value));
         }
 
+        /// <summary>Where the camera was put last (scene coordinates).</summary>
+        public ViewPose Pose { get; private set; }
+
         /// <summary>Frames <paramref name="player"/> for this frame of <paramref name="deltaTime"/> seconds.</summary>
         public void Tick(PlayerCharacter player, float deltaTime)
         {
-            var pose = _mode.Frame(player, deltaTime);
-            _camera.SetPositionAndRotation(pose.Position.ToUnity(), pose.Rotation.ToUnity());
+            Pose = _mode.Frame(player, deltaTime);
+            _camera.SetPositionAndRotation(Pose.Position.ToUnity(), Pose.Rotation.ToUnity());
         }
     }
 }

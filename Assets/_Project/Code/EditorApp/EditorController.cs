@@ -95,7 +95,7 @@ namespace Forge.EditorApp
                 Agent = new AgentHost(context, seating, slots, new EditorBriefing(context, () => GroundInView(picker)),
                     new AgentEyes(_camera, frame, picker.TerrainHeightAt), agent);
             if (player != null)
-                PlayFromHere = new PlayFromHere(context, picker, frame, _camera, _flyCamera, player);
+                PlayFromHere = new PlayFromHere(context, picker, frame, view, _camera, _flyCamera, player);
             else
                 Debug.LogWarning("[Forge] EditorApp has no player profile (EditorAppBootstrap._player); playing flies the editor camera.");
         }

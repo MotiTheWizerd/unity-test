@@ -1,6 +1,7 @@
 /*
  * The player's HUD while playing (Forge.Play.Hud.PlayerHud): Skyrim's three bars along the bottom, magicka, health,
- * stamina. Each bar's fill colour is its kind's (forge-hud-bar--{kind}); a mod's new bar is one more kind here.
+ * stamina, and a dot in the middle of the view with the use key's prompt under it. Each bar's fill colour is its
+ * kind's (forge-hud-bar--{kind}); a mod's new bar is one more kind here.
  */
 
 :root {
@@ -8,9 +9,20 @@
     --forge-hud-stamina: rgb(86, 168, 92);
     --forge-hud-magicka: rgb(64, 118, 210);
     --forge-hud-flash: rgb(255, 236, 200);
+    --forge-hud-text: rgb(244, 238, 226);
+    --forge-hud-text-muted: rgba(244, 238, 226, 0.7);
+    --forge-hud-shadow: rgba(0, 0, 0, 0.85);
 }
 
 .forge-hud {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.forge-hud-bars {
     position: absolute;
     left: 0;
     right: 0;
@@ -18,6 +30,76 @@
     flex-direction: row;
     justify-content: center;
     align-items: center;
+}
+
+/* The middle of the view: faint, and lit while something in sight can be used. */
+.forge-hud-crosshair {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 4px;
+    height: 4px;
+    translate: -50% -50%;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.45);
+}
+
+.forge-hud-crosshair--on {
+    background-color: var(--forge-hud-text);
+}
+
+/* The use key's prompt, under the middle of the view: the name, the key and what it does, a line about it. */
+.forge-hud-prompt {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    margin-top: 40px;
+    align-items: center;
+}
+
+.forge-hud-prompt Label {
+    margin: 0;
+    padding: 0;
+    color: var(--forge-hud-text);
+    text-shadow: 1px 1px 3px var(--forge-hud-shadow);
+}
+
+.forge-hud-prompt__name {
+    font-size: 20px;
+    -unity-font-style: bold;
+}
+
+.forge-hud-prompt__action {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.forge-hud-prompt Label.forge-hud-prompt__key {
+    min-width: 22px;
+    height: 22px;
+    margin-right: 8px;
+    padding: 0 6px;
+    border-width: 1px;
+    border-color: var(--forge-hud-text);
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.45);
+    font-size: 13px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    text-shadow: none;
+}
+
+.forge-hud-prompt__verb {
+    font-size: 16px;
+}
+
+.forge-hud-prompt Label.forge-hud-prompt__detail {
+    margin-top: 4px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--forge-hud-text-muted);
 }
 
 .forge-hud-bar {

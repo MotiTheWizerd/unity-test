@@ -27,6 +27,7 @@ namespace Forge.World
         readonly MaterialLooks _materials;
         readonly Dictionary<RecordId, Presented> _presented = new Dictionary<RecordId, Presented>();
         readonly HashSet<ChunkCoord> _loaded = new HashSet<ChunkCoord>();
+        readonly HashSet<RecordId> _hidden = new HashSet<RecordId>();
         ResolvedWorld _world;
         ChunkIndex _index = new ChunkIndex();
 
@@ -87,6 +88,35 @@ namespace Forge.World
             var found = _presented.TryGetValue(id, out var presented);
             gameObject = found ? presented.GameObject : null;
             return found;
+        }
+
+        /// <summary>
+        /// Takes placed object <paramref name="id"/> out of the scene until <see cref="ShowHidden"/>, whether it is loaded
+        /// now or streams in later, without touching its record: what playing changed (an item taken) shown over the world
+        /// as built.
+        /// </summary>
+        public void Hide(RecordId id)
+        {
+            if (_hidden.Add(id))
+                Remove(id);
+        }
+
+        /// <summary>Puts back everything <see cref="Hide"/> took out of the scene.</summary>
+        public void ShowHidden()
+        {
+            if (_hidden.Count == 0)
+                return;
+
+            var chunks = new HashSet<ChunkCoord>();
+            foreach (var id in _hidden)
+            {
+                if (_index.TryLocate(id, out var coord) && _loaded.Contains(coord))
+                    chunks.Add(coord);
+            }
+
+            _hidden.Clear();
+            foreach (var coord in chunks)
+                PresentChunk(coord);
         }
 
         /// <summary>
@@ -267,6 +297,8 @@ namespace Forge.World
 
             foreach (var placed in _index.ObjectsIn(coord))
             {
+                if (_hidden.Contains(placed.Id))
+                    continue;
                 _world.Records.TryGet(placed.BaseId, out var baseRecord);
                 var shown = _presented.TryGetValue(placed.Id, out var current) ? current.Record as PlacedObjectRecord : null;
                 Present(placed, baseRecord,

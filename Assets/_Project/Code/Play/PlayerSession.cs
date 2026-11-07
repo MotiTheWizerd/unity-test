@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Game.Actors;
 using Forge.Game.Attributes;
 using Forge.Game.Cameras;
 using Forge.Game.Events;
+using Forge.Game.Interaction;
+using Forge.Game.Items;
 using Forge.Game.Player;
 using Forge.World;
 using UnityEngine;
@@ -15,18 +18,19 @@ namespace Forge.Play
     /// <summary>
     /// The player while the world is played, all built from one <see cref="PlayerProfile"/>: its body
     /// (<see cref="CharacterControllerMotor"/>), its look (<see cref="PlayerAvatar"/>), its controls, its rules
-    /// (<see cref="PlayerCharacter"/>) and its camera (first or third person, <see cref="ViewSwitch"/>, put in place by the
-    /// <see cref="CameraDirector"/>). <see cref="Spawn"/> stands it somewhere, takes the camera and captures the mouse;
-    /// <see cref="Despawn"/> takes it all away again. It lives as long as the app, so the view chosen carries over to
-    /// the next spawn. What happens to the player is told on the game's stream (<see cref="Events"/>), which whoever
-    /// runs the game's loop flushes. Whatever plays the world uses it: the editor's play from here today, the game itself
-    /// later.
+    /// (<see cref="PlayerCharacter"/>), its camera (first or third person, <see cref="ViewSwitch"/>, put in place by the
+    /// <see cref="CameraDirector"/>), what it has in sight (<see cref="Focus"/>) and what it carries
+    /// (<see cref="Inventory"/>). <see cref="Spawn"/> stands it somewhere, takes the camera and captures the mouse;
+    /// <see cref="Despawn"/> takes it all away again. It lives as long as the app, so the view chosen, the attributes and
+    /// what it carries carry over to the next spawn. What happens to the player is told on the game's stream
+    /// (<see cref="Events"/>), which whoever runs the game's loop flushes (<see cref="GameSession"/>).
     /// </summary>
     public sealed class PlayerSession : IDisposable
     {
         readonly PlayerProfile _profile;
         readonly PlayerControls _controls;
         readonly CameraDirector _director;
+        readonly PhysicsInteractionProbe _probe;
         CharacterControllerMotor _motor;
         PlayerAvatar _avatar;
         AttributeRecord[] _attributeRecords;
@@ -44,6 +48,7 @@ namespace Forge.Play
                 new ThirdPersonCamera(profile.ThirdPerson(), new PhysicsCameraObstacles()),
                 profile.StartInThirdPerson);
             _director = new CameraDirector(camera, Views.Current);
+            _probe = new PhysicsInteractionProbe(profile.AimRadius);
         }
 
         /// <summary>First or third person; kept between spawns.</summary>
@@ -61,20 +66,34 @@ namespace Forge.Play
         /// </summary>
         public ActorAttributes Attributes { get; private set; }
 
+        /// <summary>What the player carries, kept from one spawn to the next, so it keeps what it took when the world resets.</summary>
+        public Inventory Inventory { get; } = new Inventory();
+
+        /// <summary>What the player has in sight and what the use key would do, while spawned; else null.</summary>
+        public InteractionFocus Focus { get; private set; }
+
+        /// <summary>The use key as a prompt shows it ("E").</summary>
+        public string InteractKey => _controls.InteractKey;
+
         /// <summary>
-        /// Stands the player at <paramref name="feet"/> (scene coordinates), facing <paramref name="heading"/>, and gives it
-        /// the camera and the controls. <paramref name="attributes"/> are the world's (its resolved attribute records):
-        /// the player keeps its numbers while they stay the same, and starts afresh from them when they changed.
+        /// Stands the player in <paramref name="world"/> at <paramref name="feet"/> (scene coordinates), facing
+        /// <paramref name="heading"/>, and gives it the camera and the controls; the use key does what
+        /// <paramref name="interactions"/> offer. The player keeps its numbers while the world's attribute records stay the
+        /// same, and starts afresh from them when they changed.
         /// </summary>
-        public void Spawn(Vector3 feet, float heading, IEnumerable<AttributeRecord> attributes)
+        public void Spawn(Vector3 feet, float heading, IRecordStore world, Interactions interactions)
         {
+            if (world == null)
+                throw new ArgumentNullException(nameof(world));
+
             Despawn();
-            UpdateAttributes(attributes);
+            UpdateAttributes(world.OfType<AttributeRecord>());
             _motor = new CharacterControllerMotor(_profile);
             if (_profile.Model != null)
                 _avatar = new PlayerAvatar(_motor.Body, _profile.Model);
             Player = new PlayerCharacter(_motor, _profile.Locomotion(), _profile.EyeHeight, Attributes, Events);
             Player.PlaceAt(feet.ToNumerics(), heading);
+            Focus = new InteractionFocus(ActorId.Player, world, interactions, _probe, _profile.Reach);
             Views.ThirdPerson.Begin();
             Frame(0f);
 
@@ -83,15 +102,22 @@ namespace Forge.Play
             Cursor.visible = false;
         }
 
-        /// <summary>Plays one frame: the view and the player take their commands, then the camera and the model follow.</summary>
+        /// <summary>
+        /// Plays one frame: the view and the player take their commands, the camera and the model follow, then what is in
+        /// sight is looked for from where the camera now is, so the prompt and the use key go by what this frame shows.
+        /// </summary>
         public void Tick(float deltaTime)
         {
             if (Player == null)
                 return;
             Views.Apply(_controls.ReadView());
             Player.Facing = Views.Current.Facing;
-            Player.Tick(_controls.Read(), deltaTime);
+            var commands = _controls.Read();
+            Player.Tick(commands, deltaTime);
             Frame(deltaTime);
+            Focus.Update(_director.Pose, Player.Eyes);
+            if (commands.Activate)
+                Focus.Activate();
         }
 
         /// <summary>The scene moved by <paramref name="delta"/> under the world (a rebase); the player moves with it.</summary>
@@ -126,6 +152,7 @@ namespace Forge.Play
             _motor.Dispose();
             _motor = null;
             Player = null;
+            Focus = null;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }

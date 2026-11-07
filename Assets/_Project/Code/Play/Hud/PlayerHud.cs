@@ -11,15 +11,20 @@ namespace Forge.Play.Hud
 {
     /// <summary>
     /// The player's HUD while playing, as Skyrim's: magicka, health and stamina bars along the bottom (PlayerHud.uss),
-    /// each shown while not full and for a moment after it changes, then faded (<see cref="BarFade"/>). The bars read the
-    /// player's numbers as they change (<see cref="ActorAttributes.Changed"/>); what happens to the player comes from the
-    /// game's stream: the stamina bar blinks when the player is exhausted (<see cref="ActorExhausted"/>) and a bar blinks
-    /// when it held too little for a move (<see cref="ActorShortOf"/>). It follows whichever player the
-    /// <see cref="PlayerSession"/> has, so whatever plays the world (the editor's play, the game later) hosts it the same.
+    /// each shown while not full and for a moment after it changes, then faded (<see cref="BarFade"/>), and a dot in the
+    /// middle of the view with the use key's prompt under it (<see cref="InteractionPrompt"/>, from the player's
+    /// <see cref="PlayerSession.Focus"/>). The bars read the player's numbers as they change
+    /// (<see cref="ActorAttributes.Changed"/>); what happens to the player comes from the game's stream: the stamina bar
+    /// blinks when the player is exhausted (<see cref="ActorExhausted"/>) and a bar blinks when it held too little for a
+    /// move (<see cref="ActorShortOf"/>). It follows whichever player the <see cref="PlayerSession"/> has, so whatever
+    /// plays the world (the editor's play, the game later) hosts it the same.
     /// </summary>
     public sealed class PlayerHud : IDisposable
     {
         public const string UssClass = "forge-hud";
+        public const string BarsClass = UssClass + "-bars";
+        public const string CrosshairClass = UssClass + "-crosshair";
+        public const string CrosshairOnClass = CrosshairClass + "--on";
 
         sealed class Bar
         {
@@ -38,6 +43,9 @@ namespace Forge.Play.Hud
 
         readonly PlayerSession _session;
         readonly VisualElement _root;
+        readonly VisualElement _barRow;
+        readonly VisualElement _crosshair;
+        readonly InteractionPrompt _prompt;
         readonly List<Bar> _bars = new List<Bar>();
         readonly IDisposable[] _subscriptions;
         ActorAttributes _attributes;
@@ -51,12 +59,21 @@ namespace Forge.Play.Hud
 
             _root = new VisualElement { name = "player-hud", pickingMode = PickingMode.Ignore };
             _root.AddToClassList(UssClass);
+            _barRow = new VisualElement { pickingMode = PickingMode.Ignore };
+            _barRow.AddToClassList(BarsClass);
             foreach (var (attribute, kind) in Layout)
             {
                 var bar = new Bar { Attribute = attribute, View = new AttributeBar(kind) };
                 _bars.Add(bar);
-                _root.Add(bar.View);
+                _barRow.Add(bar.View);
             }
+
+            _crosshair = new VisualElement { pickingMode = PickingMode.Ignore };
+            _crosshair.AddToClassList(CrosshairClass);
+            _prompt = new InteractionPrompt();
+            _root.Add(_barRow);
+            _root.Add(_crosshair);
+            _root.Add(_prompt);
 
             parent.Add(_root);
             _root.style.display = DisplayStyle.None;
@@ -72,9 +89,14 @@ namespace Forge.Play.Hud
         public void Tick(float deltaTime)
         {
             var player = _session.Player;
+            _root.style.display = player != null ? DisplayStyle.Flex : DisplayStyle.None;
+            var offer = _session.Focus?.Offer;
+            _prompt.Show(offer, _session.InteractKey);
+            _crosshair.EnableInClassList(CrosshairOnClass, offer != null);
+
             var attributes = player != null ? player.Attributes : null;
             Bind(attributes);
-            _root.style.display = attributes != null ? DisplayStyle.Flex : DisplayStyle.None;
+            _barRow.style.display = attributes != null ? DisplayStyle.Flex : DisplayStyle.None;
             if (attributes == null)
                 return;
 

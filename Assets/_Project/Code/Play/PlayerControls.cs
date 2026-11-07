@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 namespace Forge.Play
 {
     /// <summary>
-    /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump, ToggleWalk, ToggleView, Zoom) into
+    /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump, ToggleWalk, ToggleView, Zoom, Interact) into
     /// <see cref="PlayerCommands"/> and <see cref="ViewCommands"/>, the rules' only input. Rebinding, a gamepad or
     /// another layout is the actions asset's business; nothing here names a key (the wheel's binding scales its steps to
     /// notches). The map is on only while enabled (while playing).
@@ -22,6 +22,7 @@ namespace Forge.Play
         readonly InputAction _toggleWalk;
         readonly InputAction _toggleView;
         readonly InputAction _zoom;
+        readonly InputAction _interact;
         readonly float _lookSensitivity;
 
         public PlayerControls(PlayerProfile profile)
@@ -40,8 +41,18 @@ namespace Forge.Play
             _toggleWalk = _map.FindAction("ToggleWalk", throwIfNotFound: true);
             _toggleView = _map.FindAction("ToggleView", throwIfNotFound: true);
             _zoom = _map.FindAction("Zoom", throwIfNotFound: true);
+            _interact = _map.FindAction("Interact", throwIfNotFound: true);
             _lookSensitivity = profile.LookSensitivity;
+
+            // The prompt names the key the way the actions bind it in their first control scheme (the keyboard's).
+            var schemes = profile.Controls.controlSchemes;
+            InteractKey = schemes.Count > 0
+                ? _interact.GetBindingDisplayString(InputBinding.MaskByGroup(schemes[0].bindingGroup))
+                : _interact.GetBindingDisplayString();
         }
+
+        /// <summary>The use key as a prompt shows it ("E").</summary>
+        public string InteractKey { get; }
 
         public void Enable() => _map.Enable();
 
@@ -61,7 +72,8 @@ namespace Forge.Play
                 new System.Numerics.Vector2(look.x, look.y),
                 _sprint.IsPressed(),
                 _jump.WasPressedThisFrame(),
-                _toggleWalk.WasPressedThisFrame());
+                _toggleWalk.WasPressedThisFrame(),
+                activate: _interact.WasPressedThisFrame());
         }
 
         /// <summary>This frame's view commands; nothing while the map is off.</summary>

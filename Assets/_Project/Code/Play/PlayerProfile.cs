@@ -87,11 +87,18 @@ namespace Forge.Play
         [SerializeField, Min(0.1f), Tooltip("Meters per second the camera eases back out once a wall stops blocking it.")]
         float _cameraReturnSpeed = 6f;
 
+        [Header("Interaction")]
+        [SerializeField, Min(0.1f), Tooltip("How far from the eyes the use key reaches (E: take, later open, talk), meters.")]
+        float _reach = 2.5f;
+
+        [SerializeField, Min(0f), Tooltip("How near the middle of the view a thing need only be to be used, meters (0: dead on), so small things are easy to aim at.")]
+        float _aimRadius = 0.1f;
+
         [Header("Controls")]
         [SerializeField, Tooltip("The input actions; the player reads its map (Settings/InputSystem_Actions).")]
         InputActionAsset _controls;
 
-        [SerializeField, Tooltip("The action map the player reads: Move, Look, Sprint, Jump, ToggleWalk, ToggleView, Zoom.")]
+        [SerializeField, Tooltip("The action map the player reads: Move, Look, Sprint, Jump, ToggleWalk, ToggleView, Zoom, Interact.")]
         string _controlsMap = "Player";
 
         [SerializeField, Min(0.001f), Tooltip("Degrees the view turns per pixel the mouse moves.")]
@@ -111,6 +118,12 @@ namespace Forge.Play
         public GameObject Model => _model;
 
         public bool StartInThirdPerson => _startInThirdPerson;
+
+        /// <summary>How far from the eyes the use key reaches, meters.</summary>
+        public float Reach => _reach;
+
+        /// <summary>How near the middle of the view a thing need only be to be used, meters.</summary>
+        public float AimRadius => _aimRadius;
 
         public InputActionAsset Controls => _controls;
 

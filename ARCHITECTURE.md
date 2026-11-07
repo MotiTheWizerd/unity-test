@@ -611,12 +611,26 @@ from any camera, so both cameras read the same player.
   `ViewSwitch` holds both, as Skyrim switches them: ToggleView (F) swaps them, the third-person distance kept; the wheel
   (Zoom) moves it, one notch nearer than its closest is first person, one notch out of first person is third at its
   closest. `CameraDirector` (Play) puts the engine's camera where the current mode says.
-- **The player while playing** (`PlayerSession`, Play): the body, the model, the controls, the rules and the view, all
-  built from the profile. `Spawn(feet, heading)` makes the body and model, stands the player, gives it the camera,
-  switches the controls on and captures the mouse; `Tick` applies the view commands, sets the body's facing from the
-  current view, steps the player, then frames it and turns and shows (or shadows only) the model; `Despawn` takes it
-  away. One per app, so the view chosen carries over to the next spawn. The editor uses it through play from here; the
-  game will use it as it is.
+- **The player while playing** (`PlayerSession`, Play): the body, the model, the controls, the rules, the view, what it
+  has in sight (`Focus`, an `InteractionFocus`) and what it carries (`Inventory`), all built from the profile.
+  `Spawn(feet, heading, world, interactions)` makes the body and model, stands the player, gives it the camera, switches
+  the controls on and captures the mouse; `Tick` applies the view commands, sets the body's facing from the current
+  view, steps the player, then frames it and turns and shows (or shadows only) the model, and last looks for what is in
+  sight from where the camera now is (`CameraDirector.Pose`), so the prompt and the use key go by what the frame shows,
+  and uses it if the key was pressed; `Despawn` takes it away. One per app, so the view chosen, the attributes and what
+  it carries carry over to the next spawn.
+- **The use key in play**: the Player map's `Interact` (E, the gamepad's north button; a tap) is
+  `PlayerCommands.Activate`, and `PlayerControls.InteractKey` names it for the prompt (its binding in the actions' first
+  control scheme, the keyboard's). `PhysicsInteractionProbe` is the line of sight: a ray, then a ball of the profile's
+  `AimRadius` (0.1 m) along it, on the default raycast layers (never the player's body), triggers ignored, a placed
+  object known by its `RecordLink`. The profile's `Reach` is 2.5 m from the eyes.
+- **The game while playing** (`GameSession`, Play): one running game: the stream (`GameEvents`), what playing changed in
+  the world (`WorldChanges`), what the use key can do (`Interactions`: take) and the player (`PlayerSession`).
+  `Begin(feet, heading, world)` spawns the player, `Tick` plays a frame and then flushes the stream, `End` takes the
+  player away and lets the world's changes go. A placed object taken out of the world leaves the scene
+  (`WorldView.Hide`, which also keeps it out when its chunk streams in again) and the focus looks again; when the
+  changes are let go, `WorldView.ShowHidden` puts everything back. The editor's play from here runs one; the game app
+  will run one as it is.
 - **The model** (`PlayerAvatar`, Play): the profile's `_model` as a `CharacterModel` (any character's look on any body:
   the prefab riding on the body's object, turned to the body's heading, its colliders removed since the body is the
   collider, on the body's layer, animated from a `BodyMotion`; the world's characters will use it too), plus the
@@ -653,15 +667,17 @@ from any camera, so both cameras read the same player.
   VerticalSpeed; TopSpeed is the builder's default); `PlayerAvatar.Animate` drives it, and the player's animator always
   animates, so its first-person shadow walks too.
 - **Play from here** (`PlayFromHere`, EditorApp, built by the controller when the bootstrap has a `_player` profile):
-  when the app starts playing, it spawns the player (`PlayerSession`) on whatever the middle of the view shows (else
-  the ground under the camera, else it falls from the camera), facing the camera's heading, and rests the fly camera
-  (`enabled = false`). The controller ticks it each frame while playing; Esc despawns the player and wakes the fly
-  camera, and the bootstrap gives the editing camera back. The camera is the streaming's focus, so the streaming and the
+  when the app starts playing, it begins its game (`GameSession`) with the player on whatever the middle of the view
+  shows (else the ground under the camera, else it falls from the camera), facing the camera's heading, and rests the
+  fly camera (`enabled = false`). The controller ticks it each frame while playing; Esc ends the game (the player goes,
+  and the world is as built again: what was taken is back, as in the Creation Kit's test play, while the player keeps
+  what it carries) and wakes the fly camera, and the bootstrap gives the editing camera back. The camera is the streaming's focus, so the streaming and the
   origin follow the player; a rebase moves the player with the camera (`PlayFromHere.Shift`). The world's edge is open:
   walking off the land falls forever (Moti's call, as it stands).
 - Known limits: interiors have no floor to stand on yet (the floor grid has no collider), there's no swimming (water
   has no colliders, the player walks the bottom), and the gamepad's look stick is read like the mouse (per frame,
-  not per second), so it turns slowly.
+  not per second), so it turns slowly. The prompt names the keyboard's key even when a gamepad plays, and a pile of gold
+  is one gold until placed objects carry a count.
 
 ## Attributes (Forge.Data + Forge.Game.Attributes)
 
@@ -703,8 +719,10 @@ where it came from.
   Skyrim's magicka, health and stamina bars along the bottom (`AttributeBar`, styled by UI/Hud/PlayerHud.uss, imported
   by the runtime theme; a bar's kind is a style class, so a mod's bar is a style and one layout entry). `BarFade`
   (Game.Hud, engine-free) decides when each shows: while not full, then 2.5 s after it fills or changes, then a fade;
-  the stream's `ActorExhausted` and `ActorShortOf` make a bar blink. It follows whichever player the session has,
-  rebinding on a new spawn.
+  the stream's `ActorExhausted` and `ActorShortOf` make a bar blink. A dot marks the middle of the view, lit while
+  something in sight can be used, and the use key's prompt sits under it (`InteractionPrompt`: the name, the key and
+  the verb, the detail line; from the player's focus, redrawn only when the offer changes). It follows whichever player
+  the session has, rebinding on a new spawn.
 - **Live numbers are game state, not world data**: an actor's damage, own bases and timed effects belong to a save
   game, never to a plugin; modifiers from equipment are rebuilt from what is worn, so each fact lives in one place.
 
