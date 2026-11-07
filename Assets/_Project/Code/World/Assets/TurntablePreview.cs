@@ -4,26 +4,17 @@ using UnityEngine;
 namespace Forge.World.Assets
 {
     /// <summary>
-    /// A thing of the world shown live, turning slowly on a turntable in a <see cref="PreviewStudio"/>, as Skyrim shows the
-    /// item chosen in its inventory: built from the same asset the world uses (<see cref="Show"/>), framed whole by its
-    /// size (<see cref="TurntableFraming"/>), so a coin and a sword both fill the view, and drawn every
-    /// <see cref="Tick"/> into <see cref="Texture"/> on a transparent background for a UI to show. Whoever shows it can
-    /// turn it by hand (<see cref="Turn"/>, holding it still meanwhile with <see cref="Held"/>) and zoom it
-    /// (<see cref="Zoom"/>). The subject is active only inside its own render, so no other camera ever sees it.
+    /// A thing of the world shown live in a <see cref="PreviewStudio"/>, as Skyrim shows the item chosen in its inventory:
+    /// built from the same asset the world uses (<see cref="Show"/>), posed by <see cref="Turn"/> (it spins slowly by
+    /// itself, and a hand turns it every way), framed whole by the cylinder it sweeps as it leans
+    /// (<see cref="TurntableFraming"/>), so a coin and a sword both fill the view, and drawn every <see cref="Tick"/> into
+    /// <see cref="Texture"/> on a transparent background for a UI to show. The subject is active only inside its own
+    /// render, so no other camera ever sees it.
     /// </summary>
     public sealed class TurntablePreview : IDisposable
     {
         // A long lens flattens less than a wide one: things look as they do in the hand.
         const float FieldOfView = 30f;
-
-        /// <summary>Degrees a second the turntable turns by itself.</summary>
-        public const float TurnSpeed = 25f;
-
-        // The turn a new subject starts at: three-quarters on, its front (+Z) towards the camera's left.
-        const float StartYaw = 210f;
-
-        // Each wheel notch zooms by this factor.
-        const float ZoomStep = 1.15f;
 
         // The largest texture side, whatever the UI asks.
         const int MaxSide = 2048;
@@ -33,10 +24,7 @@ namespace Forge.World.Assets
         readonly Transform _turntable;
         GameObject _subject;
         RenderTexture _target;
-        float _reach;
-        float _halfHeight;
-        float _yaw;
-        float _zoom = 1f;
+        Vector3 _extents;
 
         public TurntablePreview(IAssetCatalog assets)
         {
@@ -50,18 +38,18 @@ namespace Forge.World.Assets
             _turntable.SetParent(_studio.Stage, false);
         }
 
+        /// <summary>How the subject is turned and zoomed: by itself, and by whoever drags it.</summary>
+        public PreviewTurn Turn { get; } = new PreviewTurn();
+
         /// <summary>The picture, redrawn each <see cref="Tick"/>; null until <see cref="Resize"/> gives it a size.</summary>
         public RenderTexture Texture => _target;
 
-        /// <summary>The asset key on the turntable, or null for nothing.</summary>
+        /// <summary>The asset key shown, or null for nothing.</summary>
         public string Shown { get; private set; }
 
-        /// <summary>Held by hand: it doesn't turn by itself.</summary>
-        public bool Held { get; set; }
-
         /// <summary>
-        /// Puts <paramref name="assetKey"/>'s asset on the turntable, turned three-quarters on and zoomed to fit; null
-        /// clears it. The same key again keeps the turn and the zoom.
+        /// Shows <paramref name="assetKey"/>'s asset, upright and three-quarters on (<see cref="PreviewTurn.Reset"/>); null
+        /// clears it. The same key again keeps how it was turned.
         /// </summary>
         public void Show(string assetKey)
         {
@@ -76,15 +64,12 @@ namespace Forge.World.Assets
             _turntable.localRotation = Quaternion.identity;
             _subject = _assets.Instantiate(assetKey, _turntable);
             _studio.PutOnLayer(_subject);
-            // Its drawn centre sits on the turntable's axis, so it turns in place.
+            // Its drawn centre sits on the turntable's pivot, so it turns in place.
             var bounds = PreviewStudio.BoundsOf(_subject);
             _subject.transform.localPosition -= _turntable.InverseTransformPoint(bounds.center);
-            // Turning, it sweeps a cylinder: this far around its axis, this far up and down.
-            _reach = new Vector2(bounds.extents.x, bounds.extents.z).magnitude;
-            _halfHeight = bounds.extents.y;
+            _extents = bounds.extents;
             _subject.SetActive(false);
-            _yaw = StartYaw;
-            _zoom = 1f;
+            Turn.Reset();
         }
 
         /// <summary>Draws at <paramref name="width"/> × <paramref name="height"/> pixels from now on (the UI's size).</summary>
@@ -99,29 +84,21 @@ namespace Forge.World.Assets
             _target = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32) { name = "Turntable", antiAliasing = 4 };
         }
 
-        /// <summary>Turns the subject by <paramref name="degrees"/> (a drag).</summary>
-        public void Turn(float degrees) => _yaw += degrees;
-
-        /// <summary>Zooms in by <paramref name="notches"/> (out when negative), within <see cref="TurntableFraming"/>'s bounds.</summary>
-        public void Zoom(float notches) =>
-            _zoom = Mathf.Clamp(_zoom * Mathf.Pow(ZoomStep, notches), TurntableFraming.MinZoom, TurntableFraming.MaxZoom);
-
-        /// <summary>Turns <paramref name="deltaTime"/> seconds' worth unless held, and draws the picture.</summary>
+        /// <summary>Lets <paramref name="deltaTime"/> seconds pass (it spins by itself unless held) and draws the picture.</summary>
         public void Tick(float deltaTime)
         {
             if (_subject == null || _target == null)
                 return;
 
-            if (!Held)
-                _yaw += TurnSpeed * deltaTime;
-            _yaw = Mathf.Repeat(_yaw, 360f);
-            _turntable.localRotation = Quaternion.Euler(0f, _yaw, 0f);
+            Turn.Tick(deltaTime);
+            _turntable.localRotation = Turn.Rotation;
 
-            var camera = _studio.Camera;
-            var distance = TurntableFraming.Distance(_reach, _halfHeight, FieldOfView, (float)_target.width / _target.height, _zoom);
+            TurntableFraming.Swept(_extents, Turn.Tilt, out var reach, out var halfHeight);
+            var distance = TurntableFraming.Distance(reach, halfHeight, FieldOfView, (float)_target.width / _target.height, Turn.Zoom);
             var pose = TurntableFraming.CameraPose(_turntable.position, distance);
+            var camera = _studio.Camera;
             camera.transform.SetPositionAndRotation(pose.position, pose.rotation);
-            var radius = new Vector2(_reach, _halfHeight).magnitude;
+            var radius = _extents.magnitude;
             camera.nearClipPlane = Mathf.Max(0.01f, distance - radius * 2f);
             camera.farClipPlane = distance + radius * 2f;
 

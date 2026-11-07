@@ -664,10 +664,13 @@ from any camera, so both cameras read the same player.
   and draws on the next tick, never inside the click; the item is drawn only while the screen is open.
 - **Turntables** (`TurntablePreview`, World/Assets; `TurntableView`, Play.Hud): a thing of the world shown live in a
   `PreviewStudio`, as Skyrim shows the chosen item, built from its asset key through the world's `IAssetCatalog`
-  (`GameSession.Assets`, the `WorldView`'s). It turns by itself at 25°/s; a drag turns it by hand (held still meanwhile),
-  the wheel zooms (0.6 to 3×). `TurntableFraming` (pure math, tested) fits the cylinder it sweeps turning, its reach
-  around the axis and its half height, to the view's width and, seen from 30° above, its height, so a long flat sword
-  and a tall bottle both fill the view. A perspective camera with a 30° lens draws it every tick into a render texture
+  (`GameSession.Assets`, the `WorldView`'s). Its pose is a `PreviewTurn` (World/Assets, tested): a spin around the up
+  axis over a tilt; it spins by itself at 25°/s unless held, and `TurnManipulator` (Play.Hud, a UI Toolkit
+  `PointerManipulator` any element showing a 3D thing adds) turns it every way by hand, as Skyrim's inventory does: a
+  left drag across spins it, up and down tilts it about the view's right axis however it was spun, the wheel zooms (0.6
+  to 3×), a double click puts it back. `TurntableFraming` (pure math, tested) fits the cylinder it sweeps spinning as
+  it leans (`Swept`: its reach around the axis and its half height) to the view's width and, seen from 30° above, its
+  height, so a long flat sword and a tall bottle both fill the view, and spinning never moves the frame. A perspective camera with a 30° lens draws it every tick into a render texture
   (4× MSAA) as large as the element on screen, on a transparent background; the subject is active only inside its own
   render, so no other camera sees it. The character view will be one more turntable.
 - **The use key in play**: the Player map's `Interact` (E, the gamepad's north button; a tap) is
