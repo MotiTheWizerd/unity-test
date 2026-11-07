@@ -36,6 +36,12 @@ namespace Forge.UnityEditor.Content
                 item: new ItemPart(ItemKind.Weapon, weight: 18f, value: 120),
                 equippable: new EquippablePart(CoreEquipSlots.TwoHanded()));
 
+            // A mage's staff (OpenGameArt, CC0), lying flat; held in one hand, the other free. No combat style yet.
+            yield return new BaseObjectRecord(new RecordId(pluginId, "mage_staff"), "Mage Staff", ModelImport.KeyFor("MageStaff"),
+                "Items/Weapons", new PlacementRules(randomYaw: true, 1f, 1f, alignToSlope: true),
+                item: new ItemPart(ItemKind.Weapon, weight: 6f, value: 90),
+                equippable: new EquippablePart(CoreEquipSlots.OneHanded()));
+
             // Shields (OpenGameArt, CC0), two looks of each shape, lying face up; held in the off hand.
             foreach (var (folder, id, name, weight, value) in new[]
                      {
