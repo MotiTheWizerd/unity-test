@@ -13,7 +13,8 @@ namespace Forge.Editing
     public sealed class EditDraft
     {
         readonly EditSession _session;
-        readonly ChangeSet _collected = new ChangeSet();
+        readonly List<EditStep> _steps = new List<EditStep>();
+        ChangeSet _collected = new ChangeSet();
         IReadOnlyList<RecordChange> _changes = Array.Empty<RecordChange>();
         int _changesRevision;
 
@@ -48,13 +49,38 @@ namespace Forge.Editing
         /// <summary>Rolls every change of the draft back; nothing enters the undo history.</summary>
         public void Discard() => _session.DiscardDraft(this);
 
+        /// <summary>The edits collected so far, one per edit or batch, oldest first, each with its description.</summary>
+        public IReadOnlyList<EditStep> Steps => _steps;
+
+        /// <summary>
+        /// Takes back the draft's latest edit, as if it hadn't been made; the ones before it stay. Returns it, or null
+        /// when the draft is empty.
+        /// </summary>
+        public EditStep UndoLast() => _session.UndoDraftStep(this);
+
         /// <summary>Every change collected, including ones that ended where they started (for rolling back).</summary>
         internal IReadOnlyList<RecordChange> Collected => _collected.All;
 
-        internal void Collect(IEnumerable<RecordChange> changes)
+        internal void Collect(EditStep step)
         {
-            _collected.TrackAll(changes);
+            _steps.Add(step);
+            _collected.TrackAll(step.Changes);
             Revision++;
+        }
+
+        // Drops the latest step, and the changes it brought, from what the draft holds.
+        internal EditStep TakeLast()
+        {
+            if (_steps.Count == 0)
+                return null;
+
+            var last = _steps[_steps.Count - 1];
+            _steps.RemoveAt(_steps.Count - 1);
+            _collected = new ChangeSet();
+            foreach (var step in _steps)
+                _collected.TrackAll(step.Changes);
+            Revision++;
+            return last;
         }
     }
 }

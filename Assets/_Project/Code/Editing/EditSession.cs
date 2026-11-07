@@ -273,6 +273,19 @@ namespace Forge.Editing
             Publish(Resolve());
         }
 
+        internal EditStep UndoDraftStep(EditDraft draft)
+        {
+            EnsureOpen(draft);
+            EnsureWritable();
+            var step = draft.TakeLast();
+            if (step == null)
+                return null;
+
+            ApplyStates(step, before: true);
+            Publish(Resolve());
+            return step;
+        }
+
         void EnsureOpen(EditDraft draft)
         {
             if (draft == null)
@@ -385,7 +398,7 @@ namespace Forge.Editing
 
             ClearPending();
             if (Draft != null)
-                Draft.Collect(changes);
+                Draft.Collect(new EditStep(_nextStepId++, description, changes));
             else
                 _history.Record(new EditStep(_nextStepId++, description, changes));
             Publish(world);

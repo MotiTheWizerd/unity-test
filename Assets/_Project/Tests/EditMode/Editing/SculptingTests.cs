@@ -220,6 +220,26 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void UndoLast_TakesBackTheAgentsLatestSculpt_InsideItsDraft()
+        {
+            var world = BuildingFixture.Create();
+            var undo = new UndoLastCommand(world.Context);
+            Assert.That(() => undo.Execute(new UndoLastCommand.Arguments()),
+                Throws.TypeOf<CommandException>().With.Message.Contains("nothing of yours to take back"));
+
+            world.Session.BeginDraft();
+            var hill = new SculptHillCommand(world.Context);
+            hill.Execute(new SculptHillCommand.Arguments { X = 40f, Z = 64f, Width = 20f, Height = 5f, Roughness = 0f });
+            hill.Execute(new SculptHillCommand.Arguments { X = 90f, Z = 64f, Width = 20f, Height = 30f, Roughness = 0f });
+
+            var result = undo.Execute(new UndoLastCommand.Arguments());
+
+            Assert.That(result.Summary, Is.EqualTo("Took back \"Sculpt hill\"; 1 earlier change(s) of this request remain."));
+            Assert.That(GroundAt(world, 90f, 64f), Is.EqualTo(19f).Within(1e-4f), "The tall hill is gone.");
+            Assert.That(GroundAt(world, 40f, 64f), Is.EqualTo(19f).Within(1e-4f), "The first hill stays: 14 m of ground, 5 m of hill.");
+        }
+
+        [Test]
         public void Smoothing_TakesAnyShape_AndRefusesNoLand()
         {
             var world = BuildingFixture.Create();

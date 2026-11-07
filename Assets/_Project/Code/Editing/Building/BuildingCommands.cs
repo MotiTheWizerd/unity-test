@@ -36,6 +36,7 @@ namespace Forge.Editing.Building
             registry.Add(new PaintAreaCommand(context));
             registry.Add(new AutoPaintCommand(context));
             registry.Add(new DeleteObjectsCommand(context));
+            registry.Add(new UndoLastCommand(context));
         }
     }
 }

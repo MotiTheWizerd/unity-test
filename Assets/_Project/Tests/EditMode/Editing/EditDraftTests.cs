@@ -171,5 +171,61 @@ namespace Forge.Tests.Editing
             Assert.Throws<InvalidOperationException>(() => draft.Accept("Again"));
             Assert.Throws<InvalidOperationException>(() => draft.Discard());
         }
+
+        [Test]
+        public void UndoLast_TakesBackTheLatestEdit_AndKeepsTheEarlierOnes()
+        {
+            var session = NewSession();
+            var draft = session.BeginDraft();
+            var first = PutTree(session);
+            var moved = new PlacedObjectRecord(first.Id, first.BaseId, first.Space,new Vector3(9f, 0f, 0f), first.Rotation, first.Scale);
+            session.Put(moved, "Move the tree");
+            var second = PutTree(session, 5f);
+            var revision = draft.Revision;
+
+            var undone = draft.UndoLast();
+
+            Assert.That(undone.Description, Is.EqualTo($"Edit {second.Id}"));
+            Assert.That(session.World.Records.Contains(second.Id), Is.False);
+            Assert.That(session.World.Records.Get<PlacedObjectRecord>(first.Id).Position.X, Is.EqualTo(9f), "The move before it stays.");
+            Assert.That(draft.Steps.Count, Is.EqualTo(2));
+            Assert.That(draft.Revision, Is.GreaterThan(revision), "Viewers see the draft changed.");
+
+            draft.UndoLast();
+            Assert.That(session.World.Records.Get<PlacedObjectRecord>(first.Id).Position.X, Is.EqualTo(first.Position.X), "The move is taken back.");
+            Assert.That(draft.Changes.Single().Id, Is.EqualTo(first.Id), "The draft now holds only the first tree.");
+        }
+
+        [Test]
+        public void UndoLast_ThenAccept_KeepsOnlyWhatRemains_AndDiscardRollsItAllBack()
+        {
+            var session = NewSession();
+            var draft = session.BeginDraft();
+            var kept = PutTree(session);
+            var dropped = PutTree(session, 5f);
+            draft.UndoLast();
+
+            draft.Accept("Agent: one tree");
+
+            Assert.That(session.World.Records.Contains(kept.Id), Is.True);
+            Assert.That(session.World.Records.Contains(dropped.Id), Is.False);
+            session.Undo();
+            Assert.That(PlacedCount(session), Is.Zero);
+
+            var again = session.BeginDraft();
+            PutTree(session);
+            PutTree(session, 5f);
+            again.UndoLast();
+            again.Discard();
+            Assert.That(PlacedCount(session), Is.Zero);
+        }
+
+        [Test]
+        public void UndoLast_OnAnEmptyDraft_ReturnsNull()
+        {
+            var draft = NewSession().BeginDraft();
+
+            Assert.That(draft.UndoLast(), Is.Null);
+        }
     }
 }

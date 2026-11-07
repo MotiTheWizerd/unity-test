@@ -440,7 +440,9 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
   world at once, but are collected by the draft (in a `ChangeSet`, first before / latest after per record)
   instead of entering the history. `Accept(description)` records the whole draft as one undo step, `Discard()`
   rolls it back with no history. Undo, redo and `MarkSaved` throw while a draft is open; a failed edit inside
-  a draft rolls back only itself. The agent builds into a draft.
+  a draft rolls back only itself. The agent builds into a draft. The draft keeps each edit (one per edit or outermost
+  batch, so one per command) as an `EditStep`; `UndoLast` rolls the latest back and rebuilds what the draft holds
+  from the steps that remain, so accepting or discarding afterwards sees only those.
 - **Freezing** (`EditSession.Freeze(reason)` → a handle; `IsFrozen`): the world is read-only until the handle is
   disposed. Every edit, batch, undo, redo and new draft throws, naming the reason, so whatever runs meanwhile can read
   the world but never write it. One freeze at a time, refused inside a batch or with a draft open. Playing freezes it.
@@ -531,6 +533,9 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
   - `look` from a pose of its own renders without the distance haze (`AgentEyes.From` turns `RenderSettings.fog`
     off for that one render); the user's own view keeps it.
   - `delete_objects`: placed objects by id.
+  - `undo_last` (`steps`, default 1): takes back the agent's latest commands in its open draft
+    (`EditDraft.UndoLast`); with no draft, or an empty one, it is refused, so the user's own edits and accepted builds
+    are out of its reach.
 - The editor actions that predate the registry (drop to ground, frame, undo/redo, save, the tools' gestures)
   are not commands yet; each moves into the registry when the agent needs it.
 - **Headings are compass bearings of the object's front**: 0 north (+z), 90 east (+x). That is the engine's
