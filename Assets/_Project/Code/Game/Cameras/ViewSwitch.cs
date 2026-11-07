@@ -43,6 +43,8 @@ namespace Forge.Game.Cameras
         {
             if (thirdPerson && !IsThirdPerson)
                 ThirdPerson.Begin(distance);
+            else if (!thirdPerson && IsThirdPerson)
+                FirstPerson.Begin();
             IsThirdPerson = thirdPerson;
         }
     }

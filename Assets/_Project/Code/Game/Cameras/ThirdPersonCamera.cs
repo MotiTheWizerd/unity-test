@@ -31,7 +31,9 @@ namespace Forge.Game.Cameras
 
         public BodyFacing Facing => BodyFacing.Movement;
 
-        public bool ShowsBody => true;
+        public bool InsideHead => false;
+
+        public float? NearClip => null;
 
         /// <summary>How far behind the pivot the camera wants to be, in meters (the wheel sets it).</summary>
         public float Distance { get; private set; }
@@ -70,9 +72,7 @@ namespace Forge.Game.Cameras
             var pivot = Toward(head, shoulder);
 
             // The wheel's distance glides in (ZoomEase); walls still pull the camera in at once.
-            _zoomed = float.IsNaN(_zoomed) || !(deltaTime > 0f) || _settings.ZoomEase <= 0f
-                ? Distance
-                : _zoomed + (Distance - _zoomed) * (1f - (float)Math.Exp(-deltaTime / _settings.ZoomEase));
+            _zoomed = float.IsNaN(_zoomed) ? Distance : _zoomed + (Distance - _zoomed) * Glide.Share(deltaTime, _settings.ZoomEase);
             var free = Free(pivot, pivot + back * _zoomed, _zoomed);
             _shown = float.IsNaN(_shown) || free < _shown || !(deltaTime > 0f)
                 ? free

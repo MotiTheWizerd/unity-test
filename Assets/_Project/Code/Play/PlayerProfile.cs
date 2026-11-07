@@ -59,6 +59,13 @@ namespace Forge.Play
         [SerializeField, Min(1f), Tooltip("Degrees per second the body turns toward where it goes, in third person.")]
         float _turnRate = 720f;
 
+        [Header("First person")]
+        [SerializeField, Min(0f), Tooltip("Seconds the camera takes to follow most of the way to where the head went (a stride's bob, a blow's lean); 0 rides the head exactly.")]
+        float _firstPersonHeadEase = 0.1f;
+
+        [SerializeField, Min(0.01f), Tooltip("How near the first-person camera sees, meters: near enough for the hands and what they hold.")]
+        float _firstPersonNearClip = 0.05f;
+
         [Header("Third person")]
         [SerializeField, Tooltip("Start playing in third person (F switches either way).")]
         bool _startInThirdPerson;
@@ -145,6 +152,8 @@ namespace Forge.Play
                 coyoteTime: _coyoteTime,
                 turnRate: _turnRate,
                 walkSpeed: _walkSpeed);
+
+        public FirstPersonSettings FirstPerson() => new FirstPersonSettings(headEase: _firstPersonHeadEase, nearClip: _firstPersonNearClip);
 
         public ThirdPersonSettings ThirdPerson() =>
             new ThirdPersonSettings(

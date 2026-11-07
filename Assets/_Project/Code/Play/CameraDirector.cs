@@ -7,17 +7,22 @@ using UnityEngine;
 namespace Forge.Play
 {
     /// <summary>
-    /// Puts the engine's camera where the current camera mode (<see cref="ICameraMode"/>) says, every frame while playing.
-    /// Switching between first and third person is setting <see cref="Mode"/>; nothing else moves the camera meanwhile.
+    /// Puts the engine's camera where the current camera mode (<see cref="ICameraMode"/>) says, every frame while playing,
+    /// and has it see as near as the mode asks (first person: the player's own hands). Switching between first and third
+    /// person is setting <see cref="Mode"/>; nothing else moves the camera meanwhile. <see cref="Release"/> gives the
+    /// camera back as it was set.
     /// </summary>
     public sealed class CameraDirector
     {
         readonly Transform _camera;
+        readonly Camera _lens;
         ICameraMode _mode;
+        float? _ownNearClip;
 
         public CameraDirector(Transform camera, ICameraMode mode)
         {
             _camera = camera != null ? camera : throw new ArgumentNullException(nameof(camera));
+            _lens = camera.GetComponent<Camera>();
             Mode = mode;
         }
 
@@ -35,6 +40,26 @@ namespace Forge.Play
         {
             Pose = _mode.Frame(player, deltaTime);
             _camera.SetPositionAndRotation(Pose.Position.ToUnity(), Pose.Rotation.ToUnity());
+            SeeAsNearAs(_mode.NearClip);
+        }
+
+        /// <summary>The camera sees as near as it was set to before a mode asked otherwise.</summary>
+        public void Release() => SeeAsNearAs(null);
+
+        void SeeAsNearAs(float? nearClip)
+        {
+            if (_lens == null)
+                return;
+            if (nearClip.HasValue)
+            {
+                _ownNearClip ??= _lens.nearClipPlane;
+                _lens.nearClipPlane = nearClip.Value;
+            }
+            else if (_ownNearClip.HasValue)
+            {
+                _lens.nearClipPlane = _ownNearClip.Value;
+                _ownNearClip = null;
+            }
         }
     }
 }

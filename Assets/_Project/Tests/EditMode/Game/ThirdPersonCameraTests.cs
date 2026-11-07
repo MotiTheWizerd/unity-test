@@ -138,12 +138,14 @@ namespace Forge.Tests.Game
         }
 
         [Test]
-        public void Modes_SayHowTheBodyTurns_AndWhetherItShows()
+        public void Modes_SayHowTheBodyTurns_WhereTheCameraIs_AndHowNearItSees()
         {
             Assert.That(new FirstPersonCamera().Facing, Is.EqualTo(BodyFacing.Look));
-            Assert.That(new FirstPersonCamera().ShowsBody, Is.False);
+            Assert.That(new FirstPersonCamera().InsideHead, Is.True);
+            Assert.That(new FirstPersonCamera(new FirstPersonSettings(nearClip: 0.04f)).NearClip, Is.EqualTo(0.04f));
             Assert.That(new ThirdPersonCamera().Facing, Is.EqualTo(BodyFacing.Movement));
-            Assert.That(new ThirdPersonCamera().ShowsBody, Is.True);
+            Assert.That(new ThirdPersonCamera().InsideHead, Is.False);
+            Assert.That(new ThirdPersonCamera().NearClip, Is.Null, "Third person sees as near as the camera is set to.");
         }
     }
 }

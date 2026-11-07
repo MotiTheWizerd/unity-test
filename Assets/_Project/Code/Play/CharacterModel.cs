@@ -17,20 +17,23 @@ namespace Forge.Play
     /// <para>
     /// Things it holds or wears hang from its humanoid bones (<see cref="Attach"/>): a hand holds by its grip
     /// (<see cref="GripFrame"/>), worked out from the hand's bones once, so they move with the hand as it animates; any
-    /// other bone holds at the bone. What is attached is part of the look: on its layer, without colliders, and drawn or
-    /// shadow-only with the rest (<see cref="ShadowsOnly"/>).
+    /// other bone holds at the bone. What is attached is part of the look: on its layer, without colliders, and, seen from
+    /// within (<see cref="FirstPerson"/>), drawn like the bone it hangs from.
     /// </para>
     /// </summary>
     public sealed class CharacterModel : IDisposable
     {
         readonly HumanoidAnimation _animation;
         readonly Animator _humanoid;
-        readonly List<Renderer> _renderers = new List<Renderer>();
+        readonly HashSet<Transform> _head;
         readonly Dictionary<HumanBodyBones, Transform> _points = new Dictionary<HumanBodyBones, Transform>();
         readonly Dictionary<HumanBodyBones, Transform> _sheaths = new Dictionary<HumanBodyBones, Transform>();
         readonly Dictionary<GameObject, Held> _attached = new Dictionary<GameObject, Held>();
         readonly GameObject _prefab;
-        bool _shadowsOnly;
+        readonly float _sunk;
+        HeadlessBody _headless;
+        Transform _eyes;
+        bool _firstPerson;
         bool _inHand;
 
         /// <param name="body">The body object the model rides on.</param>
@@ -47,7 +50,6 @@ namespace Forge.Play
             Root.name = prefab.name;
             RemoveColliders(Root);
             SetLayer(Root.transform, body.gameObject.layer);
-            _renderers.AddRange(Root.GetComponentsInChildren<Renderer>(true));
             Animators = Root.GetComponentsInChildren<Animator>(true);
             foreach (var animator in Animators)
             {
@@ -58,10 +60,12 @@ namespace Forge.Play
                 }
             }
 
+            _head = HumanoidHead.Bones(_humanoid);
             _animation = HumanoidAnimation.On(Root);
             // Standing on what the body stands on: down by the body's hover and by how high its idle carries its soles.
-            var soles = _animation != null && SoleFinder.TryFind(prefab, _animation.Clip(HumanoidAnimation.IdleMove), out var height) ? height : 0f;
-            Root.transform.localPosition = Vector3.down * (hover + soles);
+            var soles = _animation != null && SoleFinder.TryFind(prefab, IdleClip, out var height) ? height : 0f;
+            _sunk = hover + soles;
+            Root.transform.localPosition = Vector3.down * _sunk;
         }
 
         /// <summary>
@@ -79,22 +83,48 @@ namespace Forge.Play
         /// <summary>The model's object, a child of the body.</summary>
         public GameObject Root { get; }
 
-        /// <summary>What it draws, what is attached to it included.</summary>
-        public IReadOnlyList<Renderer> Renderers => _renderers;
-
         public Animator[] Animators { get; }
 
-        /// <summary>Only its shadow is drawn (first person), what is attached included, now and later.</summary>
-        public bool ShadowsOnly
+        /// <summary>
+        /// Seen from inside its own head (first person): all of it draws but its head, which, with what hangs from it,
+        /// casts only its shadow (<see cref="HeadlessBody"/>); what it holds draws as ever, and its shadow is whole.
+        /// </summary>
+        public bool FirstPerson
         {
-            get => _shadowsOnly;
+            get => _firstPerson;
             set
             {
-                _shadowsOnly = value;
-                foreach (var renderer in _renderers)
-                    Draw(renderer);
+                if (_firstPerson == value)
+                    return;
+                _firstPerson = value;
+                if (_headless == null && _head.Count > 0)
+                    _headless = new HeadlessBody(Root, _humanoid.GetBoneTransform(HumanBodyBones.Head), _head);
+                _headless?.Show(value);
+                foreach (var held in _attached.Values)
+                    Draw(held);
             }
         }
+
+        /// <summary>
+        /// A point riding its head where its eyes are, made the first time it is asked for
+        /// (<see cref="HumanoidHead.TryFindEyes"/>): <paramref name="height"/> above its body's feet as it stands at rest,
+        /// at the front of its face; so it sways, leans and stoops with the head as it animates. Null without a head.
+        /// </summary>
+        public Transform Eyes(float height)
+        {
+            if (_eyes != null)
+                return _eyes;
+            var head = _humanoid != null ? _humanoid.GetBoneTransform(HumanBodyBones.Head) : null;
+            if (head == null || !HumanoidHead.TryFindEyes(_prefab, IdleClip, height + _sunk, out var inHead))
+                return null;
+            _eyes = new GameObject("Eyes").transform;
+            _eyes.SetParent(head, false);
+            _eyes.localPosition = inHead;
+            _eyes.gameObject.layer = Root.layer;
+            return _eyes;
+        }
+
+        AnimationClip IdleClip => _animation?.Clip(HumanoidAnimation.IdleMove);
 
         /// <summary>Turns the model to <paramref name="heading"/> (compass degrees).</summary>
         public void Face(float heading) => Root.transform.localRotation = Quaternion.Euler(0f, heading, 0f);
@@ -176,12 +206,7 @@ namespace Forge.Play
             RemoveColliders(look);
             SetLayer(look.transform, Root.layer);
             _attached.Add(look, held);
-            foreach (var renderer in held.Renderers)
-            {
-                _renderers.Add(renderer);
-                Draw(renderer);
-            }
-
+            Draw(held);
             Place(held);
             return true;
         }
@@ -192,8 +217,6 @@ namespace Forge.Play
             if (look == null || !_attached.TryGetValue(look, out var held))
                 return;
             _attached.Remove(look);
-            foreach (var renderer in held.Renderers)
-                _renderers.Remove(renderer);
             UnityEngine.Object.Destroy(look);
         }
 
@@ -318,7 +341,14 @@ namespace Forge.Play
             public float Reach;
         }
 
-        void Draw(Renderer renderer) => renderer.shadowCastingMode = _shadowsOnly ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+        // Drawn like the bone it hangs from: seen from within, only the shadow of what the head wears.
+        void Draw(Held held)
+        {
+            var bone = _humanoid.GetBoneTransform(held.Bone);
+            var mode = _firstPerson && bone != null && bone.HangsFrom(_head) ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+            foreach (var renderer in held.Renderers)
+                renderer.shadowCastingMode = mode;
+        }
 
         static void RemoveColliders(GameObject root)
         {

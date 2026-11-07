@@ -671,20 +671,25 @@ from any camera, so both cameras read the same player.
   so the look orbits freely, as in Skyrim. Movement is always relative to the look, so stepping right in third
   person runs right and the body turns to it.
 - **Cameras**: an `ICameraMode` (Game, engine-free) says where the camera goes each frame (a `ViewPose`), how the body
-  faces meanwhile and whether the body shows. `FirstPersonCamera`: at the eyes, turned to the heading and tilted by the
-  pitch, the body hidden. `ThirdPersonCamera` (`ThirdPersonSettings`: 3.5 m behind, 1.2 to 8 m on the wheel, 0.6 m a
+  faces meanwhile, whether it is inside the player's head (`InsideHead`) and how near it sees (`NearClip`, null: as the
+  camera is set). `FirstPersonCamera` (`FirstPersonSettings`: head ease 0.1 s, near clip 0.05 m): a true first person,
+  turned to the heading and tilted by the pitch, riding the eyes of the player's look (`Head`, an `IEyePoint`: the eyes
+  from the feet in the body's own frame) as the head sways, leans into a blow or stoops into a stance, eased in the
+  body's frame (`Glide`, shared with the third-person zoom) so walking and turning never lag; without a look, at
+  `PlayerCharacter.Eyes`. The look turns only with the mouse, never with the head. `ThirdPersonCamera` (`ThirdPersonSettings`: 3.5 m behind, 1.2 to 8 m on the wheel, 0.6 m a
   notch, orbiting a pivot 1.6 m up and 0.35 m right of the body): along the look behind the pivot; an `ICameraObstacles`
   (`PhysicsCameraObstacles`, Play: a sphere cast of the camera's 0.2 m radius against the default raycast layers, so the
   terrain and placed objects, never the player's body) pulls it in at once when something is in the way, and once clear
   it eases back out (6 m/s); the shoulder offset is checked too, so a wall beside the player keeps the pivot in.
   `ViewSwitch` holds both, as Skyrim switches them: ToggleView (F) swaps them, the third-person distance kept; the wheel
   (Zoom) moves it, one notch nearer than its closest is first person, one notch out of first person is third at its
-  closest. `CameraDirector` (Play) puts the engine's camera where the current mode says.
+  closest. `CameraDirector` (Play) puts the engine's camera where the current mode says, as near-sighted as it asks, and
+  `Release` gives the camera back as it was set.
 - **The player while playing** (`PlayerSession`, Play): the body, the model, the controls, the rules, the view, what it
   has in sight (`Focus`, an `InteractionFocus`) and what it carries (`Inventory`), all built from the profile.
   `Spawn(feet, heading, world, interactions)` makes the body and model, stands the player, gives it the camera, switches
   the controls on and captures the mouse; `Tick` applies the view commands, sets the body's facing from the current
-  view, steps the player, then frames it and turns and shows (or shadows only) the model, and last looks for what is in
+  view, steps the player, then frames it and turns the model, seen from within its head in first person, and last looks for what is in
   sight from where the camera now is (`CameraDirector.Pose`), so the prompt and the use key go by what the frame shows,
   and uses it if the key was pressed; `Despawn` takes it away. One per app, so the view chosen and the attributes carry
   over to the next spawn; what it carries is emptied when play ends (`GameSession.End`) and given afresh from its
@@ -742,8 +747,12 @@ from any camera, so both cameras read the same player.
 - **The model** (`PlayerAvatar`, Play): the profile's `_model` as a `CharacterModel` (any character's look on any body:
   the prefab riding on the body's object, turned to the body's heading, its colliders removed since the body is the
   collider, on the body's layer, animated from a `BodyMotion`; the world's characters will use it too), plus the
-  player's own extras: in first person its renderers cast only shadows (`CharacterModel.ShadowsOnly`, what it holds
-  included), and its animator always animates. **Holding**: `CharacterModel.Attach(look, grip, bone)` hangs a look
+  player's own extras: its eyes (`CharacterModel.Eyes(height)`: a point riding the head bone at the profile's eye height
+  as it stands in its idle, at the front of its face, found by `HumanoidHead` from the mesh its head carries), which
+  the first-person camera rides, and its animator always animates. **Seen from within** (`CharacterModel.FirstPerson`):
+  `HeadlessBody` draws each skinned mesh the head moves a second time with the head's bones (`HumanoidHead.Bones`)
+  folded into one point of no size at the head bone, so the neck closes over, while the whole mesh casts only its
+  shadow; what hangs from the head casts only its shadow, what the hands hold draws as ever. **Holding**: `CharacterModel.Attach(look, grip, bone)` hangs a look
   from a humanoid bone (`HumanBodyBones` by name, as `EquipSlotRecord.Bone` writes it) at an attach point made once
   per bone; a hand's point is its grip, worked out from the hand's bones by `GripFrame` (tested) rather than tuned per
   rig: the hand, a knuckle (middle, else index) and the thumb give the fingers' way, the side the blade leaves the
@@ -792,7 +801,7 @@ from any camera, so both cameras read the same player.
   the speed in the clips' own size (the avatar's `humanScale`) picks the blend, and past the fastest clip it plays
   faster. `HumanoidAnimation` (Play) is the one thing feeding an `Animator` (Speed damped 0.1 s, Pace, Grounded,
   VerticalSpeed; TopSpeed is the builder's default); `PlayerAvatar.Animate` drives it, and the player's animator always
-  animates, so its first-person shadow walks too.
+  animates, so its body is seen walking from its own eyes too.
 - **Play from here** (`PlayFromHere`, EditorApp, built by the controller when the bootstrap has a `_player` profile):
   when the app starts playing, it begins its game (`GameSession`) with the player on whatever the middle of the view
   shows (else the ground under the camera), facing the camera's heading; with neither (the view is off the land) at the

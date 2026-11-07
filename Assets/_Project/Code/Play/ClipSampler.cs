@@ -76,7 +76,13 @@ namespace Forge.Play
         }
 
         /// <summary>Every vertex of the copy as it is posed now (skinned meshes baked), in its root's frame.</summary>
-        public List<Vector3> MeshPoints()
+        public List<Vector3> MeshPoints() => MeshPoints(null);
+
+        /// <summary>
+        /// The vertices of the copy, as it is posed now, that <paramref name="bones"/> (the copy's own) carry: half their
+        /// skinning weight or more, or the whole of a mesh that hangs from one of them; in its root's frame. Null bones: every vertex.
+        /// </summary>
+        public List<Vector3> MeshPoints(ICollection<Transform> bones)
         {
             var points = new List<Vector3>();
             var baked = new Mesh();
@@ -84,14 +90,17 @@ namespace Forge.Play
             {
                 foreach (var skinned in _copy.GetComponentsInChildren<SkinnedMeshRenderer>(true))
                 {
+                    var carried = bones == null ? null : Carried(skinned, bones);
+                    if (carried != null && carried.Count == 0)
+                        continue;
                     skinned.BakeMesh(baked, false);
-                    AddPoints(points, baked, skinned.transform);
+                    AddPoints(points, baked, skinned.transform, carried);
                 }
 
                 foreach (var filter in _copy.GetComponentsInChildren<MeshFilter>(true))
                 {
-                    if (filter.sharedMesh != null && filter.sharedMesh.isReadable)
-                        AddPoints(points, filter.sharedMesh, filter.transform);
+                    if (filter.sharedMesh != null && filter.sharedMesh.isReadable && (bones == null || filter.transform.HangsFrom(bones)))
+                        AddPoints(points, filter.sharedMesh, filter.transform, null);
                 }
             }
             finally
@@ -102,10 +111,42 @@ namespace Forge.Play
             return points;
         }
 
-        void AddPoints(List<Vector3> points, Mesh mesh, Transform from)
+        void AddPoints(List<Vector3> points, Mesh mesh, Transform from, HashSet<int> only)
         {
-            foreach (var vertex in mesh.vertices)
-                points.Add(Root.InverseTransformPoint(from.TransformPoint(vertex)));
+            var vertices = mesh.vertices;
+            for (var i = 0; i < vertices.Length; i++)
+            {
+                if (only == null || only.Contains(i))
+                    points.Add(Root.InverseTransformPoint(from.TransformPoint(vertices[i])));
+            }
+        }
+
+        // Which of a skinned mesh's vertices the bones carry, by half their weight or more.
+        static HashSet<int> Carried(SkinnedMeshRenderer skinned, ICollection<Transform> bones)
+        {
+            var carried = new HashSet<int>();
+            var mesh = skinned.sharedMesh;
+            var skeleton = skinned.bones;
+            if (mesh == null)
+                return carried;
+            var counts = mesh.GetBonesPerVertex();
+            var weights = mesh.GetAllBoneWeights();
+            var at = 0;
+            for (var vertex = 0; vertex < counts.Length; vertex++)
+            {
+                var share = 0f;
+                for (var i = 0; i < counts[vertex]; i++, at++)
+                {
+                    var index = weights[at].boneIndex;
+                    if (index < skeleton.Length && bones.Contains(skeleton[index]))
+                        share += weights[at].weight;
+                }
+
+                if (share >= 0.5f)
+                    carried.Add(vertex);
+            }
+
+            return carried;
         }
 
         public void Dispose()

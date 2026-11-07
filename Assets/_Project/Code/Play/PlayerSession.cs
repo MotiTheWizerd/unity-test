@@ -64,7 +64,7 @@ namespace Forge.Play
             _placedActors = placedActors ?? throw new ArgumentNullException(nameof(placedActors));
             _controls = new PlayerControls(profile);
             Views = new ViewSwitch(
-                new FirstPersonCamera(),
+                new FirstPersonCamera(profile.FirstPerson()),
                 new ThirdPersonCamera(profile.ThirdPerson(), new PhysicsCameraObstacles()),
                 profile.StartInThirdPerson);
             _director = new CameraDirector(camera, Views.Current);
@@ -163,7 +163,7 @@ namespace Forge.Play
             UpdateAttributes(world.OfType<AttributeRecord>());
             _motor = new CharacterControllerMotor(_profile);
             if (_profile.Model != null)
-                _avatar = new PlayerAvatar(_motor.Body, _profile.Model, _motor.Hover);
+                _avatar = new PlayerAvatar(_motor.Body, _profile.Model, _motor.Hover, _profile.EyeHeight);
             Player = new PlayerCharacter(_motor, _profile.Locomotion(), _profile.EyeHeight, Attributes, Events);
             World = world;
             // A world made before carrying weighed anything (no carry weight) lets the player carry anything.
@@ -190,6 +190,8 @@ namespace Forge.Play
             Player.PlaceAt(feet.ToNumerics(), heading);
             Focus = new InteractionFocus(ActorId.Player, world, interactions, _probe, _profile.Reach);
             Views.ThirdPerson.Begin();
+            Views.FirstPerson.Head = _avatar;
+            Views.FirstPerson.Begin();
             Frame(0f);
 
             _controls.Enable();
@@ -275,6 +277,8 @@ namespace Forge.Play
             Combat?.Dispose();
             Combat = null;
             _combatants.Remove(ActorId.Player);
+            Views.FirstPerson.Head = null;
+            _director.Release();
             _avatar?.Dispose();
             _avatar = null;
             _motor.Dispose();
@@ -313,7 +317,7 @@ namespace Forge.Play
             Cursor.visible = !captured;
         }
 
-        // The camera frames the player as the current view says; the model turns with the body, shows unless the camera is inside it, and animates as the body moved.
+        // The camera frames the player as the current view says; the model turns with the body, is seen from within its head in first person, and animates as the body moved.
         void Frame(float deltaTime)
         {
             var view = Views.Current;
@@ -323,7 +327,7 @@ namespace Forge.Play
             if (_avatar == null)
                 return;
             _avatar.Face(Player.BodyHeading);
-            _avatar.Show(view.ShowsBody);
+            _avatar.FirstPerson = view.InsideHead;
             if (deltaTime > 0f)
                 _avatar.Animate(Player.Motion, deltaTime);
         }
