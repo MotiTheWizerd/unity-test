@@ -80,9 +80,12 @@ namespace Forge.World.Assets
                 SetLayerRecursively(subject.transform, Layer);
         }
 
-        /// <summary>The world bounds of everything <paramref name="subject"/> draws; a unit box at it when it draws nothing.</summary>
+        /// <summary>
+        /// The world bounds of everything <paramref name="subject"/> draws, a character as it stands now; a unit box at it
+        /// when it draws nothing.
+        /// </summary>
         public static Bounds BoundsOf(GameObject subject) =>
-            RendererBounds.TryGet(subject, out var bounds) ? bounds : new Bounds(subject.transform.position, Vector3.one);
+            RendererBounds.TryGetPosed(subject, out var bounds) ? bounds : new Bounds(subject.transform.position, Vector3.one);
 
         public void Dispose()
         {

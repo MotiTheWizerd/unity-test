@@ -88,6 +88,38 @@ namespace Forge.Tests.World
         }
 
         [Test]
+        public void ACharacter_StartsNearlyFaceOn_HoldsStill_AndOnlySpins()
+        {
+            var turn = PreviewTurn.Character();
+            var start = turn.Spin;
+            Assert.That(Mathf.DeltaAngle(start, PreviewTurn.FaceOn), Is.InRange(-30f, 30f), "It faces the viewer, near enough.");
+
+            turn.Tick(5f);
+            Assert.That(turn.Spin, Is.EqualTo(start), "It doesn't spin by itself.");
+
+            turn.Drag(40f, 60f);
+            Assert.That(turn.Spin, Is.EqualTo(Mathf.Repeat(start - 40f, 360f)).Within(1e-3f));
+            Assert.That(Quaternion.Angle(turn.Tilt, Quaternion.identity), Is.LessThan(1e-3f), "A drag up never lays a man down.");
+
+            turn.Reset();
+            Assert.That(turn.Spin, Is.EqualTo(start), "Double-clicking puts it back at its own start.");
+        }
+
+        [Test]
+        public void ACharacter_SeenAtEyeLevel_IsFramedNearer_ThanFromAnItemsHeight()
+        {
+            // A man standing: 0.4 m around his axis, 0.92 m up and down, in a tall narrow panel.
+            const float reach = 0.4f, halfHeight = 0.92f, fov = 30f, aspect = 0.45f;
+
+            var fromAbove = TurntableFraming.Distance(reach, halfHeight, fov, aspect, 1f, TurntableFraming.Pitch);
+            var eyeLevel = TurntableFraming.Distance(reach, halfHeight, fov, aspect, 1f, PreviewTurn.Character().Pitch);
+            var pose = TurntableFraming.CameraPose(Vector3.zero, eyeLevel, PreviewTurn.Character().Pitch);
+
+            Assert.That(eyeLevel, Is.LessThan(fromAbove), "Seen level, his height is all that must fit.");
+            Assert.That(pose.position.y / eyeLevel, Is.LessThan(0.1f), "The camera stands about level with him.");
+        }
+
+        [Test]
         public void Zoom_StaysWithinTheFramingsBounds()
         {
             var turn = new PreviewTurn();

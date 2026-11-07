@@ -44,6 +44,26 @@ namespace Forge.Tests.Game
             new PlacedObjectRecord(changes.NewId(), item, Space, new Vector3(x, 0f, 0f), Quaternion.Identity, 1f);
     }
 
+    public class InventoryClearTests
+    {
+        [Test]
+        public void Clear_TakesEverythingOut_AndTellsOnlyWhenSomethingWent()
+        {
+            var inventory = new Inventory();
+            inventory.Add(ItemWorld.Sword);
+            inventory.Add(ItemWorld.Apple, 3);
+            var told = 0;
+            inventory.Changed += () => told++;
+
+            inventory.Clear();
+            inventory.Clear();
+
+            Assert.That(inventory.Stacks, Is.Empty);
+            Assert.That(inventory.CountOf(ItemWorld.Sword), Is.Zero);
+            Assert.That(told, Is.EqualTo(1), "An empty pack emptied again changes nothing.");
+        }
+    }
+
     public class WorldChangesAddedTests
     {
         [Test]

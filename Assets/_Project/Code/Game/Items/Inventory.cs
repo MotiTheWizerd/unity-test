@@ -87,6 +87,15 @@ namespace Forge.Game.Items
             return true;
         }
 
+        /// <summary>Takes everything out (a played world put back as built takes back what was taken from it).</summary>
+        public void Clear()
+        {
+            if (_stacks.Count == 0)
+                return;
+            _stacks.Clear();
+            Changed?.Invoke();
+        }
+
         int IndexOf(RecordId item)
         {
             for (var i = 0; i < _stacks.Count; i++)

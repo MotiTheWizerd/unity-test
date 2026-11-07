@@ -20,8 +20,8 @@ namespace Forge.Play
     /// (<see cref="Changes"/>, shown over the scene: what was taken leaves it, what was dropped joins it), the world as
     /// played (<see cref="World"/>), what actors can do with the use key (<see cref="Interactions"/>: take items) and the
     /// player (<see cref="Player"/>). <see cref="Begin"/> stands the player in the world, <see cref="Tick"/> plays a frame
-    /// and then tells what happened in it, <see cref="End"/> takes the player away and puts the world back as built; the
-    /// player keeps what it carries, as it keeps its attributes. Whatever plays the world runs one: the editor's play from
+    /// and then tells what happened in it, <see cref="End"/> takes the player away and puts the world back as built, with
+    /// what the player took from it. Whatever plays the world runs one: the editor's play from
     /// here today, the game itself later.
     /// </summary>
     public sealed class GameSession : IDisposable
@@ -126,10 +126,14 @@ namespace Forge.Play
             return placed;
         }
 
-        /// <summary>Stops playing: the player goes, and the world is as built again.</summary>
+        /// <summary>
+        /// Stops playing: the player goes, and the world is as built again, as the Creation Kit's test play leaves it.
+        /// What the player took goes back with it, so playing again never finds an item both in the pack and on the ground.
+        /// </summary>
         public void End()
         {
             Player.Despawn();
+            Player.Inventory.Clear();
             Changes.Clear();
             World = null;
             Events.Flush();

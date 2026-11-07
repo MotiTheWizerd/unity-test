@@ -4,23 +4,27 @@ using System.Linq;
 using Forge.Data;
 using Forge.Data.Records;
 using Forge.Game.Items;
+using Forge.World.Assets;
 using UnityEngine.UIElements;
 
 namespace Forge.Play.Hud
 {
     /// <summary>
-    /// The player's inventory while it is open (<see cref="PlayerSession.InventoryOpen"/>), as Skyrim's item menu: a tab
-    /// per kind of item down the left (All first; a new <see cref="ItemKind"/> gets its own), what the player carries in
+    /// The player's inventory while it is open (<see cref="PlayerSession.InventoryOpen"/>), as Skyrim's item menu: the
+    /// player's character standing full length on the far left (a <see cref="TurntableView"/> that a drag spins), a tab
+    /// per kind of item beside it (All first; a new <see cref="ItemKind"/> gets its own), what the player carries in
     /// that tab by name (<see cref="InventoryList"/>), the chosen item turning large in 3D (a <see cref="TurntableView"/>:
     /// drag to turn it, the wheel to zoom) over its card with a Drop button, and along the bottom what it all weighs
     /// against the carry weight, red when overburdened. Drawn by InventoryScreen.uss. The list is read again only when the
-    /// inventory changes, the tab does, or the screen opens; the item is drawn only while the screen is open. Whatever
+    /// inventory changes, the tab does, or the screen opens; the character and the item are drawn only while the screen
+    /// is open. Whatever
     /// plays the world hosts it beside the HUD.
     /// </summary>
     public sealed class InventoryScreen : IDisposable
     {
         public const string UssClass = "forge-inventory";
         public const string FrameClass = UssClass + "__frame";
+        public const string CharacterViewClass = UssClass + "__character-view";
         public const string TabsClass = UssClass + "__tabs";
         public const string TabClass = UssClass + "__tab";
         public const string TabActiveClass = TabClass + "--active";
@@ -54,6 +58,7 @@ namespace Forge.Play.Hud
         readonly VisualElement _root;
         readonly List<Tab> _tabs = new List<Tab>();
         readonly ScrollView _list;
+        readonly TurntableView _characterView;
         readonly TurntableView _itemView;
         readonly VisualElement _card;
         readonly Label _cardName;
@@ -66,7 +71,6 @@ namespace Forge.Play.Hud
         readonly Label _hint;
         Tab _tab;
         RecordId _selected;
-        string _selectedLook;
         bool _shown;
         bool _dirty = true;
 
@@ -80,6 +84,10 @@ namespace Forge.Play.Hud
             _root = Part<VisualElement>(parent, UssClass);
             _root.name = "inventory-screen";
             var frame = Part<VisualElement>(_root, FrameClass);
+
+            _characterView = new TurntableView(PreviewTurn.Character());
+            _characterView.AddToClassList(CharacterViewClass);
+            frame.Add(_characterView);
 
             var tabs = Part<VisualElement>(frame, TabsClass);
             foreach (var kind in TabOrder())
@@ -95,7 +103,7 @@ namespace Forge.Play.Hud
             frame.Add(_list);
 
             var aside = Part<VisualElement>(frame, AsideClass);
-            _itemView = new TurntableView(game.Assets);
+            _itemView = new TurntableView();
             _itemView.AddToClassList(ItemViewClass);
             aside.Add(_itemView);
             _card = Part<VisualElement>(aside, CardClass);
@@ -119,7 +127,7 @@ namespace Forge.Play.Hud
 
         /// <summary>
         /// Shows the screen while the inventory is open, brings it up to date when something changed, and turns the
-        /// chosen item <paramref name="deltaTime"/> seconds' worth.
+        /// character and the chosen item <paramref name="deltaTime"/> seconds' worth.
         /// </summary>
         public void Tick(float deltaTime)
         {
@@ -135,13 +143,14 @@ namespace Forge.Play.Hud
                 return;
             if (_dirty)
                 Draw();
-            _itemView.Show(_selectedLook);
+            _characterView.Tick(deltaTime);
             _itemView.Tick(deltaTime);
         }
 
         public void Dispose()
         {
             _game.Player.Inventory.Changed -= MarkDirty;
+            _characterView.Dispose();
             _itemView.Dispose();
             _root.RemoveFromHierarchy();
         }
@@ -209,8 +218,16 @@ namespace Forge.Play.Hud
             if (entries.Count == 0)
                 Part<Label>(_list.contentContainer, EmptyClass).text = _tab.Kind == null ? "You carry nothing." : $"No {TabName(_tab.Kind).ToLowerInvariant()}.";
 
+            DrawCharacter();
             DrawCard(entries.FirstOrDefault(e => e.Item == _selected));
             DrawFooter();
+        }
+
+        // The player as it looks, standing still; drawn again only when its look is another (equipment, later).
+        void DrawCharacter()
+        {
+            var model = _game.Player.Model;
+            _characterView.Show(model, parent => CharacterModel.StandingStill(parent, model));
         }
 
         VisualElement Row(InventoryEntry entry)
@@ -229,7 +246,7 @@ namespace Forge.Play.Hud
         {
             var any = entry.Record != null;
             _card.style.visibility = any ? Visibility.Visible : Visibility.Hidden;
-            _selectedLook = any ? entry.Record.AssetKey : null;
+            _itemView.Show(_game.Assets, any ? entry.Record.AssetKey : null);
             if (!any)
                 return;
 

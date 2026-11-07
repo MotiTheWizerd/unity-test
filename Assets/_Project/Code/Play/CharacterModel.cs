@@ -32,6 +32,17 @@ namespace Forge.Play
             _animation = HumanoidAnimation.On(Root);
         }
 
+        /// <summary>
+        /// <paramref name="prefab"/>'s look standing still (its idle) under <paramref name="parent"/>, for a picture of the
+        /// character (the inventory's); destroying the object returned is all it takes to take it away.
+        /// </summary>
+        public static GameObject StandingStill(Transform parent, GameObject prefab)
+        {
+            var model = new CharacterModel(parent, prefab);
+            model.Animate(BodyMotion.Still, 0f);
+            return model.Root;
+        }
+
         /// <summary>The model's object, a child of the body.</summary>
         public GameObject Root { get; }
 

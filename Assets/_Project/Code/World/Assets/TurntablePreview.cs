@@ -4,12 +4,14 @@ using UnityEngine;
 namespace Forge.World.Assets
 {
     /// <summary>
-    /// A thing of the world shown live in a <see cref="PreviewStudio"/>, as Skyrim shows the item chosen in its inventory:
-    /// built from the same asset the world uses (<see cref="Show"/>), posed by <see cref="Turn"/> (it spins slowly by
-    /// itself, and a hand turns it every way), framed whole by the cylinder it sweeps as it leans
-    /// (<see cref="TurntableFraming"/>), so a coin and a sword both fill the view, and drawn every <see cref="Tick"/> into
-    /// <see cref="Texture"/> on a transparent background for a UI to show. The subject is active only inside its own
-    /// render, so no other camera ever sees it.
+    /// A thing shown live in a <see cref="PreviewStudio"/>, as Skyrim shows the item chosen in its inventory and the
+    /// character carrying it: built by whoever shows it (<see cref="Show(object, Func{Transform, GameObject})"/>; an item
+    /// from the world's assets, a character from its prefab), posed by <see cref="Turn"/> (an item spins slowly by itself
+    /// and a hand turns it every way; a character only spins), framed whole by the cylinder it sweeps as it leans
+    /// (<see cref="TurntableFraming"/>), so a coin, a sword and a man all fill the view, and drawn every
+    /// <see cref="Tick"/> into <see cref="Texture"/> on a transparent background for a UI to show. The subject is only a
+    /// picture: its colliders go, it draws only inside its own render, so no other camera ever sees it, and its
+    /// animators (a character's idle) step with each tick rather than with the world, so it breathes while the world waits.
     /// </summary>
     public sealed class TurntablePreview : IDisposable
     {
@@ -19,16 +21,18 @@ namespace Forge.World.Assets
         // The largest texture side, whatever the UI asks.
         const int MaxSide = 2048;
 
-        readonly IAssetCatalog _assets;
         readonly PreviewStudio _studio;
         readonly Transform _turntable;
         GameObject _subject;
+        Renderer[] _renderers = Array.Empty<Renderer>();
+        Animator[] _animators = Array.Empty<Animator>();
         RenderTexture _target;
         Vector3 _extents;
 
-        public TurntablePreview(IAssetCatalog assets)
+        /// <param name="turn">How the subject turns (<see cref="PreviewTurn.Character"/> for a character); null for an item's.</param>
+        public TurntablePreview(PreviewTurn turn = null)
         {
-            _assets = assets ?? throw new ArgumentNullException(nameof(assets));
+            Turn = turn ?? new PreviewTurn();
             _studio = new PreviewStudio("Turntable", null);
             var camera = _studio.Camera;
             camera.orthographic = false;
@@ -39,36 +43,48 @@ namespace Forge.World.Assets
         }
 
         /// <summary>How the subject is turned and zoomed: by itself, and by whoever drags it.</summary>
-        public PreviewTurn Turn { get; } = new PreviewTurn();
+        public PreviewTurn Turn { get; }
 
         /// <summary>The picture, redrawn each <see cref="Tick"/>; null until <see cref="Resize"/> gives it a size.</summary>
         public RenderTexture Texture => _target;
 
-        /// <summary>The asset key shown, or null for nothing.</summary>
-        public string Shown { get; private set; }
+        /// <summary>What is shown (an asset key, a prefab), or null for nothing.</summary>
+        public object Shown { get; private set; }
+
+        /// <summary>Shows <paramref name="assetKey"/>'s asset from <paramref name="assets"/>; null clears it.</summary>
+        public void Show(IAssetCatalog assets, string assetKey)
+        {
+            if (assets == null)
+                throw new ArgumentNullException(nameof(assets));
+            Show(string.IsNullOrEmpty(assetKey) ? null : assetKey, parent => assets.Instantiate(assetKey, parent));
+        }
 
         /// <summary>
-        /// Shows <paramref name="assetKey"/>'s asset, upright and three-quarters on (<see cref="PreviewTurn.Reset"/>); null
-        /// clears it. The same key again keeps how it was turned.
+        /// Shows <paramref name="subject"/>, made by <paramref name="build"/> under the parent it is given, upright and at
+        /// its start (<see cref="PreviewTurn.Reset"/>); null clears it. The same subject again keeps how it was turned.
         /// </summary>
-        public void Show(string assetKey)
+        public void Show(object subject, Func<Transform, GameObject> build)
         {
-            if (string.Equals(assetKey, Shown, StringComparison.Ordinal))
+            if (Equals(subject, Shown))
                 return;
 
             Clear();
-            Shown = assetKey;
-            if (string.IsNullOrEmpty(assetKey))
+            if (subject == null)
                 return;
+            if (build == null)
+                throw new ArgumentNullException(nameof(build));
 
             _turntable.localRotation = Quaternion.identity;
-            _subject = _assets.Instantiate(assetKey, _turntable);
+            _subject = build(_turntable);
+            if (_subject == null)
+                return;
+            Shown = subject;
+            MakePicture(_subject);
             _studio.PutOnLayer(_subject);
             // Its drawn centre sits on the turntable's pivot, so it turns in place.
             var bounds = PreviewStudio.BoundsOf(_subject);
             _subject.transform.localPosition -= _turntable.InverseTransformPoint(bounds.center);
             _extents = bounds.extents;
-            _subject.SetActive(false);
             Turn.Reset();
         }
 
@@ -82,9 +98,13 @@ namespace Forge.World.Assets
 
             ReleaseTarget();
             _target = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32) { name = "Turntable", antiAliasing = 4 };
+            Wipe();
         }
 
-        /// <summary>Lets <paramref name="deltaTime"/> seconds pass (it spins by itself unless held) and draws the picture.</summary>
+        /// <summary>
+        /// Lets <paramref name="deltaTime"/> seconds pass (it spins by itself unless held, its animations play) and draws
+        /// the picture.
+        /// </summary>
         public void Tick(float deltaTime)
         {
             if (_subject == null || _target == null)
@@ -92,24 +112,26 @@ namespace Forge.World.Assets
 
             Turn.Tick(deltaTime);
             _turntable.localRotation = Turn.Rotation;
+            foreach (var animator in _animators)
+                animator.Update(deltaTime);
 
             TurntableFraming.Swept(_extents, Turn.Tilt, out var reach, out var halfHeight);
-            var distance = TurntableFraming.Distance(reach, halfHeight, FieldOfView, (float)_target.width / _target.height, Turn.Zoom);
-            var pose = TurntableFraming.CameraPose(_turntable.position, distance);
+            var distance = TurntableFraming.Distance(reach, halfHeight, FieldOfView, (float)_target.width / _target.height, Turn.Zoom, Turn.Pitch);
+            var pose = TurntableFraming.CameraPose(_turntable.position, distance, Turn.Pitch);
             var camera = _studio.Camera;
             camera.transform.SetPositionAndRotation(pose.position, pose.rotation);
             var radius = _extents.magnitude;
             camera.nearClipPlane = Mathf.Max(0.01f, distance - radius * 2f);
             camera.farClipPlane = distance + radius * 2f;
 
-            _subject.SetActive(true);
+            Draw(true);
             try
             {
                 _studio.Render(_target, true);
             }
             finally
             {
-                _subject.SetActive(false);
+                Draw(false);
             }
         }
 
@@ -120,12 +142,54 @@ namespace Forge.World.Assets
             ReleaseTarget();
         }
 
+        // Nothing touches it (no colliders), it draws only when asked, and its animators wait for the ticks.
+        void MakePicture(GameObject subject)
+        {
+            foreach (var collider in subject.GetComponentsInChildren<Collider>(true))
+            {
+                collider.enabled = false;
+                UnityEngine.Object.Destroy(collider);
+            }
+
+            _renderers = subject.GetComponentsInChildren<Renderer>(true);
+            _animators = subject.GetComponentsInChildren<Animator>(true);
+            foreach (var animator in _animators)
+            {
+                animator.enabled = false;
+                animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                // Its first pose (a character's idle, not its T-pose) before it is measured.
+                animator.Update(0f);
+            }
+
+            Draw(false);
+        }
+
+        void Draw(bool drawn)
+        {
+            foreach (var renderer in _renderers)
+                renderer.forceRenderingOff = !drawn;
+        }
+
         void Clear()
         {
             if (_subject != null)
                 UnityEngine.Object.Destroy(_subject);
             _subject = null;
+            _renderers = Array.Empty<Renderer>();
+            _animators = Array.Empty<Animator>();
             Shown = null;
+            Wipe();
+        }
+
+        // Nothing drawn: the picture is only drawn while there is a subject, so without this the last one would stay.
+        void Wipe()
+        {
+            if (_target == null)
+                return;
+            var active = RenderTexture.active;
+            RenderTexture.active = _target;
+            GL.Clear(true, true, Color.clear);
+            RenderTexture.active = active;
         }
 
         void ReleaseTarget()

@@ -1,6 +1,6 @@
 /*
  * The player's inventory while it is open (Forge.Play.Hud.InventoryScreen), as Skyrim's item menu: the world dimmed
- * behind, the kinds down the left, the items in the chosen kind, the chosen item's card, and the weight carried along
+ * behind, the player standing on the far left, the kinds beside it, the items in the chosen kind, the chosen item's card, and the weight carried along
  * the bottom. Colours are the HUD's (PlayerHud.uss) and the editor's gold accent for what is chosen.
  */
 
@@ -31,6 +31,14 @@
 .forge-inventory__frame {
     flex-grow: 1;
     flex-direction: row;
+}
+
+/* The player standing full length on the far left, on no backdrop of its own: a drag spins it. */
+.forge-inventory__character-view {
+    width: 300px;
+    flex-shrink: 1;
+    min-width: 160px;
+    margin-right: 24px;
 }
 
 /* The kinds, a column of words; the chosen one gold. */

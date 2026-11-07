@@ -662,29 +662,38 @@ from any camera, so both cameras read the same player.
   the controls on and captures the mouse; `Tick` applies the view commands, sets the body's facing from the current
   view, steps the player, then frames it and turns and shows (or shadows only) the model, and last looks for what is in
   sight from where the camera now is (`CameraDirector.Pose`), so the prompt and the use key go by what the frame shows,
-  and uses it if the key was pressed; `Despawn` takes it away. One per app, so the view chosen, the attributes and what
-  it carries carry over to the next spawn. While spawned in a world with a carry weight it has a `Burden`
+  and uses it if the key was pressed; `Despawn` takes it away. One per app, so the view chosen and the attributes carry
+  over to the next spawn; what it carries is emptied when play ends (`GameSession.End`), since the world is put back as
+  built too, so an item is never both in the pack and on the ground. While spawned in a world with a carry weight it has a `Burden`
   (`Encumbrance`, one of the player's `Limits`) and keeps the `World` (as played) its items are read from.
 - **The inventory in play**: the Player map's `Inventory` (I or Tab, the gamepad's select) opens and closes it
   (`PlayerSession.InventoryOpen`; `PlayerControls.InventoryKey` names it). While it is open the mouse is freed for the
   screen and `Tick` steps nothing (no move, no look, no regen), as Skyrim pauses for its menus; `GameSession.Back` (Esc)
   closes it first, and only Esc with nothing open leaves play. `InventoryScreen` (Play.Hud, InventoryScreen.uss, hosted
-  beside the HUD by `HudSection`; the HUD hides meanwhile) draws `InventoryList`: tabs down the left (All, then each
-  `ItemKind`, Misc last), the tab's items by name with their counts, the chosen item turning large in 3D (a
-  `TurntableView`) over its card (kind, weight, value, how many) with Drop, and the weight against the carry weight along
-  the bottom, red when overburdened. It reads again only when the inventory, the tab or the choice changes, or it opens,
-  and draws on the next tick, never inside the click; the item is drawn only while the screen is open.
-- **Turntables** (`TurntablePreview`, World/Assets; `TurntableView`, Play.Hud): a thing of the world shown live in a
-  `PreviewStudio`, as Skyrim shows the chosen item, built from its asset key through the world's `IAssetCatalog`
-  (`GameSession.Assets`, the `WorldView`'s). Its pose is a `PreviewTurn` (World/Assets, tested): a spin around the up
-  axis over a tilt; it spins by itself at 25°/s unless held, and `TurnManipulator` (Play.Hud, a UI Toolkit
+  beside the HUD by `HudSection`; the HUD hides meanwhile) draws `InventoryList`: the player's character standing full
+  length on the far left (a `TurntableView` of `PlayerSession.Model`, built by `CharacterModel.StandingStill`), tabs
+  beside it (All, then each `ItemKind`, Misc last), the tab's items by name with their counts, the chosen item turning
+  large in 3D (a `TurntableView`) over its card (kind, weight, value, how many) with Drop, and the weight against the
+  carry weight along the bottom, red when overburdened. It reads again only when the inventory, the tab or the choice
+  changes, or it opens, and draws on the next tick, never inside the click; the character and the item are drawn only
+  while the screen is open.
+- **Turntables** (`TurntablePreview`, World/Assets; `TurntableView`, Play.Hud): a thing shown live in a
+  `PreviewStudio`, as Skyrim shows the chosen item and the character carrying it. Whoever shows it builds it
+  (`Show(subject, build)`): an item from its asset key through the world's `IAssetCatalog` (`Show(assets, key)`;
+  `GameSession.Assets`, the `WorldView`'s), a character from its prefab. Its pose is a `PreviewTurn` (World/Assets,
+  tested), set up per view: a spin around the up axis over a tilt; an item spins by itself at 25°/s unless held and
+  tilts, seen from 30° above; a character (`PreviewTurn.Character()`) starts nearly face on, holds still, only spins,
+  and is seen from about eye level (`TurntableFraming.EyeLevelPitch`, 5°). `TurnManipulator` (Play.Hud, a UI Toolkit
   `PointerManipulator` any element showing a 3D thing adds) turns it every way by hand, as Skyrim's inventory does: a
   left drag across spins it, up and down tilts it about the view's right axis however it was spun, the wheel zooms (0.6
   to 3×), a double click puts it back. `TurntableFraming` (pure math, tested) fits the cylinder it sweeps spinning as
-  it leans (`Swept`: its reach around the axis and its half height) to the view's width and, seen from 30° above, its
-  height, so a long flat sword and a tall bottle both fill the view, and spinning never moves the frame. A perspective camera with a 30° lens draws it every tick into a render texture
-  (4× MSAA) as large as the element on screen, on a transparent background; the subject is active only inside its own
-  render, so no other camera sees it. The character view will be one more turntable.
+  it leans (`Swept`: its reach around the axis and its half height) to the view's width and, seen from its pitch, its
+  height, so a long flat sword, a tall bottle and a man all fill the view, and spinning never moves the frame. It is
+  measured as it stands (`RendererBounds.TryGetPosed` bakes a skinned mesh, so a character is framed by its idle, not
+  its T-pose). A perspective camera with a 30° lens draws it every tick into a render texture (4× MSAA) as large as the
+  element on screen, on a transparent background, wiped when the subject goes. The subject is only a picture: its
+  colliders go, its renderers are forced off but inside its own render, so no other camera sees it, and its animators
+  are stepped by the ticks (a character idles while the world waits).
 - **The use key in play**: the Player map's `Interact` (E, the gamepad's north button; a tap) is
   `PlayerCommands.Activate`, and `PlayerControls.InteractKey` names it for the prompt (its binding in the actions' first
   control scheme, the keyboard's). `PhysicsInteractionProbe` is the line of sight: a ray, then a ball of the profile's
@@ -740,8 +749,8 @@ from any camera, so both cameras read the same player.
   when the app starts playing, it begins its game (`GameSession`) with the player on whatever the middle of the view
   shows (else the ground under the camera), facing the camera's heading; with neither (the view is off the land) at the
   space's player start, facing its way; else it falls from the camera. It rests the fly camera (`enabled = false`). The controller ticks it each frame while playing; Esc ends the game (the player goes,
-  and the world is as built again: what was taken is back, as in the Creation Kit's test play, while the player keeps
-  what it carries) and wakes the fly camera, and the bootstrap gives the editing camera back. The camera is the streaming's focus, so the streaming and the
+  and the world is as built again: what was taken is back and the pack is empty, as in the Creation Kit's test play)
+  and wakes the fly camera, and the bootstrap gives the editing camera back. The camera is the streaming's focus, so the streaming and the
   origin follow the player; a rebase moves the player with the camera (`PlayFromHere.Shift`). The world's edge is open:
   walking off the land falls forever (Moti's call, as it stands).
 - Known limits: interiors have no floor to stand on yet (the floor grid has no collider), there's no swimming (water

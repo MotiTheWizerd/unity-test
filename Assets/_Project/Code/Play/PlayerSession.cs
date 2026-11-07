@@ -68,7 +68,7 @@ namespace Forge.Play
         /// </summary>
         public ActorAttributes Attributes { get; private set; }
 
-        /// <summary>What the player carries, kept from one spawn to the next, so it keeps what it took when the world resets.</summary>
+        /// <summary>What the player carries, kept from one spawn to the next; the game empties it when it puts the world back (<see cref="GameSession.End"/>).</summary>
         public Inventory Inventory { get; } = new Inventory();
 
         /// <summary>
@@ -85,6 +85,9 @@ namespace Forge.Play
 
         /// <summary>Whether the inventory is open: the mouse is the screen's and the player waits.</summary>
         public bool InventoryOpen { get; private set; }
+
+        /// <summary>What the player looks like (the profile's character prefab); null when it has no look.</summary>
+        public GameObject Model => _profile.Model;
 
         /// <summary>The use key as a prompt shows it ("E").</summary>
         public string InteractKey => _controls.InteractKey;
