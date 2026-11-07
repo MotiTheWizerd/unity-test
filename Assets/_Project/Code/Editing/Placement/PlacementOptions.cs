@@ -60,5 +60,8 @@ namespace Forge.Editing.Placement
 
         /// <summary>One gap drawn from <paramref name="gap"/>.</summary>
         public float DrawGap(RowGap gap) => gap.Draw(_random);
+
+        /// <summary>The options' random source, so every placer's variety (a scatter's spots too) comes from one seed.</summary>
+        public Random Random => _random;
     }
 }

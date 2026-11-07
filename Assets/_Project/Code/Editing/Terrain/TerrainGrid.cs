@@ -87,6 +87,25 @@ namespace Forge.Editing.Terrain
         /// <summary>Height at a ground position (x, z), bilinear between samples; null outside the terrain.</summary>
         public float? HeightAt(Vector2 ground) => Bilinear(ground, Spacing, SampleHeight);
 
+        /// <summary>
+        /// How steep the ground is at <paramref name="ground"/>, in degrees, from the heights a sample's width to each
+        /// side; null outside the terrain.
+        /// </summary>
+        public float? SlopeAt(Vector2 ground)
+        {
+            var half = Spacing / 2f;
+            var east = HeightAt(ground + new Vector2(half, 0f));
+            var west = HeightAt(ground - new Vector2(half, 0f));
+            var north = HeightAt(ground + new Vector2(0f, half));
+            var south = HeightAt(ground - new Vector2(0f, half));
+            if (east == null || west == null || north == null || south == null)
+                return null;
+
+            var dx = (east.Value - west.Value) / Spacing;
+            var dz = (north.Value - south.Value) / Spacing;
+            return (float)(Math.Atan(Math.Sqrt(dx * dx + dz * dz)) * 180.0 / Math.PI);
+        }
+
         /// <summary>Every terrain sample in the square of half-edge <paramref name="reach"/> around <paramref name="center"/>.</summary>
         public IEnumerable<(int Gx, int Gz, Vector2 Ground, float Height)> SamplesAround(Vector2 center, float reach) =>
             SamplesIn(center - new Vector2(reach), center + new Vector2(reach));

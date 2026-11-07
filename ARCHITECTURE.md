@@ -490,6 +490,15 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
     object's natural variation. Unknown ids refuse the whole call; positions without terrain are skipped.
   - `place_line`: one object end to end along a path, stretch by stretch, exactly like the place tool's
     Shift line (`PlacementStroke`); corners shared by two stretches get one object; `closed` encloses an area.
+  - `scatter_objects`: kinds (one at random per spot) and a count over a rectangle or corners, by rules on the
+    ground (`Placement/Scattering`, engine-free: dart throwing inside the `GroundShape`, keeping a spot when its slope
+    and height fit, it is dry unless `in_water`, nothing kept or already standing is within the spacing (default the
+    widest kind's size plus a meter; `SpatialBins` of one spacing), and `clustering` hasn't thinned it: low
+    `TerrainNoise` makes clearings, so spots gather in groves). Seated like `place_objects`, one undo step; when fewer
+    fit than asked, the reply names the rules that turned spots down, most first. Randomness is
+    `PlacementOptions.Random`, the placers' one seed.
+  - `ground_at`: exact height, slope (`TerrainGrid.SlopeAt`, from heights half a sample to each side) and water depth
+    at up to 64 points.
   - `place_outline`: one object around a rectangle (x, z, width, depth, heading; walls, fences) or with `fill` over
     it (floors), exactly as the outline tool lays it (`RectLayout`); pieces without ground are skipped.
   - `adjust_objects`: moves, turns and resizes placed objects by id; what an item leaves out stays as it is,
