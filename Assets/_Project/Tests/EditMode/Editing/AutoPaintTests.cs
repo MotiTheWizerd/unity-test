@@ -63,6 +63,21 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void AnEvenSlope_PaintsInPatches_NotOneBand()
+        {
+            var store = new EditSession(new[] { Plugin("core", Chunk(0, Incline(20f))) }, Plugin("user", new[] { "core" })).World.Records;
+            int Spread(AutoPaintRules rules)
+            {
+                var paint = AutoPaint.Paint(store, Space, rules, null).Single().Paint.Load();
+                var dirt = Enumerable.Range(0, 64).Select(z => (int)paint[paint.IndexOf(Dirt), 30, z]).ToList();
+                return dirt.Max() - dirt.Min();
+            }
+
+            Assert.That(Spread(new AutoPaintRules(Grass, slope: Dirt, steep: Rock) { SlopeWander = 0f }), Is.LessThanOrEqualTo(2), "Exact thresholds: one even share.");
+            Assert.That(Spread(Rules), Is.GreaterThan(60), "Wandering thresholds: patches.");
+        }
+
+        [Test]
         public void EmptyRoles_FallToTheFlatGround()
         {
             var store = new EditSession(new[] { Plugin("core", Chunk(0, Incline(45f))) }, Plugin("user", new[] { "core" })).World.Records;

@@ -46,6 +46,12 @@ namespace Forge.Editing.Terrain
         /// <summary>The width of a slope blend.</summary>
         public float Blend { get; set; } = 8f;
 
+        /// <summary>
+        /// How far, in degrees, the slope thresholds wander over the ground, so an even slope breaks into patches of
+        /// dirt and rock instead of clean bands around a hill; 0 for exact thresholds.
+        /// </summary>
+        public float SlopeWander { get; set; } = 6f;
+
         /// <summary>How far above the sea the shore reaches; ground under the sea is shore too.</summary>
         public float ShoreHeight { get; set; } = 1.5f;
 
@@ -169,19 +175,21 @@ namespace Forge.Editing.Terrain
             var dz = Lerp(h01 - h00, h11 - h10, fu) / spacing;
             var slope = (float)(Math.Atan(Math.Sqrt(dx * dx + dz * dz)) * 180.0 / Math.PI);
 
+            var ground = new Vector2(coord.X * WorldGrid.ChunkSize + (x + 0.5f) * TexelSize, coord.Z * WorldGrid.ChunkSize + (z + 0.5f) * TexelSize);
             var snow = 0f;
             if (rules.SnowLine is float snowLine)
             {
-                var ground = new Vector2(coord.X * WorldGrid.ChunkSize + (x + 0.5f) * TexelSize, coord.Z * WorldGrid.ChunkSize + (z + 0.5f) * TexelSize);
                 var wander = TerrainNoise.At(ground, 24f, 3, 3) * rules.SnowBlend;
                 snow = Ramp(height + wander, snowLine, rules.SnowBlend) * (1f - Ramp(slope, rules.SnowHoldsTo, rules.Blend));
             }
 
+            // The slope as the thresholds read it, wandering over the ground so even slopes paint in patches.
+            var patchy = rules.SlopeWander > 0f ? slope + TerrainNoise.At(ground, 16f, 2, 5) * rules.SlopeWander : slope;
             var bare = 1f - snow;
-            var steep = bare * Ramp(slope, rules.SteepFrom, rules.Blend);
+            var steep = bare * Ramp(patchy, rules.SteepFrom, rules.Blend);
             var rest = bare - steep;
             var shore = seaLevel.HasValue ? rest * (1f - Ramp(height, seaLevel.Value + rules.ShoreHeight, rules.ShoreBlend)) : 0f;
-            var sloped = (rest - shore) * Ramp(slope, rules.SlopeFrom, rules.Blend);
+            var sloped = (rest - shore) * Ramp(patchy, rules.SlopeFrom, rules.Blend);
 
             // Each share is what the ones before it left, so round-off can take one a hair below zero.
             shares[0] = Math.Max(0f, rest - shore - sloped);
