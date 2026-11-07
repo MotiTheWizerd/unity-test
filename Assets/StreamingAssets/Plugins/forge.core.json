@@ -6,7 +6,7 @@
     "masters": []
   },
   "terrain": "forge.core.54160244cad4ef2c.terrain",
-  "objects": "forge.core.f5abd702bba701c3.objects",
+  "objects": "forge.core.6546ba723d0c7808.objects",
   "records": [
     {
       "type": "actor",
@@ -385,6 +385,34 @@
       }
     },
     {
+      "type": "base_object",
+      "id": "forge.core:greatsword",
+      "displayName": "Greatsword",
+      "assetKey": "models/greatsword",
+      "category": "Items/Weapons",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      },
+      "item": {
+        "kind": "weapon",
+        "weight": 18.0,
+        "value": 120
+      },
+      "equippable": {
+        "fits": [
+          {
+            "slots": [
+              "forge.core:equip_slot/right_hand",
+              "forge.core:equip_slot/left_hand"
+            ]
+          }
+        ]
+      }
+    },
+    {
       "type": "ground_layer",
       "id": "forge.core:ground/dirt",
       "displayName": "Dirt",
@@ -462,6 +490,60 @@
       "displayName": "Small House",
       "assetKey": "architecture/house_small",
       "category": "Architecture/Buildings"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:kite_shield",
+      "displayName": "Kite Shield",
+      "assetKey": "models/kite_shield",
+      "category": "Items/Shields",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      },
+      "item": {
+        "kind": "weapon",
+        "weight": 14.0,
+        "value": 45
+      },
+      "equippable": {
+        "fits": [
+          {
+            "slots": [
+              "forge.core:equip_slot/left_hand"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:kite_shield_iron",
+      "displayName": "Iron Kite Shield",
+      "assetKey": "models/kite_shield_iron",
+      "category": "Items/Shields",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      },
+      "item": {
+        "kind": "weapon",
+        "weight": 18.0,
+        "value": 80
+      },
+      "equippable": {
+        "fits": [
+          {
+            "slots": [
+              "forge.core:equip_slot/left_hand"
+            ]
+          }
+        ]
+      }
     },
     {
       "type": "base_object",
@@ -562,6 +644,60 @@
         "minScale": 0.6,
         "maxScale": 1.5,
         "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:round_shield",
+      "displayName": "Round Shield",
+      "assetKey": "models/round_shield",
+      "category": "Items/Shields",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      },
+      "item": {
+        "kind": "weapon",
+        "weight": 12.0,
+        "value": 30
+      },
+      "equippable": {
+        "fits": [
+          {
+            "slots": [
+              "forge.core:equip_slot/left_hand"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:round_shield_painted",
+      "displayName": "Painted Round Shield",
+      "assetKey": "models/round_shield_painted",
+      "category": "Items/Shields",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      },
+      "item": {
+        "kind": "weapon",
+        "weight": 12.0,
+        "value": 40
+      },
+      "equippable": {
+        "fits": [
+          {
+            "slots": [
+              "forge.core:equip_slot/left_hand"
+            ]
+          }
+        ]
       }
     },
     {

@@ -1085,7 +1085,8 @@ slopes), so results are exact and every edit goes through the edit session.
   has no prefab or the catalog lists unused keys.
 - **Models** (`Content/Models/<Name>/`, the real art; credited in its `CREDITS.md`, plain git like the characters):
   `<Name>.fbx` in meters, and in the art repo's naming, each optional, `<Name>_BaseColor.png`,
-  `<Name>_MetallicSmoothness.png` (metal in R, smoothness in A) and `<Name>_Normal.png` (OpenGL). `ModelImport` (an
+  `<Name>_MetallicSmoothness.png` (metal in R, smoothness in A), `<Name>_Normal.png` (OpenGL) and
+  `<Name>_Occlusion.png` (ambient occlusion). `ModelImport` (an
   `AssetPostprocessor`) imports every model there with no materials, cameras, lights or animation; meshes named
   `…_LOD0/1/2` are its levels of detail (Unity groups them; `ModelImport.LodHeight` gives full detail down to 15% of the
   screen's height and culls below 1%, the levels between stepping down evenly) and meshes named `…_COL` become convex

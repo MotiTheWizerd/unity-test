@@ -29,6 +29,16 @@ MonoBehaviour:
     _asset: {fileID: 8910920425072526150, guid: 5f17434e69fa7be459f9c9056586e57a, type: 3}
   - _key: items/potion_healing
     _asset: {fileID: 6686484224693062410, guid: 82879ba5aef89ba499e8469c0d3689db, type: 3}
+  - _key: models/greatsword
+    _asset: {fileID: 4052799173345779104, guid: b5cdf48b20dd86140974a15b5dd0b4ab, type: 3}
+  - _key: models/kite_shield
+    _asset: {fileID: 4194851168021817485, guid: 5842cf3b27b34c64493ef220a91473c6, type: 3}
+  - _key: models/kite_shield_iron
+    _asset: {fileID: 2341098379205922753, guid: fbe6215ba2cd2a24dbbda683141b1d51, type: 3}
+  - _key: models/round_shield
+    _asset: {fileID: 1266176824123447654, guid: fa33266572f37ce4290e4245b61257d4, type: 3}
+  - _key: models/round_shield_painted
+    _asset: {fileID: 5459911896668073189, guid: c90ae97529241dc4698f6853fe2e8ce1, type: 3}
   - _key: models/viking_sword
     _asset: {fileID: 7334485041194033550, guid: f9cc20fa2cb4dac47b66c046438096e1, type: 3}
   - _key: nature/bush

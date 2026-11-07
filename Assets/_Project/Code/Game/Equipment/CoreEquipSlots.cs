@@ -20,6 +20,9 @@ namespace Forge.Game.Equipment
         /// <summary>A one-handed thing: either hand, the right first.</summary>
         public static EquipFit[] OneHanded() => new[] { EquipFit.Of(RightHand), EquipFit.Of(LeftHand) };
 
+        /// <summary>A thing for the off hand only, as a shield: the left.</summary>
+        public static EquipFit[] OffHand() => new[] { EquipFit.Of(LeftHand) };
+
         /// <summary>A two-handed thing: both hands at once.</summary>
         public static EquipFit[] TwoHanded() => new[] { EquipFit.Of(RightHand, LeftHand) };
     }

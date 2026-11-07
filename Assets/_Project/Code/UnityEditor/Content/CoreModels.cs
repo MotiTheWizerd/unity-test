@@ -16,6 +16,9 @@ namespace Forge.UnityEditor.Content
         /// <summary>The Viking Sword's id in <paramref name="pluginId"/>.</summary>
         public static RecordId VikingSword(string pluginId) => new RecordId(pluginId, "viking_sword");
 
+        /// <summary>The Greatsword's id in <paramref name="pluginId"/>.</summary>
+        public static RecordId Greatsword(string pluginId) => new RecordId(pluginId, "greatsword");
+
         public static IEnumerable<BaseObjectRecord> All(string pluginId)
         {
             // A one-handed sword from the blender-tests art repo, lying flat: any heading, following the ground. Held in
@@ -25,6 +28,26 @@ namespace Forge.UnityEditor.Content
                 item: new ItemPart(ItemKind.Weapon, weight: 9f, value: 75),
                 equippable: new EquippablePart(CoreEquipSlots.OneHanded()),
                 weapon: new WeaponPart(CoreCombatStyles.OneHanded, new[] { Effect.Damage(CoreAttributes.Health, 12f) }));
+
+            // A heavy two-handed sword (OpenGameArt, CC0), lying flat as the Viking Sword does. No combat style yet: the
+            // base game has none for two hands.
+            yield return new BaseObjectRecord(Greatsword(pluginId), "Greatsword", ModelImport.KeyFor("Greatsword"),
+                "Items/Weapons", new PlacementRules(randomYaw: true, 1f, 1f, alignToSlope: true),
+                item: new ItemPart(ItemKind.Weapon, weight: 18f, value: 120),
+                equippable: new EquippablePart(CoreEquipSlots.TwoHanded()));
+
+            // Shields (OpenGameArt, CC0), two looks of each shape, lying face up; held in the off hand.
+            foreach (var (folder, id, name, weight, value) in new[]
+                     {
+                         ("RoundShield", "round_shield", "Round Shield", 12f, 30),
+                         ("RoundShieldPainted", "round_shield_painted", "Painted Round Shield", 12f, 40),
+                         ("KiteShield", "kite_shield", "Kite Shield", 14f, 45),
+                         ("KiteShieldIron", "kite_shield_iron", "Iron Kite Shield", 18f, 80),
+                     })
+                yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
+                    "Items/Shields", new PlacementRules(randomYaw: true, 1f, 1f, alignToSlope: true),
+                    item: new ItemPart(ItemKind.Weapon, weight, value),
+                    equippable: new EquippablePart(CoreEquipSlots.OffHand()));
         }
     }
 }

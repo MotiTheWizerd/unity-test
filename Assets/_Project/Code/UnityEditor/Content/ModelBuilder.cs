@@ -13,7 +13,7 @@ namespace Forge.UnityEditor.Content
     /// Dev tool: turns each model folder under Content/Models into a placeable asset, as the character builder does for
     /// characters. A folder {Name} holds the model {Name}.fbx (imported by <see cref="ModelImport"/>; meters) and its
     /// textures in the art repo's naming, each optional: {Name}_BaseColor.png, {Name}_MetallicSmoothness.png (metal in R,
-    /// smoothness in A) and {Name}_Normal.png (OpenGL). The tool makes a URP Lit material {Name}.mat from them and a
+    /// smoothness in A), {Name}_Normal.png (OpenGL) and {Name}_Occlusion.png (ambient occlusion). The tool makes a URP Lit material {Name}.mat from them and a
     /// prefab {Name}.prefab holding the model as it rests in the world: turned as its optional {Name}.json says
     /// (<c>{ "rest": [90, 0, 0] }</c>: a sword modelled point up, as a hand holds it, lies flat with its point to the
     /// front), with its lowest point on the prefab's pivot and its footprint centred on it, as every asset's pivot is. The
@@ -108,15 +108,19 @@ namespace Forge.UnityEditor.Content
             var colorPath = $"{folder}/{name}_BaseColor.png";
             var metalPath = $"{folder}/{name}_MetallicSmoothness.png";
             var normalPath = $"{folder}/{name}_Normal.png";
+            var occlusionPath = $"{folder}/{name}_Occlusion.png";
             var hasColor = File.Exists(colorPath);
             var hasMetal = File.Exists(metalPath);
             var hasNormal = File.Exists(normalPath);
+            var hasOcclusion = File.Exists(occlusionPath);
             if (hasColor)
                 TextureMaps.Configure(colorPath, TextureImporterType.Default, sRGB: true, TextureSize);
             if (hasMetal)
                 TextureMaps.Configure(metalPath, TextureImporterType.Default, sRGB: false, TextureSize);
             if (hasNormal)
                 TextureMaps.Configure(normalPath, TextureImporterType.NormalMap, sRGB: false, TextureSize);
+            if (hasOcclusion)
+                TextureMaps.Configure(occlusionPath, TextureImporterType.Default, sRGB: false, TextureSize);
 
             var path = $"{folder}/{name}.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -129,11 +133,13 @@ namespace Forge.UnityEditor.Content
             material.SetTexture("_BaseMap", hasColor ? AssetDatabase.LoadAssetAtPath<Texture2D>(colorPath) : null);
             material.SetTexture("_MetallicGlossMap", hasMetal ? AssetDatabase.LoadAssetAtPath<Texture2D>(metalPath) : null);
             material.SetTexture("_BumpMap", hasNormal ? AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath) : null);
+            material.SetTexture("_OcclusionMap", hasOcclusion ? AssetDatabase.LoadAssetAtPath<Texture2D>(occlusionPath) : null);
             // With the map, smoothness is its alpha (scaled by this); without, a plain matte surface.
             material.SetFloat("_Smoothness", hasMetal ? 1f : 0.25f);
             material.SetFloat("_Metallic", 0f);
             MaterialBuilder.SetKeyword(material, "_METALLICSPECGLOSSMAP", hasMetal);
             MaterialBuilder.SetKeyword(material, "_NORMALMAP", hasNormal);
+            MaterialBuilder.SetKeyword(material, "_OCCLUSIONMAP", hasOcclusion);
             EditorUtility.SetDirty(material);
             return material;
         }

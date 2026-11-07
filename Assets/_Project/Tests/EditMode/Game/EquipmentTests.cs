@@ -60,6 +60,19 @@ namespace Forge.Tests.Game
         }
 
         [Test]
+        public void AShield_GoesInTheLeftHand_BesideASword()
+        {
+            var shield = Item("shield", ItemKind.Weapon, new EquippablePart(CoreEquipSlots.OffHand()));
+            _inventory.Add(Sword.Id);
+            _inventory.Add(shield.Id);
+
+            Assert.That(_equipment.TryEquip(shield), Is.EqualTo(EquipOutcome.Equipped));
+            Assert.That(_equipment.TryEquip(Sword), Is.EqualTo(EquipOutcome.Equipped));
+
+            Assert.That((_equipment.In(Right).Item, _equipment.In(Left).Item), Is.EqualTo((Sword.Id, shield.Id)));
+        }
+
+        [Test]
         public void TwoSwords_AreHeldOneInEachHand_ButOneSwordOnlyOnce()
         {
             _inventory.Add(Sword.Id);
