@@ -314,6 +314,18 @@
       ]
     },
     {
+      "type": "combat_style",
+      "id": "forge.core:combat_style/one_handed",
+      "displayName": "One-Handed",
+      "moves": [
+        {
+          "kind": "attack",
+          "animation": "SwordSlash",
+          "staminaCost": 0.0
+        }
+      ]
+    },
+    {
       "type": "base_object",
       "id": "forge.core:crate",
       "displayName": "Crate",
@@ -658,6 +670,16 @@
             "slots": [
               "forge.core:equip_slot/left_hand"
             ]
+          }
+        ]
+      },
+      "weapon": {
+        "style": "forge.core:combat_style/one_handed",
+        "hit": [
+          {
+            "kind": "damage",
+            "attribute": "forge.core:attribute/health",
+            "amount": 12.0
           }
         ]
       }

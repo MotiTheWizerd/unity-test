@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Forge.Data;
 using Forge.Data.Records;
+using Forge.Game.Attributes;
+using Forge.Game.Combat;
 using Forge.Game.Equipment;
 
 namespace Forge.UnityEditor.Content
@@ -21,7 +23,8 @@ namespace Forge.UnityEditor.Content
             yield return new BaseObjectRecord(VikingSword(pluginId), "Viking Sword", ModelImport.KeyFor("VikingSword"),
                 "Items/Weapons", new PlacementRules(randomYaw: true, 1f, 1f, alignToSlope: true),
                 item: new ItemPart(ItemKind.Weapon, weight: 9f, value: 75),
-                equippable: new EquippablePart(CoreEquipSlots.OneHanded()));
+                equippable: new EquippablePart(CoreEquipSlots.OneHanded()),
+                weapon: new WeaponPart(CoreCombatStyles.OneHanded, new[] { Effect.Damage(CoreAttributes.Health, 12f) }));
         }
     }
 }

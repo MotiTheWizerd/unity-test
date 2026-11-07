@@ -6,8 +6,8 @@ namespace Forge.Data.Records
     /// <summary>
     /// A definition of something that can be placed in the world (a tree, a rock,
     /// a chair). Placed instances reference it by id, so shared data lives once.
-    /// What it is beyond its look comes in optional parts: an <see cref="ItemPart"/> makes it something to carry, and an
-    /// <see cref="EquippablePart"/> something its carrier can equip.
+    /// What it is beyond its look comes in optional parts: an <see cref="ItemPart"/> makes it something to carry, an
+    /// <see cref="EquippablePart"/> something its carrier can equip, and a <see cref="WeaponPart"/> something to fight with.
     /// </summary>
     public sealed class BaseObjectRecord : Record
     {
@@ -16,8 +16,9 @@ namespace Forge.Data.Records
         /// <param name="materials">Slots every instance wears another material in than its asset does (a variant's look); null or empty = none.</param>
         /// <param name="item">What makes it an item to pick up and carry; null = not an item.</param>
         /// <param name="equippable">What makes it something to equip and hold or wear; null = not equippable. Only an item is.</param>
+        /// <param name="weapon">What makes it a weapon to fight with; null = not a weapon. Only something equippable is.</param>
         public BaseObjectRecord(RecordId id, string displayName, string assetKey, string category = null, PlacementRules placement = null,
-            IEnumerable<MaterialOverride> materials = null, ItemPart item = null, EquippablePart equippable = null)
+            IEnumerable<MaterialOverride> materials = null, ItemPart item = null, EquippablePart equippable = null, WeaponPart weapon = null)
             : base(id)
         {
             if (string.IsNullOrWhiteSpace(displayName))
@@ -26,6 +27,8 @@ namespace Forge.Data.Records
                 throw new ArgumentException("Asset key is required.", nameof(assetKey));
             if (equippable != null && item == null)
                 throw new ArgumentException("Only an item is equippable: give it an item part too.", nameof(equippable));
+            if (weapon != null && equippable == null)
+                throw new ArgumentException("Only something equippable is a weapon: give it an equippable part too.", nameof(weapon));
 
             DisplayName = displayName;
             AssetKey = assetKey;
@@ -35,6 +38,7 @@ namespace Forge.Data.Records
             Materials = validated.Count > 0 ? validated : null;
             Item = item;
             Equippable = equippable;
+            Weapon = weapon;
         }
 
         public string DisplayName { get; }
@@ -60,5 +64,8 @@ namespace Forge.Data.Records
 
         /// <summary>What makes it something its carrier can equip, or null: not equippable.</summary>
         public EquippablePart Equippable { get; }
+
+        /// <summary>What makes it a weapon to fight with, or null: not a weapon.</summary>
+        public WeaponPart Weapon { get; }
     }
 }

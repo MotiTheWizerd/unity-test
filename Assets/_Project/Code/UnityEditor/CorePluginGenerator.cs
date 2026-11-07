@@ -76,6 +76,7 @@ namespace Forge.UnityEditor
             records.AddRange(CoreAttributeSet.All());
             records.AddRange(CoreEquipSlotSet.All());
             records.AddRange(CoreActorSet.All(PluginId));
+            records.AddRange(CoreCombatStyleSet.All());
 
             // A small piece of bare land with a start in its middle and every item of the base game laid out ahead of it,
             // so a game begins beside them; everything else is the objects to build with.

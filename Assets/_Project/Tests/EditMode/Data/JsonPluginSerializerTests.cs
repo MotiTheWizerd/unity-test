@@ -517,6 +517,31 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesCombatStyles_AndAWeaponsStyleAndBlow()
+        {
+            var right = EquipSlotRecord.IdFor("core", "right_hand");
+            var health = AttributeRecord.IdFor("core", "health");
+            var stamina = AttributeRecord.IdFor("core", "stamina");
+            var style = CombatStyleRecord.IdFor("core", "one_handed");
+            var plugin = Plugin("core",
+                new CombatStyleRecord(style, "One-Handed", new[] { new CombatMove(CombatMoveKind.Attack, "SwordSlash", 5f) }),
+                new BaseObjectRecord(RecordId.Parse("core:sword"), "Sword", "items/sword", item: new ItemPart(ItemKind.Weapon, 9f, 75),
+                    equippable: new EquippablePart(new[] { EquipFit.Of(right) }),
+                    weapon: new WeaponPart(style, new[] { Effect.Damage(health, 12f), Effect.Damage(stamina, 3f) })));
+
+            var json = Write(plugin);
+            var copy = Read(json);
+            var move = copy.Records.OfType<CombatStyleRecord>().Single().Moves.Single();
+            var weapon = copy.Records.OfType<BaseObjectRecord>().Single().Weapon;
+
+            Assert.That((move.Kind, move.Animation, move.StaminaCost), Is.EqualTo((CombatMoveKind.Attack, "SwordSlash", 5f)));
+            Assert.That(weapon.Style, Is.EqualTo(style));
+            Assert.That(weapon.Hit.Select(e => (e.Kind, e.Attribute, e.Amount)), Is.EqualTo(new[] { (EffectKind.Damage, health, 12f), (EffectKind.Damage, stamina, 3f) }));
+            StringAssert.Contains("\"kind\": \"damage\"", json);
+            Assert.That(Write(copy), Is.EqualTo(json));
+        }
+
+        [Test]
         public void Read_AnEquippableThatIsNoItem_IsRejected()
         {
             var right = EquipSlotRecord.IdFor("core", "right_hand");

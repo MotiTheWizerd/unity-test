@@ -96,6 +96,39 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void AWeapon_IsEquippable_NamesItsStyle_AndItsBlowDoesSomething()
+        {
+            var health = AttributeRecord.IdFor("forge.core", "health");
+            var style = CombatStyleRecord.IdFor("forge.core", "one_handed");
+            var blow = new[] { Effect.Damage(health, 12f) };
+            var item = new ItemPart(ItemKind.Weapon, 9f, 75);
+            var equippable = new EquippablePart(new[] { EquipFit.Of(RightHand) });
+
+            Assert.That(new BaseObjectRecord(RecordId.Parse("forge.core:sword"), "Sword", "items/sword", item: item, equippable: equippable,
+                weapon: new WeaponPart(style, blow)).Weapon.Hit.Single().Amount, Is.EqualTo(12f));
+            Assert.Throws<ArgumentException>(() => new BaseObjectRecord(RecordId.Parse("forge.core:stick"), "Stick", "items/stick", item: item,
+                weapon: new WeaponPart(style, blow)), "Only something equippable is a weapon.");
+            Assert.Throws<ArgumentException>(() => new WeaponPart(default, blow));
+            Assert.Throws<ArgumentException>(() => new WeaponPart(style, new Effect[0]));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Effect.Damage(health, 0f));
+            Assert.Throws<ArgumentException>(() => Effect.Damage(default, 1f));
+        }
+
+        [Test]
+        public void ACombatStyle_HasOneMoveOfEachKind_PlayedByAnAnimation()
+        {
+            var style = CombatStyleRecord.IdFor("forge.core", "one_handed");
+            var slash = new CombatMove(CombatMoveKind.Attack, "SwordSlash");
+
+            Assert.That(new CombatStyleRecord(style, "One-Handed", new[] { slash }).TryGetMove(CombatMoveKind.Attack, out var found) && found == slash, Is.True);
+            Assert.Throws<ArgumentException>(() => new CombatStyleRecord(style, "One-Handed", new[] { slash, new CombatMove(CombatMoveKind.Attack, "Chop") }));
+            Assert.Throws<ArgumentException>(() => new CombatStyleRecord(style, "One-Handed", new CombatMove[0]));
+            Assert.Throws<ArgumentException>(() => new CombatStyleRecord(RecordId.Parse("forge.core:one_handed"), "One-Handed", new[] { slash }));
+            Assert.Throws<ArgumentException>(() => new CombatMove(CombatMoveKind.Attack, " "));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new CombatMove(CombatMoveKind.Attack, "SwordSlash", -1f));
+        }
+
+        [Test]
         public void EquipFit_TakesItsSlotsOnce_AndIsTheSameInAnyOrder()
         {
             var both = EquipFit.Of(RightHand, LeftHand);

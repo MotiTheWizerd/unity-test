@@ -29,6 +29,7 @@ namespace Forge.Data.Records
             registry.Register<AttributeRecord>("attribute");
             registry.Register<EquipSlotRecord>("equip_slot");
             registry.Register<ActorRecord>("actor");
+            registry.Register<CombatStyleRecord>("combat_style");
             return registry;
         }
 
