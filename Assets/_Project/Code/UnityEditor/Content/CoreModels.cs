@@ -42,6 +42,30 @@ namespace Forge.UnityEditor.Content
                 item: new ItemPart(ItemKind.Weapon, weight: 6f, value: 90),
                 equippable: new EquippablePart(CoreEquipSlots.OneHanded()));
 
+            // One-handed swords and bows (OpenGameArt), lying flat. No combat style yet; bows take both hands to draw.
+            foreach (var (folder, id, name, weight, value, fits) in new[]
+                     {
+                         ("ShortSword", "short_sword", "Short Sword", 6f, 40, CoreEquipSlots.OneHanded()),
+                         ("ArmingSword", "arming_sword", "Arming Sword", 8f, 70, CoreEquipSlots.OneHanded()),
+                         ("HuntingBow", "hunting_bow", "Hunting Bow", 3f, 50, CoreEquipSlots.TwoHanded()),
+                         ("RecurveBow", "recurve_bow", "Recurve Bow", 3f, 65, CoreEquipSlots.TwoHanded()),
+                     })
+                yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
+                    "Items/Weapons", new PlacementRules(randomYaw: true, 1f, 1f, alignToSlope: true),
+                    item: new ItemPart(ItemKind.Weapon, weight, value),
+                    equippable: new EquippablePart(fits));
+
+            // Arrows and a quiver of them (OpenGameArt, CC0), lying flat; carried, not held, until there is shooting.
+            foreach (var (folder, id, name, weight, value) in new[]
+                     {
+                         ("Arrow", "arrow", "Arrow", 0.1f, 1),
+                         ("BroadheadArrow", "broadhead_arrow", "Broadhead Arrow", 0.1f, 2),
+                         ("Quiver", "quiver", "Quiver of Arrows", 2f, 20),
+                     })
+                yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
+                    "Items/Ammo", new PlacementRules(randomYaw: true, 1f, 1f, alignToSlope: true),
+                    item: new ItemPart(ItemKind.Misc, weight, value));
+
             // Shields (OpenGameArt, CC0), two looks of each shape, lying face up; held in the off hand.
             foreach (var (folder, id, name, weight, value) in new[]
                      {

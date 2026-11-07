@@ -6,7 +6,7 @@
     "masters": []
   },
   "terrain": "forge.core.54160244cad4ef2c.terrain",
-  "objects": "forge.core.2abe959a6223204f.objects",
+  "objects": "forge.core.0cc0dbbc4d99bf1b.objects",
   "records": [
     {
       "type": "actor",
@@ -44,6 +44,56 @@
         "kind": "food",
         "weight": 0.1,
         "value": 3
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:arming_sword",
+      "displayName": "Arming Sword",
+      "assetKey": "models/arming_sword",
+      "category": "Items/Weapons",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      },
+      "item": {
+        "kind": "weapon",
+        "weight": 8.0,
+        "value": 70
+      },
+      "equippable": {
+        "fits": [
+          {
+            "slots": [
+              "forge.core:equip_slot/right_hand"
+            ]
+          },
+          {
+            "slots": [
+              "forge.core:equip_slot/left_hand"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:arrow",
+      "displayName": "Arrow",
+      "assetKey": "models/arrow",
+      "category": "Items/Ammo",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      },
+      "item": {
+        "kind": "misc",
+        "weight": 0.1,
+        "value": 1
       }
     },
     {
@@ -195,6 +245,24 @@
         "minScale": 0.6,
         "maxScale": 1.6,
         "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:broadhead_arrow",
+      "displayName": "Broadhead Arrow",
+      "assetKey": "models/broadhead_arrow",
+      "category": "Items/Ammo",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      },
+      "item": {
+        "kind": "misc",
+        "weight": 0.1,
+        "value": 2
       }
     },
     {
@@ -499,6 +567,34 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:hunting_bow",
+      "displayName": "Hunting Bow",
+      "assetKey": "models/hunting_bow",
+      "category": "Items/Weapons",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      },
+      "item": {
+        "kind": "weapon",
+        "weight": 3.0,
+        "value": 50
+      },
+      "equippable": {
+        "fits": [
+          {
+            "slots": [
+              "forge.core:equip_slot/right_hand",
+              "forge.core:equip_slot/left_hand"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:kite_shield",
       "displayName": "Kite Shield",
       "assetKey": "models/kite_shield",
@@ -673,6 +769,52 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:quiver",
+      "displayName": "Quiver of Arrows",
+      "assetKey": "models/quiver",
+      "category": "Items/Ammo",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      },
+      "item": {
+        "kind": "misc",
+        "weight": 2.0,
+        "value": 20
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:recurve_bow",
+      "displayName": "Recurve Bow",
+      "assetKey": "models/recurve_bow",
+      "category": "Items/Weapons",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      },
+      "item": {
+        "kind": "weapon",
+        "weight": 3.0,
+        "value": 65
+      },
+      "equippable": {
+        "fits": [
+          {
+            "slots": [
+              "forge.core:equip_slot/right_hand",
+              "forge.core:equip_slot/left_hand"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:rock_cluster",
       "displayName": "Rock Cluster",
       "assetKey": "nature/rock_cluster",
@@ -730,6 +872,38 @@
       },
       "equippable": {
         "fits": [
+          {
+            "slots": [
+              "forge.core:equip_slot/left_hand"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:short_sword",
+      "displayName": "Short Sword",
+      "assetKey": "models/short_sword",
+      "category": "Items/Weapons",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      },
+      "item": {
+        "kind": "weapon",
+        "weight": 6.0,
+        "value": 40
+      },
+      "equippable": {
+        "fits": [
+          {
+            "slots": [
+              "forge.core:equip_slot/right_hand"
+            ]
+          },
           {
             "slots": [
               "forge.core:equip_slot/left_hand"

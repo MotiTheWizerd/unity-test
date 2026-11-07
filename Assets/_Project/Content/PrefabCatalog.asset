@@ -29,18 +29,32 @@ MonoBehaviour:
     _asset: {fileID: 8910920425072526150, guid: 5f17434e69fa7be459f9c9056586e57a, type: 3}
   - _key: items/potion_healing
     _asset: {fileID: 6686484224693062410, guid: 82879ba5aef89ba499e8469c0d3689db, type: 3}
+  - _key: models/arming_sword
+    _asset: {fileID: 7910562305501405182, guid: a67cbe89fc94bf74687e79bdbf468782, type: 3}
+  - _key: models/arrow
+    _asset: {fileID: 6391796157289467360, guid: 11947bbefdd050444be4f876860150f9, type: 3}
+  - _key: models/broadhead_arrow
+    _asset: {fileID: 1493319720545331248, guid: c218709a2243a83429a444c07b2f97cc, type: 3}
   - _key: models/greatsword
     _asset: {fileID: 4052799173345779104, guid: b5cdf48b20dd86140974a15b5dd0b4ab, type: 3}
+  - _key: models/hunting_bow
+    _asset: {fileID: 6071699247951939278, guid: 61429429f465e7c42a66b37e9ac37113, type: 3}
   - _key: models/kite_shield
     _asset: {fileID: 4194851168021817485, guid: 5842cf3b27b34c64493ef220a91473c6, type: 3}
   - _key: models/kite_shield_iron
     _asset: {fileID: 2341098379205922753, guid: fbe6215ba2cd2a24dbbda683141b1d51, type: 3}
   - _key: models/mage_staff
     _asset: {fileID: 2236154627881610368, guid: 18216220fa6870c41af78d51fc3a9f33, type: 3}
+  - _key: models/quiver
+    _asset: {fileID: 7848319350537025992, guid: 05d4671fcbda7584fb0134237c08a395, type: 3}
+  - _key: models/recurve_bow
+    _asset: {fileID: 8040580631262970227, guid: 08040ec8473475640b842ae8b4052919, type: 3}
   - _key: models/round_shield
     _asset: {fileID: 1266176824123447654, guid: fa33266572f37ce4290e4245b61257d4, type: 3}
   - _key: models/round_shield_painted
     _asset: {fileID: 5459911896668073189, guid: c90ae97529241dc4698f6853fe2e8ce1, type: 3}
+  - _key: models/short_sword
+    _asset: {fileID: 6943891220673529511, guid: 7751170070e0a0f4bb538668efc12ab9, type: 3}
   - _key: models/viking_sword
     _asset: {fileID: 7334485041194033550, guid: f9cc20fa2cb4dac47b66c046438096e1, type: 3}
   - _key: nature/bush
