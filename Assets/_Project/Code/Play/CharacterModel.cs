@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Forge.Game.Combat;
 using Forge.Game.Equipment;
 using Forge.Game.Motion;
 using UnityEngine;
@@ -99,6 +100,16 @@ namespace Forge.Play
         /// <summary>Shows its weapons becoming <paramref name="readiness"/> (a draw or a sheathe playing, or done).</summary>
         public void Animate(Readiness readiness) => _animation?.Show(readiness);
 
+        /// <summary>Plays the action <paramref name="move"/> (a slash) on its arms; false when it has no such move.</summary>
+        public bool Play(string move) => _animation != null && _animation.Play(move);
+
+        /// <summary>How its move <paramref name="move"/> plays, measured from the clip (<see cref="SwingFinder"/>); false when it has none.</summary>
+        public bool TryTime(string move, out MoveTiming timing)
+        {
+            timing = default;
+            return _animation != null && SwingFinder.TryFind(_prefab, _animation.Clip(move), out timing);
+        }
+
         /// <summary>How long its draw plays, seconds; 0 without one.</summary>
         public float DrawSeconds => _animation?.DrawSeconds ?? 0f;
 
@@ -156,6 +167,7 @@ namespace Forge.Play
                 Size = look.transform.localScale,
                 Renderers = look.GetComponentsInChildren<Renderer>(true),
             };
+            held.Reach = ReachOf(held);
             RemoveColliders(look);
             SetLayer(look.transform, Root.layer);
             _attached.Add(look, held);
@@ -178,6 +190,51 @@ namespace Forge.Play
             foreach (var renderer in held.Renderers)
                 _renderers.Remove(renderer);
             UnityEngine.Object.Destroy(look);
+        }
+
+        /// <summary>
+        /// Where the blade of what <paramref name="bone"/> ("RightHand") holds is now, in the hand (scene space): from the
+        /// grip out along the held thing's +Y to its farthest point; false when the bone holds nothing, or it is sheathed.
+        /// </summary>
+        public bool TryGetBlade(string bone, out Vector3 from, out Vector3 to)
+        {
+            from = to = default;
+            if (!Enum.TryParse(bone, out HumanBodyBones id))
+                return false;
+            foreach (var held in _attached.Values)
+            {
+                if (held.Bone != id || (held.Sheathes && !_inHand) || held.Reach <= 0f)
+                    continue;
+                from = held.Grip.position;
+                to = from + held.Grip.up * (held.Reach * held.Grip.lossyScale.y);
+                return true;
+            }
+
+            return false;
+        }
+
+        // How far a held thing reaches out of the fist along its grip's +Y, in the grip's own units: the farthest corner
+        // of its meshes' bounds.
+        static float ReachOf(Held held)
+        {
+            var reach = 0f;
+            foreach (var renderer in held.Renderers)
+            {
+                var mesh = renderer is SkinnedMeshRenderer skinned ? skinned.sharedMesh
+                    : renderer.TryGetComponent<MeshFilter>(out var filter) ? filter.sharedMesh : null;
+                if (mesh == null)
+                    continue;
+                var bounds = mesh.bounds;
+                for (var corner = 0; corner < 8; corner++)
+                {
+                    var local = bounds.center + Vector3.Scale(bounds.extents,
+                        new Vector3((corner & 1) == 0 ? -1f : 1f, (corner & 2) == 0 ? -1f : 1f, (corner & 4) == 0 ? -1f : 1f));
+                    var inGrip = held.Grip.InverseTransformPoint(renderer.transform.TransformPoint(local));
+                    reach = Mathf.Max(reach, inGrip.y);
+                }
+            }
+
+            return reach;
         }
 
         // In the hand, or in its sheath when sheathed and the model knows where that is.
@@ -253,6 +310,7 @@ namespace Forge.Play
             public bool Sheathes;
             public Vector3 Size;
             public Renderer[] Renderers;
+            public float Reach;
         }
 
         void Draw(Renderer renderer) => renderer.shadowCastingMode = _shadowsOnly ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Forge.Data.Records;
+using Forge.Game.Actors;
 using UnityEngine;
 using static Forge.UnityEditor.Content.PlaceholderMaterials;
 
@@ -31,6 +32,9 @@ namespace Forge.UnityEditor.Content
             new ContentDefinition("barrel", "Barrel", "Props/Containers", "props/barrel", Barrel),
             new ContentDefinition("bench", "Bench", "Props/Furniture", "props/bench", Bench),
             new ContentDefinition("signpost", "Signpost", "Props/Decor", "props/signpost", Signpost),
+            // Something to practise blows on: an actor while the world plays, so a sword's hits land and hurt it.
+            new ContentDefinition("training_dummy", "Training Dummy", "Props/Training", "props/training_dummy", TrainingDummy,
+                actor: CoreActors.TrainingDummy),
             // Items, to pick up and carry; filed under Items, so the asset browser gives them their own tab.
             new ContentDefinition("potion_healing", "Healing Potion", "Items/Potions", "items/potion_healing", HealingPotion, Loose,
                 new ItemPart(ItemKind.Potion, weight: 0.5f, value: 15)),
@@ -143,6 +147,13 @@ namespace Forge.UnityEditor.Content
             .Post(Wood, Vector3.zero, 0.1f, 2.2f)
             .Cube(Wood, V(0.4f, 1.85f, 0), V(0.9f, 0.3f, 0.05f))
             .Cube(Wood, V(-0.35f, 1.5f, 0), V(0.8f, 0.26f, 0.05f), V(0, 0, -6));
+
+        // A post as tall as a man with a cloth-wrapped body, arms across and a leather head, facing +Z.
+        static void TrainingDummy(PrefabBuilder b) => b
+            .Post(WoodDark, Vector3.zero, 0.12f, 1.9f)
+            .Sphere(Tunic, V(0, 1.25f, 0), V(0.5f, 0.75f, 0.35f))
+            .Cube(Wood, V(0, 1.45f, 0), V(1.3f, 0.1f, 0.1f))
+            .Sphere(Leather, V(0, 1.8f, 0), V(0.3f, 0.32f, 0.3f));
 
         // A round flask 13 cm tall: body, neck and cork.
         static void HealingPotion(PrefabBuilder b) => b

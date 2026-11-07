@@ -779,10 +779,11 @@ from any camera, so both cameras read the same player.
   from the moves present: the ground moves blended at their clips' speeds; a jump when the body leaves the ground going
   up, a fall when it drops past 3 m/s, a landing when it touches down, each optional. With any drawn ground move
   (`DrawnIdle`, `DrawnWalk`, `DrawnRun`, `DrawnSprint`) a second ground state plays while `Drawn`, each missing drawn
-  move falling back to its plain one; with `Draw` or `Sheathe`, an **Arms** layer masked to the arms and fingers
-  (`<Set> Arms.mask`) plays them on their triggers over whatever the legs do, `HumanoidAnimation` weighing it in only
-  while one plays (`Show(Readiness)`), and its clips' lengths are the rules' draw and sheathe times (`ReadinessView`
-  binds a `WeaponReadiness` to a `CharacterModel`). A new move is a file dropped in and a rebuild.
+  move falling back to its plain one. Every other clip is an **action** (`HumanoidMoves.IsAction`: `Draw`, `Sheathe`,
+  a combat style's `SwordSlash`): an **Arms** layer masked to the arms and fingers (`<Set> Arms.mask`) plays each on a
+  trigger named after it over whatever the legs do, `HumanoidAnimation.Play(move)` weighing it in for as long as the
+  clip lasts. The draw and sheathe clips' lengths are the rules' draw and sheathe times (`ReadinessView` binds a
+  `WeaponReadiness` to a `CharacterModel`). A new move is a file dropped in and a rebuild.
 - **How the body moved** (`BodyMotion`, `Forge.Game.Motion`, shared by anything with a body): `PlayerCharacter.Motion` each frame, from where the body actually went
   (ground speed, vertical speed, grounded), so a run into a wall shows standing. `StrideMatch` keeps the feet planted:
   the speed in the clips' own size (the avatar's `humanScale`) picks the blend, and past the fastest clip it plays
@@ -945,7 +946,36 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
   kept relative to the hips so it moves with them; the left hand's is that one mirrored across the character (the
   right hip). The sheathe clip's own nearest moment is when it lets go. `CharacterModel.InHand` hangs what sheathes in
   the hand or in its sheath (made under the hips on first need), and `ReadinessView` sets both the rules' moments and
-  the model's place from them. A model that can't tell (no draw clip, no hands) keeps its weapons in hand.
+  the model's place from them. A model that can't tell (no draw clip, no hands) keeps its weapons in hand. Both finders
+  pose the hidden copy through one `ClipSampler`.
+- **Combat** (Game.Combat; the player's on `PlayerSession.Combat`, made each spawn). Three ideas keep every style
+  (sword, two-hander, shield, staff, magic) one system:
+  - *A style is data.* A weapon is an equippable item with a `WeaponPart`: its `Style` (a `CombatStyleRecord`,
+    `combat_style/…`: its `CombatMove`s, one of each `CombatMoveKind`, each naming the move-set animation that plays
+    it and its stamina cost) and its `Hit`. forge.core ships `One-Handed` (attack: `SwordSlash`); the Viking Sword
+    hits for 12 health. A new style is a record and its clips.
+  - *A blow applies effects.* `Hit` is a list of `Effect`s (damage or restore an attribute by an amount), applied by
+    `AttributeEffects.Apply`, the one place a blow, and later a spell or a potion, changes an actor.
+  - *Each hand swings on its own.* `ActorCombat.TryAttack(slot)` starts the move the held weapon's style has, only once
+    `Drawn`, never while that hand (or, for a two-hander, either hand: the item's fit) still swings, spending its
+    stamina (`AttackOutcome`s, never exceptions). A `Swing` runs `WindUp` → `Striking` (its hit window) → `Recovery`,
+    timed by the look (`IMoveTimings`; `MoveTiming.Default` without one). Whatever finds what the weapon passes through
+    calls `Strike(swing, target)`: in the window, once per swing and target, never the swinger, never the dead. Putting
+    the weapons away or taking the swinging one off stops it. `SwingStarted` / `SwingEnded` tell the look; the stream
+    hears `AttackStarted`, `HitLanded` (health taken) and `ActorKilled`.
+  - **Who can be struck** is `Combatants` (attributes and a name by `ActorId`), one per `GameSession`, emptied when it
+    ends: the player while spawned, and the world's **placed actors** (`PlacedActors`): a placed object whose base
+    object names an `ActorRecord` (`BaseObjectRecord.Actor`; forge.core's **Training Dummy**, which stands past the
+    items at the start) joins the first time a blow finds it, as `placed:<placed id>`, with the world's attributes at
+    their base values, and stays hurt until the game ends.
+  - **Look** (Play): `CombatView` times each move from the clip (`SwingFinder`: on the hidden copy, the hand that moves
+    fastest swings, and the hit window is the run around its fastest moment where it keeps half that speed; the move
+    lasts the clip) and plays it on the arms. `BladeSweep` finds the hits: each frame in the window, rays from where
+    points along the blade were the frame before to where they are now, and along the blade itself
+    (`CharacterModel.TryGetBlade`: from the grip out along +Y to the held thing's farthest point), so no fast swing
+    skips a target; a collider is a placed actor by its `RecordLink`. The Player map's `AttackRight` (left mouse button,
+    right trigger) swings the right hand and `AttackLeft` (right button, left trigger) the left, as Skyrim's. The HUD
+    shows whoever the player last struck at the top (`TargetHealth`, on `HitLanded`).
 - `PlayerCommands.Activate` is the key, pressed this frame; `Allowing(sprint, jump, walk)` is a command as a rule lets it through.
 
 ## World-building agent (Forge.Agent)

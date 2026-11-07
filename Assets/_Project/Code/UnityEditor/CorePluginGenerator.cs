@@ -32,6 +32,9 @@ namespace Forge.UnityEditor
         const float ItemSpacing = 0.8f;
         const float ItemsAhead = 2.5f;
 
+        // Meters past the items' row the training dummy stands.
+        const float DummyBeyond = 3f;
+
         // The bare earth around the start, so grass doesn't hide the items: dirt within the inner radius (m) of the
         // items' row, fading into the grass by the outer.
         const float ClearingInner = 3.5f;
@@ -67,7 +70,7 @@ namespace Forge.UnityEditor
                 BaseObject("pillar", "Pillar", "primitive/cylinder", "Architecture"),
                 BaseObject("totem", "Totem", "primitive/capsule", "Props/Decor"),
             };
-            records.AddRange(PlaceholderContent.All.Select(c => BaseObject(c.Name, c.DisplayName, c.AssetKey, c.Category, c.Placement, c.Item)));
+            records.AddRange(PlaceholderContent.All.Select(c => BaseObject(c.Name, c.DisplayName, c.AssetKey, c.Category, c.Placement, c.Item, c.Actor)));
             records.AddRange(CoreModels.All(PluginId));
 
             records.AddRange(CoreClimates.All(PluginId));
@@ -84,6 +87,7 @@ namespace Forge.UnityEditor
                 playerStart: MainStart));
             records.Add(ProceduralTerrain.Chunk(PluginId, MainSpace, MainChunk).WithPaint(StartClearing()));
             records.AddRange(ItemsAtTheStart(records.OfType<BaseObjectRecord>().Where(r => r.Item != null).ToList()));
+            records.Add(DummyAtTheStart());
 
             return new Plugin(new PluginManifest(PluginId, "0.1.0"), records);
         }
@@ -133,9 +137,18 @@ namespace Forge.UnityEditor
             }
         }
 
+        // A training dummy DummyBeyond past the items, facing back at the start, to practise blows on.
+        static PlacedObjectRecord DummyAtTheStart()
+        {
+            var ahead = Compass.Forward(MainStart.Heading) * DummyBeyond;
+            var facing = Quaternion.CreateFromAxisAngle(Vector3.UnitY, (MainStart.Heading + 180f) * Compass.DegreesToRadians);
+            return new PlacedObjectRecord(new RecordId(PluginId, "ref/start_training_dummy"), new RecordId(PluginId, "training_dummy"), MainSpace,
+                ItemsCentre() + new Vector3(ahead.X, 0f, ahead.Y), facing, 1f);
+        }
+
         static BaseObjectRecord BaseObject(string name, string displayName, string assetKey, string category, PlacementRules placement = null,
-            ItemPart item = null) =>
-            new BaseObjectRecord(new RecordId(PluginId, name), displayName, assetKey, category, placement, item: item);
+            ItemPart item = null, RecordId? actor = null) =>
+            new BaseObjectRecord(new RecordId(PluginId, name), displayName, assetKey, category, placement, item: item, actor: actor);
 
     }
 }

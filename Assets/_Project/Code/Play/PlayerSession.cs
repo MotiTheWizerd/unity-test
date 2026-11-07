@@ -6,6 +6,7 @@ using Forge.Data.Records;
 using Forge.Game.Actors;
 using Forge.Game.Attributes;
 using Forge.Game.Cameras;
+using Forge.Game.Combat;
 using Forge.Game.Equipment;
 using Forge.Game.Events;
 using Forge.Game.Interaction;
@@ -42,16 +43,25 @@ namespace Forge.Play
         EquipmentModifiers _equipmentModifiers;
         EquipmentView _equipmentView;
         ReadinessView _readinessView;
+        CombatView _combatView;
+        BladeSweep _sweep;
         readonly IAssetCatalog _assets;
+        readonly Combatants _combatants;
+        readonly PlacedActors _placedActors;
 
         /// <param name="camera">The camera the player sees through while spawned.</param>
         /// <param name="events">The game's stream, told what happens to the player.</param>
         /// <param name="assets">The looks of the world's things, for what the player holds.</param>
-        public PlayerSession(PlayerProfile profile, Transform camera, GameEvents events, IAssetCatalog assets)
+        /// <param name="combatants">Who can be struck in the game; the player is one while spawned.</param>
+        /// <param name="placedActors">The world's placed actors, which the player's blows find.</param>
+        public PlayerSession(PlayerProfile profile, Transform camera, GameEvents events, IAssetCatalog assets, Combatants combatants,
+            PlacedActors placedActors)
         {
             _profile = profile != null ? profile : throw new ArgumentNullException(nameof(profile));
             Events = events ?? throw new ArgumentNullException(nameof(events));
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
+            _combatants = combatants ?? throw new ArgumentNullException(nameof(combatants));
+            _placedActors = placedActors ?? throw new ArgumentNullException(nameof(placedActors));
             _controls = new PlayerControls(profile);
             Views = new ViewSwitch(
                 new FirstPersonCamera(),
@@ -88,6 +98,12 @@ namespace Forge.Play
 
         /// <summary>Whether the player's weapons are drawn (R), while spawned; else null. Every spawn starts sheathed.</summary>
         public WeaponReadiness Readiness { get; private set; }
+
+        /// <summary>How the player fights (the attack keys swing each hand), while spawned; else null.</summary>
+        public ActorCombat Combat { get; private set; }
+
+        /// <summary>Who can be struck in the game, the player among them while spawned.</summary>
+        public Combatants Combatants => _combatants;
 
         /// <summary>
         /// What the player carries against what it can, while spawned in a world with a carry weight; else null (it carries
@@ -160,10 +176,15 @@ namespace Forge.Play
             if (Attributes != null)
                 _equipmentModifiers = new EquipmentModifiers(Equipment, Attributes);
             Readiness = new WeaponReadiness(Equipment, world, Events);
+            Combat = new ActorCombat(Equipment, Readiness, world, Attributes, _combatants, Events);
+            if (Attributes != null)
+                _combatants.Add(ActorId.Player, Attributes, "You");
             if (_avatar != null)
             {
                 _equipmentView = new EquipmentView(Equipment, _avatar.Model, world, _assets);
                 _readinessView = new ReadinessView(Readiness, _avatar.Model);
+                _combatView = new CombatView(Combat, _avatar.Model);
+                _sweep = new BladeSweep(Combat, _avatar.Model, world, Identify);
             }
 
             Player.PlaceAt(feet.ToNumerics(), heading);
@@ -202,8 +223,14 @@ namespace Forge.Play
             if (_controls.ReadReadyWeapon())
                 Readiness.Toggle();
             Readiness.Tick(deltaTime);
+            if (_controls.ReadAttack(right: true))
+                Combat.TryAttack(CoreEquipSlots.RightHand);
+            if (_controls.ReadAttack(right: false))
+                Combat.TryAttack(CoreEquipSlots.LeftHand);
+            Combat.Tick(deltaTime);
             Player.Tick(commands, deltaTime);
             Frame(deltaTime);
+            _sweep?.Tick();
             Focus.Update(_director.Pose, Player.Eyes);
             if (commands.Activate)
                 Focus.Activate();
@@ -241,6 +268,13 @@ namespace Forge.Play
             _equipmentView = null;
             _readinessView?.Dispose();
             _readinessView = null;
+            _sweep?.Dispose();
+            _sweep = null;
+            _combatView?.Dispose();
+            _combatView = null;
+            Combat?.Dispose();
+            Combat = null;
+            _combatants.Remove(ActorId.Player);
             _avatar?.Dispose();
             _avatar = null;
             _motor.Dispose();
@@ -263,6 +297,13 @@ namespace Forge.Play
             Equipment.Dispose();
             _attributeEvents?.Dispose();
             _controls.Dispose();
+        }
+
+        // Whom a collider the player's blade passed through belongs to: a placed actor of the world, by its placed object.
+        ActorId? Identify(Collider collider)
+        {
+            var link = collider.GetComponentInParent<RecordLink>();
+            return link != null && World != null && _placedActors.TryGet(World, link.RecordId, out var actor) ? actor : (ActorId?)null;
         }
 
         // Captured, the mouse turns the look and hides; freed, it points at the screen.

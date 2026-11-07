@@ -5,7 +5,10 @@ using Forge.Game.Equipment;
 
 namespace Forge.UnityEditor.Content
 {
-    /// <summary>The actors the base game ships (<see cref="CoreActors"/>): the player, who starts with the Viking Sword in the right hand, sheathed.</summary>
+    /// <summary>
+    /// The actors the base game ships (<see cref="CoreActors"/>): the player, who starts with the Viking Sword in the right
+    /// hand, sheathed; and the training dummy, which the Training Dummy object is.
+    /// </summary>
     static class CoreActorSet
     {
         public static IEnumerable<ActorRecord> All(string pluginId)
@@ -14,6 +17,7 @@ namespace Forge.UnityEditor.Content
             {
                 new ActorItem(CoreModels.VikingSword(pluginId), equip: new[] { CoreEquipSlots.RightHand }),
             });
+            yield return new ActorRecord(CoreActors.TrainingDummy, "Training Dummy");
         }
     }
 }

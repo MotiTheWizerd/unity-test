@@ -1,4 +1,5 @@
 using System;
+using Forge.Data;
 using Forge.Data.Records;
 
 namespace Forge.UnityEditor.Content
@@ -10,7 +11,7 @@ namespace Forge.UnityEditor.Content
     sealed class ContentDefinition
     {
         public ContentDefinition(string name, string displayName, string category, string assetKey, Action<PrefabBuilder> build, PlacementRules placement = null,
-            ItemPart item = null)
+            ItemPart item = null, RecordId? actor = null)
         {
             Name = name;
             DisplayName = displayName;
@@ -19,7 +20,11 @@ namespace Forge.UnityEditor.Content
             Build = build;
             Placement = placement;
             Item = item;
+            Actor = actor;
         }
+
+        /// <summary>The actor each one placed is while the world plays (a training dummy); null for things.</summary>
+        public RecordId? Actor { get; }
 
         /// <summary>How new instances are placed: nature varies, ground-hugging things follow the slope, the rest stand upright.</summary>
         public PlacementRules Placement { get; }

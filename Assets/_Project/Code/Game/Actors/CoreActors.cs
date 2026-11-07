@@ -13,5 +13,8 @@ namespace Forge.Game.Actors
         public const string Namespace = "forge.core";
 
         public static readonly RecordId Player = ActorRecord.IdFor(Namespace, "player");
+
+        /// <summary>A training dummy: something to strike, which strikes nothing back.</summary>
+        public static readonly RecordId TrainingDummy = ActorRecord.IdFor(Namespace, "training_dummy");
     }
 }

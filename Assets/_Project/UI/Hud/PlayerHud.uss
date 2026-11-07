@@ -133,6 +133,28 @@
     background-color: var(--forge-hud-magicka);
 }
 
+/* Whoever the player last struck: its name over its health, at the top middle of the view. */
+.forge-hud-target {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 28px;
+    align-items: center;
+}
+
+.forge-hud-target__name {
+    margin: 0 0 4px 0;
+    padding: 0;
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: var(--forge-hud-text);
+    text-shadow: 1px 1px 3px var(--forge-hud-shadow);
+}
+
+.forge-hud-target .forge-hud-bar {
+    width: 300px;
+}
+
 /* Too little for a move: the frame lights up while the flash blinks on. */
 .forge-hud-bar--flash {
     border-color: var(--forge-hud-flash);

@@ -1,13 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Animations;
-using UnityEngine.Playables;
 
 namespace Forge.Play
 {
     /// <summary>
     /// Where a character's sheaths are, read off its own draw (or sheathe) clip rather than placed by hand: played on a
-    /// hidden copy of the character, the moment the right hand comes nearest the left hip is when it takes the hilt, and
+    /// hidden copy of the character (<see cref="ClipSampler"/>), the moment the right hand comes nearest the left hip is when it takes the hilt, and
     /// where its grip is then is where the hilt hangs, relative to the hips (so it moves with them). The blade points back
     /// the way the hand pulls it out, and the sheath stands just outside the body there (<see cref="Hang"/>). The left
     /// hand's sheath is that one in a mirror (the right hip). Measured once per character and clip, then remembered.
@@ -76,31 +74,15 @@ namespace Forge.Play
 
         static Sheaths? Measure(GameObject character, AnimationClip clip)
         {
-            var copy = Object.Instantiate(character, new Vector3(0f, -1000f, 0f), Quaternion.identity);
-            var graph = PlayableGraph.Create("Sheath finder");
-            try
+            using (var sampler = ClipSampler.TryCreate(character, clip))
             {
-                foreach (var renderer in copy.GetComponentsInChildren<Renderer>(true))
-                    renderer.forceRenderingOff = true;
-                foreach (var collider in copy.GetComponentsInChildren<Collider>(true))
-                    collider.enabled = false;
-                var animator = copy.GetComponentInChildren<Animator>();
-                if (animator == null || !animator.isHuman)
+                if (sampler == null)
                     return null;
-                // Out of every camera's sight, it would be culled and never take a pose.
-                animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                var animator = sampler.Animator;
                 var hips = animator.GetBoneTransform(HumanBodyBones.Hips);
                 var hip = animator.GetBoneTransform(HumanBodyBones.LeftUpperLeg);
-                if (hips == null || hip == null)
-                    return null;
-
-                graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
-                var playable = AnimationClipPlayable.Create(graph, clip);
-                playable.SetApplyFootIK(false);
-                AnimationPlayableOutput.Create(graph, "Pose", animator).SetSourcePlayable(playable);
-
                 var knee = animator.GetBoneTransform(HumanBodyBones.LeftLowerLeg);
-                if (knee == null)
+                if (hips == null || hip == null || knee == null)
                     return null;
 
                 var best = float.MaxValue;
@@ -108,7 +90,7 @@ namespace Forge.Play
                 for (var i = 0; i < Samples; i++)
                 {
                     var t = (float)i / (Samples - 1);
-                    if (!GripAt(t * clip.length, out var now))
+                    if (!sampler.TryGripAt(t * clip.length, true, out var now))
                         return null;
                     var distance = Vector3.Distance(now.position, hip.position);
                     if (distance < best)
@@ -120,11 +102,11 @@ namespace Forge.Play
 
                 // Where the hand goes just after the grab is the way the blade comes out of the scabbard; then back to
                 // the grab, to measure the body around it. All in the character's own frame (it faces +Z).
-                var root = copy.transform;
-                if (!GripAt(Mathf.Min(clip.length, moment * clip.length + PullSeconds), out var pulled) ||
-                    !GripAt(moment * clip.length, out var grip))
+                var root = sampler.Root;
+                if (!sampler.TryGripAt(moment * clip.length + PullSeconds, true, out var pulled) ||
+                    !sampler.TryGripAt(moment * clip.length, true, out var grip))
                     return null;
-                var right = Hang(Local(root, grip), root.InverseTransformPoint(pulled.position), BodyPoints(copy, root),
+                var right = Hang(Local(root, grip), root.InverseTransformPoint(pulled.position), BodyPoints(root.gameObject, root),
                     Vector3.Distance(hip.position, knee.position), Vector3.left);
 
                 // The left sheath is the right one across the character's middle.
@@ -132,18 +114,6 @@ namespace Forge.Play
                     new Quaternion(right.rotation.x, -right.rotation.y, -right.rotation.z, right.rotation.w));
                 var hipsLocal = Local(root, new Pose(hips.position, hips.rotation));
                 return new Sheaths(moment, Relative(hipsLocal, right), Relative(hipsLocal, left));
-
-                bool GripAt(float seconds, out Pose at)
-                {
-                    playable.SetTime(seconds);
-                    graph.Evaluate();
-                    return HumanoidHands.TryGrip(animator, true, out at);
-                }
-            }
-            finally
-            {
-                graph.Destroy();
-                Object.DestroyImmediate(copy);
             }
         }
 

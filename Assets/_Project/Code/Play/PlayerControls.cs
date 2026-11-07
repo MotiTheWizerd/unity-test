@@ -8,7 +8,7 @@ namespace Forge.Play
 {
     /// <summary>
     /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump, ToggleWalk, ToggleView, Zoom, Interact,
-    /// Inventory, ReadyWeapon) into <see cref="PlayerCommands"/>, <see cref="ViewCommands"/> and the menu key, the rules' only input. Rebinding, a gamepad or
+    /// Inventory, ReadyWeapon, AttackRight, AttackLeft) into <see cref="PlayerCommands"/>, <see cref="ViewCommands"/> and the menu key, the rules' only input. Rebinding, a gamepad or
     /// another layout is the actions asset's business; nothing here names a key (the wheel's binding scales its steps to
     /// notches). The map is on only while enabled (while playing).
     /// </summary>
@@ -25,6 +25,8 @@ namespace Forge.Play
         readonly InputAction _interact;
         readonly InputAction _inventory;
         readonly InputAction _readyWeapon;
+        readonly InputAction _attackRight;
+        readonly InputAction _attackLeft;
         readonly float _lookSensitivity;
 
         public PlayerControls(PlayerProfile profile)
@@ -46,6 +48,8 @@ namespace Forge.Play
             _interact = _map.FindAction("Interact", throwIfNotFound: true);
             _inventory = _map.FindAction("Inventory", throwIfNotFound: true);
             _readyWeapon = _map.FindAction("ReadyWeapon", throwIfNotFound: true);
+            _attackRight = _map.FindAction("AttackRight", throwIfNotFound: true);
+            _attackLeft = _map.FindAction("AttackLeft", throwIfNotFound: true);
             _lookSensitivity = profile.LookSensitivity;
 
             // Prompts name a key the way the actions bind it in their first control scheme (the keyboard's).
@@ -66,6 +70,12 @@ namespace Forge.Play
 
         /// <summary>Whether the ready-weapon key was pressed this frame (draw or sheathe); never while the map is off.</summary>
         public bool ReadReadyWeapon() => _map.enabled && _readyWeapon.WasPressedThisFrame();
+
+        /// <summary>
+        /// Whether the right or left hand's attack key was pressed this frame (Skyrim's: the left button swings the right
+        /// hand, the right button the left); never while the map is off.
+        /// </summary>
+        public bool ReadAttack(bool right) => _map.enabled && (right ? _attackRight : _attackLeft).WasPressedThisFrame();
 
         public void Enable() => _map.Enable();
 

@@ -33,6 +33,14 @@ namespace Forge.UnityEditor.Content
         /// <summary>A ground move's drawn version ("DrawnRun").</summary>
         public static string Drawn(string move) => "Drawn" + move;
 
+        /// <summary>
+        /// Whether <paramref name="move"/> is an action: anything beyond the ground and air moves (a draw, a sheathe, a
+        /// combat style's slash), played on the arms by a trigger of its name, so a clip dropped in is playable by name.
+        /// </summary>
+        public static bool IsAction(string move) =>
+            Array.IndexOf(Ground, move) < 0 && Array.IndexOf(DrawnGround, move) < 0 &&
+            move != Jump && move != Fall && move != Land;
+
         /// <summary>Whether <paramref name="move"/> repeats while it lasts (standing, walking, falling) rather than playing once (a jump, a landing).</summary>
         public static bool Loops(string move) =>
             Array.IndexOf(Ground, move) >= 0 || Array.IndexOf(DrawnGround, move) >= 0 || string.Equals(move, Fall, StringComparison.Ordinal);

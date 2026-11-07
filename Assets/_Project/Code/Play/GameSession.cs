@@ -3,6 +3,7 @@ using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Game.Actors;
+using Forge.Game.Combat;
 using Forge.Game.Equipment;
 using Forge.Game.Events;
 using Forge.Game.Interaction;
@@ -22,7 +23,7 @@ namespace Forge.Play
     /// played (<see cref="World"/>), what actors can do with the use key (<see cref="Interactions"/>: take items) and the
     /// player (<see cref="Player"/>). <see cref="Begin"/> gives the player its starting items and stands it in the world, <see cref="Tick"/> plays a frame
     /// and then tells what happened in it, <see cref="End"/> takes the player away and puts the world back as built, with
-    /// what the player took from it. Whatever plays the world runs one: the editor's play from
+    /// what the player took from it, and the hurt it did forgotten. Whatever plays the world runs one: the editor's play from
     /// here today, the game itself later.
     /// </summary>
     public sealed class GameSession : IDisposable
@@ -47,7 +48,9 @@ namespace Forge.Play
             _placement = placement ?? throw new ArgumentNullException(nameof(placement));
             Events = new GameEvents(onError);
             Changes = new WorldChanges();
-            Player = new PlayerSession(profile, camera, Events, view.Assets);
+            Combatants = new Combatants();
+            PlacedActors = new PlacedActors(Combatants);
+            Player = new PlayerSession(profile, camera, Events, view.Assets, Combatants, PlacedActors);
             Interactions = new Interactions()
                 .Add(new TakeInteraction(Changes, InventoryOf, Events));
             _dropper = new ItemDropper(Changes, InventoryOf, Events);
@@ -67,6 +70,12 @@ namespace Forge.Play
 
         /// <summary>The looks of the world's things, by asset key, for whatever shows them apart from the world (the inventory's preview).</summary>
         public IAssetCatalog Assets => _view.Assets;
+
+        /// <summary>Who can be struck in this game: the player while spawned, the world's actors once met; emptied when it ends.</summary>
+        public Combatants Combatants { get; }
+
+        /// <summary>The world's placed actors (a training dummy) as combatants, by their placed objects.</summary>
+        public PlacedActors PlacedActors { get; }
 
         /// <summary>What actors can do with the use key, in order.</summary>
         public Interactions Interactions { get; }
@@ -167,6 +176,8 @@ namespace Forge.Play
         {
             Player.Despawn();
             Player.Inventory.Clear();
+            Combatants.Clear();
+            PlacedActors.Clear();
             Changes.Clear();
             World = null;
             Events.Flush();

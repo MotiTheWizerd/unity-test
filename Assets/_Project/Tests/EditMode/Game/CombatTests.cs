@@ -237,6 +237,33 @@ namespace Forge.Tests.Game
             Assert.That(_dummy.Current(CoreAttributes.Health), Is.EqualTo(5f));
         }
 
+        [Test]
+        public void APlacedObjectNamingAnActor_IsOneWhoCanBeStruck_ByItsPlacedId_AndAThingIsNot()
+        {
+            var dummy = ActorRecord.IdFor("forge.core", "training_dummy");
+            var world = LoadOrderResolver.Resolve(new[]
+            {
+                Plugin("forge.core",
+                    new AttributeRecord(CoreAttributes.Health, "Health", AttributeKind.Resource, 100f),
+                    new ActorRecord(dummy, "Training Dummy"),
+                    new BaseObjectRecord(new RecordId("forge.core", "training_dummy"), "Training Dummy", "props/training_dummy", actor: dummy),
+                    new BaseObjectRecord(new RecordId("forge.core", "barrel"), "Barrel", "props/barrel"),
+                    Placed("forge.core:ref/dummy", "forge.core:training_dummy"),
+                    Placed("forge.core:ref/barrel", "forge.core:barrel", x: 2f)),
+            }).Records;
+            var combatants = new Combatants();
+            var placed = new PlacedActors(combatants);
+
+            Assert.That(placed.TryGet(world, RecordId.Parse("forge.core:ref/dummy"), out var actor), Is.True);
+            Assert.That(actor, Is.EqualTo(PlacedActors.IdOf(RecordId.Parse("forge.core:ref/dummy"))));
+            Assert.That(combatants.TryGet(actor, out var attributes) && attributes.Current(CoreAttributes.Health) == 100f, Is.True);
+            Assert.That(combatants.NameOf(actor), Is.EqualTo("Training Dummy"));
+            attributes.Drain(CoreAttributes.Health, 30f);
+            placed.TryGet(world, RecordId.Parse("forge.core:ref/dummy"), out _);
+            Assert.That(attributes.Current(CoreAttributes.Health), Is.EqualTo(70f), "Met again, it is the same, hurt as it was.");
+            Assert.That(placed.TryGet(world, RecordId.Parse("forge.core:ref/barrel"), out _), Is.False, "A barrel is just a thing.");
+        }
+
         sealed class FixedTimings : IMoveTimings
         {
             readonly MoveTiming _timing;

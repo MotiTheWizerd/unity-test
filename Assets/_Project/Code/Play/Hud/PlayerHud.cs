@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Forge.Data;
 using Forge.Game.Actors;
 using Forge.Game.Attributes;
+using Forge.Game.Combat;
 using Forge.Game.Hud;
 using Forge.Game.Player;
 using UnityEngine.UIElements;
@@ -16,7 +17,8 @@ namespace Forge.Play.Hud
     /// <see cref="PlayerSession.Focus"/>). The bars read the player's numbers as they change
     /// (<see cref="ActorAttributes.Changed"/>); what happens to the player comes from the game's stream: the stamina bar
     /// blinks when the player is exhausted (<see cref="ActorExhausted"/>) and a bar blinks when it held too little for a
-    /// move (<see cref="ActorShortOf"/>). It follows whichever player the <see cref="PlayerSession"/> has, so whatever
+    /// move (<see cref="ActorShortOf"/>). Whoever the player's blows land on shows its health at the top
+    /// (<see cref="TargetHealth"/>, on <see cref="HitLanded"/>). It follows whichever player the <see cref="PlayerSession"/> has, so whatever
     /// plays the world (the editor's play, the game later) hosts it the same.
     /// </summary>
     public sealed class PlayerHud : IDisposable
@@ -46,6 +48,7 @@ namespace Forge.Play.Hud
         readonly VisualElement _barRow;
         readonly VisualElement _crosshair;
         readonly InteractionPrompt _prompt;
+        readonly TargetHealth _target;
         readonly List<Bar> _bars = new List<Bar>();
         readonly IDisposable[] _subscriptions;
         ActorAttributes _attributes;
@@ -71,9 +74,11 @@ namespace Forge.Play.Hud
             _crosshair = new VisualElement { pickingMode = PickingMode.Ignore };
             _crosshair.AddToClassList(CrosshairClass);
             _prompt = new InteractionPrompt();
+            _target = new TargetHealth();
             _root.Add(_barRow);
             _root.Add(_crosshair);
             _root.Add(_prompt);
+            _root.Add(_target);
 
             parent.Add(_root);
             _root.style.display = DisplayStyle.None;
@@ -82,6 +87,11 @@ namespace Forge.Play.Hud
             {
                 session.Events.Subscribe<ActorExhausted>(e => Flash(e.Actor, CoreAttributes.Stamina)),
                 session.Events.Subscribe<ActorShortOf>(e => Flash(e.Actor, e.Attribute)),
+                session.Events.Subscribe<HitLanded>(e =>
+                {
+                    if (e.Attacker == ActorId.Player)
+                        _target.Struck(e.Target);
+                }),
             };
         }
 
@@ -93,6 +103,7 @@ namespace Forge.Play.Hud
             var offer = _session.Focus?.Offer;
             _prompt.Show(offer, _session.InteractKey);
             _crosshair.EnableInClassList(CrosshairOnClass, offer != null);
+            _target.Tick(_session.Combatants, deltaTime);
 
             var attributes = player != null ? player.Attributes : null;
             Bind(attributes);

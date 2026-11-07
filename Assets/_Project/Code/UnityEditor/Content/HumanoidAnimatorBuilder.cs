@@ -134,17 +134,15 @@ namespace Forge.UnityEditor.Content
             return state;
         }
 
-        // Drawing and sheathing on the arms only (a layer masked to them, which HumanoidAnimation weighs in while they
-        // play), so the legs walk or run on underneath; left out when the set has neither move.
+        // The set's actions (a draw, a sheathe, a slash: HumanoidMoves.IsAction) on the arms only (a layer masked to
+        // them, which HumanoidAnimation weighs in while one plays), so the legs walk or run on underneath; each starts
+        // by a trigger named after it. Left out when the set has none.
         static void BuildArms(string set, AnimatorController controller)
         {
-            var draw = Clip(set, HumanoidMoves.Draw);
-            var sheathe = Clip(set, HumanoidMoves.Sheathe);
-            if (draw == null && sheathe == null)
+            var actions = Actions(set).Select(move => Clip(set, move)).Where(clip => clip != null).ToArray();
+            if (actions.Length == 0)
                 return;
 
-            controller.AddParameter(HumanoidAnimation.DrawTrigger, AnimatorControllerParameterType.Trigger);
-            controller.AddParameter(HumanoidAnimation.SheatheTrigger, AnimatorControllerParameterType.Trigger);
             controller.AddLayer(HumanoidAnimation.ArmsLayer);
             var layers = controller.layers;
             var arms = layers[layers.Length - 1];
@@ -156,10 +154,10 @@ namespace Forge.UnityEditor.Content
             var rest = machine.AddState("Rest");
             rest.writeDefaultValues = false;
             machine.defaultState = rest;
-            foreach (var (clip, trigger) in new[] { (draw, HumanoidAnimation.DrawTrigger), (sheathe, HumanoidAnimation.SheatheTrigger) })
+            foreach (var clip in actions)
             {
-                if (clip == null)
-                    continue;
+                var trigger = clip.name;
+                controller.AddParameter(trigger, AnimatorControllerParameterType.Trigger);
                 var state = machine.AddState(clip.name);
                 state.motion = clip;
                 var start = machine.AddAnyStateTransition(state);
@@ -274,6 +272,18 @@ namespace Forge.UnityEditor.Content
 
         // How fast the clip walks: its root motion over the ground, in the clips' own size.
         static float ClipSpeed(AnimationClip clip) => new Vector2(clip.averageSpeed.x, clip.averageSpeed.z).magnitude;
+
+        // The actions of the set: its own clips and the base set's that are actions, by name, each once.
+        static IEnumerable<string> Actions(string set)
+        {
+            var folders = set == BaseSet ? new[] { SetFolder(set) } : new[] { SetFolder(set), SetFolder(BaseSet) };
+            return folders.Where(Directory.Exists)
+                .SelectMany(folder => Directory.GetFiles(folder, "*.fbx", SearchOption.TopDirectoryOnly))
+                .Select(Path.GetFileNameWithoutExtension)
+                .Where(HumanoidMoves.IsAction)
+                .Distinct(System.StringComparer.Ordinal)
+                .OrderBy(move => move, System.StringComparer.Ordinal);
+        }
 
         // The set's own clip for the move, else the base set's.
         static AnimationClip Clip(string set, string move) =>

@@ -6,7 +6,7 @@
     "masters": []
   },
   "terrain": "forge.core.54160244cad4ef2c.terrain",
-  "objects": "forge.core.6546ba723d0c7808.objects",
+  "objects": "forge.core.2abe959a6223204f.objects",
   "records": [
     {
       "type": "actor",
@@ -21,6 +21,12 @@
           ]
         }
       ]
+    },
+    {
+      "type": "actor",
+      "id": "forge.core:actor/training_dummy",
+      "displayName": "Training Dummy",
+      "items": []
     },
     {
       "type": "base_object",
@@ -553,6 +559,38 @@
       "category": "Props/Lighting"
     },
     {
+      "type": "base_object",
+      "id": "forge.core:mage_staff",
+      "displayName": "Mage Staff",
+      "assetKey": "models/mage_staff",
+      "category": "Items/Weapons",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      },
+      "item": {
+        "kind": "weapon",
+        "weight": 6.0,
+        "value": 90
+      },
+      "equippable": {
+        "fits": [
+          {
+            "slots": [
+              "forge.core:equip_slot/right_hand"
+            ]
+          },
+          {
+            "slots": [
+              "forge.core:equip_slot/left_hand"
+            ]
+          }
+        ]
+      }
+    },
+    {
       "type": "material",
       "id": "forge.core:material/cutstone",
       "displayName": "Cut Stone",
@@ -751,6 +789,14 @@
       "displayName": "Totem",
       "assetKey": "primitive/capsule",
       "category": "Props/Decor"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:training_dummy",
+      "displayName": "Training Dummy",
+      "assetKey": "props/training_dummy",
+      "category": "Props/Training",
+      "actor": "forge.core:actor/training_dummy"
     },
     {
       "type": "base_object",

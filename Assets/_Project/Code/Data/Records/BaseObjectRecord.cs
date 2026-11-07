@@ -17,10 +17,16 @@ namespace Forge.Data.Records
         /// <param name="item">What makes it an item to pick up and carry; null = not an item.</param>
         /// <param name="equippable">What makes it something to equip and hold or wear; null = not equippable. Only an item is.</param>
         /// <param name="weapon">What makes it a weapon to fight with; null = not a weapon. Only something equippable is.</param>
+        /// <param name="actor">The actor each one placed is while the world plays (an <see cref="ActorRecord"/>: a training dummy, later a character); null = no actor.</param>
         public BaseObjectRecord(RecordId id, string displayName, string assetKey, string category = null, PlacementRules placement = null,
-            IEnumerable<MaterialOverride> materials = null, ItemPart item = null, EquippablePart equippable = null, WeaponPart weapon = null)
+            IEnumerable<MaterialOverride> materials = null, ItemPart item = null, EquippablePart equippable = null, WeaponPart weapon = null,
+            RecordId? actor = null)
             : base(id)
         {
+            if (actor.HasValue && actor.Value.IsDefault)
+                throw new ArgumentException("An actor link names the actor, or is left out.", nameof(actor));
+            if (actor.HasValue && item != null)
+                throw new ArgumentException("An item is carried, not an actor: give it one or the other.", nameof(actor));
             if (string.IsNullOrWhiteSpace(displayName))
                 throw new ArgumentException("Display name is required.", nameof(displayName));
             if (string.IsNullOrWhiteSpace(assetKey))
@@ -39,6 +45,7 @@ namespace Forge.Data.Records
             Item = item;
             Equippable = equippable;
             Weapon = weapon;
+            Actor = actor;
         }
 
         public string DisplayName { get; }
@@ -67,5 +74,11 @@ namespace Forge.Data.Records
 
         /// <summary>What makes it a weapon to fight with, or null: not a weapon.</summary>
         public WeaponPart Weapon { get; }
+
+        /// <summary>
+        /// The actor each one placed is while the world plays (an <see cref="ActorRecord"/>), or null: just a thing. Its
+        /// look is this object's; who it is (and, later, what it carries and how it fights) is the actor's.
+        /// </summary>
+        public RecordId? Actor { get; }
     }
 }

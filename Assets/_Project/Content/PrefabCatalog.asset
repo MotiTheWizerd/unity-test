@@ -35,6 +35,8 @@ MonoBehaviour:
     _asset: {fileID: 4194851168021817485, guid: 5842cf3b27b34c64493ef220a91473c6, type: 3}
   - _key: models/kite_shield_iron
     _asset: {fileID: 2341098379205922753, guid: fbe6215ba2cd2a24dbbda683141b1d51, type: 3}
+  - _key: models/mage_staff
+    _asset: {fileID: 2236154627881610368, guid: 18216220fa6870c41af78d51fc3a9f33, type: 3}
   - _key: models/round_shield
     _asset: {fileID: 1266176824123447654, guid: fa33266572f37ce4290e4245b61257d4, type: 3}
   - _key: models/round_shield_painted
@@ -59,3 +61,5 @@ MonoBehaviour:
     _asset: {fileID: 6767466117711091179, guid: 96a265ebacc821f4d9ead463cdc69e2b, type: 3}
   - _key: props/signpost
     _asset: {fileID: 5700418885086303127, guid: befe31470f51a9c4fbe6a739c7ccc847, type: 3}
+  - _key: props/training_dummy
+    _asset: {fileID: 8651124311353649385, guid: 278051243324fc342897ab08103efc9d, type: 3}
