@@ -2,6 +2,7 @@
     "name": "Forge.UnityEditor",
     "rootNamespace": "Forge.UnityEditor",
     "references": [
+        "Forge.Core",
         "Forge.Data",
         "Forge.Data.Json",
         "Forge.World",

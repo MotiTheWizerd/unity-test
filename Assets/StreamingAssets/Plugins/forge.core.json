@@ -5,7 +5,8 @@
     "version": "0.1.0",
     "masters": []
   },
-  "terrain": "forge.core.8caffe0b36f641c1.terrain",
+  "terrain": "forge.core.54160244cad4ef2c.terrain",
+  "objects": "forge.core.f5abd702bba701c3.objects",
   "records": [
     {
       "type": "base_object",
@@ -538,59 +539,15 @@
       "baseHeight": 50.0,
       "climate": "forge.core:climate/temperate",
       "heightmapResolution": 65,
+      "playerStart": {
+        "position": [
+          32.0,
+          50.0,
+          29.5
+        ],
+        "heading": 0.0
+      },
       "sampleSpacing": 1.0
-    },
-    {
-      "type": "terrain_chunk",
-      "id": "forge.core:terrain/forge.core/space/main/c-1_-1",
-      "space": "forge.core:space/main",
-      "coord": [
-        -1,
-        -1
-      ],
-      "heights": {
-        "resolution": 65,
-        "block": 0
-      }
-    },
-    {
-      "type": "terrain_chunk",
-      "id": "forge.core:terrain/forge.core/space/main/c-1_0",
-      "space": "forge.core:space/main",
-      "coord": [
-        -1,
-        0
-      ],
-      "heights": {
-        "resolution": 65,
-        "block": 1
-      }
-    },
-    {
-      "type": "terrain_chunk",
-      "id": "forge.core:terrain/forge.core/space/main/c-1_1",
-      "space": "forge.core:space/main",
-      "coord": [
-        -1,
-        1
-      ],
-      "heights": {
-        "resolution": 65,
-        "block": 2
-      }
-    },
-    {
-      "type": "terrain_chunk",
-      "id": "forge.core:terrain/forge.core/space/main/c0_-1",
-      "space": "forge.core:space/main",
-      "coord": [
-        0,
-        -1
-      ],
-      "heights": {
-        "resolution": 65,
-        "block": 3
-      }
     },
     {
       "type": "terrain_chunk",
@@ -602,59 +559,14 @@
       ],
       "heights": {
         "resolution": 65,
-        "block": 4
-      }
-    },
-    {
-      "type": "terrain_chunk",
-      "id": "forge.core:terrain/forge.core/space/main/c0_1",
-      "space": "forge.core:space/main",
-      "coord": [
-        0,
-        1
-      ],
-      "heights": {
-        "resolution": 65,
-        "block": 5
-      }
-    },
-    {
-      "type": "terrain_chunk",
-      "id": "forge.core:terrain/forge.core/space/main/c1_-1",
-      "space": "forge.core:space/main",
-      "coord": [
-        1,
-        -1
-      ],
-      "heights": {
-        "resolution": 65,
-        "block": 6
-      }
-    },
-    {
-      "type": "terrain_chunk",
-      "id": "forge.core:terrain/forge.core/space/main/c1_0",
-      "space": "forge.core:space/main",
-      "coord": [
-        1,
-        0
-      ],
-      "heights": {
-        "resolution": 65,
-        "block": 7
-      }
-    },
-    {
-      "type": "terrain_chunk",
-      "id": "forge.core:terrain/forge.core/space/main/c1_1",
-      "space": "forge.core:space/main",
-      "coord": [
-        1,
-        1
-      ],
-      "heights": {
-        "resolution": 65,
-        "block": 8
+        "block": 0
+      },
+      "paint": {
+        "layers": [
+          "forge.core:ground/grass",
+          "forge.core:ground/dirt"
+        ],
+        "block": 1
       }
     },
     {

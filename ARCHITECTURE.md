@@ -211,6 +211,12 @@ the loaded chunks is drawn as coarse *far tiles* out to a kilometre (see Streami
 load a chunk at a time (*Objects storage*), and the stress world's 24k objects cost 94 ms and 2 MB to open. The
 editor shows and edits one space at a time (`EditorContext.ActiveSpace`); the chunk index, terrain grid, terrain edits,
 terrain followers and the agent's commands are all per space.
+A space may have a **player start** (`SpaceRecord.PlayerStart`: the feet's position and the heading faced, omitted
+when there is none), Bethesda's player start marker: where a new game will begin. The editor's first look at a space
+(`SpaceCameras.Recall`, also at startup when no camera was kept) is from behind and above it, the view's middle on the
+feet, so playing from there begins at the start; playing with the view off the land begins there too. The base game's
+Main World (`CorePluginGenerator`) is one chunk (64 m) with its start in the middle, facing north, and one of every
+item laid in a row 2.5 m ahead of it, in a clearing of dirt so the grass doesn't hide them.
 A worldspace may have a **sea**: `SpaceRecord.WaterLevel` (meters, optional, omitted from the JSON when there is
 none; interiors never have one). All ground below it is under water, coasts and hollows alike; beyond the land the sea
 goes on. It is the first of three water layers: the **data** (records, saved in plugins) and the **query**
@@ -681,8 +687,8 @@ from any camera, so both cameras read the same player.
   animates, so its first-person shadow walks too.
 - **Play from here** (`PlayFromHere`, EditorApp, built by the controller when the bootstrap has a `_player` profile):
   when the app starts playing, it begins its game (`GameSession`) with the player on whatever the middle of the view
-  shows (else the ground under the camera, else it falls from the camera), facing the camera's heading, and rests the
-  fly camera (`enabled = false`). The controller ticks it each frame while playing; Esc ends the game (the player goes,
+  shows (else the ground under the camera), facing the camera's heading; with neither (the view is off the land) at the
+  space's player start, facing its way; else it falls from the camera. It rests the fly camera (`enabled = false`). The controller ticks it each frame while playing; Esc ends the game (the player goes,
   and the world is as built again: what was taken is back, as in the Creation Kit's test play, while the player keeps
   what it carries) and wakes the fly camera, and the bootstrap gives the editing camera back. The camera is the streaming's focus, so the streaming and the
   origin follow the player; a rebase moves the player with the camera (`PlayFromHere.Shift`). The world's edge is open:

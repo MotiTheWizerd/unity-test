@@ -286,6 +286,21 @@ namespace Forge.Tests.Data
             Assert.That(coarse.WithClimate(null).HeightmapResolution, Is.EqualTo(33));
         }
 
+        [Test]
+        public void Space_PlayerStart_IsOptional_AndKeptByWith()
+        {
+            var start = new PlayerStart(new System.Numerics.Vector3(32f, 50f, 30f), 90f);
+            var space = new SpaceRecord(TestRecords.Space, "Main", SpaceKind.Worldspace, 50f, playerStart: start);
+
+            Assert.That(new SpaceRecord(TestRecords.Space, "Main", SpaceKind.Worldspace, 50f).PlayerStart, Is.Null);
+            Assert.That(space.PlayerStart, Is.SameAs(start));
+            Assert.That(space.WithWaterLevel(40f).PlayerStart, Is.SameAs(start));
+            Assert.That(space.WithClimate(null).PlayerStart, Is.SameAs(start));
+            Assert.That(space.WithPlayerStart(null).PlayerStart, Is.Null);
+            Assert.Throws<ArgumentOutOfRangeException>(() => new PlayerStart(new System.Numerics.Vector3(float.NaN, 0f, 0f), 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new PlayerStart(System.Numerics.Vector3.Zero, float.PositiveInfinity));
+        }
+
         [TestCase(0)]
         [TestCase(64)]
         [TestCase(WorldGrid.MaxHeightmapResolution + 1)]

@@ -26,8 +26,9 @@ namespace Forge.Data.Records
         /// <param name="waterLevel">Height of the sea's surface in a worldspace, in meters, or null for no sea; ignored for interiors.</param>
         /// <param name="climate">The <see cref="ClimateRecord"/> a worldspace's sky follows, or null for none; ignored for interiors.</param>
         /// <param name="heightmapResolution">Samples per edge of each terrain chunk of a worldspace (65 for 1 m between samples, 33 for 2 m), or null for the default; ignored for interiors. Nullable so a file without it (an older plugin) reads as the default: the serializer passes 0, not the C# default, for a missing argument.</param>
+        /// <param name="playerStart">Where a game begins in this space, or null for none.</param>
         public SpaceRecord(RecordId id, string displayName, SpaceKind kind, float baseHeight = 0f, float? waterLevel = null, RecordId? climate = null,
-            int? heightmapResolution = null)
+            int? heightmapResolution = null, PlayerStart playerStart = null)
             : base(id)
         {
             var resolution = heightmapResolution ?? WorldGrid.DefaultHeightmapResolution;
@@ -52,6 +53,7 @@ namespace Forge.Data.Records
             WaterLevel = kind == SpaceKind.Worldspace ? waterLevel : null;
             Climate = kind == SpaceKind.Worldspace ? climate : null;
             HeightmapResolution = kind == SpaceKind.Worldspace ? resolution : WorldGrid.DefaultHeightmapResolution;
+            PlayerStart = playerStart;
         }
 
         public string DisplayName { get; }
@@ -81,12 +83,20 @@ namespace Forge.Data.Records
         /// </summary>
         public int HeightmapResolution { get; }
 
+        /// <summary>
+        /// Where a game begins in this space (a new game's first steps, the editor's first look at it), or null for none:
+        /// then the player begins wherever it is put.
+        /// </summary>
+        public PlayerStart PlayerStart { get; }
+
         /// <summary>Meters between the terrain's height samples (1 m at the default resolution).</summary>
         public float SampleSpacing => WorldGrid.SpacingOf(HeightmapResolution);
 
-        public SpaceRecord WithWaterLevel(float? waterLevel) => new SpaceRecord(Id, DisplayName, Kind, BaseHeight, waterLevel, Climate, HeightmapResolution);
+        public SpaceRecord WithWaterLevel(float? waterLevel) => new SpaceRecord(Id, DisplayName, Kind, BaseHeight, waterLevel, Climate, HeightmapResolution, PlayerStart);
 
-        public SpaceRecord WithClimate(RecordId? climate) => new SpaceRecord(Id, DisplayName, Kind, BaseHeight, WaterLevel, climate, HeightmapResolution);
+        public SpaceRecord WithClimate(RecordId? climate) => new SpaceRecord(Id, DisplayName, Kind, BaseHeight, WaterLevel, climate, HeightmapResolution, PlayerStart);
+
+        public SpaceRecord WithPlayerStart(PlayerStart playerStart) => new SpaceRecord(Id, DisplayName, Kind, BaseHeight, WaterLevel, Climate, HeightmapResolution, playerStart);
 
         public static RecordId IdFor(string ns, string name) => new RecordId(ns, NamePrefix + name);
 

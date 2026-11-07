@@ -213,6 +213,18 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void AWorldWithObjectsOnDisk_FindsNothing_ForTheDefaultId()
+        {
+            // The editor asks for the space on show before it shows one; a stored block can't hash an id without strings.
+            _store.Save(Plugin("core", Base("core:rock"), At("core:ref/a", 1f, 1f)));
+            var world = LoadOrderResolver.Resolve(new[] { Store().Load("core") }).Records;
+
+            Assert.That(world.TryGet(default, out _), Is.False);
+            Assert.That(world.Contains(default), Is.False);
+            Assert.That(world.Contains(RecordId.Parse("core:ref/a")), Is.True);
+        }
+
+        [Test]
         public void Store_PluginWithoutObjects_HasNoObjectsFile()
         {
             _store.Save(Plugin("core", Base("core:rock")));

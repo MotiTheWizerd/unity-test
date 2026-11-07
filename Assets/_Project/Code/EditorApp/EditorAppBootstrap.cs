@@ -169,9 +169,8 @@ namespace Forge.EditorApp
                 if (!RecordId.TryParse(_profile.StartSpace, out var startSpace) || !(_context.Session.World.Records.TryGet(startSpace, out var start) && start is SpaceRecord))
                     throw new DataValidationException(new[] { $"World '{_profile.name}' has no start space '{_profile.StartSpace}'." });
                 var firstSpace = KeptSpace(_state.World) ?? startSpace;
-                // The first space opens where the camera last was in it; the scene's own view the first time.
-                if (_spaceCameras.TryRecall(firstSpace, out var firstPose))
-                    PlaceCamera(firstPose);
+                // The first space opens where the camera last was in it; the first time, on its player start.
+                PlaceCamera(_spaceCameras.Recall(_context.Session.World.Records.Get<SpaceRecord>(firstSpace)));
                 _context.ShowSpace(firstSpace);
                 var viewMs = Lap(clock);
 

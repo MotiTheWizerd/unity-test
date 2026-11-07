@@ -146,6 +146,22 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesThePlayerStart_AndItsAbsence()
+        {
+            var plugin = Plugin("core",
+                new SpaceRecord(Space, "Main", SpaceKind.Worldspace, 50f, playerStart: new PlayerStart(new System.Numerics.Vector3(32f, 50f, 30.2f), 45f)),
+                new SpaceRecord(SpaceRecord.IdFor("core", "inn"), "The Inn", SpaceKind.Interior));
+
+            var json = Write(plugin);
+            var copy = Read(json).Records.OfType<SpaceRecord>().ToDictionary(r => r.Id.ToString());
+
+            var start = copy["core:space/main"].PlayerStart;
+            Assert.That((start.Position, start.Heading), Is.EqualTo((new System.Numerics.Vector3(32f, 50f, 30.2f), 45f)));
+            Assert.That(copy["core:space/inn"].PlayerStart, Is.Null);
+            Assert.That(Write(Read(json)), Is.EqualTo(json));
+        }
+
+        [Test]
         public void RoundTrip_PreservesTheHeightmapResolution()
         {
             var plugin = Plugin("core", new SpaceRecord(Space, "Plains", SpaceKind.Worldspace, 50f, heightmapResolution: 33));

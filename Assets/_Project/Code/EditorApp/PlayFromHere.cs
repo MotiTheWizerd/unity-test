@@ -1,4 +1,5 @@
 using System;
+using Forge.Data.Records;
 using Forge.EditorApp.Tools;
 using Forge.Editing.Modes;
 using Forge.Editing.Placement;
@@ -70,11 +71,8 @@ namespace Forge.EditorApp
         {
             if (mode == AppMode.Playing)
             {
-                var view = _camera.transform;
-                Game.Begin(
-                    SpawnFeet(view),
-                    Compass.HeadingOf(new System.Numerics.Vector2(view.forward.x, view.forward.z)),
-                    _context.Session.World.Records);
+                var (feet, heading) = Spawn(_camera.transform);
+                Game.Begin(feet, heading, _context.Session.World.Records);
                 _flyCamera.enabled = false;
             }
             else
@@ -84,15 +82,19 @@ namespace Forge.EditorApp
             }
         }
 
-        // Where the feet start, in scene coordinates: on what the middle of the view shows, else on the ground under the
-        // camera, else at the camera (and the player falls until something stops it).
-        Vector3 SpawnFeet(Transform view)
+        // Where the feet start, in scene coordinates, and the heading faced: on what the middle of the view shows, else on
+        // the ground under the camera, facing the way the camera does; else at the space's player start, facing its way
+        // (the view is off the land: the sky, the sea); else at the camera (and the player falls until something stops it).
+        (Vector3 Feet, float Heading) Spawn(Transform view)
         {
+            var heading = Compass.HeadingOf(new System.Numerics.Vector2(view.forward.x, view.forward.z));
             var middle = _frame.ToWorld(_camera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)));
             var below = new Ray(_frame.ToWorld(view.position), Vector3.down);
             if (_picker.TryPickWorld(middle, out var hit) || _picker.TryPickWorld(below, out hit))
-                return _frame.ToScene(hit.Point) + Vector3.up * SpawnClearance;
-            return view.position;
+                return (_frame.ToScene(hit.Point) + Vector3.up * SpawnClearance, heading);
+            if (_context.ActiveSpaceRecord?.PlayerStart is PlayerStart start)
+                return (_frame.ToScene(start.Position.ToUnity()) + Vector3.up * SpawnClearance, start.Heading);
+            return (view.position, heading);
         }
     }
 }

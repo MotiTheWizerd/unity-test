@@ -103,6 +103,9 @@ namespace Forge.Data.Plugins
         /// <summary>Who last wrote or deleted <paramref name="id"/> among the plugins before <paramref name="before"/>, if any.</summary>
         public Toucher LastToucherBefore(RecordId id, int before)
         {
+            // The default id names nothing (and has no strings to hash).
+            if (id.IsDefault)
+                return default;
             for (var j = Math.Min(before, _plugins.Count) - 1; j >= 0; j--)
             {
                 if (_plugins[j].Objects.TryLocate(id, out var key))
@@ -117,6 +120,8 @@ namespace Forge.Data.Plugins
         // Whether a deletion names an object: some earlier plugin keeps the id in a block.
         bool IsObjectId(RecordId id, int before)
         {
+            if (id.IsDefault)
+                return false;
             for (var j = 0; j < before; j++)
             {
                 if (_plugins[j].Objects.TryLocate(id, out _))
