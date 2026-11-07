@@ -18,12 +18,24 @@ namespace Forge.UnityEditor.Content
         public const string Fall = "Fall";
         public const string Land = "Land";
 
+        /// <summary>Drawing the weapons (the arms only, whatever the legs do).</summary>
+        public const string Draw = "Draw";
+
+        /// <summary>Putting the weapons away (the arms only).</summary>
+        public const string Sheathe = "Sheathe";
+
         /// <summary>The ground moves, slowest first: the speed blend's order.</summary>
         public static readonly string[] Ground = { Idle, Walk, Run, Sprint };
 
+        /// <summary>The ground moves with weapons drawn, in the same order; each falls back to its plain move when missing.</summary>
+        public static readonly string[] DrawnGround = { Drawn(Idle), Drawn(Walk), Drawn(Run), Drawn(Sprint) };
+
+        /// <summary>A ground move's drawn version ("DrawnRun").</summary>
+        public static string Drawn(string move) => "Drawn" + move;
+
         /// <summary>Whether <paramref name="move"/> repeats while it lasts (standing, walking, falling) rather than playing once (a jump, a landing).</summary>
         public static bool Loops(string move) =>
-            Array.IndexOf(Ground, move) >= 0 || string.Equals(move, Fall, StringComparison.Ordinal);
+            Array.IndexOf(Ground, move) >= 0 || Array.IndexOf(DrawnGround, move) >= 0 || string.Equals(move, Fall, StringComparison.Ordinal);
 
         /// <summary>
         /// Whether <paramref name="move"/> lifts the body off the ground (a jump). The body's own rise already does that,

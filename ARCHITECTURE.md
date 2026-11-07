@@ -769,8 +769,12 @@ from any camera, so both cameras read the same player.
   changes, the rest coming from the base; a whole controller per set rather than an override, since its clips walk at
   their own speeds. A character plays the set its optional `<Name>.json` names (`{ "moves": "Guard" }`). Each is built
   from the moves present: the ground moves blended at their clips' speeds; a jump when the body leaves the ground going
-  up, a fall when it drops past 3 m/s, a landing when it touches down, each optional. A new move is a file dropped in
-  and a rebuild.
+  up, a fall when it drops past 3 m/s, a landing when it touches down, each optional. With any drawn ground move
+  (`DrawnIdle`, `DrawnWalk`, `DrawnRun`, `DrawnSprint`) a second ground state plays while `Drawn`, each missing drawn
+  move falling back to its plain one; with `Draw` or `Sheathe`, an **Arms** layer masked to the arms and fingers
+  (`<Set> Arms.mask`) plays them on their triggers over whatever the legs do, `HumanoidAnimation` weighing it in only
+  while one plays (`Show(Readiness)`), and its clips' lengths are the rules' draw and sheathe times (`ReadinessView`
+  binds a `WeaponReadiness` to a `CharacterModel`). A new move is a file dropped in and a rebuild.
 - **How the body moved** (`BodyMotion`, `Forge.Game.Motion`, shared by anything with a body): `PlayerCharacter.Motion` each frame, from where the body actually went
   (ground speed, vertical speed, grounded), so a run into a wall shows standing. `StrideMatch` keeps the feet planted:
   the speed in the clips' own size (the avatar's `humanScale`) picks the blend, and past the fastest clip it plays

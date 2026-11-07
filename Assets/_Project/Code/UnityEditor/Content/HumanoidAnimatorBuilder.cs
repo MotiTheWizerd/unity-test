@@ -71,22 +71,7 @@ namespace Forge.UnityEditor.Content
                 ?? AnimatorController.CreateAnimatorControllerAtPath(path);
             Clear(controller, path);
 
-            var tree = new BlendTree
-            {
-                name = "Ground",
-                blendType = BlendTreeType.Simple1D,
-                blendParameter = HumanoidAnimation.Speed,
-                useAutomaticThresholds = false,
-                hideFlags = HideFlags.HideInHierarchy,
-            };
-            AssetDatabase.AddObjectToAsset(tree, controller);
-            var topSpeed = 0f;
-            foreach (var (move, clip) in ground)
-            {
-                var speed = move == HumanoidMoves.Idle ? 0f : ClipSpeed(clip);
-                tree.AddChild(clip, speed);
-                topSpeed = Mathf.Max(topSpeed, speed);
-            }
+            var tree = GroundTree(controller, "Ground", ground, out var topSpeed);
 
             controller.AddParameter(HumanoidAnimation.Speed, AnimatorControllerParameterType.Float);
             controller.AddParameter(new AnimatorControllerParameter { name = HumanoidAnimation.Pace, type = AnimatorControllerParameterType.Float, defaultFloat = 1f });
@@ -95,22 +80,125 @@ namespace Forge.UnityEditor.Content
             controller.AddParameter(HumanoidAnimation.VerticalSpeed, AnimatorControllerParameterType.Float);
 
             var machine = controller.layers[0].stateMachine;
-            var moving = machine.AddState("Ground");
-            moving.motion = tree;
-            moving.speedParameter = HumanoidAnimation.Pace;
-            moving.speedParameterActive = true;
+            var moving = GroundState(machine, "Ground", tree);
             machine.defaultState = moving;
+            var grounds = new List<AnimatorState> { moving };
 
-            BuildAir(set, machine, moving);
+            // Weapons drawn: the drawn ground moves, each falling back to its plain one, when the set has any of them.
+            var drawn = HumanoidMoves.Ground.Select((move, i) => (move, clip: Clip(set, HumanoidMoves.DrawnGround[i]) ?? Clip(set, move)))
+                .Where(m => m.clip != null).ToArray();
+            if (HumanoidMoves.DrawnGround.Any(move => Clip(set, move) != null))
+            {
+                controller.AddParameter(HumanoidAnimation.Drawn, AnimatorControllerParameterType.Bool);
+                var drawnMoving = GroundState(machine, "Drawn Ground", GroundTree(controller, "Drawn Ground", drawn, out _));
+                When(moving, drawnMoving, new AnimatorCondition { mode = AnimatorConditionMode.If, parameter = HumanoidAnimation.Drawn });
+                When(drawnMoving, moving, new AnimatorCondition { mode = AnimatorConditionMode.IfNot, parameter = HumanoidAnimation.Drawn });
+                grounds.Add(drawnMoving);
+            }
+
+            BuildAir(set, machine, moving, grounds);
+            BuildArms(set, controller);
             EditorUtility.SetDirty(controller);
             return controller;
+        }
+
+        // The ground moves blended by speed, each clip at the speed it walks (an idle at rest).
+        static BlendTree GroundTree(AnimatorController controller, string name, IEnumerable<(string move, AnimationClip clip)> moves, out float topSpeed)
+        {
+            var tree = new BlendTree
+            {
+                name = name,
+                blendType = BlendTreeType.Simple1D,
+                blendParameter = HumanoidAnimation.Speed,
+                useAutomaticThresholds = false,
+                hideFlags = HideFlags.HideInHierarchy,
+            };
+            AssetDatabase.AddObjectToAsset(tree, controller);
+            topSpeed = 0f;
+            foreach (var (move, clip) in moves)
+            {
+                var speed = move == HumanoidMoves.Idle ? 0f : ClipSpeed(clip);
+                tree.AddChild(clip, speed);
+                topSpeed = Mathf.Max(topSpeed, speed);
+            }
+
+            return tree;
+        }
+
+        static AnimatorState GroundState(AnimatorStateMachine machine, string name, BlendTree tree)
+        {
+            var state = machine.AddState(name);
+            state.motion = tree;
+            state.speedParameter = HumanoidAnimation.Pace;
+            state.speedParameterActive = true;
+            return state;
+        }
+
+        // Drawing and sheathing on the arms only (a layer masked to them, which HumanoidAnimation weighs in while they
+        // play), so the legs walk or run on underneath; left out when the set has neither move.
+        static void BuildArms(string set, AnimatorController controller)
+        {
+            var draw = Clip(set, HumanoidMoves.Draw);
+            var sheathe = Clip(set, HumanoidMoves.Sheathe);
+            if (draw == null && sheathe == null)
+                return;
+
+            controller.AddParameter(HumanoidAnimation.DrawTrigger, AnimatorControllerParameterType.Trigger);
+            controller.AddParameter(HumanoidAnimation.SheatheTrigger, AnimatorControllerParameterType.Trigger);
+            controller.AddLayer(HumanoidAnimation.ArmsLayer);
+            var layers = controller.layers;
+            var arms = layers[layers.Length - 1];
+            arms.defaultWeight = 0f;
+            arms.avatarMask = ArmsMask(set, controller);
+            controller.layers = layers;
+
+            var machine = arms.stateMachine;
+            var rest = machine.AddState("Rest");
+            rest.writeDefaultValues = false;
+            machine.defaultState = rest;
+            foreach (var (clip, trigger) in new[] { (draw, HumanoidAnimation.DrawTrigger), (sheathe, HumanoidAnimation.SheatheTrigger) })
+            {
+                if (clip == null)
+                    continue;
+                var state = machine.AddState(clip.name);
+                state.motion = clip;
+                var start = machine.AddAnyStateTransition(state);
+                start.duration = Crossfade;
+                start.hasFixedDuration = true;
+                start.canTransitionToSelf = false;
+                start.conditions = new[] { new AnimatorCondition { mode = AnimatorConditionMode.If, parameter = trigger } };
+                AtEnd(state, rest);
+            }
+        }
+
+        // The set's mask of the arms and fingers, made once and kept (rebuilt in place) beside its controller.
+        static AvatarMask ArmsMask(string set, AnimatorController controller)
+        {
+            var path = $"{SetFolder(set)}/{set} Arms.mask";
+            var mask = AssetDatabase.LoadAssetAtPath<AvatarMask>(path);
+            if (mask == null)
+            {
+                mask = new AvatarMask();
+                AssetDatabase.CreateAsset(mask, path);
+            }
+
+            for (var part = AvatarMaskBodyPart.Root; part < AvatarMaskBodyPart.LastBodyPart; part++)
+            {
+                var arm = part == AvatarMaskBodyPart.LeftArm || part == AvatarMaskBodyPart.RightArm ||
+                    part == AvatarMaskBodyPart.LeftFingers || part == AvatarMaskBodyPart.RightFingers;
+                mask.SetHumanoidBodyPartActive(part, arm);
+            }
+
+            EditorUtility.SetDirty(mask);
+            return mask;
         }
 
         static string SetFolder(string set) => $"{AnimationImport.AnimationsFolder}/{set}";
 
         static string ControllerPath(string set) => $"{SetFolder(set)}/{set}.controller";
 
-        static void BuildAir(string set, AnimatorStateMachine machine, AnimatorState moving)
+        // From any ground state into the air; back down onto the plain ground, which goes on to the drawn one if drawn.
+        static void BuildAir(string set, AnimatorStateMachine machine, AnimatorState moving, IReadOnlyList<AnimatorState> grounds)
         {
             var jump = State(set, machine, HumanoidMoves.Jump);
             var fall = State(set, machine, HumanoidMoves.Fall);
@@ -120,7 +208,8 @@ namespace Forge.UnityEditor.Content
 
             if (jump != null)
             {
-                When(moving, jump, Airborne(), Rising());
+                foreach (var ground in grounds)
+                    When(ground, jump, Airborne(), Rising());
                 if (fall != null)
                     AtEnd(jump, fall);
                 When(jump, touchDown, OnGround());
@@ -128,7 +217,8 @@ namespace Forge.UnityEditor.Content
 
             if (fall != null)
             {
-                When(moving, fall, Airborne(), Dropping());
+                foreach (var ground in grounds)
+                    When(ground, fall, Airborne(), Dropping());
                 When(fall, touchDown, OnGround());
             }
 
@@ -192,11 +282,13 @@ namespace Forge.UnityEditor.Content
         static AnimationClip OwnClip(string set, string move) =>
             AssetDatabase.LoadAllAssetsAtPath($"{SetFolder(set)}/{move}.fbx").OfType<AnimationClip>().FirstOrDefault(c => c.name == move);
 
-        // Empties the controller for a rebuild: its parameters, its states and the blend trees they played.
+        // Empties the controller for a rebuild: its parameters, its layers past the first, its states and the blend trees they played.
         static void Clear(AnimatorController controller, string path)
         {
             foreach (var parameter in controller.parameters)
                 controller.RemoveParameter(parameter);
+            while (controller.layers.Length > 1)
+                controller.RemoveLayer(controller.layers.Length - 1);
             var machine = controller.layers[0].stateMachine;
             foreach (var child in machine.states)
                 machine.RemoveState(child.state);

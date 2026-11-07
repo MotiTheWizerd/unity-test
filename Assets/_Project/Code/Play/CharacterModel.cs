@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Forge.Game.Equipment;
 using Forge.Game.Motion;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -90,6 +91,15 @@ namespace Forge.Play
 
         /// <summary>Shows how the body moved over the last <paramref name="deltaTime"/> seconds (standing, walking, a jump).</summary>
         public void Animate(BodyMotion motion, float deltaTime) => _animation?.Show(motion, deltaTime);
+
+        /// <summary>Shows its weapons becoming <paramref name="readiness"/> (a draw or a sheathe playing, or done).</summary>
+        public void Animate(Readiness readiness) => _animation?.Show(readiness);
+
+        /// <summary>How long its draw plays, seconds; 0 without one.</summary>
+        public float DrawSeconds => _animation?.DrawSeconds ?? 0f;
+
+        /// <summary>How long its sheathe plays, seconds; 0 without one.</summary>
+        public float SheatheSeconds => _animation?.SheatheSeconds ?? 0f;
 
         /// <summary>
         /// Hangs <paramref name="look"/> from the humanoid bone named <paramref name="bone"/> ("RightHand"), held by

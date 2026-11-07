@@ -41,6 +41,7 @@ namespace Forge.Play
         IDisposable _attributeEvents;
         EquipmentModifiers _equipmentModifiers;
         EquipmentView _equipmentView;
+        ReadinessView _readinessView;
         readonly IAssetCatalog _assets;
 
         /// <param name="camera">The camera the player sees through while spawned.</param>
@@ -160,7 +161,10 @@ namespace Forge.Play
                 _equipmentModifiers = new EquipmentModifiers(Equipment, Attributes);
             Readiness = new WeaponReadiness(Equipment, world, Events);
             if (_avatar != null)
+            {
                 _equipmentView = new EquipmentView(Equipment, _avatar.Model, world, _assets);
+                _readinessView = new ReadinessView(Readiness, _avatar.Model);
+            }
 
             Player.PlaceAt(feet.ToNumerics(), heading);
             Focus = new InteractionFocus(ActorId.Player, world, interactions, _probe, _profile.Reach);
@@ -235,6 +239,8 @@ namespace Forge.Play
             _controls.Disable();
             _equipmentView?.Dispose();
             _equipmentView = null;
+            _readinessView?.Dispose();
+            _readinessView = null;
             _avatar?.Dispose();
             _avatar = null;
             _motor.Dispose();
