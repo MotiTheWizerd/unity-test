@@ -21,39 +21,43 @@ namespace Forge.UnityEditor.Content
 
         public static IEnumerable<BaseObjectRecord> All(string pluginId)
         {
-            // A one-handed sword from the blender-tests art repo, lying flat: any heading, following the ground. Held in
-            // either hand, so two make a pair.
-            yield return new BaseObjectRecord(VikingSword(pluginId), "Viking Sword", ModelImport.KeyFor("VikingSword"),
-                "Items/Weapons", new PlacementRules(randomYaw: true, 1f, 1f, alignToSlope: true),
-                item: new ItemPart(ItemKind.Weapon, weight: 9f, value: 75),
-                equippable: new EquippablePart(CoreEquipSlots.OneHanded()),
-                weapon: new WeaponPart(CoreCombatStyles.OneHanded, new[] { Effect.Damage(CoreAttributes.Health, 12f) }));
+            // One-handed swords, lying flat: any heading, following the ground. Held in either hand, so two make a pair,
+            // and swung in the One-Handed style, each blow taking its damage from health. The Viking Sword is from the
+            // blender-tests art repo, the others from OpenGameArt.
+            foreach (var (id, name, folder, weight, value, damage) in new[]
+                     {
+                         (VikingSword(pluginId), "Viking Sword", "VikingSword", 9f, 75, 12f),
+                         (new RecordId(pluginId, "short_sword"), "Short Sword", "ShortSword", 6f, 40, 9f),
+                         (new RecordId(pluginId, "arming_sword"), "Arming Sword", "ArmingSword", 8f, 70, 11f),
+                     })
+                yield return new BaseObjectRecord(id, name, ModelImport.KeyFor(folder), "Items/Weapons", LyingFlat(),
+                    item: new ItemPart(ItemKind.Weapon, weight, value),
+                    equippable: new EquippablePart(CoreEquipSlots.OneHanded()),
+                    weapon: new WeaponPart(CoreCombatStyles.OneHanded, new[] { Effect.Damage(CoreAttributes.Health, damage) }));
 
-            // A heavy two-handed sword (OpenGameArt, CC0), lying flat as the Viking Sword does. No combat style yet: the
-            // base game has none for two hands.
+            // A heavy two-handed sword (OpenGameArt, CC0), lying flat as the swords do. No combat style yet: the base
+            // game has none for two hands.
             yield return new BaseObjectRecord(Greatsword(pluginId), "Greatsword", ModelImport.KeyFor("Greatsword"),
-                "Items/Weapons", new PlacementRules(randomYaw: true, 1f, 1f, alignToSlope: true),
+                "Items/Weapons", LyingFlat(),
                 item: new ItemPart(ItemKind.Weapon, weight: 18f, value: 120),
                 equippable: new EquippablePart(CoreEquipSlots.TwoHanded()));
 
             // A mage's staff (OpenGameArt, CC0), lying flat; held in one hand, the other free. No combat style yet.
             yield return new BaseObjectRecord(new RecordId(pluginId, "mage_staff"), "Mage Staff", ModelImport.KeyFor("MageStaff"),
-                "Items/Weapons", new PlacementRules(randomYaw: true, 1f, 1f, alignToSlope: true),
+                "Items/Weapons", LyingFlat(),
                 item: new ItemPart(ItemKind.Weapon, weight: 6f, value: 90),
                 equippable: new EquippablePart(CoreEquipSlots.OneHanded()));
 
-            // One-handed swords and bows (OpenGameArt), lying flat. No combat style yet; bows take both hands to draw.
-            foreach (var (folder, id, name, weight, value, fits) in new[]
+            // Bows (OpenGameArt), lying flat; they take both hands to draw. No combat style yet.
+            foreach (var (folder, id, name, weight, value) in new[]
                      {
-                         ("ShortSword", "short_sword", "Short Sword", 6f, 40, CoreEquipSlots.OneHanded()),
-                         ("ArmingSword", "arming_sword", "Arming Sword", 8f, 70, CoreEquipSlots.OneHanded()),
-                         ("HuntingBow", "hunting_bow", "Hunting Bow", 3f, 50, CoreEquipSlots.TwoHanded()),
-                         ("RecurveBow", "recurve_bow", "Recurve Bow", 3f, 65, CoreEquipSlots.TwoHanded()),
+                         ("HuntingBow", "hunting_bow", "Hunting Bow", 3f, 50),
+                         ("RecurveBow", "recurve_bow", "Recurve Bow", 3f, 65),
                      })
                 yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
-                    "Items/Weapons", new PlacementRules(randomYaw: true, 1f, 1f, alignToSlope: true),
+                    "Items/Weapons", LyingFlat(),
                     item: new ItemPart(ItemKind.Weapon, weight, value),
-                    equippable: new EquippablePart(fits));
+                    equippable: new EquippablePart(CoreEquipSlots.TwoHanded()));
 
             // Arrows and a quiver of them (OpenGameArt, CC0), lying flat; carried, not held, until there is shooting.
             foreach (var (folder, id, name, weight, value) in new[]
@@ -63,7 +67,7 @@ namespace Forge.UnityEditor.Content
                          ("Quiver", "quiver", "Quiver of Arrows", 2f, 20),
                      })
                 yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
-                    "Items/Ammo", new PlacementRules(randomYaw: true, 1f, 1f, alignToSlope: true),
+                    "Items/Ammo", LyingFlat(),
                     item: new ItemPart(ItemKind.Misc, weight, value));
 
             // Shields (OpenGameArt, CC0), two looks of each shape, lying face up; held in the off hand.
@@ -75,9 +79,12 @@ namespace Forge.UnityEditor.Content
                          ("KiteShieldIron", "kite_shield_iron", "Iron Kite Shield", 18f, 80),
                      })
                 yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
-                    "Items/Shields", new PlacementRules(randomYaw: true, 1f, 1f, alignToSlope: true),
+                    "Items/Shields", LyingFlat(),
                     item: new ItemPart(ItemKind.Weapon, weight, value),
                     equippable: new EquippablePart(CoreEquipSlots.OffHand()));
         }
+
+        // Laid on the ground as it falls: any heading, following the slope, at its own size.
+        static PlacementRules LyingFlat() => new PlacementRules(randomYaw: true, 1f, 1f, alignToSlope: true);
     }
 }
