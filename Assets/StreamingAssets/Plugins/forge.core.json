@@ -307,6 +307,18 @@
       "category": "Props/Containers"
     },
     {
+      "type": "equip_slot",
+      "id": "forge.core:equip_slot/left_hand",
+      "displayName": "Left Hand",
+      "bone": "LeftHand"
+    },
+    {
+      "type": "equip_slot",
+      "id": "forge.core:equip_slot/right_hand",
+      "displayName": "Right Hand",
+      "bone": "RightHand"
+    },
+    {
       "type": "base_object",
       "id": "forge.core:fence_wood",
       "displayName": "Wooden Fence",
@@ -618,6 +630,20 @@
         "kind": "weapon",
         "weight": 9.0,
         "value": 75
+      },
+      "equippable": {
+        "fits": [
+          {
+            "slots": [
+              "forge.core:equip_slot/right_hand"
+            ]
+          },
+          {
+            "slots": [
+              "forge.core:equip_slot/left_hand"
+            ]
+          }
+        ]
       }
     },
     {

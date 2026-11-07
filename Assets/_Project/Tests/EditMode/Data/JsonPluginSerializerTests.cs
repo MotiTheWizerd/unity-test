@@ -466,6 +466,50 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesEquipSlots_AndAnEquippablesFitsAndModifiers()
+        {
+            var right = EquipSlotRecord.IdFor("core", "right_hand");
+            var left = EquipSlotRecord.IdFor("core", "left_hand");
+            var carry = AttributeRecord.IdFor("core", "carry_weight");
+            var plugin = Plugin("core",
+                new EquipSlotRecord(right, "Right Hand", "RightHand"),
+                new EquipSlotRecord(EquipSlotRecord.IdFor("core", "ring"), "Ring"),
+                new BaseObjectRecord(RecordId.Parse("core:sword"), "Sword", "items/sword", item: new ItemPart(ItemKind.Weapon, 9f, 75),
+                    equippable: new EquippablePart(new[] { EquipFit.Of(right), EquipFit.Of(left) }, new[] { AttributeModifier.Percent(carry, 10f) })),
+                new BaseObjectRecord(RecordId.Parse("core:apple"), "Apple", "items/apple", item: new ItemPart(ItemKind.Food, 0.1f, 3)));
+
+            var json = Write(plugin);
+            var copy = Read(json);
+            var slots = copy.Records.OfType<EquipSlotRecord>().ToDictionary(s => s.Id.ToString());
+            var objects = copy.Records.OfType<BaseObjectRecord>().ToDictionary(r => r.Id.ToString());
+
+            Assert.That(slots["core:equip_slot/right_hand"].Bone, Is.EqualTo("RightHand"));
+            Assert.That(slots["core:equip_slot/ring"].Bone, Is.Null);
+            var sword = objects["core:sword"].Equippable;
+            Assert.That(sword.Fits.Select(f => f.Slots.Single()), Is.EqualTo(new[] { right, left }), "The fits keep their order: the first free one is taken.");
+            var modifier = sword.Modifiers.Single();
+            Assert.That((modifier.Attribute, modifier.Op, modifier.Amount), Is.EqualTo((carry, ModifierOp.Percent, 10f)));
+            Assert.That(objects["core:apple"].Equippable, Is.Null);
+            StringAssert.Contains("\"op\": \"percent\"", json);
+            Assert.That(Regex.Matches(json, "\"equippable\"").Count, Is.EqualTo(1), "What is not equippable is written as nothing.");
+            Assert.That(Write(copy), Is.EqualTo(json));
+        }
+
+        [Test]
+        public void Read_AnEquippableThatIsNoItem_IsRejected()
+        {
+            var right = EquipSlotRecord.IdFor("core", "right_hand");
+            var plugin = Plugin("core", new BaseObjectRecord(RecordId.Parse("core:sword"), "Sword", "items/sword", item: new ItemPart(ItemKind.Weapon, 9f, 75),
+                equippable: new EquippablePart(new[] { EquipFit.Of(right) })));
+            var json = Write(plugin);
+            var noItem = Regex.Replace(json, @"""item"": \{[^}]*\},\s*", string.Empty);
+            StringAssert.DoesNotContain("\"item\"", noItem);
+
+            var ex = Assert.Throws<DataValidationException>(() => Read(noItem));
+            StringAssert.Contains("item", ex.Message);
+        }
+
+        [Test]
         public void Read_AnItemNamingNoKind_IsMisc()
         {
             var plugin = Plugin("core", new BaseObjectRecord(RecordId.Parse("core:coin"), "Coin", "items/coin", item: new ItemPart(ItemKind.Food, 0f, 1)));

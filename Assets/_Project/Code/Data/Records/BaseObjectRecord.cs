@@ -6,7 +6,8 @@ namespace Forge.Data.Records
     /// <summary>
     /// A definition of something that can be placed in the world (a tree, a rock,
     /// a chair). Placed instances reference it by id, so shared data lives once.
-    /// What it is beyond its look comes in optional parts: an <see cref="ItemPart"/> makes it something to carry.
+    /// What it is beyond its look comes in optional parts: an <see cref="ItemPart"/> makes it something to carry, and an
+    /// <see cref="EquippablePart"/> something its carrier can equip.
     /// </summary>
     public sealed class BaseObjectRecord : Record
     {
@@ -14,14 +15,17 @@ namespace Forge.Data.Records
         /// <param name="placement">How the editor places new instances; null = exactly as chosen, upright.</param>
         /// <param name="materials">Slots every instance wears another material in than its asset does (a variant's look); null or empty = none.</param>
         /// <param name="item">What makes it an item to pick up and carry; null = not an item.</param>
+        /// <param name="equippable">What makes it something to equip and hold or wear; null = not equippable. Only an item is.</param>
         public BaseObjectRecord(RecordId id, string displayName, string assetKey, string category = null, PlacementRules placement = null,
-            IEnumerable<MaterialOverride> materials = null, ItemPart item = null)
+            IEnumerable<MaterialOverride> materials = null, ItemPart item = null, EquippablePart equippable = null)
             : base(id)
         {
             if (string.IsNullOrWhiteSpace(displayName))
                 throw new ArgumentException("Display name is required.", nameof(displayName));
             if (string.IsNullOrWhiteSpace(assetKey))
                 throw new ArgumentException("Asset key is required.", nameof(assetKey));
+            if (equippable != null && item == null)
+                throw new ArgumentException("Only an item is equippable: give it an item part too.", nameof(equippable));
 
             DisplayName = displayName;
             AssetKey = assetKey;
@@ -30,6 +34,7 @@ namespace Forge.Data.Records
             var validated = MaterialOverrides.Validated(materials, nameof(materials));
             Materials = validated.Count > 0 ? validated : null;
             Item = item;
+            Equippable = equippable;
         }
 
         public string DisplayName { get; }
@@ -52,5 +57,8 @@ namespace Forge.Data.Records
 
         /// <summary>What makes it an item an actor can pick up and carry, or null: not an item.</summary>
         public ItemPart Item { get; }
+
+        /// <summary>What makes it something its carrier can equip, or null: not equippable.</summary>
+        public EquippablePart Equippable { get; }
     }
 }

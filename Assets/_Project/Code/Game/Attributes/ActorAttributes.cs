@@ -117,6 +117,8 @@ namespace Forge.Game.Attributes
         {
             if (source.Key == null)
                 throw new ArgumentException("A modifier names its source.", nameof(source));
+            if (modifier == null)
+                throw new ArgumentNullException(nameof(modifier));
             if (seconds.HasValue && !(seconds.Value > 0f && !float.IsInfinity(seconds.Value)))
                 throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "Must be a positive number of seconds.");
 

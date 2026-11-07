@@ -118,8 +118,16 @@ one in the active plugin.
   The first is **`ItemPart`** (`BaseObjectRecord.Item`; in JSON `"item": {"kind": "potion", "weight": 0.5, "value": 15}`,
   omitted when it is no item): something an actor picks up and carries. `ItemKind` (misc, weapon, potion, food; by name,
   misc when left out) is where an inventory lists it, grouping only; weight (≥ 0) counts against carry weight; value
-  (≥ 0) is in gold. What using an item does (wielding, wearing, drinking) will be parts of their own; doors and
-  containers will be parts too. A variant of an item is an item (`MakeVariant` keeps the parts).
+  (≥ 0) is in gold. What using an item does is a part of its own: **`EquippablePart`** (`BaseObjectRecord.Equippable`,
+  only beside an `ItemPart`) makes it something its carrier equips and holds or wears. Its `Fits` are the ways it can
+  be equipped, in order of preference, each an `EquipFit`: the **equip slots** it takes together. A one-handed sword
+  fits the right hand or the left (`CoreEquipSlots.OneHanded()`), so an actor can hold two; a two-handed one fits both
+  hands at once (`TwoHanded()`). Its `Modifiers` (`AttributeModifier`s, data in `Forge.Data.Records`, written
+  `{"attribute": …, "op": "add", "amount": 50}`) apply to the bearer while equipped. Slots are records
+  (`EquipSlotRecord`, `equip_slot/…`: display name, and the humanoid bone what it holds hangs from, e.g. `RightHand`;
+  none for a slot that shows nothing), so a mod adds one; forge.core ships the two hands (`CoreEquipSlotSet`). The rules
+  read no slot by name, only content does. Drinking, doors and containers will be parts too. A variant of an item is an
+  item (`MakeVariant` keeps the parts).
 - Optional fields are omitted from plugin JSON rather than written as `null` (`NullValueHandling.Ignore`).
 - `PlacedObjectRecord`: an instance in the world (base id, position, rotation, scale), and optionally the
   `Materials` it wears instead of its base object's in some **material slots** (`MaterialOverride`: slot, material id;
@@ -788,7 +796,8 @@ where it came from.
   whom, and an order where each comes after what it reads.
 - **`ActorAttributes`**: one actor's numbers over the set, owned by an `ActorId` (the player's now, any NPC's later). Value =
   `(base + terms + adds) × (1 + percents/100) × multipliers`, within min and max. Each `AttributeModifier`
-  (`Add`, `Percent`, `Multiply`) is added under a `ModifierSource` (an item worn, an effect, a perk); `Remove(source)`
+  (`Add`, `Percent`, `Multiply`; a data record, so plugins write them) is added under a `ModifierSource` (an item
+  worn, an effect, a perk); `Remove(source)`
   takes exactly its modifiers away, and a modifier given seconds wears off by itself. Values are worked out when
   something changes, rippling in order to whatever reads them, so reading costs nothing. A resource stores the
   damage it took, not what is left: `Current` = value − damage, so a bigger pool lifts what is left and a smaller one

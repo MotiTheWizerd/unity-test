@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using Forge.Data;
 using Forge.Data.Records;
@@ -77,6 +78,61 @@ namespace Forge.Tests.Data
         public void ItemPart_RejectsUnknownKinds_AndNegativeOrEndlessWeightOrValue(ItemKind kind, float weight, int value)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new ItemPart(kind, weight, value));
+        }
+
+        static readonly RecordId RightHand = EquipSlotRecord.IdFor("forge.core", "right_hand");
+        static readonly RecordId LeftHand = EquipSlotRecord.IdFor("forge.core", "left_hand");
+
+        [Test]
+        public void EquipSlot_IsNamedAsOne_AndNamesItsBoneOrNone()
+        {
+            var hand = new EquipSlotRecord(RightHand, "Right Hand", "RightHand");
+            Assert.That((hand.DisplayName, hand.Bone), Is.EqualTo(("Right Hand", "RightHand")));
+            Assert.That(new EquipSlotRecord(EquipSlotRecord.IdFor("forge.core", "ring"), "Ring").Bone, Is.Null, "A ring shows nothing (yet).");
+
+            Assert.Throws<ArgumentException>(() => new EquipSlotRecord(RecordId.Parse("forge.core:right_hand"), "Right Hand"));
+            Assert.Throws<ArgumentException>(() => new EquipSlotRecord(RightHand, " "));
+            Assert.Throws<ArgumentException>(() => new EquipSlotRecord(RightHand, "Right Hand", " "));
+        }
+
+        [Test]
+        public void EquipFit_TakesItsSlotsOnce_AndIsTheSameInAnyOrder()
+        {
+            var both = EquipFit.Of(RightHand, LeftHand);
+
+            Assert.That(both.Takes(LeftHand), Is.True);
+            Assert.That(EquipFit.Of(RightHand).Takes(LeftHand), Is.False);
+            Assert.That(both.SameAs(EquipFit.Of(LeftHand, RightHand)), Is.True);
+            Assert.That(both.SameAs(EquipFit.Of(RightHand)), Is.False);
+
+            Assert.Throws<ArgumentException>(() => EquipFit.Of());
+            Assert.Throws<ArgumentException>(() => EquipFit.Of(RightHand, RightHand));
+            Assert.Throws<ArgumentException>(() => EquipFit.Of(default(RecordId)));
+        }
+
+        [Test]
+        public void Equippable_FitsAtLeastOneWay_EachOnce_AndKeepsItsModifiers()
+        {
+            var carry = AttributeRecord.IdFor("forge.core", "carry_weight");
+            var ring = new EquippablePart(new[] { EquipFit.Of(RightHand), EquipFit.Of(LeftHand) }, new[] { AttributeModifier.Add(carry, 50f) });
+
+            Assert.That(ring.Fits.Count, Is.EqualTo(2));
+            Assert.That(ring.Modifiers.Single().Amount, Is.EqualTo(50f));
+            Assert.That(new EquippablePart(new[] { EquipFit.Of(RightHand) }, new AttributeModifier[0]).Modifiers, Is.Null, "Nothing to change is no list.");
+
+            Assert.Throws<ArgumentException>(() => new EquippablePart(new EquipFit[0]));
+            Assert.Throws<ArgumentException>(() => new EquippablePart(new[] { EquipFit.Of(RightHand, LeftHand), EquipFit.Of(LeftHand, RightHand) }));
+            Assert.Throws<ArgumentException>(() => new EquippablePart(new[] { EquipFit.Of(RightHand) }, new AttributeModifier[] { null }));
+        }
+
+        [Test]
+        public void BaseObject_IsEquippable_OnlyAsAnItem()
+        {
+            var sword = new EquippablePart(new[] { EquipFit.Of(RightHand) });
+
+            Assert.That(new BaseObjectRecord(TreeId, "Sword", "items/sword", item: new ItemPart(ItemKind.Weapon, 9f, 75), equippable: sword).Equippable, Is.SameAs(sword));
+            Assert.That(new BaseObjectRecord(TreeId, "Apple", "items/apple", item: new ItemPart(ItemKind.Food, 0.1f, 3)).Equippable, Is.Null);
+            Assert.Throws<ArgumentException>(() => new BaseObjectRecord(TreeId, "Statue", "decor/statue", equippable: sword));
         }
 
         [Test]

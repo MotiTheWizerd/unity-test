@@ -27,6 +27,7 @@ namespace Forge.Data.Records
             registry.Register<GroundLayerRecord>("ground_layer");
             registry.Register<MaterialRecord>("material");
             registry.Register<AttributeRecord>("attribute");
+            registry.Register<EquipSlotRecord>("equip_slot");
             return registry;
         }
 
