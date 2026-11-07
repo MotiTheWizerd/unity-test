@@ -271,14 +271,16 @@ namespace Forge.Play.Hud
         {
             var model = _game.Player.Model;
             var world = _game.Player.World;
-            var subject = model != null ? (object)(model, _dressed) : null;
-            _characterView.Show(subject, parent => Dressed(parent, model, world), keepTurn: true);
+            var inHand = _game.Player.Readiness != null && _game.Player.Readiness.InHand;
+            var subject = model != null ? (object)(model, _dressed, inHand) : null;
+            _characterView.Show(subject, parent => Dressed(parent, model, world, inHand), keepTurn: true);
         }
 
-        // The looks of what it holds hang from the character's model and go with it.
-        GameObject Dressed(Transform parent, GameObject prefab, IRecordStore world)
+        // The looks of what it holds hang from the character's model, drawn or sheathed as in the world, and go with it.
+        GameObject Dressed(Transform parent, GameObject prefab, IRecordStore world, bool inHand)
         {
             var character = CharacterModel.StandingStill(parent, prefab);
+            character.InHand = inHand;
             if (world != null)
             {
                 var held = new HeldItems(character, world, _game.Assets);

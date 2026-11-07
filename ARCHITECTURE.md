@@ -929,7 +929,15 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
   (`SetTimes`) and running to its end whatever is pressed meanwhile, so later combat knows a weapon is in hand only
   when `Drawn`. Nothing to draw keeps it sheathed; taking off the last weapon sheathes at once. Equipping never draws.
   `Changed` tells the look as it happens; the stream hears `WeaponsDrawn` / `WeaponsSheathed` when done. It waits while
-  the inventory is open, as the rest of the player does.
+  the inventory is open, as the rest of the player does. `InHand` says whether the weapons are in hand rather than in
+  their sheaths: from `DrawnAt` into a draw (the hand takes the hilt) until `SheathedAt` into a sheathe (it lets go),
+  told on `InHandChanged`. **Sheaths** (Play): `SheathFinder` reads them off the character's own draw clip, played once
+  on a hidden copy of it (through a `PlayableGraph`, the Animator forced to animate though out of sight): the moment
+  the right hand comes nearest the left hip is when it takes the hilt, and its grip then is the right hand's sheath,
+  kept relative to the hips so it moves with them; the left hand's is that one mirrored across the character (the
+  right hip). The sheathe clip's own nearest moment is when it lets go. `CharacterModel.InHand` hangs what sheathes in
+  the hand or in its sheath (made under the hips on first need), and `ReadinessView` sets both the rules' moments and
+  the model's place from them. A model that can't tell (no draw clip, no hands) keeps its weapons in hand.
 - `PlayerCommands.Activate` is the key, pressed this frame; `Allowing(sprint, jump, walk)` is a command as a rule lets it through.
 
 ## World-building agent (Forge.Agent)

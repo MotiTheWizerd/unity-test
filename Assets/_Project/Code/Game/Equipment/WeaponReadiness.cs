@@ -66,6 +66,33 @@ namespace Forge.Game.Equipment
 
         public float SheatheSeconds { get; private set; } = DefaultSeconds;
 
+        /// <summary>How far into a draw the weapon leaves its sheath for the hand, 0 to 1.</summary>
+        public float DrawnAt { get; private set; } = 1f;
+
+        /// <summary>How far into a sheathe the weapon leaves the hand for its sheath, 0 to 1.</summary>
+        public float SheathedAt { get; private set; } = 1f;
+
+        /// <summary>
+        /// Whether the weapons are in hand rather than in their sheaths: from the moment a draw takes them
+        /// (<see cref="DrawnAt"/>) to the moment a sheathe puts them back (<see cref="SheathedAt"/>).
+        /// </summary>
+        public bool InHand
+        {
+            get
+            {
+                switch (State)
+                {
+                    case Readiness.Drawn: return true;
+                    case Readiness.Drawing: return Progress >= DrawnAt;
+                    case Readiness.Sheathing: return Progress < SheathedAt;
+                    default: return false;
+                }
+            }
+        }
+
+        /// <summary>The weapons went from sheath to hand (true) or back (false), as it happens, for the look.</summary>
+        public event Action<bool> InHandChanged;
+
         /// <summary>Whether it holds anything to draw: something in a slot that sheathes.</summary>
         public bool HasWeapons
         {
@@ -87,15 +114,26 @@ namespace Forge.Game.Equipment
         /// <summary>The state changed (a draw began, ended, ...), as it happens, for the look.</summary>
         public event Action<Readiness> Changed;
 
-        /// <summary>How long a draw and a sheathe take, as the look's clips play them; zero is at once.</summary>
-        public void SetTimes(float drawSeconds, float sheatheSeconds)
+        /// <summary>
+        /// How long a draw and a sheathe take, as the look's clips play them (zero is at once), and how far into each the
+        /// weapon changes place (<paramref name="drawnAt"/>: sheath to hand; <paramref name="sheathedAt"/>: hand to sheath).
+        /// </summary>
+        public void SetTimes(float drawSeconds, float sheatheSeconds, float drawnAt = 1f, float sheathedAt = 1f)
         {
             if (!(drawSeconds >= 0f) || float.IsInfinity(drawSeconds))
                 throw new ArgumentOutOfRangeException(nameof(drawSeconds), drawSeconds, "Must be a finite number of seconds, zero or more.");
             if (!(sheatheSeconds >= 0f) || float.IsInfinity(sheatheSeconds))
                 throw new ArgumentOutOfRangeException(nameof(sheatheSeconds), sheatheSeconds, "Must be a finite number of seconds, zero or more.");
+            if (!(drawnAt >= 0f && drawnAt <= 1f))
+                throw new ArgumentOutOfRangeException(nameof(drawnAt), drawnAt, "Must be a fraction of the draw, 0 to 1.");
+            if (!(sheathedAt >= 0f && sheathedAt <= 1f))
+                throw new ArgumentOutOfRangeException(nameof(sheathedAt), sheathedAt, "Must be a fraction of the sheathe, 0 to 1.");
+            var wasInHand = InHand;
             DrawSeconds = drawSeconds;
             SheatheSeconds = sheatheSeconds;
+            DrawnAt = drawnAt;
+            SheathedAt = sheathedAt;
+            TellInHand(wasInHand);
         }
 
         /// <summary>The ready-weapon key: draws what is sheathed, sheathes what is drawn; false when it does nothing.</summary>
@@ -121,11 +159,14 @@ namespace Forge.Game.Equipment
         {
             if (State != Readiness.Drawing && State != Readiness.Sheathing)
                 return;
+            var wasInHand = InHand;
             _elapsed += Math.Max(0f, deltaTime);
             if (State == Readiness.Drawing && _elapsed >= DrawSeconds)
                 End(Readiness.Drawn);
             else if (State == Readiness.Sheathing && _elapsed >= SheatheSeconds)
                 End(Readiness.Sheathed);
+            else
+                TellInHand(wasInHand);
         }
 
         public void Dispose() => _equipment.Changed -= OnEquipmentChanged;
@@ -141,21 +182,32 @@ namespace Forge.Game.Equipment
 
         void Begin(Readiness state)
         {
+            var wasInHand = InHand;
             State = state;
             _elapsed = 0f;
             Changed?.Invoke(state);
+            TellInHand(wasInHand);
             Tick(0f);
         }
 
         void End(Readiness state)
         {
+            var wasInHand = InHand;
             State = state;
             _elapsed = 0f;
             Changed?.Invoke(state);
+            TellInHand(wasInHand);
             if (state == Readiness.Drawn)
                 _events?.Publish(new WeaponsDrawn(_equipment.Owner));
             else
                 _events?.Publish(new WeaponsSheathed(_equipment.Owner));
+        }
+
+        void TellInHand(bool wasInHand)
+        {
+            var inHand = InHand;
+            if (inHand != wasInHand)
+                InHandChanged?.Invoke(inHand);
         }
 
         static float Fraction(float elapsed, float seconds) => seconds > 0f ? Math.Min(1f, elapsed / seconds) : 1f;

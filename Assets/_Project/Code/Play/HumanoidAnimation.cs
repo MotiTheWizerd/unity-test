@@ -56,15 +56,21 @@ namespace Forge.Play
             foreach (var parameter in animator.parameters)
                 _drawnMoves |= parameter.nameHash == DrawnId;
             _arms = animator.GetLayerIndex(ArmsLayer);
-            DrawSeconds = ClipLength(animator, DrawTrigger);
-            SheatheSeconds = ClipLength(animator, SheatheTrigger);
+            DrawClip = ClipNamed(animator, DrawTrigger);
+            SheatheClip = ClipNamed(animator, SheatheTrigger);
         }
 
+        /// <summary>The clip its draw plays, or null.</summary>
+        public AnimationClip DrawClip { get; }
+
+        /// <summary>The clip its sheathe plays, or null.</summary>
+        public AnimationClip SheatheClip { get; }
+
         /// <summary>How long its draw plays, seconds; 0 when it has none (a draw is then at once).</summary>
-        public float DrawSeconds { get; }
+        public float DrawSeconds => DrawClip != null ? DrawClip.length : 0f;
 
         /// <summary>How long its sheathe plays, seconds; 0 when it has none.</summary>
-        public float SheatheSeconds { get; }
+        public float SheatheSeconds => SheatheClip != null ? SheatheClip.length : 0f;
 
         /// <summary>The animations of <paramref name="model"/>, or null when it has none to play (no humanoid Animator with a controller).</summary>
         public static HumanoidAnimation On(GameObject model)
@@ -108,15 +114,15 @@ namespace Forge.Play
             _animator.SetLayerWeight(_arms, _armsWeight);
         }
 
-        static float ClipLength(Animator animator, string name)
+        static AnimationClip ClipNamed(Animator animator, string name)
         {
             foreach (var clip in animator.runtimeAnimatorController.animationClips)
             {
                 if (clip.name == name)
-                    return clip.length;
+                    return clip;
             }
 
-            return 0f;
+            return null;
         }
     }
 }

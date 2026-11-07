@@ -115,6 +115,31 @@ namespace Forge.Tests.Game
         }
 
         [Test]
+        public void TheWeapon_ReachesTheHandPartWayIntoTheDraw_AndTheSheathPartWayIntoTheSheathe()
+        {
+            Wield(Sword);
+            _readiness.SetTimes(1f, 1f, drawnAt: 0.4f, sheathedAt: 0.7f);
+            var told = new List<bool>();
+            _readiness.InHandChanged += told.Add;
+
+            _readiness.Toggle();
+            _readiness.Tick(0.3f);
+            Assert.That(_readiness.InHand, Is.False, "Still reaching for the hilt.");
+            _readiness.Tick(0.2f);
+            Assert.That(_readiness.InHand, Is.True, "Out of the sheath.");
+            _readiness.Tick(1f);
+
+            _readiness.Toggle();
+            _readiness.Tick(0.6f);
+            Assert.That(_readiness.InHand, Is.True, "On its way back.");
+            _readiness.Tick(0.2f);
+            Assert.That(_readiness.InHand, Is.False, "In the sheath before the arm is back.");
+            _readiness.Tick(1f);
+
+            Assert.That(told, Is.EqualTo(new[] { true, false }), "Told once each way.");
+        }
+
+        [Test]
         public void ADrawOfNoTime_IsDoneAtOnce()
         {
             Wield(Sword);

@@ -25,8 +25,11 @@ namespace Forge.Play
         readonly Animator _humanoid;
         readonly List<Renderer> _renderers = new List<Renderer>();
         readonly Dictionary<HumanBodyBones, Transform> _points = new Dictionary<HumanBodyBones, Transform>();
-        readonly Dictionary<GameObject, Renderer[]> _attached = new Dictionary<GameObject, Renderer[]>();
+        readonly Dictionary<HumanBodyBones, Transform> _sheaths = new Dictionary<HumanBodyBones, Transform>();
+        readonly Dictionary<GameObject, Held> _attached = new Dictionary<GameObject, Held>();
+        readonly GameObject _prefab;
         bool _shadowsOnly;
+        bool _inHand;
 
         /// <param name="body">The body object the model rides on.</param>
         public CharacterModel(Transform body, GameObject prefab)
@@ -36,6 +39,7 @@ namespace Forge.Play
             if (prefab == null)
                 throw new ArgumentNullException(nameof(prefab));
 
+            _prefab = prefab;
             Root = UnityEngine.Object.Instantiate(prefab, body, false);
             Root.name = prefab.name;
             RemoveColliders(Root);
@@ -101,53 +105,115 @@ namespace Forge.Play
         /// <summary>How long its sheathe plays, seconds; 0 without one.</summary>
         public float SheatheSeconds => _animation?.SheatheSeconds ?? 0f;
 
+        /// <summary>How far into its draw the hand takes the hilt (when the weapon leaves the sheath), 0 to 1; 1 when unknown.</summary>
+        public float DrawnAt => SheathFinder.TryFind(_prefab, _animation?.DrawClip, out var sheaths) ? sheaths.Moment : 1f;
+
+        /// <summary>How far into its sheathe the hand lets go at the sheath, 0 to 1; 1 when unknown.</summary>
+        public float SheathedAt => SheathFinder.TryFind(_prefab, _animation?.SheatheClip, out var sheaths) ? sheaths.Moment : 1f;
+
+        /// <summary>
+        /// Whether what sheathes is in hand (weapons drawn) or in its sheath at the hip, where the model's draw clip takes it
+        /// from (<see cref="SheathFinder"/>); a model that can't tell keeps it in hand.
+        /// </summary>
+        public bool InHand
+        {
+            get => _inHand;
+            set
+            {
+                if (_inHand == value)
+                    return;
+                _inHand = value;
+                foreach (var held in _attached.Values)
+                {
+                    if (held.Sheathes)
+                        Place(held);
+                }
+            }
+        }
+
         /// <summary>
         /// Hangs <paramref name="look"/> from the humanoid bone named <paramref name="bone"/> ("RightHand"), held by
-        /// <paramref name="grip"/> (a part of it, or itself): the grip's pivot and axes on the bone's attach point. False,
-        /// and the look destroyed, when the model has no such bone.
+        /// <paramref name="grip"/> (a part of it, or itself): the grip's pivot and axes on the bone's attach point; or, when
+        /// it <paramref name="sheathes"/> and is not <see cref="InHand"/>, on that hand's sheath. False, and the look
+        /// destroyed, when the model has no such bone.
         /// </summary>
-        public bool Attach(GameObject look, Transform grip, string bone)
+        public bool Attach(GameObject look, Transform grip, string bone, bool sheathes = false)
         {
             if (look == null)
                 throw new ArgumentNullException(nameof(look));
-            if (!TryPoint(bone, out var point))
+            if (!Enum.TryParse(bone, out HumanBodyBones id) || !TryPoint(id, out _))
             {
                 UnityEngine.Object.Destroy(look);
                 return false;
             }
 
-            // Its own size whatever the skeleton's scale, then turned and moved so that its grip lies on the point.
-            var size = look.transform.localScale;
-            look.transform.SetParent(point, false);
-            var boneScale = point.lossyScale.x;
-            if (boneScale > 0f)
-                look.transform.localScale = size / boneScale;
-            var gripTurn = Quaternion.Inverse(look.transform.rotation) * grip.rotation;
-            look.transform.rotation = point.rotation * Quaternion.Inverse(gripTurn);
-            look.transform.position += point.position - grip.position;
-
+            var held = new Held
+            {
+                Look = look,
+                Grip = grip,
+                Bone = id,
+                Sheathes = sheathes,
+                Size = look.transform.localScale,
+                Renderers = look.GetComponentsInChildren<Renderer>(true),
+            };
             RemoveColliders(look);
             SetLayer(look.transform, Root.layer);
-            var renderers = look.GetComponentsInChildren<Renderer>(true);
-            _attached.Add(look, renderers);
-            foreach (var renderer in renderers)
+            _attached.Add(look, held);
+            foreach (var renderer in held.Renderers)
             {
                 _renderers.Add(renderer);
                 Draw(renderer);
             }
 
+            Place(held);
             return true;
         }
 
         /// <summary>Takes <paramref name="look"/> off and destroys it.</summary>
         public void Detach(GameObject look)
         {
-            if (look == null || !_attached.TryGetValue(look, out var renderers))
+            if (look == null || !_attached.TryGetValue(look, out var held))
                 return;
             _attached.Remove(look);
-            foreach (var renderer in renderers)
+            foreach (var renderer in held.Renderers)
                 _renderers.Remove(renderer);
             UnityEngine.Object.Destroy(look);
+        }
+
+        // In the hand, or in its sheath when sheathed and the model knows where that is.
+        void Place(Held held)
+        {
+            var point = held.Sheathes && !_inHand && TrySheath(held.Bone, out var sheath) ? sheath : _points[held.Bone];
+
+            // Its own size whatever the skeleton's scale, then turned and moved so that its grip lies on the point.
+            var look = held.Look.transform;
+            look.SetParent(point, false);
+            var boneScale = point.lossyScale.x;
+            look.localScale = boneScale > 0f ? held.Size / boneScale : held.Size;
+            var gripTurn = Quaternion.Inverse(look.rotation) * held.Grip.rotation;
+            look.rotation = point.rotation * Quaternion.Inverse(gripTurn);
+            look.position += point.position - held.Grip.position;
+        }
+
+        // A hand's sheath at the hip, made the first time it is asked for, from where the draw clip takes the hilt.
+        bool TrySheath(HumanBodyBones hand, out Transform sheath)
+        {
+            sheath = null;
+            if (hand != HumanBodyBones.RightHand && hand != HumanBodyBones.LeftHand)
+                return false;
+            if (_sheaths.TryGetValue(hand, out sheath))
+                return true;
+            var hips = _humanoid != null ? _humanoid.GetBoneTransform(HumanBodyBones.Hips) : null;
+            if (hips == null || !SheathFinder.TryFind(_prefab, _animation?.DrawClip, out var sheaths))
+                return false;
+
+            var pose = sheaths.Of(hand == HumanBodyBones.RightHand);
+            sheath = new GameObject("Sheath " + hand).transform;
+            sheath.SetParent(hips, false);
+            sheath.gameObject.layer = Root.layer;
+            sheath.SetPositionAndRotation(hips.position + hips.rotation * pose.position, hips.rotation * pose.rotation);
+            _sheaths.Add(hand, sheath);
+            return true;
         }
 
         public void Dispose()
@@ -157,10 +223,10 @@ namespace Forge.Play
         }
 
         // A bone's attach point, made the first time it is asked for: a hand's grip, any other bone itself.
-        bool TryPoint(string bone, out Transform point)
+        bool TryPoint(HumanBodyBones id, out Transform point)
         {
             point = null;
-            if (_humanoid == null || !Enum.TryParse(bone, out HumanBodyBones id) || id == HumanBodyBones.LastBone)
+            if (_humanoid == null || id < 0 || id >= HumanBodyBones.LastBone)
                 return false;
             if (_points.TryGetValue(id, out point))
                 return true;
@@ -168,35 +234,25 @@ namespace Forge.Play
             if (boneTransform == null)
                 return false;
 
-            point = new GameObject("Holds " + bone).transform;
+            point = new GameObject("Holds " + id).transform;
             point.SetParent(boneTransform, false);
             point.gameObject.layer = Root.layer;
-            if (TryGrip(id, boneTransform, out var grip))
+            if ((id == HumanBodyBones.RightHand || id == HumanBodyBones.LeftHand) &&
+                HumanoidHands.TryGrip(_humanoid, id == HumanBodyBones.RightHand, out var grip))
                 point.SetPositionAndRotation(grip.position, grip.rotation);
             _points.Add(id, point);
             return true;
         }
 
-        // A hand's grip from its bones: a knuckle (the middle finger's, else the index's) and the thumb.
-        bool TryGrip(HumanBodyBones id, Transform hand, out Pose grip)
+        // A thing hung from the model: how it is held, where, and whether it goes to a sheath.
+        sealed class Held
         {
-            grip = default;
-            bool right;
-            if (id == HumanBodyBones.RightHand)
-                right = true;
-            else if (id == HumanBodyBones.LeftHand)
-                right = false;
-            else
-                return false;
-
-            var knuckle = _humanoid.GetBoneTransform(right ? HumanBodyBones.RightMiddleProximal : HumanBodyBones.LeftMiddleProximal);
-            if (knuckle == null)
-                knuckle = _humanoid.GetBoneTransform(right ? HumanBodyBones.RightIndexProximal : HumanBodyBones.LeftIndexProximal);
-            var thumb = _humanoid.GetBoneTransform(right ? HumanBodyBones.RightThumbProximal : HumanBodyBones.LeftThumbProximal);
-            if (knuckle == null || thumb == null)
-                return false;
-            grip = GripFrame.Hand(hand.position, knuckle.position, thumb.position, right);
-            return true;
+            public GameObject Look;
+            public Transform Grip;
+            public HumanBodyBones Bone;
+            public bool Sheathes;
+            public Vector3 Size;
+            public Renderer[] Renderers;
         }
 
         void Draw(Renderer renderer) => renderer.shadowCastingMode = _shadowsOnly ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
