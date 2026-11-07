@@ -26,6 +26,26 @@ namespace Forge.Game.Equipment
         public override string ToString() => $"{Actor}: equipped {Item} in {string.Join(" + ", Fit.Slots)}";
     }
 
+    /// <summary>An actor's weapons are out and in hand (<see cref="WeaponReadiness"/>).</summary>
+    public readonly struct WeaponsDrawn : IGameEvent
+    {
+        public WeaponsDrawn(ActorId actor) => Actor = actor;
+
+        public ActorId Actor { get; }
+
+        public override string ToString() => $"{Actor}: weapons drawn";
+    }
+
+    /// <summary>An actor's weapons are put away (or there are none left to hold).</summary>
+    public readonly struct WeaponsSheathed : IGameEvent
+    {
+        public WeaponsSheathed(ActorId actor) => Actor = actor;
+
+        public ActorId Actor { get; }
+
+        public override string ToString() => $"{Actor}: weapons sheathed";
+    }
+
     /// <summary>An item came off an actor, from the slots of <see cref="Fit"/>, and why.</summary>
     public readonly struct ItemUnequipped : IGameEvent
     {

@@ -310,13 +310,15 @@
       "type": "equip_slot",
       "id": "forge.core:equip_slot/left_hand",
       "displayName": "Left Hand",
-      "bone": "LeftHand"
+      "bone": "LeftHand",
+      "sheathes": true
     },
     {
       "type": "equip_slot",
       "id": "forge.core:equip_slot/right_hand",
       "displayName": "Right Hand",
-      "bone": "RightHand"
+      "bone": "RightHand",
+      "sheathes": true
     },
     {
       "type": "base_object",

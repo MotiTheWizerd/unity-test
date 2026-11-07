@@ -121,9 +121,40 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "ReadyWeapon",
+                    "type": "Button",
+                    "id": "c4a7e2d1-6b3f-4e8a-9d15-2f7b8c9e0a13",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
+                {
+                    "name": "",
+                    "id": "d8b2f3e4-7c4a-4f9b-ae26-3a8c9d0f1b24",
+                    "path": "<Keyboard>/r",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "ReadyWeapon",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "e9c3a4f5-8d5b-4a0c-bf37-4b9d0e1a2c35",
+                    "path": "<Gamepad>/buttonWest",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Gamepad",
+                    "action": "ReadyWeapon",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
                 {
                     "name": "",
                     "id": "6c1f8d52-3e7b-4a4f-8b9c-8d2e3f4a5b62",

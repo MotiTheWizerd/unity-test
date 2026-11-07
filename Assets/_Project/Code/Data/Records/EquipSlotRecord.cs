@@ -16,7 +16,11 @@ namespace Forge.Data.Records
         /// The humanoid bone what it holds hangs from while shown ("RightHand", as humanoid rigs name their bones); null
         /// when nothing in it is shown.
         /// </param>
-        public EquipSlotRecord(RecordId id, string displayName, string bone = null)
+        /// <param name="sheathes">
+        /// Whether what it holds is put away until the actor readies it (a hand's sword sheathed at the hip, drawn with
+        /// R), as Skyrim's weapons are; a ring is simply worn.
+        /// </param>
+        public EquipSlotRecord(RecordId id, string displayName, string bone = null, bool sheathes = false)
             : base(id)
         {
             if (!id.Name.StartsWith(NamePrefix, StringComparison.Ordinal))
@@ -28,6 +32,7 @@ namespace Forge.Data.Records
 
             DisplayName = displayName;
             Bone = bone;
+            Sheathes = sheathes;
         }
 
         /// <summary>What a player reads ("Right Hand").</summary>
@@ -35,6 +40,9 @@ namespace Forge.Data.Records
 
         /// <summary>The humanoid bone what it holds hangs from; null when nothing in it is shown (and left out of the file).</summary>
         public string Bone { get; }
+
+        /// <summary>Whether what it holds is put away until readied (sheathed, then drawn).</summary>
+        public bool Sheathes { get; }
 
         public static RecordId IdFor(string ns, string name) => new RecordId(ns, NamePrefix + name);
     }

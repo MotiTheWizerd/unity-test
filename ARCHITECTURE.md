@@ -918,6 +918,14 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
   player's while spawned): each thing equipped adds its modifiers under its own `ModifierSource` (`equipped/<first
   slot>`), so two rings add twice and losing one leaves the other's; a modifier for an attribute the world lacks does
   nothing. `GameSession.Equip(item, slot?)` / `Unequip(slot)` are the player's, as `Drop` is.
+- **Ready weapon** (`WeaponReadiness`, Game.Equipment; the player's on `PlayerSession.Readiness`, made each spawn so it
+  starts sheathed): what the actor holds in slots that sheathe (`EquipSlotRecord.Sheathes`: the hands; a ring is just
+  worn) is put away until the ready-weapon key (the Player map's `ReadyWeapon`: R, the gamepad's west button) draws it:
+  `Sheathed` → `Drawing` → `Drawn` → `Sheathing` → `Sheathed`, each draw or sheathe taking the look's clip time
+  (`SetTimes`) and running to its end whatever is pressed meanwhile, so later combat knows a weapon is in hand only
+  when `Drawn`. Nothing to draw keeps it sheathed; taking off the last weapon sheathes at once. Equipping never draws.
+  `Changed` tells the look as it happens; the stream hears `WeaponsDrawn` / `WeaponsSheathed` when done. It waits while
+  the inventory is open, as the rest of the player does.
 - `PlayerCommands.Activate` is the key, pressed this frame; `Allowing(sprint, jump, walk)` is a command as a rule lets it through.
 
 ## World-building agent (Forge.Agent)

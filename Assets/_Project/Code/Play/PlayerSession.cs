@@ -85,6 +85,9 @@ namespace Forge.Play
         /// </summary>
         public ActorEquipment Equipment { get; }
 
+        /// <summary>Whether the player's weapons are drawn (R), while spawned; else null. Every spawn starts sheathed.</summary>
+        public WeaponReadiness Readiness { get; private set; }
+
         /// <summary>
         /// What the player carries against what it can, while spawned in a world with a carry weight; else null (it carries
         /// whatever it takes, unslowed).
@@ -155,6 +158,7 @@ namespace Forge.Play
 
             if (Attributes != null)
                 _equipmentModifiers = new EquipmentModifiers(Equipment, Attributes);
+            Readiness = new WeaponReadiness(Equipment, world, Events);
             if (_avatar != null)
                 _equipmentView = new EquipmentView(Equipment, _avatar.Model, world, _assets);
 
@@ -169,7 +173,8 @@ namespace Forge.Play
 
         /// <summary>
         /// Plays one frame: the inventory's key opens or closes the inventory, and while it is open the player waits.
-        /// Otherwise the view and the player take their commands, the camera and the model follow, then what is in sight is
+        /// Otherwise the view and the player take their commands (the ready-weapon key draws or sheathes), the camera and the
+        /// model follow, then what is in sight is
         /// looked for from where the camera now is, so the prompt and the use key go by what this frame shows.
         /// </summary>
         public void Tick(float deltaTime)
@@ -190,6 +195,9 @@ namespace Forge.Play
             Views.Apply(_controls.ReadView());
             Player.Facing = Views.Current.Facing;
             var commands = _controls.Read();
+            if (_controls.ReadReadyWeapon())
+                Readiness.Toggle();
+            Readiness.Tick(deltaTime);
             Player.Tick(commands, deltaTime);
             Frame(deltaTime);
             Focus.Update(_director.Pose, Player.Eyes);
@@ -235,6 +243,8 @@ namespace Forge.Play
             Burden = null;
             _equipmentModifiers?.Dispose();
             _equipmentModifiers = null;
+            Readiness?.Dispose();
+            Readiness = null;
             Player = null;
             World = null;
             Focus = null;

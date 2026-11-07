@@ -8,7 +8,7 @@ namespace Forge.Play
 {
     /// <summary>
     /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump, ToggleWalk, ToggleView, Zoom, Interact,
-    /// Inventory) into <see cref="PlayerCommands"/>, <see cref="ViewCommands"/> and the menu key, the rules' only input. Rebinding, a gamepad or
+    /// Inventory, ReadyWeapon) into <see cref="PlayerCommands"/>, <see cref="ViewCommands"/> and the menu key, the rules' only input. Rebinding, a gamepad or
     /// another layout is the actions asset's business; nothing here names a key (the wheel's binding scales its steps to
     /// notches). The map is on only while enabled (while playing).
     /// </summary>
@@ -24,6 +24,7 @@ namespace Forge.Play
         readonly InputAction _zoom;
         readonly InputAction _interact;
         readonly InputAction _inventory;
+        readonly InputAction _readyWeapon;
         readonly float _lookSensitivity;
 
         public PlayerControls(PlayerProfile profile)
@@ -44,6 +45,7 @@ namespace Forge.Play
             _zoom = _map.FindAction("Zoom", throwIfNotFound: true);
             _interact = _map.FindAction("Interact", throwIfNotFound: true);
             _inventory = _map.FindAction("Inventory", throwIfNotFound: true);
+            _readyWeapon = _map.FindAction("ReadyWeapon", throwIfNotFound: true);
             _lookSensitivity = profile.LookSensitivity;
 
             // Prompts name a key the way the actions bind it in their first control scheme (the keyboard's).
@@ -61,6 +63,9 @@ namespace Forge.Play
 
         /// <summary>Whether the inventory's key was pressed this frame (open or close it); never while the map is off.</summary>
         public bool ReadInventory() => _map.enabled && _inventory.WasPressedThisFrame();
+
+        /// <summary>Whether the ready-weapon key was pressed this frame (draw or sheathe); never while the map is off.</summary>
+        public bool ReadReadyWeapon() => _map.enabled && _readyWeapon.WasPressedThisFrame();
 
         public void Enable() => _map.Enable();
 
