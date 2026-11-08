@@ -37,6 +37,10 @@ MonoBehaviour:
     _asset: {fileID: 6048638152428231367, guid: 5a839ea26423d40469a7b6a3fab0585a, type: 3}
   - _key: models/beech_tree
     _asset: {fileID: 1022344954274234755, guid: 0ff3525bdabb7f8478d918d129aecbaa, type: 3}
+  - _key: models/bench
+    _asset: {fileID: 1853000875130374344, guid: 72d95dace99983d4d97ba1072ece7c40, type: 3}
+  - _key: models/brick_house
+    _asset: {fileID: 1293020105581506376, guid: 5fb5ba1d0a1bb34498a9d3ecf9dfc2b3, type: 3}
   - _key: models/broadhead_arrow
     _asset: {fileID: 1493319720545331248, guid: c218709a2243a83429a444c07b2f97cc, type: 3}
   - _key: models/burdock
@@ -51,22 +55,40 @@ MonoBehaviour:
     _asset: {fileID: 4531339660142659181, guid: c570fec9355b1ec4db6b05eb0a43ba83, type: 3}
   - _key: models/bush5
     _asset: {fileID: 1341343009015678093, guid: 15d5a546e05dc994e897223c237c809f, type: 3}
+  - _key: models/campfire
+    _asset: {fileID: 6152849386001925974, guid: 1594166fd9eece340a468deb5bdda02f, type: 3}
   - _key: models/cannon
     _asset: {fileID: 1137697445927454546, guid: e7ce50a5e2b727642b80df7fbfa6d79a, type: 3}
+  - _key: models/cart
+    _asset: {fileID: 3647686625470960758, guid: aae5b46c18c91b84daaab89e5c69406a, type: 3}
   - _key: models/cattail
     _asset: {fileID: 1383663623496744173, guid: 4cc92a717e6163542a095d2717987809, type: 3}
+  - _key: models/covered_well
+    _asset: {fileID: 7953335360933399773, guid: c0d15d89ce6d89949b7cc047298e8939, type: 3}
   - _key: models/dutch_ship_large
     _asset: {fileID: 2697402286303030488, guid: 07d1dcaab061eca48b829c7017decabe, type: 3}
   - _key: models/dutch_ship_large_sailing
     _asset: {fileID: 4770905889482213951, guid: 308732ad08f648d4b80717391cd2ecb5, type: 3}
   - _key: models/dutch_ship_medium
     _asset: {fileID: 8457608174387692926, guid: 55bd6470e46273c428627e300647a0e9, type: 3}
+  - _key: models/fence
+    _asset: {fileID: 7959412028042064504, guid: 72ea7546545db864fa12f8586ad9966b, type: 3}
+  - _key: models/fence_gate
+    _asset: {fileID: 706377986893671918, guid: 33feb29b3eb579e47b3daebf45880049, type: 3}
+  - _key: models/firewood
+    _asset: {fileID: 2967036921510501780, guid: 5c709fae0a226bf439c204ff3f1d48b5, type: 3}
   - _key: models/flowering_bush
     _asset: {fileID: 8893817114575300684, guid: 38b61b985b7fa23468d6867d0f8ecf48, type: 3}
   - _key: models/greatsword
     _asset: {fileID: 4052799173345779104, guid: b5cdf48b20dd86140974a15b5dd0b4ab, type: 3}
+  - _key: models/hay_bundle
+    _asset: {fileID: 8481957538616025080, guid: c98dc0453c78a5a4da955cd18275adf2, type: 3}
+  - _key: models/hitching_post
+    _asset: {fileID: 6148179618712182269, guid: d2f6299ead8a21a4297e4f03eb50b9e9, type: 3}
   - _key: models/hunting_bow
     _asset: {fileID: 6071699247951939278, guid: 61429429f465e7c42a66b37e9ac37113, type: 3}
+  - _key: models/iron_gate
+    _asset: {fileID: 8912674475415173869, guid: f491e1dcc1bb42e4a9a2552722b589f4, type: 3}
   - _key: models/kite_shield
     _asset: {fileID: 4194851168021817485, guid: 5842cf3b27b34c64493ef220a91473c6, type: 3}
   - _key: models/kite_shield_iron
@@ -75,16 +97,26 @@ MonoBehaviour:
     _asset: {fileID: 3092172223361584828, guid: e2b59f125157be54f977aee68dc5d7bf, type: 3}
   - _key: models/lidded_basket
     _asset: {fileID: 3586242705119707738, guid: 842bb9e6f4dd751498b10b39374ec7a1, type: 3}
+  - _key: models/log
+    _asset: {fileID: 8196266769982417404, guid: bbea60a059064524f987ea1d53ca0873, type: 3}
   - _key: models/long_crate
     _asset: {fileID: 7682951480815562419, guid: e8269bd1675bc314490de4495972e423, type: 3}
+  - _key: models/longhouse
+    _asset: {fileID: 415339675559296599, guid: f8524b55be491dd409e88baec7792e67, type: 3}
   - _key: models/mage_staff
     _asset: {fileID: 2236154627881610368, guid: 18216220fa6870c41af78d51fc3a9f33, type: 3}
+  - _key: models/market_stall
+    _asset: {fileID: 8977112709763463672, guid: 7b707b4879858044a9751bb60aab4baa, type: 3}
   - _key: models/medieval_cottage
     _asset: {fileID: 3077484272994201092, guid: 2b3e553eb0386b346a9975c0c40f753b, type: 3}
   - _key: models/old_shack
     _asset: {fileID: 6538764620331614473, guid: 99e1c679bbc9436448130376df83f5b2, type: 3}
+  - _key: models/outhouse
+    _asset: {fileID: 5586281086530744244, guid: 8c100aa076032ac478202c1f60dc34fd, type: 3}
   - _key: models/oxeye_daisy
     _asset: {fileID: 611550241321494667, guid: baa187647c4b76f4a9e22427d95d1374, type: 3}
+  - _key: models/palisade
+    _asset: {fileID: 105503576109757144, guid: 31e83f25e5732f04aacc735b634fa234, type: 3}
   - _key: models/pier_section1
     _asset: {fileID: 1069244285370180107, guid: 61c9c11591306ab4f9a7f75d4f690ce5, type: 3}
   - _key: models/pier_section2
@@ -97,6 +129,8 @@ MonoBehaviour:
     _asset: {fileID: 8613710839396724354, guid: 787229c6f5fd3af4b99ced440d814522, type: 3}
   - _key: models/pinnace
     _asset: {fileID: 1530231796718385756, guid: b6a00ffc9357a8e4ba443d25cab53c75, type: 3}
+  - _key: models/plaster_house
+    _asset: {fileID: 3661365790474922243, guid: bf89a7a7d8cd1d347aaeecb694cdd865, type: 3}
   - _key: models/quiver
     _asset: {fileID: 7848319350537025992, guid: 05d4671fcbda7584fb0134237c08a395, type: 3}
   - _key: models/recurve_bow
@@ -105,28 +139,48 @@ MonoBehaviour:
     _asset: {fileID: 1266176824123447654, guid: fa33266572f37ce4290e4245b61257d4, type: 3}
   - _key: models/round_shield_painted
     _asset: {fileID: 5459911896668073189, guid: c90ae97529241dc4698f6853fe2e8ce1, type: 3}
+  - _key: models/sawbuck
+    _asset: {fileID: 3610243153309655453, guid: ea2a2c129a21d314e9a2d505c0ca8a65, type: 3}
   - _key: models/short_sword
     _asset: {fileID: 6943891220673529511, guid: 7751170070e0a0f4bb538668efc12ab9, type: 3}
   - _key: models/small_crate
     _asset: {fileID: 5675818892761294327, guid: 97989778e15bc294fbaf5518494ce4ce, type: 3}
+  - _key: models/stone_archway
+    _asset: {fileID: 3899842153022716660, guid: 2058e766895c5ee4884a89c57358b425, type: 3}
+  - _key: models/stone_brazier
+    _asset: {fileID: 257185681390901021, guid: a8cf977d800b7ca40a73bdba4bca0f0c, type: 3}
+  - _key: models/stone_cottage
+    _asset: {fileID: 2725623669452636183, guid: eaec0cd5e5ca0584288f64e20d02b8a9, type: 3}
   - _key: models/timber_house
     _asset: {fileID: 3303310201960172976, guid: 0901b9832732077468c319afc700913f, type: 3}
+  - _key: models/town_gate
+    _asset: {fileID: 4619596225514408864, guid: eb1c9a4a875166640bd09ccd45a31da8, type: 3}
   - _key: models/treasure_chest
     _asset: {fileID: 7410670352420374428, guid: 1cea3e74e8878384bb8b9044f25dd1b0, type: 3}
   - _key: models/viking_sword
     _asset: {fileID: 7334485041194033550, guid: f9cc20fa2cb4dac47b66c046438096e1, type: 3}
   - _key: models/wash_tub
     _asset: {fileID: 8076483501211593247, guid: d098929c4cca38c40bd517c30eaef419, type: 3}
+  - _key: models/watchtower
+    _asset: {fileID: 7733896262846087933, guid: 3280a9a69ad589a4da83ceddec29abee, type: 3}
+  - _key: models/water_trough
+    _asset: {fileID: 897713714111204845, guid: 7a743d69f18a90f42a6aa84bdd68c6e5, type: 3}
   - _key: models/wicker_tray
     _asset: {fileID: 4287557882105788372, guid: 9581a75032077f24f957afdd7da4887f, type: 3}
   - _key: models/wild_carrot
     _asset: {fileID: 5688740474388048745, guid: ccb354c8aa6a3344b9f82d0efb5bc82c, type: 3}
   - _key: models/wine_barrel
     _asset: {fileID: 8820390349937931553, guid: 6e6041c94b286684a8fc04244706bb20, type: 3}
+  - _key: models/wooden_awning
+    _asset: {fileID: 241973253345184004, guid: 8ed1d267beac92542a02c5c210248af6, type: 3}
   - _key: models/wooden_barrel
     _asset: {fileID: 6496097174952182961, guid: d4bd2e58a864e144ca498677174c2e15, type: 3}
   - _key: models/wooden_bucket
     _asset: {fileID: 7805190219228338305, guid: 4e29f4f120296374a978c3c9fae07fbc, type: 3}
+  - _key: models/wooden_chest
+    _asset: {fileID: 3621296186199661304, guid: 00fa72724cf8c324094cdd2935f3f461, type: 3}
+  - _key: models/wooden_hut
+    _asset: {fileID: 5258132877956672686, guid: 61ac7f09a6c5d544d9246ae2a509ea08, type: 3}
   - _key: models/wooden_lantern
     _asset: {fileID: 1452582213391218644, guid: a435c68734e72c843b6a4f578e8cc84d, type: 3}
   - _key: models/worn_barrel

@@ -309,6 +309,19 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:brick_house",
+      "displayName": "Brick Town House",
+      "assetKey": "models/brick_house",
+      "category": "Architecture/Buildings",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:broadhead_arrow",
       "displayName": "Broadhead Arrow",
       "assetKey": "models/broadhead_arrow",
@@ -457,6 +470,19 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:cart",
+      "displayName": "Hand Cart",
+      "assetKey": "models/cart",
+      "category": "Props/Street",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:cattail",
       "displayName": "Cattails",
       "assetKey": "models/cattail",
@@ -466,6 +492,19 @@
         "minScale": 0.8,
         "maxScale": 1.2,
         "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:chopping_block",
+      "displayName": "Chopping Block",
+      "assetKey": "models/firewood",
+      "category": "Props/Street",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
       }
     },
     {
@@ -616,6 +655,19 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:covered_well",
+      "displayName": "Covered Well",
+      "assetKey": "models/covered_well",
+      "category": "Architecture/Town",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:crate",
       "displayName": "Crate",
       "assetKey": "primitive/cube",
@@ -680,6 +732,32 @@
       "displayName": "Right Hand",
       "bone": "RightHand",
       "sheathes": true
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:fence",
+      "displayName": "Wooden Fence",
+      "assetKey": "models/fence",
+      "category": "Architecture/Walls",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:fence_gate",
+      "displayName": "Fence Gate",
+      "assetKey": "models/fence_gate",
+      "category": "Architecture/Walls",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": true
+      }
     },
     {
       "type": "base_object",
@@ -858,6 +936,32 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:hay_bundle",
+      "displayName": "Hay Bundle",
+      "assetKey": "models/hay_bundle",
+      "category": "Props/Street",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:hitching_post",
+      "displayName": "Hitching Post",
+      "assetKey": "models/hitching_post",
+      "category": "Props/Street",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:house_small",
       "displayName": "Small House",
       "assetKey": "architecture/house_small",
@@ -900,6 +1004,19 @@
           }
         ],
         "ammo": "forge.core:equip_slot/ammo"
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:iron_gate",
+      "displayName": "Iron Gate",
+      "assetKey": "models/iron_gate",
+      "category": "Architecture/Gates",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
       }
     },
     {
@@ -991,6 +1108,32 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:log",
+      "displayName": "Log",
+      "assetKey": "models/log",
+      "category": "Props/Street",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:log_campfire",
+      "displayName": "Log Campfire",
+      "assetKey": "models/campfire",
+      "category": "Props/Lighting",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:long_crate",
       "displayName": "Long Wooden Crate",
       "assetKey": "models/long_crate",
@@ -999,6 +1142,19 @@
         "randomYaw": true,
         "minScale": 0.9,
         "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:longhouse",
+      "displayName": "Longhouse",
+      "assetKey": "models/longhouse",
+      "category": "Architecture/Buildings",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
         "alignToSlope": false
       }
     },
@@ -1032,6 +1188,19 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:market_stall",
+      "displayName": "Market Stall",
+      "assetKey": "models/market_stall",
+      "category": "Architecture/Town",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
       }
     },
     {
@@ -1118,6 +1287,19 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:outhouse",
+      "displayName": "Outhouse",
+      "assetKey": "models/outhouse",
+      "category": "Architecture/Buildings",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:oxeye_daisy",
       "displayName": "Oxeye Daisy",
       "assetKey": "models/oxeye_daisy",
@@ -1126,6 +1308,19 @@
         "randomYaw": true,
         "minScale": 0.8,
         "maxScale": 1.2,
+        "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:palisade",
+      "displayName": "Wooden Palisade",
+      "assetKey": "models/palisade",
+      "category": "Architecture/Walls",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
         "alignToSlope": true
       }
     },
@@ -1207,6 +1402,19 @@
       "displayName": "Pinnace",
       "assetKey": "models/pinnace",
       "category": "Vessels/Ships",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:plaster_house",
+      "displayName": "Plastered Town House",
+      "assetKey": "models/plaster_house",
+      "category": "Architecture/Buildings",
       "placement": {
         "randomYaw": false,
         "minScale": 1.0,
@@ -1358,6 +1566,19 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:sawbuck",
+      "displayName": "Sawbuck",
+      "assetKey": "models/sawbuck",
+      "category": "Props/Street",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:short_sword",
       "displayName": "Short Sword",
       "assetKey": "models/short_sword",
@@ -1437,6 +1658,45 @@
       "sampleSpacing": 1.0
     },
     {
+      "type": "base_object",
+      "id": "forge.core:stone_archway",
+      "displayName": "Stone Archway",
+      "assetKey": "models/stone_archway",
+      "category": "Architecture/Gates",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:stone_brazier",
+      "displayName": "Stone Brazier",
+      "assetKey": "models/stone_brazier",
+      "category": "Props/Lighting",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:stone_cottage",
+      "displayName": "Stone Cottage",
+      "assetKey": "models/stone_cottage",
+      "category": "Architecture/Buildings",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
       "type": "terrain_chunk",
       "id": "forge.core:terrain/forge.core/space/main/c0_0",
       "space": "forge.core:space/main",
@@ -1475,6 +1735,19 @@
       "displayName": "Totem",
       "assetKey": "primitive/capsule",
       "category": "Props/Decor"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:town_gate",
+      "displayName": "Wooden Town Gate",
+      "assetKey": "models/town_gate",
+      "category": "Architecture/Gates",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
     },
     {
       "type": "base_object",
@@ -1600,6 +1873,32 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:watchtower",
+      "displayName": "Wooden Watchtower",
+      "assetKey": "models/watchtower",
+      "category": "Architecture/Buildings",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:water_trough",
+      "displayName": "Water Trough",
+      "assetKey": "models/water_trough",
+      "category": "Props/Street",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:wicker_tray",
       "displayName": "Wicker Tray",
       "assetKey": "models/wicker_tray",
@@ -1639,10 +1938,36 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:wooden_awning",
+      "displayName": "Wooden Awning",
+      "assetKey": "models/wooden_awning",
+      "category": "Architecture/Town",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:wooden_barrel",
       "displayName": "Wooden Barrel",
       "assetKey": "models/wooden_barrel",
       "category": "Props/Containers",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:wooden_bench",
+      "displayName": "Wooden Bench",
+      "assetKey": "models/bench",
+      "category": "Props/Furniture",
       "placement": {
         "randomYaw": true,
         "minScale": 0.9,
@@ -1660,6 +1985,32 @@
         "randomYaw": true,
         "minScale": 0.9,
         "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:wooden_chest",
+      "displayName": "Wooden Chest",
+      "assetKey": "models/wooden_chest",
+      "category": "Props/Containers",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:wooden_hut",
+      "displayName": "Wooden Hut",
+      "assetKey": "models/wooden_hut",
+      "category": "Architecture/Buildings",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
         "alignToSlope": false
       }
     },

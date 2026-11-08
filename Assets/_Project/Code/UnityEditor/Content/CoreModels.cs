@@ -152,6 +152,50 @@ namespace Forge.UnityEditor.Content
                 yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder), category,
                     new PlacementRules(randomYaw: true, 0.9f, 1.1f, alignToSlope: false));
 
+            // A town (OpenGameArt, CC0: system-g6's medieval packs, iconoclast's well, hreikin's houses). Buildings, gates
+            // and the market: upright, placed as aimed, at their own size. Fences and the palisade follow the ground, so
+            // a place_line run of them climbs a slope.
+            foreach (var (folder, id, name, category, followsGround) in new[]
+                     {
+                         ("StoneCottage", "stone_cottage", "Stone Cottage", "Architecture/Buildings", false),
+                         ("PlasterHouse", "plaster_house", "Plastered Town House", "Architecture/Buildings", false),
+                         ("BrickHouse", "brick_house", "Brick Town House", "Architecture/Buildings", false),
+                         ("WoodenHut", "wooden_hut", "Wooden Hut", "Architecture/Buildings", false),
+                         ("Longhouse", "longhouse", "Longhouse", "Architecture/Buildings", false),
+                         ("Outhouse", "outhouse", "Outhouse", "Architecture/Buildings", false),
+                         ("Watchtower", "watchtower", "Wooden Watchtower", "Architecture/Buildings", false),
+                         ("MarketStall", "market_stall", "Market Stall", "Architecture/Town", false),
+                         ("WoodenAwning", "wooden_awning", "Wooden Awning", "Architecture/Town", false),
+                         ("CoveredWell", "covered_well", "Covered Well", "Architecture/Town", false),
+                         ("TownGate", "town_gate", "Wooden Town Gate", "Architecture/Gates", false),
+                         ("IronGate", "iron_gate", "Iron Gate", "Architecture/Gates", false),
+                         ("StoneArchway", "stone_archway", "Stone Archway", "Architecture/Gates", false),
+                         ("Palisade", "palisade", "Wooden Palisade", "Architecture/Walls", true),
+                         ("Fence", "fence", "Wooden Fence", "Architecture/Walls", true),
+                         ("FenceGate", "fence_gate", "Fence Gate", "Architecture/Walls", true),
+                     })
+                yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder), category,
+                    new PlacementRules(randomYaw: false, 1f, 1f, alignToSlope: followsGround));
+
+            // The street's dressing (system-g6's props, CC0): upright, any heading, about their own size; logs lie on
+            // the ground as it slopes.
+            foreach (var (folder, id, name, category, followsGround) in new[]
+                     {
+                         ("Cart", "cart", "Hand Cart", "Props/Street", false),
+                         ("HayBundle", "hay_bundle", "Hay Bundle", "Props/Street", false),
+                         ("WaterTrough", "water_trough", "Water Trough", "Props/Street", false),
+                         ("HitchingPost", "hitching_post", "Hitching Post", "Props/Street", false),
+                         ("Sawbuck", "sawbuck", "Sawbuck", "Props/Street", false),
+                         ("Log", "log", "Log", "Props/Street", true),
+                         ("Firewood", "chopping_block", "Chopping Block", "Props/Street", false),
+                         ("Bench", "wooden_bench", "Wooden Bench", "Props/Furniture", false),
+                         ("WoodenChest", "wooden_chest", "Wooden Chest", "Props/Containers", false),
+                         ("Campfire", "log_campfire", "Log Campfire", "Props/Lighting", false),
+                         ("StoneBrazier", "stone_brazier", "Stone Brazier", "Props/Lighting", false),
+                     })
+                yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder), category,
+                    new PlacementRules(randomYaw: true, 0.9f, 1.1f, alignToSlope: followsGround));
+
             // Trees and plants (OpenGameArt), cut out of their leaves' alpha: upright, any heading, a size about their own.
             foreach (var (folder, id, name, category, minScale, maxScale, alignToSlope) in new[]
                      {
