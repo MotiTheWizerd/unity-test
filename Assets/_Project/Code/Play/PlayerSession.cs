@@ -187,7 +187,7 @@ namespace Forge.Play
                 _readinessView = new ReadinessView(Readiness, _avatar.Model);
                 _combatView = new CombatView(Combat, _avatar.Model);
                 _sweep = new BladeSweep(Combat, _avatar.Model, world, Identify);
-                _shotView = new ShotView(Combat, Equipment, _avatar.Model, _assets, AimPitch);
+                _shotView = new ShotView(Combat, Equipment, _avatar.Model, _assets, () => _director.Pose);
                 _arrows = new ArrowFlights(Combat, _avatar.Model, _assets, () => _director.Pose, Identify);
             }
 
@@ -252,13 +252,6 @@ namespace Forge.Play
         {
             Player?.Shift(delta.ToNumerics());
             _arrows?.Shift(delta);
-        }
-
-        // How high the player looks, degrees above level: the view's.
-        float AimPitch()
-        {
-            var forward = _director.Pose.Forward;
-            return Mathf.Asin(Mathf.Clamp(forward.Y, -1f, 1f)) * Mathf.Rad2Deg;
         }
 
         // Records are immutable, so the same records (by reference) are the same attributes.

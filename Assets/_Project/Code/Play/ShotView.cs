@@ -1,4 +1,5 @@
 using System;
+using Forge.Game.Cameras;
 using Forge.Game.Combat;
 using Forge.Game.Equipment;
 using Forge.World.Assets;
@@ -9,50 +10,36 @@ namespace Forge.Play
     /// <summary>
     /// A bow's draw on its archer's look: from the moment the drawing hand reaches the quiver
     /// (<see cref="CharacterModel.TryArrowTaken"/>) an arrow of the ammo equipped is in it, tail in the fist and point
-    /// down as it comes out; by the time it is on the string (the draw's window opens) it lies along the draw, from the
-    /// drawing hand to the bow hand, until it is loosed. While drawing, the upper body bends to the aim's height
-    /// (<see cref="CharacterModel.BendUpperBody"/>), easing in and out, so the arrow points where the archer looks. Works
-    /// on each frame's pose (<see cref="CharacterModel.Posed"/>). Bound while the look exists.
+    /// down as it comes out; by the time it is on the string (the draw's window opens) it lies along the draw
+    /// (<see cref="ArcheryAim.TryDrawLine"/>), until it is loosed. As the arrow comes to the string the upper body turns
+    /// (<see cref="CharacterModel.TurnUpperBody"/>) so that the draw points at what the archer aims at
+    /// (<see cref="ArcheryAim.Target"/>), high or low, and wherever the clip's own stance would point it; it eases out
+    /// once the shot is gone. Works on each frame's pose (<see cref="CharacterModel.Posed"/>). Bound while the look exists.
     /// </summary>
     public sealed class ShotView : IDisposable
     {
-        // Seconds the bend takes to come in as a draw starts, and to go once it is over.
+        // Seconds the aim takes to let go of the upper body once the draw is over.
         const float AimFade = 0.2f;
 
         readonly ActorCombat _combat;
         readonly ActorEquipment _equipment;
         readonly CharacterModel _model;
         readonly IAssetCatalog _assets;
-        readonly Func<float> _aimPitch;
+        readonly Func<ViewPose> _view;
         GameObject _arrow;
         string _arrowKey;
-        float _tail;
         float _aim;
+        float _onString;
 
-        /// <param name="aimPitch">How high the archer looks, degrees above level (below: less than zero).</param>
-        public ShotView(ActorCombat combat, ActorEquipment equipment, CharacterModel model, IAssetCatalog assets, Func<float> aimPitch)
+        /// <param name="view">Where the archer looks from and which way (the camera).</param>
+        public ShotView(ActorCombat combat, ActorEquipment equipment, CharacterModel model, IAssetCatalog assets, Func<ViewPose> view)
         {
             _combat = combat ?? throw new ArgumentNullException(nameof(combat));
             _equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
             _model = model ?? throw new ArgumentNullException(nameof(model));
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
-            _aimPitch = aimPitch ?? throw new ArgumentNullException(nameof(aimPitch));
+            _view = view ?? throw new ArgumentNullException(nameof(view));
             _model.Posed += OnPosed;
-        }
-
-        /// <summary>
-        /// The line an arrow on <paramref name="model"/>'s string lies along: from the drawing (right) hand's grip
-        /// <paramref name="direction"/>wards to the bow (left) hand's; false without both hands.
-        /// </summary>
-        public static bool TryDrawLine(CharacterModel model, out Vector3 from, out Vector3 direction)
-        {
-            from = direction = default;
-            if (model == null || !model.TryGrip(true, out var drawing) || !model.TryGrip(false, out var bow))
-                return false;
-            from = drawing.position;
-            var way = bow.position - from;
-            direction = way.sqrMagnitude > 1e-6f ? way.normalized : model.Root.transform.forward;
-            return true;
         }
 
         public void Dispose()
@@ -65,11 +52,12 @@ namespace Forge.Play
         void OnPosed()
         {
             var drawing = Drawing(out var any);
-            _aim = Mathf.MoveTowards(_aim, any ? 1f : 0f, Time.deltaTime / AimFade);
-            if (_aim > 0f)
-                _model.BendUpperBody(_aimPitch() * Mathf.SmoothStep(0f, 1f, _aim));
-
             var taken = drawing != null && _model.TryArrowTaken(drawing.Move.Animation, out var moment) ? moment : 0f;
+            if (drawing != null)
+                _onString = OnString(drawing, taken);
+            _aim = any ? 1f : Mathf.MoveTowards(_aim, 0f, Time.deltaTime / AimFade);
+            Aim(Mathf.SmoothStep(0f, 1f, _aim) * _onString);
+
             if (drawing == null || drawing.Progress < taken || !TryArrow(drawing))
             {
                 if (_arrow != null)
@@ -77,7 +65,26 @@ namespace Forge.Play
                 return;
             }
 
-            Lay(drawing, taken);
+            Lay();
+        }
+
+        // How far the arrow has come from the quiver to the string, 0 to 1, eased.
+        static float OnString(Swing drawing, float taken)
+        {
+            var span = drawing.Timing.HitFrom - taken;
+            return span > 1e-4f ? Mathf.SmoothStep(0f, 1f, (drawing.Progress - taken) / span) : 1f;
+        }
+
+        // Turns the upper body by `weight` of the turn that brings the draw onto the aim.
+        void Aim(float weight)
+        {
+            if (!(weight > 0f) || !ArcheryAim.TryDrawLine(_model, out var from, out var along))
+                return;
+            var aimed = ArcheryAim.Target(_view(), from) - from;
+            if (aimed.sqrMagnitude < 1e-6f)
+                return;
+            var turn = Quaternion.FromToRotation(along, aimed.normalized);
+            _model.TurnUpperBody(Quaternion.Slerp(Quaternion.identity, turn, weight));
         }
 
         // The draw of a weapon that shoots not yet loosed, if any; and whether any such swing plays at all (loosed too).
@@ -112,7 +119,6 @@ namespace Forge.Play
                 if (_arrow == null)
                     return false;
                 _model.Adopt(_arrow);
-                _tail = ArrowLook.Tail(_arrow);
             }
 
             _arrow.SetActive(true);
@@ -121,18 +127,13 @@ namespace Forge.Play
 
         // Tail in the drawing hand: point down out of the fist as it leaves the quiver, turning to lie along the draw by
         // the time it is on the string.
-        void Lay(Swing drawing, float taken)
+        void Lay()
         {
-            if (!_model.TryGrip(true, out var hand) || !TryDrawLine(_model, out var from, out var along))
+            if (!_model.TryGrip(true, out var hand) || !ArcheryAim.TryDrawLine(_model, out var from, out var along))
                 return;
-            var span = drawing.Timing.HitFrom - taken;
-            var onString = span > 1e-4f ? Mathf.SmoothStep(0f, 1f, (drawing.Progress - taken) / span) : 1f;
             var outOfQuiver = hand.rotation * Quaternion.Euler(180f, 0f, 0f);
             var onBow = Quaternion.FromToRotation(Vector3.up, along);
-            var rotation = Quaternion.Slerp(outOfQuiver, onBow, onString);
-            var arrow = _arrow.transform;
-            arrow.rotation = rotation;
-            arrow.position = from + rotation * Vector3.up * (_tail * arrow.lossyScale.y);
+            ArrowLook.LayByTail(_arrow, from, Quaternion.Slerp(outOfQuiver, onBow, _onString));
         }
     }
 }

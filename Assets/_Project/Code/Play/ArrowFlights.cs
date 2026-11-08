@@ -11,7 +11,7 @@ namespace Forge.Play
 {
     /// <summary>
     /// What an actor's bow looses, flown through the engine's world: each shot leaves the string where the arrow lay
-    /// (<see cref="ShotView.TryDrawLine"/>), towards what the aim's line meets (the centre of the view, as Skyrim aims),
+    /// (<see cref="ArcheryAim.TryDrawLine"/>), towards what the aim's line meets (<see cref="ArcheryAim.Target"/>),
     /// at its speed (<see cref="Shot.Speed"/>), and falls as it flies (<see cref="Flight"/>). Every frame the way from
     /// where its point was to where it is is tested through the physics, so a fast arrow misses nothing between frames;
     /// what it meets, it sticks in, and whoever that is takes its blow (<see cref="ActorCombat.Strike(Shot, ActorId)"/>;
@@ -29,9 +29,6 @@ namespace Forge.Play
 
         // Meters an arrow's point sinks into what it strikes.
         const float Sinks = 0.08f;
-
-        // Meters the aim's line is followed to find what it points at.
-        const float AimReach = 1000f;
 
         readonly ActorCombat _combat;
         readonly CharacterModel _model;
@@ -108,7 +105,7 @@ namespace Forge.Play
         // It leaves the string with its point where the arrow on it had its point, towards what the aim meets.
         void OnLoosed(Shot shot)
         {
-            if (!ShotView.TryDrawLine(_model, out var tail, out var along))
+            if (!ArcheryAim.TryDrawLine(_model, out var tail, out var along))
                 return;
             var look = _assets.Instantiate(shot.Ammo.AssetKey, null);
             if (look == null)
@@ -116,25 +113,11 @@ namespace Forge.Play
             foreach (var collider in look.GetComponentsInChildren<Collider>(true))
                 UnityEngine.Object.Destroy(collider);
 
-            var scale = look.transform.lossyScale.y;
-            var arrow = new Flying { Shot = shot, Look = look, Point = ArrowLook.Point(look) * scale };
-            var point = tail + along * ((ArrowLook.Tail(look) + ArrowLook.Point(look)) * scale);
-            arrow.Flight = Flight.Toward(point.ToNumerics(), AimedAt(point).ToNumerics(), shot.Speed);
+            var point = tail + along * (ArrowLook.Tail(look) + ArrowLook.Point(look));
+            var arrow = new Flying { Shot = shot, Look = look };
+            arrow.Flight = Flight.Toward(point.ToNumerics(), ArcheryAim.Target(_aim(), point).ToNumerics(), shot.Speed);
             _flying.Add(arrow);
             Pose(arrow, point, arrow.Flight.Heading.ToUnity());
-        }
-
-        // What the line of the aim meets first, else as far along it as it is followed; never nearer than the bow.
-        Vector3 AimedAt(Vector3 from)
-        {
-            var view = _aim();
-            var origin = view.Position.ToUnity();
-            var forward = view.Forward.ToUnity();
-            var target = Physics.Raycast(origin, forward, out var hit, AimReach, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
-                ? hit.point
-                : origin + forward * AimReach;
-            // Something between the camera and the bow (a wall at the shoulder) is no aim: shoot along the view instead.
-            return Vector3.Dot(target - from, forward) > 0f ? target : from + forward * AimReach;
         }
 
         void Stick(Flying arrow, RaycastHit hit, Vector3 heading)
@@ -150,11 +133,7 @@ namespace Forge.Play
         }
 
         // Its point at `point`, pointing along `heading`.
-        static void Pose(Flying arrow, Vector3 point, Vector3 heading)
-        {
-            var rotation = Quaternion.FromToRotation(Vector3.up, heading);
-            arrow.Look.transform.SetPositionAndRotation(point - rotation * Vector3.up * arrow.Point, rotation);
-        }
+        static void Pose(Flying arrow, Vector3 point, Vector3 heading) => ArrowLook.LayByPoint(arrow.Look, point, heading);
 
         static void Destroy(GameObject look)
         {
@@ -162,12 +141,11 @@ namespace Forge.Play
                 UnityEngine.Object.Destroy(look);
         }
 
-        // An arrow in the air: what was shot, its look, how far its point lies ahead of its pivot (meters), where it is.
+        // An arrow in the air: what was shot, its look, where it is, how long it has flown.
         sealed class Flying
         {
             public Shot Shot;
             public GameObject Look;
-            public float Point;
             public Flight Flight;
             public float Age;
         }

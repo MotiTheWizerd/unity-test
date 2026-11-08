@@ -73,7 +73,7 @@ namespace Forge.Play
 
         /// <summary>
         /// Every frame once its animations have posed it (<see cref="AfterAnimation"/>), for what works on the pose:
-        /// bending it (<see cref="BendUpperBody"/>), laying something along it.
+        /// turning it (<see cref="TurnUpperBody"/>), laying something along it.
         /// </summary>
         public event Action Posed
         {
@@ -220,25 +220,26 @@ namespace Forge.Play
         public bool TryGrip(bool right, out Transform grip) => TryPoint(right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand, out grip);
 
         /// <summary>
-        /// Bends its upper body <paramref name="degrees"/> up (down when less than zero) about its own side, spread over
-        /// the spine's bones, as an archer aims high or low; on this frame's pose, so from <see cref="Posed"/>.
+        /// Turns its upper body by <paramref name="turn"/> (scene space), spread evenly over the spine's bones, so what
+        /// the arms hold turns by all of it while the hips stay: an archer swinging the bow onto the aim, high or low, left
+        /// or right. On this frame's pose, so from <see cref="Posed"/>.
         /// </summary>
-        public void BendUpperBody(float degrees)
+        public void TurnUpperBody(Quaternion turn)
         {
-            if (_humanoid == null || Mathf.Approximately(degrees, 0f))
+            if (_humanoid == null)
                 return;
             var bones = 0;
             foreach (var id in SpineBones)
                 bones += _humanoid.GetBoneTransform(id) != null ? 1 : 0;
             if (bones == 0)
                 return;
-            // Unity turns +Z towards -Y about +X: up is a turn the other way.
-            var turn = Quaternion.AngleAxis(-degrees / bones, Root.transform.right);
+            // Each bone turns by its share about its own joint; one after the other, what hangs from the last turns by all.
+            var share = Quaternion.Slerp(Quaternion.identity, turn, 1f / bones);
             foreach (var id in SpineBones)
             {
                 var bone = _humanoid.GetBoneTransform(id);
                 if (bone != null)
-                    bone.rotation = turn * bone.rotation;
+                    bone.rotation = share * bone.rotation;
             }
         }
 
