@@ -45,6 +45,8 @@ namespace Forge.Play
         ReadinessView _readinessView;
         CombatView _combatView;
         BladeSweep _sweep;
+        ShotView _shotView;
+        ArrowFlights _arrows;
         readonly IAssetCatalog _assets;
         readonly Combatants _combatants;
         readonly PlacedActors _placedActors;
@@ -185,6 +187,8 @@ namespace Forge.Play
                 _readinessView = new ReadinessView(Readiness, _avatar.Model);
                 _combatView = new CombatView(Combat, _avatar.Model);
                 _sweep = new BladeSweep(Combat, _avatar.Model, world, Identify);
+                _shotView = new ShotView(Combat, Equipment, _avatar.Model, _assets, AimPitch);
+                _arrows = new ArrowFlights(Combat, _avatar.Model, _assets, () => _director.Pose, Identify);
             }
 
             Player.PlaceAt(feet.ToNumerics(), heading);
@@ -229,7 +233,12 @@ namespace Forge.Play
                 Combat.TryAttack(CoreEquipSlots.RightHand);
             if (_controls.ReadAttack(right: false))
                 Combat.TryAttack(CoreEquipSlots.LeftHand);
+            if (_controls.ReadAttackReleased(right: true))
+                Combat.Release(CoreEquipSlots.RightHand);
+            if (_controls.ReadAttackReleased(right: false))
+                Combat.Release(CoreEquipSlots.LeftHand);
             Combat.Tick(deltaTime);
+            _arrows?.Tick(deltaTime);
             Player.Tick(commands, deltaTime);
             Frame(deltaTime);
             _sweep?.Tick();
@@ -242,6 +251,14 @@ namespace Forge.Play
         public void Shift(Vector3 delta)
         {
             Player?.Shift(delta.ToNumerics());
+            _arrows?.Shift(delta);
+        }
+
+        // How high the player looks, degrees above level: the view's.
+        float AimPitch()
+        {
+            var forward = _director.Pose.Forward;
+            return Mathf.Asin(Mathf.Clamp(forward.Y, -1f, 1f)) * Mathf.Rad2Deg;
         }
 
         // Records are immutable, so the same records (by reference) are the same attributes.
@@ -272,6 +289,10 @@ namespace Forge.Play
             _readinessView = null;
             _sweep?.Dispose();
             _sweep = null;
+            _shotView?.Dispose();
+            _shotView = null;
+            _arrows?.Dispose();
+            _arrows = null;
             _combatView?.Dispose();
             _combatView = null;
             Combat?.Dispose();

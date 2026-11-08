@@ -28,7 +28,29 @@ namespace Forge.Game.Combat
         public override string ToString() => $"{Actor}: {Move} with {Weapon} ({Slot})";
     }
 
-    /// <summary>A blow landed: <see cref="Attacker"/>'s <see cref="Weapon"/> struck <see cref="Target"/>, taking <see cref="Damage"/> health.</summary>
+    /// <summary><see cref="Actor"/>'s <see cref="Weapon"/> loosed one <see cref="Ammo"/> (a bow, an arrow), <see cref="Power"/> of a full draw's.</summary>
+    public readonly struct ShotLoosed : IGameEvent
+    {
+        public ShotLoosed(ActorId actor, RecordId weapon, RecordId ammo, float power)
+        {
+            Actor = actor;
+            Weapon = weapon;
+            Ammo = ammo;
+            Power = power;
+        }
+
+        public ActorId Actor { get; }
+
+        public RecordId Weapon { get; }
+
+        public RecordId Ammo { get; }
+
+        public float Power { get; }
+
+        public override string ToString() => $"{Actor}: loosed {Ammo} from {Weapon} at {Power:P0}";
+    }
+
+    /// <summary>A blow landed:<see cref="Attacker"/>'s <see cref="Weapon"/> struck <see cref="Target"/>, taking <see cref="Damage"/> health.</summary>
     public readonly struct HitLanded : IGameEvent
     {
         public HitLanded(ActorId attacker, ActorId target, RecordId weapon, float damage)

@@ -120,6 +120,16 @@ namespace Forge.Game.Equipment
             return EquipOutcome.Equipped;
         }
 
+        /// <summary>
+        /// Uses up one of what <paramref name="slot"/> holds (an arrow shot): it leaves the pack, and when it was the last,
+        /// comes off by itself. False, and nothing used, when the slot holds nothing.
+        /// </summary>
+        public bool TryUse(RecordId slot, out BaseObjectRecord used)
+        {
+            used = In(slot)?.Record;
+            return used != null && _inventory.TryRemove(used.Id);
+        }
+
         /// <summary>Takes off what <paramref name="slot"/> holds (all of it, every slot it takes); false when it held nothing.</summary>
         public bool Unequip(RecordId slot)
         {

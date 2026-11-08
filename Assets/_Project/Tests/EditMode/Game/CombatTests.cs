@@ -20,8 +20,20 @@ namespace Forge.Tests.Game
         static readonly RecordId Greatsword = CombatStyleRecord.IdFor("forge.core", "two_handed");
         static readonly ActorId Dummy = new ActorId("dummy");
 
+        static readonly RecordId Archery = CombatStyleRecord.IdFor("forge.core", "archery");
+
         static readonly BaseObjectRecord Sword = Weapon("sword", CoreEquipSlots.OneHanded(), OneHanded, 12f);
         static readonly BaseObjectRecord Claymore = Weapon("claymore", CoreEquipSlots.TwoHanded(), Greatsword, 20f);
+
+        static readonly BaseObjectRecord Bow = new BaseObjectRecord(new RecordId("forge.core", "bow"), "bow", "items/bow",
+            item: new ItemPart(ItemKind.Weapon, 3f, 50), equippable: new EquippablePart(CoreEquipSlots.Bow()),
+            weapon: new WeaponPart(Archery, new[] { Effect.Damage(CoreAttributes.Health, 10f) }, CoreEquipSlots.Ammo));
+
+        static readonly BaseObjectRecord Arrow = new BaseObjectRecord(new RecordId("forge.core", "arrow"), "arrow", "items/arrow",
+            item: new ItemPart(ItemKind.Misc, 0.1f, 1), equippable: new EquippablePart(CoreEquipSlots.Ammunition()));
+
+        // The draw: 1 s, the arrow on the string at 0.5, fully drawn at 1 (where the clip ends, as the real one does).
+        static readonly MoveTiming DrawTiming = new MoveTiming(1f, 0.5f, 1f);
 
         IRecordStore _world;
         Inventory _inventory;
@@ -46,6 +58,10 @@ namespace Forge.Tests.Game
                 Plugin("forge.core",
                     new EquipSlotRecord(CoreEquipSlots.RightHand, "Right Hand", "RightHand", sheathes: true),
                     new EquipSlotRecord(CoreEquipSlots.LeftHand, "Left Hand", "LeftHand", sheathes: true),
+                    new EquipSlotRecord(CoreEquipSlots.Ammo, "Ammo", "Chest"),
+                    new CombatStyleRecord(Archery, "Archery", new[] { new CombatMove(CombatMoveKind.Attack, "BowShot", held: true) }),
+                    Bow,
+                    Arrow,
                     new AttributeRecord(CoreAttributes.Health, "Health", AttributeKind.Resource, 30f),
                     new AttributeRecord(CoreAttributes.Stamina, "Stamina", AttributeKind.Resource, 10f),
                     new CombatStyleRecord(OneHanded, "One-Handed", new[] { new CombatMove(CombatMoveKind.Attack, "SwordSlash") }),
@@ -264,6 +280,139 @@ namespace Forge.Tests.Game
             Assert.That(placed.TryGet(world, RecordId.Parse("forge.core:ref/barrel"), out _), Is.False, "A barrel is just a thing.");
         }
 
+        // A bow drawn, with `arrows` arrows equipped, the draw timed as DrawTiming; the loosed shots kept.
+        List<Shot> ReadyBow(int arrows)
+        {
+            Hold(Bow);
+            if (arrows > 0)
+            {
+                _inventory.Add(Arrow.Id, arrows);
+                _equipment.TryEquip(Arrow);
+            }
+
+            Draw();
+            _combat.Timings = new FixedTimings(DrawTiming);
+            var shots = new List<Shot>();
+            _combat.Loosed += shots.Add;
+            return shots;
+        }
+
+        [Test]
+        public void ABow_WithoutArrows_DoesNotDraw()
+        {
+            ReadyBow(0);
+
+            Assert.That(_combat.TryAttack(CoreEquipSlots.RightHand), Is.EqualTo(AttackOutcome.NoAmmo));
+        }
+
+        [Test]
+        public void ABowsDraw_IsHeldAtFullDraw_ForAsLongAsTheAttackIs()
+        {
+            ReadyBow(5);
+            var held = new List<Swing>();
+            _combat.SwingHeld += held.Add;
+
+            Assert.That(_combat.TryAttack(CoreEquipSlots.RightHand), Is.EqualTo(AttackOutcome.Attacking));
+            var draw = _combat.Swings.Single();
+            _combat.Tick(0.6f);
+            Assert.That(held, Is.Empty, "Still drawing.");
+            _combat.Tick(0.6f);
+            _combat.Tick(5f);
+
+            Assert.That(held, Is.EqualTo(new[] { draw }), "Told once, as it came to full draw.");
+            Assert.That((draw.IsHeldStill, draw.Pull, draw.IsOver), Is.EqualTo((true, 1f, false)));
+            Assert.That(_combat.Strike(draw, Dummy), Is.False, "A bow strikes with what it shoots, not itself.");
+        }
+
+        [Test]
+        public void LettingGo_AtFullDraw_LoosesOneArrow_AtFullPower_AndItStrikesOnce()
+        {
+            var shots = ReadyBow(5);
+            _combat.TryAttack(CoreEquipSlots.RightHand);
+            _combat.Tick(2f);
+
+            Assert.That(_combat.Release(CoreEquipSlots.RightHand), Is.True);
+            _combat.Tick(0.01f);
+
+            var shot = shots.Single();
+            Assert.That((shot.Power, shot.Ammo, shot.Weapon), Is.EqualTo((1f, Arrow, Bow)));
+            Assert.That(_inventory.CountOf(Arrow.Id), Is.EqualTo(4), "One arrow used up.");
+            Assert.That(_combat.Swings, Is.Empty, "The draw ends at full draw, so loosed, it is over.");
+            Assert.That(_combat.Strike(shot, ActorId.Player), Is.False, "Never its shooter.");
+            Assert.That(_combat.Strike(shot, Dummy), Is.True, "It lands after its draw is over.");
+            Assert.That(_combat.Strike(shot, Dummy), Is.False, "Once.");
+            _events.Flush();
+
+            Assert.That(_dummy.Current(CoreAttributes.Health), Is.EqualTo(20f));
+            var loosed = _told.OfType<ShotLoosed>().Single();
+            Assert.That((loosed.Actor, loosed.Weapon, loosed.Ammo, loosed.Power), Is.EqualTo((ActorId.Player, Bow.Id, Arrow.Id, 1f)));
+        }
+
+        [Test]
+        public void LettingGo_HalfDrawn_LoosesAWeakerShot_AndTooSoon_LoosesTheWeakest_OnceTheArrowIsOn()
+        {
+            var shots = ReadyBow(5);
+            _combat.TryAttack(CoreEquipSlots.RightHand);
+            _combat.Tick(0.75f);
+            _combat.Release(CoreEquipSlots.RightHand);
+
+            var half = ActorCombat.WeakestShot + (1f - ActorCombat.WeakestShot) * 0.5f;
+            Assert.That(shots.Single().Power, Is.EqualTo(half).Within(1e-4f), "Halfway from the string to full draw.");
+            _combat.Tick(0.01f);
+            Assert.That(_combat.Swings, Is.Empty);
+
+            _combat.TryAttack(CoreEquipSlots.RightHand);
+            _combat.Tick(0.2f);
+            _combat.Release(CoreEquipSlots.RightHand);
+            Assert.That(shots.Count, Is.EqualTo(1), "The arrow isn't on the string yet.");
+            _combat.Tick(0.4f);
+
+            Assert.That(shots.Count, Is.EqualTo(2), "Loosed as soon as it was on.");
+            Assert.That(shots[1].Power, Is.EqualTo(ActorCombat.WeakestShot).Within(1e-4f));
+            _combat.Strike(shots[0], Dummy);
+            Assert.That(_dummy.Current(CoreAttributes.Health), Is.EqualTo(30f - 10f * half).Within(1e-4f), "The blow is as strong as the shot.");
+        }
+
+        [Test]
+        public void TheLastArrow_IsLoosed_ThenTheBowHasNone()
+        {
+            var shots = ReadyBow(1);
+            _combat.TryAttack(CoreEquipSlots.RightHand);
+            _combat.Tick(1f);
+            _combat.Release(CoreEquipSlots.RightHand);
+            _combat.Tick(0.01f);
+
+            Assert.That(shots.Count, Is.EqualTo(1));
+            Assert.That(_equipment.In(CoreEquipSlots.Ammo), Is.Null, "The last came off as it was used.");
+            Assert.That(_combat.TryAttack(CoreEquipSlots.RightHand), Is.EqualTo(AttackOutcome.NoAmmo));
+        }
+
+        [Test]
+        public void ReleasingTheOtherKey_DoesNotLooseTheDraw_AndPuttingTheBowAway_LoosesNothing()
+        {
+            var shots = ReadyBow(5);
+            _combat.TryAttack(CoreEquipSlots.RightHand);
+            _combat.Tick(2f);
+
+            Assert.That(_combat.Release(CoreEquipSlots.LeftHand), Is.False, "Drawn by the other key.");
+            _readiness.Toggle();
+
+            Assert.That((shots.Count, _combat.Swings.Count, _inventory.CountOf(Arrow.Id)), Is.EqualTo((0, 0, 5)));
+        }
+
+        [Test]
+        public void AFlight_FallsAsItGoes_AndPointsTheWayItMoves()
+        {
+            var flight = Flight.Toward(System.Numerics.Vector3.Zero, new System.Numerics.Vector3(0f, 0f, 10f), 50f);
+            for (var i = 0; i < 100; i++)
+                flight = flight.Step(0.01f);
+
+            Assert.That(flight.Position.Z, Is.EqualTo(50f).Within(1e-3f), "One second at 50 m/s.");
+            Assert.That(flight.Position.Y, Is.EqualTo(-Flight.Gravity / 2f).Within(0.06f), "Fallen half g t², to within a step's fall.");
+            Assert.That(flight.Heading.Y, Is.LessThan(0f), "Pointing down now.");
+            Assert.That(flight.Step(0f).Position, Is.EqualTo(flight.Position), "No time, no move.");
+        }
+
         sealed class FixedTimings : IMoveTimings
         {
             readonly MoveTiming _timing;
@@ -275,7 +424,7 @@ namespace Forge.Tests.Game
                 _only = only;
             }
 
-            public bool TryGet(string animation, out MoveTiming timing)
+            public bool TryGet(string animation, bool shoots, out MoveTiming timing)
             {
                 timing = _timing;
                 return _only == null || animation == _only;

@@ -164,6 +164,10 @@ namespace Forge.UnityEditor.Content
             layer.avatarMask = Mask(set, name, parts);
             controller.layers = layers;
 
+            // The layer's actions play at its pace, which holds one still (a bow at full draw) at 0.
+            var pace = HumanoidAnimation.ActionPace(name);
+            controller.AddParameter(new AnimatorControllerParameter { name = pace, type = AnimatorControllerParameterType.Float, defaultFloat = 1f });
+
             var machine = layer.stateMachine;
             var rest = machine.AddState("Rest");
             rest.writeDefaultValues = false;
@@ -174,6 +178,8 @@ namespace Forge.UnityEditor.Content
                 controller.AddParameter(trigger, AnimatorControllerParameterType.Trigger);
                 var state = machine.AddState(clip.name);
                 state.motion = clip;
+                state.speedParameter = pace;
+                state.speedParameterActive = true;
                 var start = machine.AddAnyStateTransition(state);
                 start.duration = 0f;
                 start.hasFixedDuration = true;

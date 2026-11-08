@@ -41,6 +41,9 @@ namespace Forge.Data.Records
 
         public float Amount { get; }
 
+        /// <summary>The same effect, <paramref name="factor"/> (more than zero) times as strong: a bow drawn halfway.</summary>
+        public Effect Times(float factor) => factor == 1f ? this : new Effect(Kind, Attribute, Amount * factor);
+
         public static Effect Damage(RecordId attribute, float amount) => new Effect(EffectKind.Damage, attribute, amount);
 
         public static Effect Restore(RecordId attribute, float amount) => new Effect(EffectKind.Restore, attribute, amount);

@@ -23,5 +23,19 @@ namespace Forge.Tests.Play
             Assert.That(SwingFinder.Window(new float[0]), Is.EqualTo((0f, 1f)));
             Assert.That(SwingFinder.Window(new[] { 0f, 0f }), Is.EqualTo((0f, 1f)));
         }
+
+        [Test]
+        public void ABowsDraw_IsOnTheStringWhereTheHandsMeet_AndFullWhereTheyAreFarthestApartAfter()
+        {
+            // Eleven samples, as the real clip: the hands far apart (the hand at the quiver), meeting at the bow at 0.5,
+            // then the pull to full at 0.9, easing off a little at the end.
+            var apart = new[] { 1f, 1f, 0.9f, 0.7f, 0.5f, 0.3f, 0.35f, 0.5f, 0.65f, 0.74f, 0.73f };
+
+            var (from, to) = ShotFinder.Window(apart);
+
+            Assert.That(from, Is.EqualTo(0.5f).Within(1e-5f));
+            Assert.That(to, Is.EqualTo(0.9f).Within(1e-5f), "The hands' start apart doesn't count: it is before the arrow is on.");
+            Assert.That(ShotFinder.Window(new[] { 1f }), Is.EqualTo((0f, 1f)));
+        }
     }
 }

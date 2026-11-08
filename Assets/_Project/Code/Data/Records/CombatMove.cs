@@ -17,14 +17,15 @@ namespace Forge.Data.Records
 
     /// <summary>
     /// One move of a <see cref="CombatStyleRecord"/>: what it is for, the animation that plays it (a move of the actor's
-    /// move set, "SwordSlash"), and the stamina it costs. How long it lasts and when in it a blow can land are the
-    /// animation's to say, measured from the clip, so no move is timed by hand.
+    /// move set, "SwordSlash"), the stamina it costs, and whether it is <see cref="Held"/> (a bow's draw). How long it
+    /// lasts and when in it a blow can land are the animation's to say, measured from the clip, so no move is timed by hand.
     /// </summary>
     public sealed class CombatMove
     {
         /// <param name="animation">The move set's move that plays it ("SwordSlash"; a clip named so).</param>
         /// <param name="staminaCost">Stamina it takes to start; zero or more.</param>
-        public CombatMove(CombatMoveKind kind, string animation, float staminaCost = 0f)
+        /// <param name="held">Whether it is drawn out for as long as the attack is held, and let go on release (a bow's draw).</param>
+        public CombatMove(CombatMoveKind kind, string animation, float staminaCost = 0f, bool held = false)
         {
             if (!Enum.IsDefined(typeof(CombatMoveKind), kind))
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown combat move kind.");
@@ -36,6 +37,7 @@ namespace Forge.Data.Records
             Kind = kind;
             Animation = animation;
             StaminaCost = staminaCost;
+            Held = held;
         }
 
         public CombatMoveKind Kind { get; }
@@ -43,5 +45,11 @@ namespace Forge.Data.Records
         public string Animation { get; }
 
         public float StaminaCost { get; }
+
+        /// <summary>
+        /// Whether it is drawn out while the attack is held: it plays on up to the end of its hit window and stays there,
+        /// and lets its blow go when the attack is released (a bow's draw: release looses the arrow, Skyrim's way).
+        /// </summary>
+        public bool Held { get; }
     }
 }

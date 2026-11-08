@@ -6,7 +6,8 @@ namespace Forge.UnityEditor.Content
 {
     /// <summary>
     /// The combat styles the base game ships (<see cref="CoreCombatStyles"/>), each move the move set's clip that plays it:
-    /// one-handed, drawn from the hip and a slash that costs nothing; archery, drawn from the back (no shot yet).
+    /// one-handed, drawn from the hip and a slash that costs nothing; archery, drawn from the back, its attack an arrow
+    /// drawn while held and loosed on release.
     /// </summary>
     static class CoreCombatStyleSet
     {
@@ -21,6 +22,9 @@ namespace Forge.UnityEditor.Content
         public const string BowDraw = "BowDraw";
         public const string BowSheathe = "BowSheathe";
 
+        /// <summary>The move set's move an archery attack plays: an arrow from the quiver, nocked and drawn to full.</summary>
+        public const string BowShot = "BowShot";
+
         public static IEnumerable<CombatStyleRecord> All()
         {
             yield return new CombatStyleRecord(CoreCombatStyles.OneHanded, "One-Handed", new[]
@@ -31,6 +35,7 @@ namespace Forge.UnityEditor.Content
             });
             yield return new CombatStyleRecord(CoreCombatStyles.Archery, "Archery", new[]
             {
+                new CombatMove(CombatMoveKind.Attack, BowShot, held: true),
                 new CombatMove(CombatMoveKind.Draw, BowDraw),
                 new CombatMove(CombatMoveKind.Sheathe, BowSheathe),
             });

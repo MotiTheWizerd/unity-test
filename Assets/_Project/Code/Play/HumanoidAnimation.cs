@@ -35,6 +35,9 @@ namespace Forge.Play
         public const string ArmsLayer = "Arms";
         public const string UpperBodyLayer = "Upper Body";
 
+        /// <summary>The pace an action layer's actions play at ("Arms Pace"), 1 as they are, 0 held still (a bow at full draw).</summary>
+        public static string ActionPace(string layer) => layer + " Pace";
+
         // Seconds the blend takes to catch up with a new speed, so a stop or a start eases rather than snaps.
         const float SpeedDamping = 0.1f;
 
@@ -64,8 +67,13 @@ namespace Forge.Play
             foreach (var name in new[] { ArmsLayer, UpperBodyLayer })
             {
                 var index = animator.GetLayerIndex(name);
-                if (index >= 0)
-                    _actionLayers.Add(new ActionLayer { Index = index });
+                if (index < 0)
+                    continue;
+                var pace = Animator.StringToHash(ActionPace(name));
+                var hasPace = false;
+                foreach (var parameter in animator.parameters)
+                    hasPace |= parameter.nameHash == pace;
+                _actionLayers.Add(new ActionLayer { Index = index, Pace = hasPace ? pace : (int?)null });
             }
 
             DrawClip = Clip(DrawTrigger);
@@ -124,7 +132,58 @@ namespace Forge.Play
         /// </summary>
         public bool Play(string move)
         {
-            var clip = Clip(move);
+            if (!TryAction(move, out var layer, out var clip))
+                return false;
+            _animator.SetTrigger(move);
+            SetPace(layer, 1f);
+            layer.Held = layer.Thawing = false;
+            layer.Left = clip.length;
+            return true;
+        }
+
+        /// <summary>
+        /// Holds the action <paramref name="move"/> still <paramref name="at"/> (a fraction of it: a bow at full draw), its
+        /// layer weighed in, until <see cref="Resume"/>; false when the set has no such action, or its layer can't be held.
+        /// </summary>
+        public bool Hold(string move, float at)
+        {
+            if (!TryAction(move, out var layer, out _) || layer.Pace == null)
+                return false;
+            // Just short of its end, where it would leave for the layer's rest.
+            _animator.Play(Animator.StringToHash(move), layer.Index, Mathf.Clamp(at, 0f, HeldShortOfEnd));
+            SetPace(layer, 0f);
+            layer.Held = true;
+            layer.Thawing = false;
+            return true;
+        }
+
+        /// <summary>
+        /// Lets the held action <paramref name="move"/> play on <paramref name="from"/> (a fraction of it: past a bow's
+        /// release); when too little of it is left there to fade out over, it fades out where it is, still.
+        /// </summary>
+        public void Resume(string move, float from)
+        {
+            if (!TryAction(move, out var layer, out var clip) || !layer.Held)
+                return;
+            layer.Held = false;
+            var left = (1f - Mathf.Clamp01(from)) * clip.length;
+            if (left > ActionFade)
+            {
+                _animator.Play(Animator.StringToHash(move), layer.Index, Mathf.Clamp01(from));
+                SetPace(layer, 1f);
+                layer.Left = left;
+                return;
+            }
+
+            layer.Left = 0f;
+            layer.Thawing = true;
+        }
+
+        // The action layer that holds `move`, and its clip.
+        bool TryAction(string move, out ActionLayer found, out AnimationClip clip)
+        {
+            found = null;
+            clip = Clip(move);
             if (clip == null)
                 return false;
             var state = Animator.StringToHash(move);
@@ -132,12 +191,17 @@ namespace Forge.Play
             {
                 if (!_animator.HasState(layer.Index, state))
                     continue;
-                _animator.SetTrigger(move);
-                layer.Left = clip.length;
+                found = layer;
                 return true;
             }
 
             return false;
+        }
+
+        void SetPace(ActionLayer layer, float pace)
+        {
+            if (layer.Pace.HasValue)
+                _animator.SetFloat(layer.Pace.Value, pace);
         }
 
         /// <summary>The clip of <paramref name="move"/> in its controller, or null.</summary>
@@ -155,26 +219,41 @@ namespace Forge.Play
         }
 
         // Each action layer comes in as its action starts and is out as it ends, so the layer's own state can go back
-        // to rest at once, unseen.
+        // to rest at once, unseen; one held stays in. One let go still fades out still, and plays on once it is out.
         void FadeActions(float deltaTime)
         {
             foreach (var layer in _actionLayers)
             {
-                layer.Left = Mathf.Max(0f, layer.Left - Mathf.Max(0f, deltaTime));
-                var target = layer.Left > ActionFade ? 1f : 0f;
-                if (layer.Weight == target)
-                    continue;
-                layer.Weight = deltaTime > 0f ? Mathf.MoveTowards(layer.Weight, target, deltaTime / ActionFade) : target;
-                _animator.SetLayerWeight(layer.Index, layer.Weight);
+                if (!layer.Held)
+                    layer.Left = Mathf.Max(0f, layer.Left - Mathf.Max(0f, deltaTime));
+                var target = layer.Held || layer.Left > ActionFade ? 1f : 0f;
+                if (layer.Weight != target)
+                {
+                    layer.Weight = deltaTime > 0f ? Mathf.MoveTowards(layer.Weight, target, deltaTime / ActionFade) : target;
+                    _animator.SetLayerWeight(layer.Index, layer.Weight);
+                }
+
+                if (layer.Thawing && layer.Weight <= 0f)
+                {
+                    layer.Thawing = false;
+                    SetPace(layer, 1f);
+                }
             }
         }
 
-        // An action layer of the controller, and how much of it shows.
+        // How near its end a held action stays (a fraction of it): not at its very end, which it would leave by.
+        const float HeldShortOfEnd = 0.995f;
+
+        // An action layer of the controller, how much of it shows, and whether its action is held still (by its pace
+        // parameter, when the controller has one).
         sealed class ActionLayer
         {
             public int Index;
+            public int? Pace;
             public float Weight;
             public float Left;
+            public bool Held;
+            public bool Thawing;
         }
 
         static AnimationClip ClipNamed(Animator animator, string name)

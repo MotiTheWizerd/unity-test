@@ -5,6 +5,7 @@ namespace Forge.Game.Combat
     /// <summary>
     /// How a combat move plays: how long it lasts and the part of it in which a blow can land (its hit window, fractions
     /// of the move). The look's to say, measured from the move's clip, as a draw's length is; the rules only count time.
+    /// For a bow's draw the window is from the arrow on the string (it can be loosed) to full draw (where it is held).
     /// </summary>
     public readonly struct MoveTiming
     {
@@ -40,7 +41,10 @@ namespace Forge.Game.Combat
     /// <summary>The look's timings of an actor's moves, by the animation that plays them (<see cref="Data.Records.CombatMove.Animation"/>).</summary>
     public interface IMoveTimings
     {
-        /// <summary>How <paramref name="animation"/> plays; false when the look has no such move.</summary>
-        bool TryGet(string animation, out MoveTiming timing);
+        /// <summary>
+        /// How <paramref name="animation"/> plays, the move of a weapon that <paramref name="shoots"/> (a bow's draw:
+        /// timed by the string's pull) or one that strikes with itself (timed by its cut); false when the look has no such move.
+        /// </summary>
+        bool TryGet(string animation, bool shoots, out MoveTiming timing);
     }
 }

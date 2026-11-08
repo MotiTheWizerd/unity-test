@@ -31,6 +31,7 @@ namespace Forge.Play
         readonly Dictionary<GameObject, Held> _attached = new Dictionary<GameObject, Held>();
         readonly GameObject _prefab;
         readonly float _sunk;
+        readonly AfterAnimation _afterAnimation;
         HeadlessBody _headless;
         Transform _eyes;
         readonly Dictionary<bool, Transform> _backs = new Dictionary<bool, Transform>();
@@ -67,6 +68,17 @@ namespace Forge.Play
             var soles = _animation != null && SoleFinder.TryFind(prefab, IdleClip, out var height) ? height : 0f;
             _sunk = hover + soles;
             Root.transform.localPosition = Vector3.down * _sunk;
+            _afterAnimation = Root.AddComponent<AfterAnimation>();
+        }
+
+        /// <summary>
+        /// Every frame once its animations have posed it (<see cref="AfterAnimation"/>), for what works on the pose:
+        /// bending it (<see cref="BendUpperBody"/>), laying something along it.
+        /// </summary>
+        public event Action Posed
+        {
+            add => _afterAnimation.Posed += value;
+            remove => _afterAnimation.Posed -= value;
         }
 
         /// <summary>
@@ -174,11 +186,75 @@ namespace Forge.Play
         /// <summary>Plays the action <paramref name="move"/> (a slash) on its arms; false when it has no such move.</summary>
         public bool Play(string move) => _animation != null && _animation.Play(move);
 
-        /// <summary>How its move <paramref name="move"/> plays, measured from the clip (<see cref="SwingFinder"/>); false when it has none.</summary>
-        public bool TryTime(string move, out MoveTiming timing)
+        /// <summary>
+        /// How its move <paramref name="move"/> plays, measured from the clip: a draw of a weapon that
+        /// <paramref name="shoots"/> by the string's pull (<see cref="ShotFinder"/>), else by the blade's cut
+        /// (<see cref="SwingFinder"/>); false when it has none.
+        /// </summary>
+        public bool TryTime(string move, bool shoots, out MoveTiming timing)
         {
             timing = default;
-            return _animation != null && SwingFinder.TryFind(_prefab, _animation.Clip(move), out timing);
+            if (_animation == null)
+                return false;
+            var clip = _animation.Clip(move);
+            return shoots ? ShotFinder.TryFind(_prefab, clip, out timing) : SwingFinder.TryFind(_prefab, clip, out timing);
+        }
+
+        /// <summary>Holds its action <paramref name="move"/> still <paramref name="at"/> (a fraction of it: a bow at full draw).</summary>
+        public bool Hold(string move, float at) => _animation != null && _animation.Hold(move, at);
+
+        /// <summary>Lets its held action <paramref name="move"/> play on <paramref name="from"/> (a fraction of it).</summary>
+        public void Resume(string move, float from) => _animation?.Resume(move, from);
+
+        /// <summary>
+        /// How far into its draw <paramref name="move"/> (a bow's) the right hand is nearest the back over the right
+        /// shoulder, 0 to 1: where it takes an arrow from the quiver (<see cref="BackFinder"/>); false when it can't tell.
+        /// </summary>
+        public bool TryArrowTaken(string move, out float moment)
+        {
+            moment = 0f;
+            return _animation != null && BackFinder.TryFindReach(_prefab, _animation.Clip(move), IdleClip, true, out moment);
+        }
+
+        /// <summary>Where the right or left hand grips (it moves with the hand); false without the hand.</summary>
+        public bool TryGrip(bool right, out Transform grip) => TryPoint(right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand, out grip);
+
+        /// <summary>
+        /// Bends its upper body <paramref name="degrees"/> up (down when less than zero) about its own side, spread over
+        /// the spine's bones, as an archer aims high or low; on this frame's pose, so from <see cref="Posed"/>.
+        /// </summary>
+        public void BendUpperBody(float degrees)
+        {
+            if (_humanoid == null || Mathf.Approximately(degrees, 0f))
+                return;
+            var bones = 0;
+            foreach (var id in SpineBones)
+                bones += _humanoid.GetBoneTransform(id) != null ? 1 : 0;
+            if (bones == 0)
+                return;
+            // Unity turns +Z towards -Y about +X: up is a turn the other way.
+            var turn = Quaternion.AngleAxis(-degrees / bones, Root.transform.right);
+            foreach (var id in SpineBones)
+            {
+                var bone = _humanoid.GetBoneTransform(id);
+                if (bone != null)
+                    bone.rotation = turn * bone.rotation;
+            }
+        }
+
+        static readonly HumanBodyBones[] SpineBones = { HumanBodyBones.Spine, HumanBodyBones.Chest, HumanBodyBones.UpperChest };
+
+        /// <summary>
+        /// Makes <paramref name="look"/> part of its look without hanging it anywhere (an arrow on the string, laid there by
+        /// whoever holds it): under its root, on its layer, without colliders.
+        /// </summary>
+        public void Adopt(GameObject look)
+        {
+            if (look == null)
+                throw new ArgumentNullException(nameof(look));
+            look.transform.SetParent(Root.transform, true);
+            RemoveColliders(look);
+            SetLayer(look.transform, Root.layer);
         }
 
         /// <summary>How long its draw plays, seconds; 0 without one.</summary>

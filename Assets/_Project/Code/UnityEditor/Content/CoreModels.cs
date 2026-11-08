@@ -49,7 +49,7 @@ namespace Forge.UnityEditor.Content
                 equippable: new EquippablePart(CoreEquipSlots.OneHanded()));
 
             // Bows (OpenGameArt), lying flat; they take both hands, held in the left, and are drawn from the back in the
-            // Archery style. An arrow's hit is the bow's damage to health (no shot yet).
+            // Archery style, shooting the arrows equipped as ammo. An arrow's hit is the bow's damage to health, times how far it was drawn.
             foreach (var (folder, id, name, weight, value, damage) in new[]
                      {
                          ("HuntingBow", "hunting_bow", "Hunting Bow", 3f, 50, 7f),
@@ -59,7 +59,7 @@ namespace Forge.UnityEditor.Content
                     "Items/Weapons", LyingFlat(),
                     item: new ItemPart(ItemKind.Weapon, weight, value),
                     equippable: new EquippablePart(CoreEquipSlots.Bow()),
-                    weapon: new WeaponPart(CoreCombatStyles.Archery, new[] { Effect.Damage(CoreAttributes.Health, damage) }));
+                    weapon: new WeaponPart(CoreCombatStyles.Archery, new[] { Effect.Damage(CoreAttributes.Health, damage) }, CoreEquipSlots.Ammo));
 
             // Arrows (OpenGameArt, CC0), lying flat: equipped as ammo, worn as a quiver of them on the back, as in Skyrim.
             foreach (var (folder, id, name, weight, value) in new[]

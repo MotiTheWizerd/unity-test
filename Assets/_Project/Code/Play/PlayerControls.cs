@@ -77,6 +77,9 @@ namespace Forge.Play
         /// </summary>
         public bool ReadAttack(bool right) => _map.enabled && (right ? _attackRight : _attackLeft).WasPressedThisFrame();
 
+        /// <summary>Whether that attack key was let go this frame (a drawn bow looses); never while the map is off.</summary>
+        public bool ReadAttackReleased(bool right) => _map.enabled && (right ? _attackRight : _attackLeft).WasReleasedThisFrame();
+
         public void Enable() => _map.Enable();
 
         public void Disable() => _map.Disable();

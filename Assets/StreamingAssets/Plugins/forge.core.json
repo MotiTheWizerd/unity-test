@@ -540,14 +540,22 @@
       "displayName": "Archery",
       "moves": [
         {
+          "kind": "attack",
+          "animation": "BowShot",
+          "staminaCost": 0.0,
+          "held": true
+        },
+        {
           "kind": "draw",
           "animation": "BowDraw",
-          "staminaCost": 0.0
+          "staminaCost": 0.0,
+          "held": false
         },
         {
           "kind": "sheathe",
           "animation": "BowSheathe",
-          "staminaCost": 0.0
+          "staminaCost": 0.0,
+          "held": false
         }
       ]
     },
@@ -559,17 +567,20 @@
         {
           "kind": "attack",
           "animation": "SwordSlash",
-          "staminaCost": 0.0
+          "staminaCost": 0.0,
+          "held": false
         },
         {
           "kind": "draw",
           "animation": "Draw",
-          "staminaCost": 0.0
+          "staminaCost": 0.0,
+          "held": false
         },
         {
           "kind": "sheathe",
           "animation": "Sheathe",
-          "staminaCost": 0.0
+          "staminaCost": 0.0,
+          "held": false
         }
       ]
     },
@@ -794,7 +805,8 @@
             "attribute": "forge.core:attribute/health",
             "amount": 7.0
           }
-        ]
+        ],
+        "ammo": "forge.core:equip_slot/ammo"
       }
     },
     {
@@ -1076,7 +1088,8 @@
             "attribute": "forge.core:attribute/health",
             "amount": 9.0
           }
-        ]
+        ],
+        "ammo": "forge.core:equip_slot/ammo"
       }
     },
     {
