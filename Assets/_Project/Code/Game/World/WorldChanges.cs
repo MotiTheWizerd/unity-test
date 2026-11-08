@@ -8,9 +8,9 @@ namespace Forge.Game.World
     /// <summary>
     /// What playing has changed in the world, kept beside it the way a saved game keeps its changes over the load order
     /// (Bethesda's changed references): the world's records stay exactly as built, and whatever shows the world while
-    /// playing lays these on top (<see cref="PlayedWorld"/>). For now the placed objects taken out of it and the ones
-    /// playing put in (an item dropped); opened doors and emptied containers will join them, and the save game will write
-    /// it all. Engine-free.
+    /// playing lays these on top (<see cref="PlayedWorld"/>). For now the placed objects taken out of it, the ones
+    /// playing put in (an item dropped) and the ones it moved (a cup knocked over, a basket carried off: <see cref="Move"/>);
+    /// opened doors and emptied containers will join them, and the save game will write it all. Engine-free.
     /// </summary>
     public sealed class WorldChanges
     {
@@ -19,10 +19,14 @@ namespace Forge.Game.World
 
         readonly HashSet<RecordId> _removed = new HashSet<RecordId>();
         readonly Dictionary<RecordId, PlacedObjectRecord> _added = new Dictionary<RecordId, PlacedObjectRecord>();
+        readonly Dictionary<RecordId, PlacedObjectRecord> _moved = new Dictionary<RecordId, PlacedObjectRecord>();
         int _lastId;
 
         /// <summary>Raised with a placed object as it is put into the world.</summary>
         public event Action<PlacedObjectRecord> Added;
+
+        /// <summary>Raised with a placed object, built or added, as it is where it was moved to.</summary>
+        public event Action<PlacedObjectRecord> Moved;
 
         /// <summary>Raised with a placed object as it is taken out of the world, built or added.</summary>
         public event Action<RecordId> Removed;
@@ -41,6 +45,30 @@ namespace Forge.Game.World
 
         /// <summary>The placed object <paramref name="id"/> playing put into the world, if it is still there.</summary>
         public bool TryGetAdded(RecordId id, out PlacedObjectRecord placed) => _added.TryGetValue(id, out placed);
+
+        /// <summary>The world's own placed objects playing moved, where they are now.</summary>
+        public IReadOnlyCollection<PlacedObjectRecord> MovedObjects => _moved.Values;
+
+        /// <summary>The world's own placed object <paramref name="id"/> where playing moved it, if it did and it is still there.</summary>
+        public bool TryGetMoved(RecordId id, out PlacedObjectRecord placed) => _moved.TryGetValue(id, out placed);
+
+        /// <summary>
+        /// The placed object <paramref name="moved"/> names, built or added, is now where <paramref name="moved"/> says
+        /// (only its place differs: it fell, it was carried). False, and nothing changed, when it is no longer in the world.
+        /// </summary>
+        public bool Move(PlacedObjectRecord moved)
+        {
+            if (moved == null)
+                throw new ArgumentNullException(nameof(moved));
+            if (_added.ContainsKey(moved.Id))
+                _added[moved.Id] = moved;
+            else if (moved.Id.Namespace != Namespace && !_removed.Contains(moved.Id))
+                _moved[moved.Id] = moved;
+            else
+                return false;
+            Moved?.Invoke(moved);
+            return true;
+        }
 
         /// <summary>An id for a new placed object, never given before by this world's changes, so nothing stale names it.</summary>
         public RecordId NewId() => new RecordId(Namespace, "placed/" + ++_lastId);
@@ -78,6 +106,7 @@ namespace Forge.Game.World
             // What playing added simply goes again; the world's own is remembered as taken.
             if (!_added.Remove(placed) && (placed.Namespace == Namespace || !_removed.Add(placed)))
                 return false;
+            _moved.Remove(placed);
             Removed?.Invoke(placed);
             return true;
         }
@@ -85,10 +114,11 @@ namespace Forge.Game.World
         /// <summary>Lets every change go, as going back to editing does.</summary>
         public void Clear()
         {
-            if (_removed.Count == 0 && _added.Count == 0)
+            if (_removed.Count == 0 && _added.Count == 0 && _moved.Count == 0)
                 return;
             _removed.Clear();
             _added.Clear();
+            _moved.Clear();
             Cleared?.Invoke();
         }
     }

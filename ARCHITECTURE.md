@@ -999,7 +999,33 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
     skips a target; a collider is a placed actor by its `RecordLink`. The Player map's `AttackRight` (left mouse button,
     right trigger) swings the right hand and `AttackLeft` (right button, left trigger) the left, as Skyrim's. The HUD
     shows whoever the player last struck at the top (`TargetHealth`, on `HitLanded`).
-- `PlayerCommands.Activate` is the key, pressed this frame; `Allowing(sprint, jump, walk)` is a command as a rule lets it through.
+  - **Shooting** (a bow): a `CombatMove` can be `Held` (Archery's attack `BowShot`) and a `WeaponPart` names an `Ammo`
+    slot. A held swing comes on only while held, stops at its window's end (full draw) and is let go by
+    `ActorCombat.Release(slot)` (the attack key coming up): once its window is open it uses up one ammo
+    (`ActorEquipment.TryUse`) and looses a `Shot` (`Loosed`; the stream's `ShotLoosed`), its `Power` from
+    `WeakestShot` (0.3) to 1 by how far it was drawn; let go sooner, it looses the weakest as the arrow comes on.
+    `NoAmmo` without arrows; a bow's swing never strikes itself, its shot does (`Strike(shot, target)`: once, the bow's
+    hit times the power). `Flight` is a shot's path (gravity only). The look: `ShotFinder` times a draw (arrow on where
+    the hands meet, full where they are farthest apart after), action states have a per-layer pace so
+    `HumanoidAnimation.Hold` / `Resume` freeze the draw; `ShotView` lays the arrow (`ArrowLook`: an arrow's model points
+    +Y) from the drawing hand to the bow and turns the upper body so the draw points at what the view's centre meets
+    (`ArcheryAim`); `PlayerCharacter.Aiming` turns the body to the look meanwhile. `ArrowFlights` flies what is loosed,
+    swept by rays, and hands what sticks to `ShotLandings`: it breaks as often as its `AmmoPart.BreakChance` says, else
+    it stays there as the item it is (`WorldChanges.Place`), takeable again; the stream hears `ShotLanded`.
+- **Physics** (loose things): every item, and anything with a `PhysicsPart`, is a physical body while the world plays
+  (`PhysicalObjects.TryGetMass`: an item weighs its weight read as Skyrim's pounds, a part its mass). `WorldPhysics`
+  (Play, one per game) gives each such object the view shows (`WorldView.PlacedShown` / `PlacedRemoving`) a rigid body,
+  asleep where it was placed until touched, swept every step (thin swords tunnel through terrain otherwise). When one
+  has come to rest somewhere new, or streams out away from its rest, the game keeps it there: `WorldChanges.Move` (a
+  built object is then `MovedObjects`, an added one is replaced), which `PlayedWorld` reads (it is in the block it lies
+  in now) and the view shows (`ShowMoved`). One fallen out of the world is put back. The game ending takes every body
+  off and the world is as built again.
+- **Carrying** (`ObjectCarry`, Play): the use key is tap-or-hold (`UseKey`, `PlayerControls.Use`): a tap is
+  `PlayerCommands.Activate` (take), a hold of `GrabHold` grabs the body in reach (as the use key aims) if no heavier than
+  `MostCarriedMass`; `Carried` drives it each physics step to a point in front of the eyes where the view looks, turned
+  with the body, so walls stop it (held back a metre for half a second, it is let go). Letting go drops it; an attack
+  key throws it (`ThrowImpulse` over its mass, up to `ThrowSpeed`); it passes through the carrier.
+- `PlayerCommands.Activate` is a tap of the use key; `Allowing(sprint, jump, walk)` is a command as a rule lets it through.
 
 ## World-building agent (Forge.Agent)
 

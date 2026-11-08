@@ -10,9 +10,10 @@ namespace Forge.Game.World
 {
     /// <summary>
     /// The world as it is being played: the world as built with what playing changed laid on top
-    /// (<see cref="WorldChanges"/>), as a saved game reads over the load order. What was taken is gone from it and what
-    /// was dropped is in it, so whatever asks it (what is in sight, later the AI and the save) sees one world. A live
-    /// view, never a copy: a change shows at once. Engine-free.
+    /// (<see cref="WorldChanges"/>), as a saved game reads over the load order. What was taken is gone from it, what was
+    /// dropped is in it, and what was moved is where it was moved to (in the block it lies in now), so whatever asks it
+    /// (what is in sight, later the AI and the save) sees one world. A live view, never a copy: a change shows at once.
+    /// Engine-free.
     /// </summary>
     public sealed class PlayedWorld : IRecordStore
     {
@@ -33,7 +34,7 @@ namespace Forge.Game.World
 
         public bool TryGet(RecordId id, out Record record)
         {
-            if (_changes.TryGetAdded(id, out var added))
+            if (_changes.TryGetAdded(id, out var added) || _changes.TryGetMoved(id, out added))
             {
                 record = added;
                 return true;
@@ -63,24 +64,35 @@ namespace Forge.Game.World
         public IReadOnlyList<ChunkCoord> ObjectChunks(RecordId space)
         {
             var chunks = _built.ObjectChunks(space);
-            var added = AddedIn(space).Select(p => ObjectBlockKey.Of(p).Coord).ToArray();
-            return added.Length > 0 ? chunks.Union(added).ToArray() : chunks;
+            var played = ChangedIn(space).Select(p => ObjectBlockKey.Of(p).Coord).ToArray();
+            return played.Length > 0 ? chunks.Union(played).ToArray() : chunks;
         }
 
         public IReadOnlyList<PlacedObjectRecord> ObjectsIn(RecordId space, ChunkCoord coord)
         {
             var built = _built.ObjectsIn(space, coord);
             var key = new ObjectBlockKey(space, coord);
-            var added = AddedIn(space).Where(p => ObjectBlockKey.Of(p) == key).ToArray();
+            var changed = ChangedIn(space).Where(p => ObjectBlockKey.Of(p) == key).ToArray();
             // Most blocks are as built: handed on as they are.
-            if (added.Length == 0 && !built.Any(p => _changes.IsRemoved(p.Id)))
+            if (changed.Length == 0 && !built.Any(p => _changes.IsRemoved(p.Id) || _changes.TryGetMoved(p.Id, out _)))
                 return built;
-            return Played(built).Concat(added).OrderBy(p => p.Id).ToArray();
+            // What was moved is in the block it lies in now, and only there.
+            var stayed = built.Where(p => !_changes.IsRemoved(p.Id) && !_changes.TryGetMoved(p.Id, out _));
+            return stayed.Concat(changed).OrderBy(p => p.Id).ToArray();
         }
 
-        IEnumerable<T> Played<T>(IEnumerable<T> built) where T : Record =>
-            _changes.RemovedObjects.Count == 0 ? built : built.Where(r => !_changes.IsRemoved(r.Id));
+        // As built, less what was taken, what was moved where it is now.
+        IEnumerable<T> Played<T>(IEnumerable<T> built) where T : Record
+        {
+            if (_changes.RemovedObjects.Count == 0 && _changes.MovedObjects.Count == 0)
+                return built;
+            return built
+                .Where(r => !_changes.IsRemoved(r.Id))
+                .Select(r => _changes.TryGetMoved(r.Id, out var moved) && moved is T now ? now : r);
+        }
 
-        IEnumerable<PlacedObjectRecord> AddedIn(RecordId space) => _changes.AddedObjects.Where(p => p.Space == space);
+        // What playing put into the space, and what of the world's own it moved.
+        IEnumerable<PlacedObjectRecord> ChangedIn(RecordId space) =>
+            _changes.AddedObjects.Concat(_changes.MovedObjects).Where(p => p.Space == space);
     }
 }

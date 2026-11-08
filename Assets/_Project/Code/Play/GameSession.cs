@@ -57,6 +57,7 @@ namespace Forge.Play
             _dropper = new ItemDropper(Changes, InventoryOf, Events);
             _landings = new ShotLandings(Changes, Events);
             Changes.Added += _view.ShowAdded;
+            Changes.Moved += _view.ShowMoved;
             Changes.Removed += OnRemoved;
             Changes.Cleared += _view.ShowAsBuilt;
         }
@@ -97,16 +98,21 @@ namespace Forge.Play
                 End();
 
             World = new PlayedWorld(world, Changes);
+            Bodies = new WorldPhysics(_view, World, OnSettled);
             if (World.TryGet(CoreActors.Player, out var record) && record is ActorRecord player)
                 StartingItems.Give(player, World, Player.Inventory, Player.Equipment);
             Player.Spawn(feet, heading, World, Interactions);
             Events.Flush();
         }
 
+        /// <summary>The world's loose things as physical bodies while playing; else null.</summary>
+        public WorldPhysics Bodies { get; private set; }
+
         /// <summary>Plays one frame, then tells what happened in it.</summary>
         public void Tick(float deltaTime)
         {
             Player.Tick(deltaTime);
+            Bodies?.Tick();
             Events.Flush();
         }
 
@@ -177,6 +183,8 @@ namespace Forge.Play
         public void End()
         {
             Player.Despawn();
+            Bodies?.Dispose();
+            Bodies = null;
             Player.Inventory.Clear();
             Combatants.Clear();
             PlacedActors.Clear();
@@ -186,17 +194,29 @@ namespace Forge.Play
         }
 
         /// <summary>The scene moved by <paramref name="delta"/> under the world (a rebase); the player moves with it.</summary>
-        public void Shift(Vector3 delta) => Player.Shift(delta);
+        public void Shift(Vector3 delta)
+        {
+            Player.Shift(delta);
+            Bodies?.Shift(delta);
+        }
 
         public void Dispose()
         {
             Changes.Added -= _view.ShowAdded;
+            Changes.Moved -= _view.ShowMoved;
             Changes.Removed -= OnRemoved;
             Changes.Cleared -= _view.ShowAsBuilt;
             Player.Dispose();
         }
 
         Inventory InventoryOf(ActorId actor) => actor == ActorId.Player ? Player.Inventory : null;
+
+        // A loose thing came to rest somewhere new (scene space): playing keeps it there, in the world's own coordinates.
+        void OnSettled(RecordId id, Vector3 position, Quaternion rotation)
+        {
+            if (World != null && World.TryGet(id, out var record) && record is PlacedObjectRecord placed)
+                Changes.Move(placed.WithTransform(_frame.ToWorld(position).ToNumerics(), rotation.ToNumerics(), placed.Scale));
+        }
 
         // What was shot landed at a pose in the scene: it stays there in the world's own coordinates as the item it is,
         // to be taken back, unless it broke.

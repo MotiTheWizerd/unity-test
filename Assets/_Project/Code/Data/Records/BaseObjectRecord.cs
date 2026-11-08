@@ -8,7 +8,7 @@ namespace Forge.Data.Records
     /// a chair). Placed instances reference it by id, so shared data lives once.
     /// What it is beyond its look comes in optional parts: an <see cref="ItemPart"/> makes it something to carry, an
     /// <see cref="EquippablePart"/> something its carrier can equip, a <see cref="WeaponPart"/> something to fight with, and
-    /// an <see cref="AmmoPart"/> something a weapon shoots.
+    /// an <see cref="AmmoPart"/> something a weapon shoots, and a <see cref="PhysicsPart"/> a loose physical thing that is no item.
     /// </summary>
     public sealed class BaseObjectRecord : Record
     {
@@ -20,11 +20,14 @@ namespace Forge.Data.Records
         /// <param name="weapon">What makes it a weapon to fight with; null = not a weapon. Only something equippable is.</param>
         /// <param name="actor">The actor each one placed is while the world plays (an <see cref="ActorRecord"/>: a training dummy, later a character); null = no actor.</param>
         /// <param name="ammo">What makes it ammunition a weapon shoots; null = not ammo. Only an item is.</param>
+        /// <param name="physics">What makes it a loose physical thing while playing, with its mass; null = an item is by its weight, anything else stands still.</param>
         public BaseObjectRecord(RecordId id, string displayName, string assetKey, string category = null, PlacementRules placement = null,
             IEnumerable<MaterialOverride> materials = null, ItemPart item = null, EquippablePart equippable = null, WeaponPart weapon = null,
-            RecordId? actor = null, AmmoPart ammo = null)
+            RecordId? actor = null, AmmoPart ammo = null, PhysicsPart physics = null)
             : base(id)
         {
+            if (physics != null && actor.HasValue)
+                throw new ArgumentException("An actor's body is its own, not a loose thing: give it one or the other.", nameof(physics));
             if (ammo != null && item == null)
                 throw new ArgumentException("Only an item is ammunition: give it an item part too.", nameof(ammo));
             if (actor.HasValue && actor.Value.IsDefault)
@@ -51,6 +54,7 @@ namespace Forge.Data.Records
             Weapon = weapon;
             Actor = actor;
             Ammo = ammo;
+            Physics = physics;
         }
 
         public string DisplayName { get; }
@@ -88,5 +92,8 @@ namespace Forge.Data.Records
 
         /// <summary>What makes it ammunition a weapon shoots (an arrow), or null: not ammo.</summary>
         public AmmoPart Ammo { get; }
+
+        /// <summary>What makes it a loose physical thing while playing when it is no item (a barrel), or null.</summary>
+        public PhysicsPart Physics { get; }
     }
 }

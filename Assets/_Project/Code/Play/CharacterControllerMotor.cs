@@ -42,6 +42,9 @@ namespace Forge.Play
         /// <summary>The body's scene object, whose transform is the feet (what the player's model rides on).</summary>
         public Transform Body => _body.transform;
 
+        /// <summary>The body's collider, the capsule: what the player carries passes through it.</summary>
+        public Collider Collider => _controller;
+
         public System.Numerics.Vector3 Position => _body.transform.position.ToNumerics();
 
         public MotorContact Move(System.Numerics.Vector3 displacement)

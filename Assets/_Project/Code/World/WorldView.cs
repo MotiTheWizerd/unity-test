@@ -58,6 +58,12 @@ namespace Forge.World
         /// </summary>
         public event Action<IReadOnlyCollection<ChunkCoord>> TerrainChanged;
 
+        /// <summary>A placed object's scene object was built (it streamed in, it was shown), for what works on it while it is there.</summary>
+        public event Action<RecordId, GameObject> PlacedShown;
+
+        /// <summary>A placed object's scene object is about to go (it streams out, it was taken), still where it is.</summary>
+        public event Action<RecordId, GameObject> PlacedRemoving;
+
         /// <summary>The winning terrain record at <paramref name="coord"/> in the shown space, loaded or not.</summary>
         public bool TryGetTerrain(ChunkCoord coord, out TerrainChunkRecord chunk) => _index.TryGetTerrain(coord, out chunk);
 
@@ -106,6 +112,27 @@ namespace Forge.World
             _added[placed.Id] = placed;
             if (placed.Space == Space && _loaded.Contains(ChunkIndex.ChunkOf(placed)))
                 PresentPlaced(placed);
+        }
+
+        /// <summary>
+        /// Shows placed object <paramref name="moved"/> (the world's own or one <see cref="ShowAdded"/> showed) where
+        /// playing moved it, until <see cref="Hide"/> or <see cref="ShowAsBuilt"/>: it streams in and out with the chunk it
+        /// lies in now. Its scene object, already there (it got there itself: it fell, it was carried), is left where it is.
+        /// </summary>
+        public void ShowMoved(PlacedObjectRecord moved)
+        {
+            if (moved == null)
+                throw new ArgumentNullException(nameof(moved));
+            // The world's own is shown from now on as playing has it, no longer as built.
+            if (_index.TryLocate(moved.Id, out _))
+                _hidden.Add(moved.Id);
+            _added[moved.Id] = moved;
+            if (!(moved.Space == Space && _loaded.Contains(ChunkIndex.ChunkOf(moved))))
+                Remove(moved.Id);
+            else if (_presented.TryGetValue(moved.Id, out var current))
+                _presented[moved.Id] = new Presented(moved, current.Dependency, current.GameObject);
+            else
+                PresentPlaced(moved);
         }
 
         /// <summary>
@@ -295,8 +322,13 @@ namespace Forge.World
         {
             if (_index.TryGetTerrain(coord, out var chunk))
                 yield return chunk.Id;
+            // What is hidden isn't shown from here (taken, or shown where playing moved it, in another chunk maybe).
             foreach (var placed in _index.ObjectsIn(coord))
-                yield return placed.Id;
+            {
+                if (!_hidden.Contains(placed.Id))
+                    yield return placed.Id;
+            }
+
             foreach (var placed in AddedIn(coord))
                 yield return placed.Id;
         }
@@ -385,6 +417,8 @@ namespace Forge.World
             var go = build();
             go.AddComponent<RecordLink>().RecordId = record.Id;
             _presented.Add(record.Id, new Presented(record, dependency, go));
+            if (record is PlacedObjectRecord)
+                PlacedShown?.Invoke(record.Id, go);
         }
 
         GameObject BuildPlaced(PlacedObjectRecord placed, BaseObjectRecord baseRecord)
@@ -426,7 +460,10 @@ namespace Forge.World
             if (presented.Record is TerrainChunkRecord)
                 TerrainChunkBuilder.Destroy(presented.GameObject);
             else
+            {
+                PlacedRemoving?.Invoke(id, presented.GameObject);
                 UnityEngine.Object.Destroy(presented.GameObject);
+            }
         }
 
         readonly struct Presented

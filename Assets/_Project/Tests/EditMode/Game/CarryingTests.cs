@@ -183,6 +183,120 @@ namespace Forge.Tests.Game
         }
     }
 
+    public class MovedObjectTests
+    {
+        static readonly ChunkCoord Origin = WorldGrid.ChunkOf(0f, 0f);
+
+        [Test]
+        public void AMovedBuiltObject_IsWhereItWasMoved_InTheBlockItLiesInNow_UntilClear()
+        {
+            var built = ItemWorld.Records();
+            var changes = new WorldChanges();
+            var played = new PlayedWorld(built, changes);
+            var told = new List<PlacedObjectRecord>();
+            changes.Moved += told.Add;
+            var apple = built.Get<PlacedObjectRecord>(ItemWorld.AppleRef);
+            var far = WorldGrid.ChunkOf(5000f, 5000f);
+            var carried = apple.WithPosition(new Vector3(5000f, 0f, 5000f));
+
+            Assert.That(changes.Move(carried), Is.True);
+
+            Assert.That(told, Is.EqualTo(new[] { carried }));
+            Assert.That(played.Get<PlacedObjectRecord>(ItemWorld.AppleRef), Is.SameAs(carried));
+            Assert.That(played.ObjectsIn(Space, Origin).Select(p => p.Id), Is.EqualTo(new[] { ItemWorld.TreeRef }), "Gone from where it was...");
+            Assert.That(played.ObjectsIn(Space, far), Is.EqualTo(new[] { carried }), "...and in the block it lies in now.");
+            Assert.That(played.ObjectChunks(Space), Does.Contain(far));
+            Assert.That(played.OfType<PlacedObjectRecord>(), Does.Contain(carried));
+            Assert.That(played.Count, Is.EqualTo(built.Count), "Moved, not added.");
+
+            changes.Clear();
+            Assert.That(played.Get<PlacedObjectRecord>(ItemWorld.AppleRef), Is.SameAs(apple), "As built again.");
+        }
+
+        [Test]
+        public void AMovedDroppedObject_IsReplaced_AndWhatIsGoneCantBeMoved()
+        {
+            var built = ItemWorld.Records();
+            var changes = new WorldChanges();
+            var played = new PlayedWorld(built, changes);
+            var dropped = ItemWorld.Dropped(changes, ItemWorld.Sword);
+            changes.Add(dropped);
+            var fallen = dropped.WithPosition(new Vector3(0f, -1f, 0f));
+
+            Assert.That(changes.Move(fallen), Is.True);
+            Assert.That(played.Get<PlacedObjectRecord>(dropped.Id), Is.SameAs(fallen));
+            Assert.That(changes.AddedObjects, Is.EqualTo(new[] { fallen }), "Still one dropped sword, where it fell.");
+            Assert.That(changes.MovedObjects, Is.Empty, "What playing made is just replaced.");
+
+            var apple = built.Get<PlacedObjectRecord>(ItemWorld.AppleRef);
+            changes.Move(apple.WithPosition(new Vector3(1f, 0f, 0f)));
+            changes.Remove(ItemWorld.AppleRef);
+            changes.Remove(dropped.Id);
+            Assert.That(changes.MovedObjects, Is.Empty, "Taken, it is no longer moved: it is gone.");
+            Assert.That(changes.Move(apple.WithPosition(new Vector3(2f, 0f, 0f))), Is.False, "Taken objects stay taken.");
+            Assert.That(changes.Move(fallen), Is.False);
+            Assert.That(played.TryGet(ItemWorld.AppleRef, out _), Is.False);
+        }
+
+        [Test]
+        public void EveryItemIsALooseThing_ByItsWeight_APhysicsPartByItsMass_TheRestStandStill()
+        {
+            var built = ItemWorld.Records();
+
+            Assert.That(PhysicalObjects.TryGetMass(built.Get<BaseObjectRecord>(ItemWorld.Sword), out var sword), Is.True);
+            Assert.That(sword, Is.EqualTo(9f * PhysicalObjects.KilogramsPerWeight).Within(1e-5f), "Skyrim's pounds.");
+            Assert.That(PhysicalObjects.TryGetMass(built.Get<BaseObjectRecord>(ItemWorld.Tree), out _), Is.False, "A tree stands still.");
+            var gold = new BaseObjectRecord(RecordId.Parse("core:gold"), "Gold", "items/gold", item: new ItemPart(ItemKind.Misc, 0f, 1));
+            Assert.That(PhysicalObjects.TryGetMass(gold, out var coin) && coin == PhysicalObjects.LeastMass, Is.True, "Weightless, still something.");
+            var barrel = new BaseObjectRecord(RecordId.Parse("core:barrel"), "Barrel", "props/barrel", physics: new PhysicsPart(40f));
+            Assert.That(PhysicalObjects.TryGetMass(barrel, out var mass) && mass == 40f, Is.True, "No item, but loose by its part.");
+            Assert.Throws<ArgumentOutOfRangeException>(() => new PhysicsPart(0f));
+        }
+    }
+
+    public class UseKeyTests
+    {
+        // Exact in binary, so the sums are too.
+        const float Frame = 0.125f;
+
+        [Test]
+        public void AShortPress_IsATap_ToldAsTheKeyComesUp()
+        {
+            var key = new UseKey(0.25f);
+
+            Assert.That(key.Update(true, Frame), Is.EqualTo(UseKeyEvent.None));
+            Assert.That(key.Update(true, Frame), Is.EqualTo(UseKeyEvent.None));
+            Assert.That(key.Update(false, Frame), Is.EqualTo(UseKeyEvent.Tap));
+            Assert.That(key.Update(false, Frame), Is.EqualTo(UseKeyEvent.None));
+        }
+
+        [Test]
+        public void AHold_StartsOnceItHasLasted_AndEndsAsTheKeyComesUp_WithNoTap()
+        {
+            var key = new UseKey(0.25f);
+            var told = new List<UseKeyEvent>();
+
+            for (var i = 0; i < 10; i++)
+                told.Add(key.Update(true, Frame));
+            told.Add(key.Update(false, Frame));
+
+            Assert.That(told.Where(e => e != UseKeyEvent.None), Is.EqualTo(new[] { UseKeyEvent.HoldStarted, UseKeyEvent.HoldEnded }));
+            Assert.That(told.IndexOf(UseKeyEvent.HoldStarted), Is.EqualTo(2), "0.25 s after the press: the press frame counts from zero.");
+        }
+
+        [Test]
+        public void Reset_ForgetsAPressUnderWay()
+        {
+            var key = new UseKey(0.25f);
+            key.Update(true, Frame);
+
+            key.Reset();
+
+            Assert.That(key.Update(false, Frame), Is.EqualTo(UseKeyEvent.None));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new UseKey(0f));
+        }
+    }
+
     public class InventoryWeightAndListTests
     {
         [Test]

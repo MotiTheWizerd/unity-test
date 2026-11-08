@@ -28,6 +28,7 @@ namespace Forge.Play
         readonly InputAction _attackRight;
         readonly InputAction _attackLeft;
         readonly float _lookSensitivity;
+        readonly UseKey _use;
 
         public PlayerControls(PlayerProfile profile)
         {
@@ -51,6 +52,7 @@ namespace Forge.Play
             _attackRight = _map.FindAction("AttackRight", throwIfNotFound: true);
             _attackLeft = _map.FindAction("AttackLeft", throwIfNotFound: true);
             _lookSensitivity = profile.LookSensitivity;
+            _use = new UseKey(profile.GrabHold);
 
             // Prompts name a key the way the actions bind it in their first control scheme (the keyboard's).
             var schemes = profile.Controls.controlSchemes;
@@ -80,15 +82,31 @@ namespace Forge.Play
         /// <summary>Whether that attack key was let go this frame (a drawn bow looses); never while the map is off.</summary>
         public bool ReadAttackReleased(bool right) => _map.enabled && (right ? _attackRight : _attackLeft).WasReleasedThisFrame();
 
+        /// <summary>
+        /// What the use key did in the frame <see cref="Read"/> last read: a tap is the commands' activate (E: take); a hold
+        /// grabs and its end lets go (<see cref="UseKey"/>).
+        /// </summary>
+        public UseKeyEvent Use { get; private set; }
+
         public void Enable() => _map.Enable();
 
-        public void Disable() => _map.Disable();
+        public void Disable()
+        {
+            _map.Disable();
+            _use.Reset();
+            Use = UseKeyEvent.None;
+        }
 
-        /// <summary>This frame's commands; nothing while the map is off.</summary>
-        public PlayerCommands Read()
+        /// <summary>This frame's commands, <paramref name="deltaTime"/> seconds after the last; nothing while the map is off.</summary>
+        public PlayerCommands Read(float deltaTime)
         {
             if (!_map.enabled)
+            {
+                Use = UseKeyEvent.None;
                 return PlayerCommands.None;
+            }
+
+            Use = _use.Update(_interact.IsPressed(), deltaTime);
 
             var move = _move.ReadValue<Vector2>();
             // Pixels the pointer moved this frame, turned into degrees; screen y grows up, as the look's pitch does.
@@ -99,14 +117,14 @@ namespace Forge.Play
                 _sprint.IsPressed(),
                 _jump.WasPressedThisFrame(),
                 _toggleWalk.WasPressedThisFrame(),
-                activate: _interact.WasPressedThisFrame());
+                activate: Use == UseKeyEvent.Tap);
         }
 
         /// <summary>This frame's view commands; nothing while the map is off.</summary>
         public ViewCommands ReadView() =>
             _map.enabled ? new ViewCommands(_toggleView.WasPressedThisFrame(), _zoom.ReadValue<float>()) : ViewCommands.None;
 
-        public void Dispose() => Disable();
+        public void Dispose() => _map.Disable();
 
         // An action's first binding, as the keyboard's scheme shows it ("E"; "I" of "I | Tab").
         static string KeyOf(InputAction action, InputBinding? mask)

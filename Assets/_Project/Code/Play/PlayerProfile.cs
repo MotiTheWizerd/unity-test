@@ -104,6 +104,21 @@ namespace Forge.Play
         [SerializeField, Min(0f), Tooltip("How near the middle of the view a thing need only be to be used, meters (0: dead on), so small things are easy to aim at.")]
         float _aimRadius = 0.1f;
 
+        [SerializeField, Min(0.05f), Tooltip("Seconds the use key is held to grab what is in sight instead of using it (a tap takes, a hold carries).")]
+        float _grabHold = 0.3f;
+
+        [SerializeField, Min(0.3f), Tooltip("How far in front of the eyes a carried thing is held, meters.")]
+        float _holdDistance = 1.3f;
+
+        [SerializeField, Min(0.1f), Tooltip("The heaviest thing the player can lift and carry, kilograms.")]
+        float _mostCarriedMass = 30f;
+
+        [SerializeField, Min(0f), Tooltip("How hard a carried thing is thrown (the attack key), newton-seconds: it flies at this over its mass...")]
+        float _throwImpulse = 15f;
+
+        [SerializeField, Min(0f), Tooltip("...up to this many meters a second.")]
+        float _throwSpeed = 12f;
+
         [Header("Controls")]
         [SerializeField, Tooltip("The input actions; the player reads its map (Settings/InputSystem_Actions).")]
         InputActionAsset _controls;
@@ -134,6 +149,12 @@ namespace Forge.Play
 
         /// <summary>How near the middle of the view a thing need only be to be used, meters.</summary>
         public float AimRadius => _aimRadius;
+
+        /// <summary>Seconds the use key is held to grab instead of use.</summary>
+        public float GrabHold => _grabHold;
+
+        /// <summary>How the player grabs, carries and throws loose things.</summary>
+        public CarrySettings Carry() => new CarrySettings(_reach, _aimRadius, _holdDistance, _mostCarriedMass, _throwImpulse, _throwSpeed);
 
         public InputActionAsset Controls => _controls;
 
