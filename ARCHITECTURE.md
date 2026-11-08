@@ -1011,8 +1011,10 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
     `HumanoidAnimation.Hold` / `Resume` freeze the draw; `ShotView` lays the arrow (`ArrowLook`: an arrow's model points
     +Y) from the drawing hand to the bow and turns the upper body so the draw points at what the view's centre meets
     (`ArcheryAim`); `PlayerCharacter.Aiming` turns the body to the look meanwhile. `ArrowFlights` flies what is loosed,
-    swept by rays, and hands what sticks to `ShotLandings`: it breaks as often as its `AmmoPart.BreakChance` says, else
-    it stays there as the item it is (`WorldChanges.Place`), takeable again; the stream hears `ShotLanded`.
+    swept by rays, pushes a loose thing it strikes (its whole momentum, the ammo's mass times its speed, at the point
+    struck), and hands what sticks to `ShotLandings` (`ArrowFlights.Landing`, with the loose thing it is in): it breaks
+    as often as its `AmmoPart.BreakChance` says, else it stays there as the item it is (`WorldChanges.Place`), takeable
+    again, stuck (`WorldPhysics.Stick`); the stream hears `ShotLanded`.
 - **Physics** (loose things): every item, and anything with a `PhysicsPart`, is a physical body while the world plays
   (`PhysicalObjects.TryGetMass`: an item weighs its weight read as Skyrim's pounds, a part its mass). `WorldPhysics`
   (Play, one per game) gives each such object the view shows (`WorldView.PlacedShown` / `PlacedRemoving`) a rigid body,
@@ -1020,8 +1022,11 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
   has come to rest somewhere new, or streams out away from its rest, the game keeps it there: `WorldChanges.Move` (a
   built object is then `MovedObjects`, an added one is replaced), which `PlayedWorld` reads (it is in the block it lies
   in now) and the view shows (`ShowMoved`). One fallen out of the world is put back. A rebase moves the bodies with the
-  land at once and the sleeping sleep on (woken by it, a pile would settle a little apart at every rebase). The game
-  ending takes every body off and the world is as built again.
+  land at once and the sleeping sleep on (woken by it, a pile would settle a little apart at every rebase). What is
+  stuck in something (`Stick`: an arrow landed) rides along with it when that is a loose thing (a `FixedJoint`, the
+  two never colliding though its point is sunk in), else stays fixed (kinematic: never kicked or knocked over); it is
+  kept while the game lasts, so it is stuck again when it streams back in, and falls when what it is in goes (taken,
+  streamed out). The game ending takes every body off and the world is as built again.
 - **Clutter**: the light loose things (`PhysicalObjects.IsClutter`, up to `MostClutterMass`, 10 kg: a cup, a sword, a
   basket) are on the `ForgeClutter` layer while they play (`ClutterLayer`; their colliders' own layers come back after).
   The player's controller leaves the layer out (`excludeLayers`), so clutter is never stood on or walked into: each move

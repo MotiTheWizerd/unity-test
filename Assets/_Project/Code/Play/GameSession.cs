@@ -237,11 +237,14 @@ namespace Forge.Play
         }
 
         // What was shot landed at a pose in the scene: it stays there in the world's own coordinates as the item it is,
-        // to be taken back, unless it broke.
-        void LandShot(Shot shot, Vector3 position, Quaternion rotation)
+        // to be taken back, unless it broke, stuck in what it struck (riding along with a loose thing, else fixed).
+        void LandShot(Shot shot, Vector3 position, Quaternion rotation, Rigidbody stuckIn)
         {
-            if (World != null)
-                _landings.Land(shot, _view.Space, _frame.ToWorld(position).ToNumerics(), rotation.ToNumerics());
+            if (World == null)
+                return;
+            var placed = _landings.Land(shot, _view.Space, _frame.ToWorld(position).ToNumerics(), rotation.ToNumerics());
+            if (placed != null)
+                Bodies?.Stick(placed.Id, stuckIn);
         }
 
         // What was taken leaves the scene, and the player looks again at what is in sight.

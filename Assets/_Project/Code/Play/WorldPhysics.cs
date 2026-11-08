@@ -36,6 +36,10 @@ namespace Forge.Play
         readonly List<RecordId> _ids = new List<RecordId>();
         readonly List<Rigidbody> _asleep = new List<Rigidbody>();
 
+        // What is stuck in something (an arrow landed), by what it is stuck in: null for what doesn't move.
+        readonly Dictionary<RecordId, RecordId?> _stuck = new Dictionary<RecordId, RecordId?>();
+        readonly List<RecordId> _ties = new List<RecordId>();
+
         /// <param name="world">The world as played, which says what each placed object is.</param>
         /// <param name="settled">Hears a placed object come to rest somewhere new, with its pose there (scene space).</param>
         public WorldPhysics(WorldView view, IRecordStore world, Action<RecordId, Vector3, Quaternion> settled)
@@ -96,6 +100,63 @@ namespace Forge.Play
         }
 
         /// <summary>
+        /// The loose thing <paramref name="id"/> (an arrow landed) is stuck in <paramref name="host"/>: it rides along with
+        /// it when that is a loose thing too, else (the ground, a wall, a dummy: null) it stays fixed where it is, never
+        /// knocked over, until it is taken. Kept while the game lasts, so it is stuck again when it streams back in; when
+        /// what it is in goes (taken), it falls.
+        /// </summary>
+        public void Stick(RecordId id, Rigidbody host)
+        {
+            var link = host != null ? host.GetComponent<RecordLink>() : null;
+            _stuck[id] = link != null && _bodies.ContainsKey(link.RecordId) ? link.RecordId : (RecordId?)null;
+            if (_bodies.TryGetValue(id, out var body))
+                HoldStuck(id, body);
+        }
+
+        // A stuck thing tied to the body it is in, when that is shown; else fixed where it is.
+        void HoldStuck(RecordId id, Body body)
+        {
+            if (!_stuck.TryGetValue(id, out var host) || body.Rigidbody == null)
+                return;
+            var rigidbody = body.Rigidbody;
+            if (host.HasValue && _bodies.TryGetValue(host.Value, out var into) && into.Rigidbody != null)
+            {
+                SetFixed(rigidbody, false);
+                if (body.Joint == null)
+                {
+                    // Joined, the two never collide, though its point is sunk in.
+                    body.Joint = rigidbody.gameObject.AddComponent<FixedJoint>();
+                    body.Joint.connectedBody = into.Rigidbody;
+                }
+            }
+            else
+                SetFixed(rigidbody, true);
+        }
+
+        // What can't be pushed (kinematic) can't be swept either: it is tested by speculative contacts meanwhile.
+        static void SetFixed(Rigidbody rigidbody, bool isFixed)
+        {
+            rigidbody.collisionDetectionMode = isFixed ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
+            rigidbody.isKinematic = isFixed;
+        }
+
+        // What was stuck in a body that goes (taken, streamed out) falls free of it.
+        void Unstick(RecordId host)
+        {
+            foreach (var pair in _bodies)
+            {
+                var body = pair.Value;
+                if (body.Joint == null || !_stuck.TryGetValue(pair.Key, out var into) || into != host)
+                    continue;
+                UnityEngine.Object.DestroyImmediate(body.Joint);
+                body.Joint = null;
+                _stuck.Remove(pair.Key);
+                if (body.Rigidbody != null)
+                    body.Rigidbody.WakeUp();
+            }
+        }
+
+        /// <summary>
         /// The scene moved by <paramref name="delta"/> under the world (a rebase): where each body rested moves with it,
         /// so nothing seems moved, and what was asleep sleeps on.
         /// </summary>
@@ -123,6 +184,9 @@ namespace Forge.Play
             _view.PlacedRemoving -= OnRemoving;
             foreach (var body in _bodies.Values)
             {
+                // A joint needs its body: it goes first, at once.
+                if (body.Joint != null)
+                    UnityEngine.Object.DestroyImmediate(body.Joint);
                 if (body.Rigidbody != null)
                     UnityEngine.Object.Destroy(body.Rigidbody);
                 body.RestoreLayers();
@@ -130,6 +194,7 @@ namespace Forge.Play
 
             _view.ResetTransforms(_bodies.Keys);
             _bodies.Clear();
+            _stuck.Clear();
         }
 
         void OnShown(RecordId id, GameObject go)
@@ -148,7 +213,20 @@ namespace Forge.Play
             // Asleep where it was placed: it waits to be touched, not to settle the moment it streams in.
             rigidbody.Sleep();
             var transform = go.transform;
-            _bodies[id] = new Body(rigidbody, transform.position, transform.rotation, PhysicalObjects.IsClutter(mass) ? ToClutter(go) : null);
+            var body = new Body(rigidbody, transform.position, transform.rotation, PhysicalObjects.IsClutter(mass) ? ToClutter(go) : null);
+            _bodies[id] = body;
+            HoldStuck(id, body);
+            // Shown again, what is stuck in it is tied to it again (shown while Tick tells of rests, so a list of its own).
+            _ties.Clear();
+            foreach (var pair in _stuck)
+            {
+                if (pair.Value == id && _bodies.ContainsKey(pair.Key))
+                    _ties.Add(pair.Key);
+            }
+
+            foreach (var stuck in _ties)
+                HoldStuck(stuck, _bodies[stuck]);
+            _ties.Clear();
         }
 
         // Clutter's colliders go on the clutter layer while it plays; the layers they were on are kept to put them back.
@@ -177,6 +255,7 @@ namespace Forge.Play
             _bodies.Remove(id);
             if (body.Rigidbody != null)
                 TellIfMoved(id, body);
+            Unstick(id);
         }
 
         void TellIfMoved(RecordId id, Body body)
@@ -224,6 +303,9 @@ namespace Forge.Play
             public Vector3 RestPosition { get; set; }
 
             public Quaternion RestRotation { get; set; }
+
+            /// <summary>What ties it to the body it is stuck in, if it is stuck in one that is shown.</summary>
+            public FixedJoint Joint { get; set; }
 
             public void RestoreLayers()
             {

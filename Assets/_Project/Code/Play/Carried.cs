@@ -110,8 +110,9 @@ namespace Forge.Play
 
         void OnDestroy()
         {
+            // At once: the game ending takes the body off in this same frame, and a joint holds on to its body.
             if (_joint != null)
-                Destroy(_joint);
+                DestroyImmediate(_joint);
             if (_grip != null)
                 Destroy(_grip.gameObject);
             if (_rigidbody == null)
