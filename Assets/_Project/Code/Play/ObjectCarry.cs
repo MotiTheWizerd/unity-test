@@ -9,10 +9,10 @@ namespace Forge.Play
     /// <summary>
     /// How an actor grabs and carries loose things, Skyrim's way (the use key held): the physical body of a world object
     /// in reach, along the middle of the view (<see cref="ReachRay"/>, a thin line then a ball, as the use key aims), no
-    /// heavier than the actor can lift, is held a little way in front of its eyes, where it looks, turned as the actor
-    /// turns (<see cref="Carried"/>). It knocks into things and walls stop it; held back too far for a while it is let go. Let go, it
-    /// drops; thrown, it flies the way the actor looks, the lighter the faster. What is carried passes through the
-    /// carrier, so it can't be stood on to ride it. Scene coordinates.
+    /// heavier than the actor can lift, is held by the point the line met a little way in front of its eyes, where it
+    /// looks (<see cref="Carried"/>): the rest of it hangs from there and swings. It knocks into things and walls stop it;
+    /// held back too far for a while it is let go. Let go, it drops; thrown, it flies the way the actor looks, the lighter
+    /// the faster. What is carried passes through the carrier, so it can't be stood on to ride it. Scene coordinates.
     /// </summary>
     public sealed class ObjectCarry : IDisposable
     {
@@ -25,7 +25,6 @@ namespace Forge.Play
         readonly CarrySettings _settings;
         Carried _held;
         Collider[] _heldColliders;
-        Quaternion _turnInView;
         float _heldBack;
 
         /// <param name="carrier">The carrier's own body, which what it carries passes through.</param>
@@ -40,26 +39,18 @@ namespace Forge.Play
 
         /// <summary>
         /// Grabs what physical body of a world object is in reach along <paramref name="view"/> from eyes at
-        /// <paramref name="eyes"/>, if it is light enough; whether it did.
+        /// <paramref name="eyes"/>, if it is light enough, by the point the view's line met it; whether it did.
         /// </summary>
         public bool TryGrab(ViewPose view, Vector3 eyes)
         {
-            if (IsCarrying || !ReachRay.TryGet(view, eyes.ToNumerics(), _settings.Reach, out var from, out var direction, out var length))
-                return false;
-            var start = from.ToUnity();
-            var way = direction.ToUnity();
-            var body = BodyHit(Physics.Raycast(start, way, out var hit, length, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) ? hit : (RaycastHit?)null)
-                       ?? (_settings.AimRadius > 0f && Physics.SphereCast(start, _settings.AimRadius, way, out var graze, length, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
-                           ? BodyHit(graze)
-                           : null);
-            if (body == null || body.mass > _settings.MostMass)
+            if (IsCarrying || !ReachRay.TryGet(view, eyes.ToNumerics(), _settings.Reach, out var from, out var direction, out var length) ||
+                !TryReach(from.ToUnity(), direction.ToUnity(), length, out var body, out var point) || body.mass > _settings.MostMass)
                 return false;
 
             _heldColliders = body.GetComponentsInChildren<Collider>();
             foreach (var collider in _heldColliders)
                 Physics.IgnoreCollision(_carrier, collider, true);
-            _held = body.gameObject.AddComponent<Carried>();
-            _turnInView = Quaternion.Inverse(Level(view)) * body.rotation;
+            _held = Carried.Take(body, point);
             _heldBack = 0f;
             Hold(view, eyes, 0f);
             return true;
@@ -80,7 +71,6 @@ namespace Forge.Play
             }
 
             _held.Target = eyes + view.Forward.ToUnity() * _settings.HoldDistance;
-            _held.TargetRotation = Level(view) * _turnInView;
             _heldBack = _held.Gap > MostHeldBack ? _heldBack + Mathf.Max(0f, deltaTime) : 0f;
             if (_heldBack > HeldBackSeconds)
                 Drop();
@@ -128,19 +118,28 @@ namespace Forge.Play
             _heldColliders = null;
         }
 
-        // A world object's own free body that a line or ball met, or null (the ground, a house, a held weapon).
-        static Rigidbody BodyHit(RaycastHit? hit)
+        // The world object's own free body a line from start along way meets within length, else a ball of the aim's
+        // radius (so small things are easy to take), and the point on it met; false when it meets none first (the
+        // ground, a house, a held weapon).
+        bool TryReach(Vector3 start, Vector3 way, float length, out Rigidbody body, out Vector3 point)
         {
-            var body = hit?.collider.attachedRigidbody;
-            return body != null && !body.isKinematic && body.GetComponent<RecordLink>() != null ? body : null;
+            const int layers = Physics.DefaultRaycastLayers;
+            if ((Physics.Raycast(start, way, out var hit, length, layers, QueryTriggerInteraction.Ignore) && IsFree(hit, out body)) ||
+                (_settings.AimRadius > 0f && Physics.SphereCast(start, _settings.AimRadius, way, out hit, length, layers, QueryTriggerInteraction.Ignore) && IsFree(hit, out body)))
+            {
+                point = hit.point;
+                return true;
+            }
+
+            body = null;
+            point = default;
+            return false;
         }
 
-        // The view turned only about the up axis: what is carried turns as the actor turns, not as it looks up or down.
-        static Quaternion Level(ViewPose view)
+        static bool IsFree(RaycastHit hit, out Rigidbody body)
         {
-            var forward = view.Forward.ToUnity();
-            forward.y = 0f;
-            return forward.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(forward.normalized, Vector3.up) : Quaternion.identity;
+            body = hit.collider.attachedRigidbody;
+            return body != null && !body.isKinematic && body.GetComponent<RecordLink>() != null;
         }
     }
 

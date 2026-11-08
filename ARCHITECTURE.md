@@ -1031,9 +1031,12 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
   way as the rest of the world does.
 - **Carrying** (`ObjectCarry`, Play): the use key is tap-or-hold (`UseKey`, `PlayerControls.Use`): a tap is
   `PlayerCommands.Activate` (take), a hold of `GrabHold` grabs the body in reach (as the use key aims) if no heavier than
-  `MostCarriedMass`; `Carried` drives it each physics step to a point in front of the eyes where the view looks, turned
-  with the body, so walls stop it (held back a metre for half a second, it is let go). Letting go drops it; an attack
-  key throws it (`ThrowImpulse` over its mass, up to `ThrowSpeed`); it passes through the carrier.
+  `MostCarriedMass`, by the point the use key's line met it. `Carried` holds it there as a hand would, Skyrim's way: a
+  kinematic grip goes each physics step toward a point in front of the eyes where the view looks (at most 12 m/s), and
+  a `ConfigurableJoint` draws the point held after it on a damped spring (per kilogram, at most 800 N), every turn
+  free, so the rest hangs and swings under its weight (a sword taken by the hilt hangs blade down) and walls stop it
+  (held back a metre for half a second, it is let go). Letting go drops it; an attack key throws it (`ThrowImpulse`
+  over its mass, up to `ThrowSpeed`); it passes through the carrier.
 - `PlayerCommands.Activate` is a tap of the use key; `Allowing(sprint, jump, walk)` is a command as a rule lets it through.
 
 ## World-building agent (Forge.Agent)
