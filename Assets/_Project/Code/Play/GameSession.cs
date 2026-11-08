@@ -28,25 +28,30 @@ namespace Forge.Play
     /// </summary>
     public sealed class GameSession : IDisposable
     {
-        // How far ahead of the player's feet a dropped item is set down, in meters.
-        const float DropReach = 0.9f;
+        // Where a dropped item is let go, meters: this far ahead of the eyes the way the body faces, this far below them
+        // (the hands, before the chest), and this far clear of what stands nearer (a wall).
+        const float DropReach = 0.6f;
+        const float DropBelowEyes = 0.5f;
+        const float DropClearance = 0.1f;
+
+        // How a dropped item leaves the hands: pushed this fast ahead of the body, meters a second, and turning at most
+        // this fast, radians a second, so it tumbles as it lands rather than falling flat like a placed one.
+        const float DropToss = 0.5f;
+        const float DropSpin = 3f;
 
         readonly WorldView _view;
         readonly WorldFrame _frame;
-        readonly IItemPlacement _placement;
         readonly ItemDropper _dropper;
         readonly ShotLandings _landings;
 
         /// <param name="camera">The camera the player sees through while playing.</param>
         /// <param name="view">The scene's world, which shows what playing changed.</param>
         /// <param name="frame">The world's frame in the scene, where the player's positions become the world's.</param>
-        /// <param name="placement">Where a dropped item comes to rest.</param>
         /// <param name="onError">Where a listener that fails is reported; the others still hear.</param>
-        public GameSession(PlayerProfile profile, Transform camera, WorldView view, WorldFrame frame, IItemPlacement placement, Action<Exception> onError)
+        public GameSession(PlayerProfile profile, Transform camera, WorldView view, WorldFrame frame, Action<Exception> onError)
         {
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            _placement = placement ?? throw new ArgumentNullException(nameof(placement));
             Events = new GameEvents(onError);
             Changes = new WorldChanges();
             Combatants = new Combatants();
@@ -129,25 +134,38 @@ namespace Forge.Play
         }
 
         /// <summary>
-        /// The player drops one <paramref name="item"/> it carries: it comes to rest on whatever is a little ahead of its
-        /// feet (else at them), turned the way the player faces. The placed object it now is, or null when nothing was dropped.
+        /// The player drops one <paramref name="item"/> it carries, as Skyrim's player does: let go from its hands, a
+        /// little ahead of its chest the way its body faces (nearer when a wall is), turned that way, it falls and tumbles,
+        /// and stays wherever it comes to rest (<see cref="WorldPhysics"/>). The placed object it now is, or null when
+        /// nothing was dropped.
         /// </summary>
         public PlacedObjectRecord Drop(RecordId item)
         {
             var player = Player.Player;
-            if (player == null || !ItemRecords.TryGet(World, item, out var record))
+            if (player == null || Bodies == null || !ItemRecords.TryGet(World, item, out _))
                 return null;
 
             var heading = player.BodyHeading;
-            var ahead = Compass.Forward(heading) * DropReach;
-            var above = _frame.ToWorld((player.Feet + new System.Numerics.Vector3(ahead.X, player.EyeHeight, ahead.Y)).ToUnity()).ToNumerics();
-            if (!_placement.TryRest(record, above, heading, out var position, out var rotation))
-            {
-                position = _frame.ToWorld(player.Feet.ToUnity()).ToNumerics();
-                rotation = System.Numerics.Quaternion.CreateFromAxisAngle(System.Numerics.Vector3.UnitY, heading * Compass.DegreesToRadians);
-            }
+            var ahead = Compass.Forward(heading);
+            var way = new Vector3(ahead.X, 0f, ahead.Y);
+            var hands = player.Eyes.ToUnity() + Vector3.down * DropBelowEyes;
+            var reach = Physics.SphereCast(hands, DropClearance, way, out var wall, DropReach, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+                ? wall.distance
+                : DropReach;
+            var position = _frame.ToWorld(hands + way * reach).ToNumerics();
+            var rotation = System.Numerics.Quaternion.CreateFromAxisAngle(System.Numerics.Vector3.UnitY, heading * Compass.DegreesToRadians);
 
             var placed = _dropper.Drop(ActorId.Player, item, _view.Space, position, rotation);
+            if (placed != null)
+            {
+                // Shown at once (the player's own chunk is loaded), so its body is there to let go. It goes on as the player
+                // walks; not as it falls, since standing, the body is held to the ground by a fall of its own.
+                var moving = player.Locomotion.Velocity;
+                var velocity = new Vector3(moving.X, 0f, moving.Z) + way * DropToss;
+                if (!Bodies.Release(placed.Id, velocity, UnityEngine.Random.insideUnitSphere * DropSpin))
+                    Debug.LogWarning($"[Forge] '{item}' has no collider, so it can't fall: it stays where it was let go.");
+            }
+
             Events.Flush();
             return placed;
         }

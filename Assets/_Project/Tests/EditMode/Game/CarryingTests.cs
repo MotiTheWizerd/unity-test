@@ -254,6 +254,67 @@ namespace Forge.Tests.Game
         }
     }
 
+    public class ClutterTests
+    {
+        // Exact in binary, so the sums are too.
+        const float Step = 0.125f;
+
+        static readonly Vector3 Ahead = new Vector3(0f, 0f, 1f);
+
+        [Test]
+        public void LightLooseThings_AreClutter_HeavyOnesStandInTheWay()
+        {
+            var built = ItemWorld.Records();
+
+            Assert.That(PhysicalObjects.TryGetMass(built.Get<BaseObjectRecord>(ItemWorld.Sword), out var sword) && PhysicalObjects.IsClutter(sword), Is.True, "A sword is kicked aside.");
+            Assert.That(PhysicalObjects.IsClutter(PhysicalObjects.LeastMass), Is.True);
+            Assert.That(PhysicalObjects.IsClutter(PhysicalObjects.MostClutterMass), Is.True);
+            Assert.That(PhysicalObjects.IsClutter(PhysicalObjects.MostClutterMass + 0.5f), Is.False);
+            var barrel = new BaseObjectRecord(RecordId.Parse("core:barrel"), "Barrel", "props/barrel", physics: new PhysicsPart(40f));
+            Assert.That(PhysicalObjects.TryGetMass(barrel, out var mass) && PhysicalObjects.IsClutter(mass), Is.False, "A full barrel is in the way.");
+        }
+
+        [Test]
+        public void WhatTheActorWalksInto_IsSentOnAhead_FasterThanItComes()
+        {
+            var change = ClutterKick.VelocityChange(new Vector3(0f, 0f, 4f), Ahead, 0f, Vector3.Zero, Step);
+
+            Assert.That(change, Is.EqualTo(Ahead * 4f * ClutterKick.Overtake));
+        }
+
+        [Test]
+        public void OnlyTheLevelWayCounts_AndNothingIsKickedUpOrDown()
+        {
+            var change = ClutterKick.VelocityChange(new Vector3(0f, -1f, 4f), new Vector3(0f, -3f, 4f), 0f, Vector3.Zero, Step);
+
+            Assert.That(change.Y, Is.EqualTo(0f));
+            Assert.That(change.Z, Is.EqualTo(4f * ClutterKick.Overtake).Within(1e-5f));
+            Assert.That(ClutterKick.VelocityChange(new Vector3(0f, 0f, 4f), Vector3.UnitY, 0.1f, Vector3.Zero, Step), Is.EqualTo(Vector3.Zero), "Straight below or above has no way out.");
+        }
+
+        [Test]
+        public void WhatIsBesideOrBehind_IsNeverPulled_OnlyEasedOutOfTheBody()
+        {
+            var walkingAway = new Vector3(0f, 0f, -4f);
+
+            Assert.That(ClutterKick.VelocityChange(walkingAway, Ahead, 0f, Vector3.Zero, Step), Is.EqualTo(Vector3.Zero), "Just touching: left be.");
+            Assert.That(ClutterKick.VelocityChange(walkingAway, Ahead, 0.125f, Vector3.Zero, Step), Is.EqualTo(Ahead * 1f), "In the body: eased out by its depth over the step.");
+            Assert.That(ClutterKick.VelocityChange(Vector3.Zero, Ahead, 2f, Vector3.Zero, Step), Is.EqualTo(Ahead * ClutterKick.MostEasing), "Deep in: out no faster than easing goes.");
+        }
+
+        [Test]
+        public void WhatGoesFastEnough_IsLeftBe_WhatComesBackIsTurned_AndASprintKicksNoHarderThanMostSpeed()
+        {
+            var running = new Vector3(0f, 0f, 4f);
+
+            Assert.That(ClutterKick.VelocityChange(running, Ahead, 0f, Ahead * 6f, Step), Is.EqualTo(Vector3.Zero));
+            Assert.That(ClutterKick.VelocityChange(running, Ahead, 0f, Ahead * 3f, Step), Is.EqualTo(Ahead * 2f), "Only the difference.");
+            Assert.That(ClutterKick.VelocityChange(running, Ahead, 0f, Ahead * -2f, Step), Is.EqualTo(Ahead * 7f), "Thrown at the actor, it comes off it.");
+            Assert.That(ClutterKick.VelocityChange(new Vector3(0f, 0f, 20f), Ahead, 0f, Vector3.Zero, Step), Is.EqualTo(Ahead * ClutterKick.MostSpeed));
+            Assert.That(ClutterKick.VelocityChange(running, Ahead, 0f, Vector3.Zero, 0f), Is.EqualTo(Vector3.Zero), "No time, no kick.");
+        }
+    }
+
     public class UseKeyTests
     {
         // Exact in binary, so the sums are too.

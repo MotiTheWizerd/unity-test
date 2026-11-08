@@ -7,9 +7,9 @@ namespace Forge.Play
 {
     /// <summary>
     /// The player's body as Unity's <see cref="CharacterController"/>: a capsule that collides with the terrain and the
-    /// placed objects, walks up steps and slopes up to the profile's limits, and slides along walls. Its own scene object,
-    /// on the Ignore Raycast layer so the editor's picks and the camera's depth probes look through it. Positions are the
-    /// feet, in scene coordinates.
+    /// placed objects, walks up steps and slopes up to the profile's limits, and slides along walls. Clutter it walks
+    /// through, kicking it aside (<see cref="ClutterKicker"/>). Its own scene object, on the Ignore Raycast layer so the
+    /// editor's picks and the camera's depth probes look through it. Positions are the feet, in scene coordinates.
     /// </summary>
     public sealed class CharacterControllerMotor : IPlayerMotor, IDisposable
     {
@@ -18,6 +18,7 @@ namespace Forge.Play
 
         readonly GameObject _body;
         readonly CharacterController _controller;
+        readonly ClutterKicker _kicker;
 
         public CharacterControllerMotor(PlayerProfile profile)
         {
@@ -34,6 +35,9 @@ namespace Forge.Play
             _controller.slopeLimit = profile.SlopeLimit;
             _controller.skinWidth = Mathf.Max(0.01f, profile.Radius * 0.1f);
             _controller.minMoveDistance = 0f;
+            // Clutter is never stood on or walked into: it is kicked aside.
+            _controller.excludeLayers = ClutterLayer.Mask;
+            _kicker = new ClutterKicker(_controller);
         }
 
         /// <summary>How far the feet stay above the ground they stand on: the controller's skin, meters.</summary>
@@ -50,6 +54,7 @@ namespace Forge.Play
         public MotorContact Move(System.Numerics.Vector3 displacement)
         {
             var flags = _controller.Move(displacement.ToUnity());
+            _kicker.Kick(_controller.velocity, Time.deltaTime);
             return new MotorContact(
                 grounded: (flags & CollisionFlags.Below) != 0 || _controller.isGrounded,
                 hitCeiling: (flags & CollisionFlags.Above) != 0);

@@ -6,7 +6,8 @@ namespace Forge.Play
 {
     /// <summary>
     /// The camera's obstacles are the scene's colliders on the default raycast layers: the terrain and the placed
-    /// objects, never the player's own body (Ignore Raycast) or the editor's gizmos. Positions in scene coordinates.
+    /// objects, never the player's own body (Ignore Raycast), the editor's gizmos or clutter (<see cref="ClutterLayer"/>:
+    /// a cup kicked past the lens is no wall). Positions in scene coordinates.
     /// </summary>
     public sealed class PhysicsCameraObstacles : ICameraObstacles
     {
@@ -18,10 +19,11 @@ namespace Forge.Play
             if (length < 1e-5f)
                 return 0f;
 
+            var layers = Physics.DefaultRaycastLayers & ~ClutterLayer.Mask;
             // A ball that starts inside something can't move at all.
-            if (Physics.CheckSphere(start, radius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            if (Physics.CheckSphere(start, radius, layers, QueryTriggerInteraction.Ignore))
                 return 0f;
-            return Physics.SphereCast(start, radius, path / length, out var hit, length, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+            return Physics.SphereCast(start, radius, path / length, out var hit, length, layers, QueryTriggerInteraction.Ignore)
                 ? hit.distance
                 : length;
         }

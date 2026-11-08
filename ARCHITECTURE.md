@@ -747,9 +747,9 @@ from any camera, so both cameras read the same player.
   chunk streams in again) and the focus looks again; one dropped joins it (`WorldView.ShowAdded`: streamed with its
   chunk like the world's own); when the changes are let go, `WorldView.ShowAsBuilt` puts the world back as built.
   `Drop(item)` lets one go from the player's hands, as Skyrim's drops are: 0.6 m ahead of the eyes the way the body
-  faces and 0.5 m below them (nearer when a wall is), turned that way, moving as the player moves, tossed a little ahead
-  and spinning (`WorldPhysics.Release`), so it falls, tumbles and stays wherever it comes to rest. The editor's play from
-  here runs one; the game app will run one as it is.
+  faces and 0.5 m below them (nearer when a wall is), turned that way, going on as the player walks, tossed a little
+  ahead and spinning (`WorldPhysics.Release`), so it falls, tumbles and stays wherever it comes to rest. The editor's
+  play from here runs one; the game app will run one as it is.
 - **The model** (`PlayerAvatar`, Play): the profile's `_model` as a `CharacterModel` (any character's look on any body:
   the prefab riding on the body's object, turned to the body's heading, its colliders removed since the body is the
   collider, on the body's layer, animated from a `BodyMotion`; the world's characters will use it too), plus the

@@ -12,11 +12,12 @@ namespace Forge.Play
     /// <summary>
     /// The world's loose things as physical bodies while it plays (<see cref="PhysicalObjects"/>: every item, and what
     /// has a <see cref="PhysicsPart"/>): each placed one the view shows gets a rigid body of its mass, asleep where it was
-    /// placed until something touches it, as Skyrim's clutter waits. Whenever one has come to rest somewhere else, or
-    /// streams out while away from where it was, <c>settled</c> hears its new pose, so the game keeps it there
-    /// (<see cref="WorldChanges.Move"/>); one that falls out of the world is put back where it last rested. Things without
-    /// a collider stay as they are. Bound for one game: disposed, every
-    /// body goes and every object is back where its record has it. Scene coordinates.
+    /// placed until something touches it, as Skyrim's clutter waits, or moving when it is let go (<see cref="Release"/>:
+    /// dropped). The light ones are clutter, on the <see cref="ClutterLayer"/>, which actors walk through and kick.
+    /// Whenever one has come to rest somewhere else, or streams out while away from where it was, <c>settled</c> hears
+    /// its new pose, so the game keeps it there (<see cref="WorldChanges.Move"/>); one that falls out of the world is put
+    /// back where it last rested. Things without a collider stay as they are. Bound for one game: disposed, every body
+    /// goes and every object is back where its record has it, on its own layers. Scene coordinates.
     /// </summary>
     public sealed class WorldPhysics : IDisposable
     {
@@ -79,6 +80,22 @@ namespace Forge.Play
         }
 
         /// <summary>
+        /// Lets the loose thing <paramref name="id"/> go moving (dropped from the hands): awake, at
+        /// <paramref name="velocity"/>, turning at <paramref name="spin"/> (radians a second about each axis), to come to
+        /// rest wherever it falls. False when it is no body (it isn't shown, or it has no collider).
+        /// </summary>
+        public bool Release(RecordId id, Vector3 velocity, Vector3 spin)
+        {
+            if (!_bodies.TryGetValue(id, out var body) || body.Rigidbody == null)
+                return false;
+            var rigidbody = body.Rigidbody;
+            rigidbody.WakeUp();
+            rigidbody.linearVelocity = velocity;
+            rigidbody.angularVelocity = spin;
+            return true;
+        }
+
+        /// <summary>
         /// The scene moved by <paramref name="delta"/> under the world (a rebase): where each body rested moves with it,
         /// so nothing seems moved, and what was asleep sleeps on.
         /// </summary>
@@ -108,6 +125,7 @@ namespace Forge.Play
             {
                 if (body.Rigidbody != null)
                     UnityEngine.Object.Destroy(body.Rigidbody);
+                body.RestoreLayers();
             }
 
             _view.ResetTransforms(_bodies.Keys);
@@ -130,7 +148,25 @@ namespace Forge.Play
             // Asleep where it was placed: it waits to be touched, not to settle the moment it streams in.
             rigidbody.Sleep();
             var transform = go.transform;
-            _bodies[id] = new Body(rigidbody, transform.position, transform.rotation);
+            _bodies[id] = new Body(rigidbody, transform.position, transform.rotation, PhysicalObjects.IsClutter(mass) ? ToClutter(go) : null);
+        }
+
+        // Clutter's colliders go on the clutter layer while it plays; the layers they were on are kept to put them back.
+        static (GameObject Part, int Layer)[] ToClutter(GameObject go)
+        {
+            var layer = ClutterLayer.Index;
+            if (layer < 0)
+                return null;
+            var colliders = go.GetComponentsInChildren<Collider>();
+            var was = new (GameObject, int)[colliders.Length];
+            for (var i = 0; i < colliders.Length; i++)
+            {
+                var part = colliders[i].gameObject;
+                was[i] = (part, part.layer);
+                part.layer = layer;
+            }
+
+            return was;
         }
 
         // Streaming out (or taken) while away from where it last rested: where it is now is kept.
@@ -170,14 +206,17 @@ namespace Forge.Play
             return true;
         }
 
-        // A physical object: its body, and where it last rested.
+        // A physical object: its body, where it last rested, and the layers its colliders were on, when it is clutter.
         sealed class Body
         {
-            public Body(Rigidbody rigidbody, Vector3 position, Quaternion rotation)
+            readonly (GameObject Part, int Layer)[] _layers;
+
+            public Body(Rigidbody rigidbody, Vector3 position, Quaternion rotation, (GameObject Part, int Layer)[] layers)
             {
                 Rigidbody = rigidbody;
                 RestPosition = position;
                 RestRotation = rotation;
+                _layers = layers;
             }
 
             public Rigidbody Rigidbody { get; }
@@ -185,6 +224,17 @@ namespace Forge.Play
             public Vector3 RestPosition { get; set; }
 
             public Quaternion RestRotation { get; set; }
+
+            public void RestoreLayers()
+            {
+                if (_layers == null)
+                    return;
+                foreach (var (part, layer) in _layers)
+                {
+                    if (part != null)
+                        part.layer = layer;
+                }
+            }
         }
     }
 }
