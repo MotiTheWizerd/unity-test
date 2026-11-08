@@ -69,6 +69,7 @@ namespace Forge.Play
             _sunk = hover + soles;
             Root.transform.localPosition = Vector3.down * _sunk;
             _afterAnimation = Root.AddComponent<AfterAnimation>();
+            _afterAnimation.Posed += FaceHolders;
         }
 
         /// <summary>
@@ -298,8 +299,9 @@ namespace Forge.Play
         /// it <paramref name="sheathes"/> and is not <see cref="InHand"/>, where it is carried meanwhile: the hand's sheath
         /// at the hip, or across the back (<see cref="BackFinder"/>) when <paramref name="how"/> says so. A thing whose
         /// <paramref name="how"/> names a side that faces its holder (a bow's string) is turned about its length: in the
-        /// hand to face the body as it stands ready (<see cref="HoldFinder"/>); on the back it lies flat, that side down
-        /// across the back, standing just off it. False, and the look destroyed, when the model has no such bone.
+        /// hand to face the chest, every frame, whatever pose the hand is in (<see cref="FaceHolders"/>); on the back it
+        /// lies flat, that side down across the back, standing just off it. False, and the look destroyed, when the model
+        /// has no such bone.
         /// </summary>
         public bool Attach(GameObject look, Transform grip, string bone, bool sheathes = false, HeldLook how = null)
         {
@@ -323,8 +325,6 @@ namespace Forge.Play
                 FacesHolder = how != null ? how.FacesHolder : null,
                 InHandTurn = Quaternion.identity,
             };
-            if (held.FacesHolder.HasValue && IsHand(id) && HoldFinder.TryFindBody(_prefab, StanceClip, id == HumanBodyBones.RightHand, out var body))
-                held.InHandTurn = HoldFinder.Facing(held.FacesHolder.Value, body);
             held.Reach = ExtentOf(held, Vector3.up);
             RemoveColliders(look);
             SetLayer(look.transform, Root.layer);
@@ -434,6 +434,27 @@ namespace Forge.Play
                 ? BackFinder.Strap + (hand ? 0f : HandCarriedOnBack()) + ExtentOf(held, Quaternion.Inverse(turn) * Vector3.back) * scale
                 : 0f;
             look.position += point.position + point.forward * standOff - held.Grip.position;
+        }
+
+        // What a hand holds with a side that faces its holder (a bow's string) turns about its length, on this frame's
+        // pose, to face the chest: the stance holds the bow one way, a draw another, and the string faces the archer in both.
+        void FaceHolders()
+        {
+            var chest = BackFinder.Chest(_humanoid);
+            if (chest == null)
+                return;
+            foreach (var held in _attached.Values)
+            {
+                if (!held.FacesHolder.HasValue || held.OnBack || !IsHand(held.Bone) || (held.Sheathes && !_inHand))
+                    continue;
+                var point = _points[held.Bone];
+                var toward = Quaternion.Inverse(point.rotation) * (chest.position - point.position);
+                held.InHandTurn = HoldFinder.Facing(held.FacesHolder.Value, toward);
+                var look = held.Look.transform;
+                var gripTurn = Quaternion.Inverse(look.rotation) * held.Grip.rotation;
+                look.rotation = point.rotation * held.InHandTurn * Quaternion.Inverse(gripTurn);
+                look.position += point.position - held.Grip.position;
+            }
         }
 
         // How thick what the hands carry on the back is there now (with its strap), which what no hand holds lies on.
