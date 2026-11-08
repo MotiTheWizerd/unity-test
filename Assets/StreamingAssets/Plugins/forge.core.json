@@ -104,6 +104,16 @@
         "kind": "misc",
         "weight": 0.1,
         "value": 1
+      },
+      "equippable": {
+        "fits": [
+          {
+            "slots": [
+              "forge.core:equip_slot/ammo"
+            ]
+          }
+        ],
+        "worn": "models/quiver"
       }
     },
     {
@@ -299,6 +309,16 @@
         "kind": "misc",
         "weight": 0.1,
         "value": 2
+      },
+      "equippable": {
+        "fits": [
+          {
+            "slots": [
+              "forge.core:equip_slot/ammo"
+            ]
+          }
+        ],
+        "worn": "models/quiver"
       }
     },
     {
@@ -559,6 +579,13 @@
       "displayName": "Crate",
       "assetKey": "primitive/cube",
       "category": "Props/Containers"
+    },
+    {
+      "type": "equip_slot",
+      "id": "forge.core:equip_slot/ammo",
+      "displayName": "Ammo",
+      "bone": "Chest",
+      "sheathes": false
     },
     {
       "type": "equip_slot",

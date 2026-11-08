@@ -61,16 +61,21 @@ namespace Forge.UnityEditor.Content
                     equippable: new EquippablePart(CoreEquipSlots.Bow()),
                     weapon: new WeaponPart(CoreCombatStyles.Archery, new[] { Effect.Damage(CoreAttributes.Health, damage) }));
 
-            // Arrows and a quiver of them (OpenGameArt, CC0), lying flat; carried, not held, until there is shooting.
+            // Arrows (OpenGameArt, CC0), lying flat: equipped as ammo, worn as a quiver of them on the back, as in Skyrim.
             foreach (var (folder, id, name, weight, value) in new[]
                      {
                          ("Arrow", "arrow", "Arrow", 0.1f, 1),
                          ("BroadheadArrow", "broadhead_arrow", "Broadhead Arrow", 0.1f, 2),
-                         ("Quiver", "quiver", "Quiver of Arrows", 2f, 20),
                      })
                 yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
                     "Items/Ammo", LyingFlat(),
-                    item: new ItemPart(ItemKind.Misc, weight, value));
+                    item: new ItemPart(ItemKind.Misc, weight, value),
+                    equippable: new EquippablePart(CoreEquipSlots.Ammunition(), worn: ModelImport.KeyFor("Quiver")));
+
+            // A quiver of arrows (OpenGameArt, CC0), lying flat; carried, its look the one arrows are worn by.
+            yield return new BaseObjectRecord(new RecordId(pluginId, "quiver"), "Quiver of Arrows", ModelImport.KeyFor("Quiver"),
+                "Items/Ammo", LyingFlat(),
+                item: new ItemPart(ItemKind.Misc, 2f, 20));
 
             // Shields (OpenGameArt, CC0), two looks of each shape, lying face up; held in the off hand.
             foreach (var (folder, id, name, weight, value) in new[]

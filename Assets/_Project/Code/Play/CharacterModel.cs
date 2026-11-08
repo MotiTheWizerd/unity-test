@@ -33,7 +33,7 @@ namespace Forge.Play
         readonly float _sunk;
         HeadlessBody _headless;
         Transform _eyes;
-        readonly Dictionary<HumanBodyBones, Transform> _backs = new Dictionary<HumanBodyBones, Transform>();
+        readonly Dictionary<bool, Transform> _backs = new Dictionary<bool, Transform>();
         bool _firstPerson;
         bool _inHand;
 
@@ -210,6 +210,8 @@ namespace Forge.Play
                     if (held.Sheathes)
                         Place(held);
                 }
+
+                PlaceWornOnBack();
             }
         }
 
@@ -252,6 +254,7 @@ namespace Forge.Play
             _attached.Add(look, held);
             Draw(held);
             Place(held);
+            PlaceWornOnBack();
             return true;
         }
 
@@ -262,6 +265,7 @@ namespace Forge.Play
                 return;
             _attached.Remove(look);
             UnityEngine.Object.Destroy(look);
+            PlaceWornOnBack();
         }
 
         /// <summary>
@@ -310,21 +314,24 @@ namespace Forge.Play
         }
 
         // In the hand; or, put away, where it is carried when the model knows where that is: its sheath, or on the back.
+        // What no hand holds and is carried on the back (a quiver) is always there, over the right shoulder, the hand
+        // that draws from it: crossing a bow on the back (over the left), on top of it.
         void Place(Held held)
         {
             var point = _points[held.Bone];
             var turn = held.InHandTurn;
-            var onBack = false;
-            if (held.Sheathes && !_inHand)
+            var hand = IsHand(held.Bone);
+            held.OnBack = false;
+            if ((held.Sheathes && !_inHand) || (!hand && held.Carried == CarriedAt.Back))
             {
-                if (held.Carried == CarriedAt.Back && TryBack(held.Bone, out var back))
+                if (held.Carried == CarriedAt.Back && TryBack(held.Bone != HumanBodyBones.LeftHand, out var back))
                 {
                     // Flat against the back, its holder's side down across it, away from the neck.
                     point = back;
                     turn = held.FacesHolder.HasValue
                         ? HoldFinder.Facing(held.FacesHolder.Value, back.InverseTransformDirection(Vector3.down))
                         : Quaternion.identity;
-                    onBack = true;
+                    held.OnBack = true;
                 }
                 else if (TrySheath(held.Bone, out var sheath))
                 {
@@ -334,34 +341,62 @@ namespace Forge.Play
             }
 
             // Its own size whatever the skeleton's scale, then turned (about its length too, so its holder's side faces
-            // the way the place wants) and moved so that its grip lies on the point, or off the back by its depth.
+            // the way the place wants) and moved so that its grip lies on the point, or off the back by its depth (and on
+            // top of what a hand carries there, for what no hand holds).
             var look = held.Look.transform;
             look.SetParent(point, false);
             var boneScale = point.lossyScale.x;
             look.localScale = boneScale > 0f ? held.Size / boneScale : held.Size;
             var gripTurn = Quaternion.Inverse(look.rotation) * held.Grip.rotation;
             look.rotation = point.rotation * turn * Quaternion.Inverse(gripTurn);
-            var standOff = onBack ? BackFinder.Strap + ExtentOf(held, Quaternion.Inverse(turn) * Vector3.back) * held.Grip.lossyScale.z : 0f;
+            var scale = held.Grip.lossyScale.z;
+            held.Thickness = held.OnBack
+                ? (ExtentOf(held, Quaternion.Inverse(turn) * Vector3.back) + ExtentOf(held, Quaternion.Inverse(turn) * Vector3.forward)) * scale
+                : 0f;
+            var standOff = held.OnBack
+                ? BackFinder.Strap + (hand ? 0f : HandCarriedOnBack()) + ExtentOf(held, Quaternion.Inverse(turn) * Vector3.back) * scale
+                : 0f;
             look.position += point.position + point.forward * standOff - held.Grip.position;
         }
 
-        // A hand's spot across the back, made the first time it is asked for, from where the idle carries the back.
-        bool TryBack(HumanBodyBones hand, out Transform back)
+        // How thick what the hands carry on the back is there now (with its strap), which what no hand holds lies on.
+        float HandCarriedOnBack()
         {
-            back = null;
-            if (!IsHand(hand))
-                return false;
-            if (_backs.TryGetValue(hand, out back))
+            var thickest = 0f;
+            foreach (var held in _attached.Values)
+            {
+                if (held.OnBack && IsHand(held.Bone))
+                    thickest = Mathf.Max(thickest, held.Thickness + BackFinder.Strap);
+            }
+
+            return thickest;
+        }
+
+        // What no hand holds and is worn on the back, placed again on what the hands carry there now.
+        void PlaceWornOnBack()
+        {
+            foreach (var held in _attached.Values)
+            {
+                if (!IsHand(held.Bone) && held.Carried == CarriedAt.Back)
+                    Place(held);
+            }
+        }
+
+        // The spot across the back over the right or the left shoulder, made the first time it is asked for, from
+        // where the idle carries the back.
+        bool TryBack(bool overRight, out Transform back)
+        {
+            if (_backs.TryGetValue(overRight, out back))
                 return true;
             var chest = BackFinder.Chest(_humanoid);
-            if (chest == null || !BackFinder.TryFind(_prefab, IdleClip, hand == HumanBodyBones.RightHand, out var pose))
+            if (chest == null || !BackFinder.TryFind(_prefab, IdleClip, overRight, out var pose))
                 return false;
 
-            back = new GameObject("Back " + hand).transform;
+            back = new GameObject(overRight ? "Back (right shoulder)" : "Back (left shoulder)").transform;
             back.SetParent(chest, false);
             back.gameObject.layer = Root.layer;
             back.SetPositionAndRotation(chest.position + chest.rotation * pose.position, chest.rotation * pose.rotation);
-            _backs.Add(hand, back);
+            _backs.Add(overRight, back);
             return true;
         }
 
@@ -432,6 +467,10 @@ namespace Forge.Play
             // brings it round to the body in the hand.
             public Vector3? FacesHolder;
             public Quaternion InHandTurn;
+
+            // Whether it is on the back now, and how thick it lies there (meters).
+            public bool OnBack;
+            public float Thickness;
         }
 
         // Drawn like the bone it hangs from: seen from within, only the shadow of what the head wears.

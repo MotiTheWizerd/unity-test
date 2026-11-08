@@ -496,6 +496,26 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void RoundTrip_PreservesTheLookAnEquippableIsWornBy_AndLeavesItOutWhenItsOwn()
+        {
+            var ammo = EquipSlotRecord.IdFor("core", "ammo");
+            var plugin = Plugin("core",
+                new EquipSlotRecord(ammo, "Ammo", "Chest"),
+                new BaseObjectRecord(RecordId.Parse("core:arrow"), "Arrow", "items/arrow", item: new ItemPart(ItemKind.Misc, 0.1f, 1),
+                    equippable: new EquippablePart(new[] { EquipFit.Of(ammo) }, worn: "items/quiver")),
+                new BaseObjectRecord(RecordId.Parse("core:ring"), "Ring", "items/ring", item: new ItemPart(ItemKind.Misc, 0.1f, 1),
+                    equippable: new EquippablePart(new[] { EquipFit.Of(ammo) })));
+
+            var json = Write(plugin);
+            var objects = Read(json).Records.OfType<BaseObjectRecord>().ToDictionary(r => r.Id.ToString());
+
+            Assert.That(objects["core:arrow"].Equippable.Worn, Is.EqualTo("items/quiver"), "Arrows are worn as a quiver...");
+            Assert.That(objects["core:ring"].Equippable.Worn, Is.Null, "...a ring as itself.");
+            Assert.That(Regex.Matches(json, "\"worn\"").Count, Is.EqualTo(1), "Its own look is written as nothing.");
+            Assert.Throws<System.ArgumentException>(() => new EquippablePart(new[] { EquipFit.Of(ammo) }, worn: " "));
+        }
+
+        [Test]
         public void RoundTrip_PreservesAnActorsItems_AndWhatOfThemIsEquipped()
         {
             var right = EquipSlotRecord.IdFor("core", "right_hand");

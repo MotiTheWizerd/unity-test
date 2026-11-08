@@ -5,7 +5,7 @@ namespace Forge.Game.Equipment
 {
     /// <summary>
     /// The equip slots of the base game (forge.core), as its content names them: a hand each, so an actor holds one
-    /// one-handed thing in each, or one two-handed thing in both. Records, so a mod retunes or adds slots; the rules read
+    /// one-handed thing in each, or one two-handed thing in both; and its ammunition (arrows). Records, so a mod retunes or adds slots; the rules read
     /// none of them by name, only content does.
     /// </summary>
     public static class CoreEquipSlots
@@ -16,6 +16,12 @@ namespace Forge.Game.Equipment
         public static readonly RecordId RightHand = EquipSlotRecord.IdFor(Namespace, "right_hand");
 
         public static readonly RecordId LeftHand = EquipSlotRecord.IdFor(Namespace, "left_hand");
+
+        /// <summary>What a bow shoots (arrows), worn on the back in a quiver; never drawn or put away.</summary>
+        public static readonly RecordId Ammo = EquipSlotRecord.IdFor(Namespace, "ammo");
+
+        /// <summary>Ammunition: the ammo slot.</summary>
+        public static EquipFit[] Ammunition() => new[] { EquipFit.Of(Ammo) };
 
         /// <summary>A one-handed thing: either hand, the right first.</summary>
         public static EquipFit[] OneHanded() => new[] { EquipFit.Of(RightHand), EquipFit.Of(LeftHand) };

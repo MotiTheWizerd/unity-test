@@ -759,7 +759,9 @@ from any camera, so both cameras read the same player.
   fist by (+Y), and the palm (+Z, mirrored for the left hand), the grip sitting in the palm past the knuckles. What is
   held is turned and moved so its grip (a model asset's inner model's pivot, else the look's root) lies on the point,
   at its own size whatever the skeleton's scale, without colliders, on the model's layer. `HeldItems` shows equipped
-  things on a model at the first slot of their fit (a two-hander in the right hand; a slot with no bone shows
+  things on a model, by their own look or the one they are worn as (`EquippablePart.Worn`: arrows, equipped in the
+  Ammo slot on the chest, are worn as the quiver, `"carried": "back"`, which no hand holds: always on the back, over
+  the right shoulder that draws from it, crossing a bow there in an X and lying on it), at the first slot of their fit (a two-hander in the right hand; a slot with no bone shows
   nothing); `EquipmentView` keeps that in step with an `ActorEquipment` (the player's while spawned), and the
   inventory's character is dressed anew whenever the equipment changes (turned as it was: `TurntablePreview.Show`
   with `keepTurn`). The player is the **Viking hero** (`Content/Characters/VikingHero`, 1.85 m, eyes at 1.72 m), the first

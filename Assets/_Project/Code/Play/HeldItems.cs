@@ -11,7 +11,8 @@ namespace Forge.Play
 {
     /// <summary>
     /// What a character holds and wears, on its look (<see cref="CharacterModel"/>): each thing equipped is built from
-    /// the asset the world uses and hung from the bone its slot names (<see cref="EquipSlotRecord.Bone"/>), at the first
+    /// the asset the world uses (or the one it is worn as: arrows as a quiver, <see cref="EquippablePart.Worn"/>) and
+    /// hung from the bone its slot names (<see cref="EquipSlotRecord.Bone"/>), at the first
     /// slot of its fit (a two-handed sword in the right hand), or hung in its sheath while the model's weapons are put
     /// away and the slot sheathes (<see cref="CharacterModel.InHand"/>); a slot with no bone shows nothing. It is held by
     /// its grip (<see cref="ModelGrip"/>), and held and carried as its <see cref="HeldLook"/> says (a bow: string to the
@@ -41,7 +42,7 @@ namespace Forge.Play
             if (_looks.ContainsKey(equipped) || !TrySlot(equipped.Fit.Slots[0], out var slot) || slot.Bone == null)
                 return;
 
-            var look = _assets.Instantiate(equipped.Record.AssetKey, null);
+            var look = _assets.Instantiate(equipped.Record.Equippable?.Worn ?? equipped.Record.AssetKey, null);
             if (look != null && _model.Attach(look, ModelGrip.Of(look), slot.Bone, slot.Sheathes, look.GetComponent<HeldLook>()))
                 _looks.Add(equipped, look);
         }
