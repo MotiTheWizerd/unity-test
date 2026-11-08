@@ -213,7 +213,7 @@ namespace Forge.Play
         /// Otherwise the view and the player take their commands (the ready-weapon key draws or sheathes; while something is
         /// carried, an attack key throws it), the camera and the model follow, then what is in sight is looked for from where
         /// the camera now is, so the prompt and the use key go by what this frame shows: a tap uses it, a hold grabs and
-        /// carries it (<see cref="ObjectCarry"/>), letting go drops it.
+        /// carries it loose, the lift key held lifts it steady (<see cref="ObjectCarry"/>), letting go drops it.
         /// </summary>
         public void Tick(float deltaTime)
         {
@@ -264,14 +264,19 @@ namespace Forge.Play
             Carry(deltaTime);
         }
 
-        // The use key held grabs what is in reach, let go drops it; meanwhile it is held where the player looks.
+        // The use key held grabs what is in reach loose, the lift key held lifts it steady (CarryHold); letting go of the key
+        // that took it drops it. Meanwhile it is held where the player looks.
         void Carry(float deltaTime)
         {
             var eyes = Player.Eyes.ToUnity();
             if (_controls.Use == UseKeyEvent.HoldStarted)
-                _carry.TryGrab(_director.Pose, eyes);
+                _carry.TryGrab(_director.Pose, eyes, CarryHold.Loose);
             else if (_controls.Use == UseKeyEvent.HoldEnded)
-                _carry.Drop();
+                _carry.Drop(CarryHold.Loose);
+            if (_controls.ReadLift())
+                _carry.TryGrab(_director.Pose, eyes, CarryHold.Steady);
+            else if (_controls.ReadLiftReleased())
+                _carry.Drop(CarryHold.Steady);
             _carry.Hold(_director.Pose, eyes, deltaTime);
         }
 

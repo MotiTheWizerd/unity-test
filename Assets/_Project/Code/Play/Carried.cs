@@ -3,12 +3,13 @@ using UnityEngine;
 namespace Forge.Play
 {
     /// <summary>
-    /// A body being carried (<see cref="ObjectCarry"/>), Skyrim's way: held by the point it was taken at, as a hand holds
-    /// it, so the rest of it hangs and swings under its own weight (a sword taken by the hilt hangs blade down; one taken
-    /// by the middle balances). Every physics step a grip (a kinematic body of its own) goes toward where the carrier
-    /// holds it (<see cref="Target"/>), and a joint draws the point held after it on a damped spring, free to turn and
-    /// no stronger than a hand, so what is carried still knocks into things and walls stop it. It stays awake while held.
-    /// Taken off, the grip goes and it falls again.
+    /// A body being carried (<see cref="ObjectCarry"/>), Skyrim's way, one of two ways (<see cref="CarryHold"/>). Held
+    /// loose, it is held by the point it was taken at, as a hand holds it, so the rest of it hangs and swings under its own
+    /// weight (a sword taken by the hilt hangs blade down; one taken by the middle balances). Held steady, it is held by
+    /// its middle and kept turned as it lay, turning only as the carrier turns (<see cref="Facing"/>). Every physics step
+    /// a grip (a kinematic body of its own) goes toward where the carrier holds it (<see cref="Target"/>), and a joint
+    /// draws the point held after it on a damped spring no stronger than a hand, so what is carried still knocks into
+    /// things and walls stop it. It stays awake while held. Taken off, the grip goes and it falls again.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody))]
@@ -18,6 +19,10 @@ namespace Forge.Play
         // second, quick enough to keep up with a turn of the head without flinging what it lifts from the ground.
         const float GripEase = 0.1f;
         const float MostSpeed = 12f;
+
+        // How fast the grip of what is held steady turns after the carrier, degrees a second: a quick turn of the head
+        // swings it round smoothly, not in one step.
+        const float MostTurnSpeed = 540f;
 
         // The hold's spring and damping, per kilogram held: critically damped at 20 radians a second, so it eases in
         // rather than bounces, alike for a cup and a chest.
@@ -41,16 +46,25 @@ namespace Forge.Play
         RigidbodyInterpolation _interpolation;
         float _sleepThreshold;
 
-        /// <summary>Takes <paramref name="body"/> up by the point <paramref name="point"/> on it (scene space).</summary>
-        public static Carried Take(Rigidbody body, Vector3 point)
+        /// <summary>
+        /// Takes <paramref name="body"/> up <paramref name="hold"/>: loose by the point <paramref name="point"/> on it
+        /// (scene space), steady by its middle, by a carrier facing <paramref name="facing"/>.
+        /// </summary>
+        public static Carried Take(Rigidbody body, Vector3 point, CarryHold hold, Quaternion facing)
         {
             var carried = body.gameObject.AddComponent<Carried>();
-            carried.Hold(point);
+            carried.Hold(hold == CarryHold.Steady ? body.worldCenterOfMass : point, hold, facing);
             return carried;
         }
 
+        /// <summary>How it is held.</summary>
+        public CarryHold Kind { get; private set; }
+
         /// <summary>Where it is held, scene space: where the point it was taken by is drawn to.</summary>
         public Vector3 Target { get; set; }
+
+        /// <summary>Which way the carrier faces, level, scene space: what is held steady turns with it.</summary>
+        public Quaternion Facing { get; set; } = Quaternion.identity;
 
         /// <summary>How far the point it was taken by is from where it is held, meters: what a wall between keeps it from.</summary>
         public float Gap => _rigidbody != null ? Vector3.Distance(transform.TransformPoint(_held), Target) : 0f;
@@ -71,14 +85,18 @@ namespace Forge.Play
         }
 
         // The grip starts on the point taken, beside the body in the world's frame (so a rebase moves both alike), and the
-        // joint ties that point to it, every turn free.
-        void Hold(Vector3 point)
+        // joint ties that point to it. Held steady, the grip faces as the carrier does, and the joint locks the body's turn
+        // to the grip's as it was when taken: a spring could not, the hold's pull being far stronger, a hair off its
+        // centre, than any spring that would not shake.
+        void Hold(Vector3 point, CarryHold hold, Quaternion facing)
         {
+            Kind = hold;
             _held = transform.InverseTransformPoint(point);
             Target = point;
+            Facing = facing;
             var grip = new GameObject("Carry Grip").transform;
             grip.SetParent(transform.parent, false);
-            grip.position = point;
+            grip.SetPositionAndRotation(point, hold == CarryHold.Steady ? facing : Quaternion.identity);
             _grip = grip.gameObject.AddComponent<Rigidbody>();
             _grip.isKinematic = true;
 
@@ -88,13 +106,18 @@ namespace Forge.Play
             _joint.anchor = _held;
             _joint.connectedAnchor = Vector3.zero;
             _joint.xMotion = _joint.yMotion = _joint.zMotion = ConfigurableJointMotion.Free;
-            _joint.angularXMotion = _joint.angularYMotion = _joint.angularZMotion = ConfigurableJointMotion.Free;
             var mass = _rigidbody.mass;
             var drive = new JointDrive { positionSpring = Stiffness * mass, positionDamper = Damping * mass, maximumForce = MostForce };
             _joint.xDrive = _joint.yDrive = _joint.zDrive = drive;
+            if (hold == CarryHold.Steady)
+            {
+                _joint.angularXMotion = _joint.angularYMotion = _joint.angularZMotion = ConfigurableJointMotion.Locked;
+                return;
+            }
 
             // Swinging is turning about the point held, so it is damped against how hard the body is to turn about it:
             // about its centre (the mean of its principal moments), and its mass that far from the point.
+            _joint.angularXMotion = _joint.angularYMotion = _joint.angularZMotion = ConfigurableJointMotion.Free;
             var inertia = _rigidbody.inertiaTensor;
             var reach = Vector3.Distance(point, _rigidbody.worldCenterOfMass);
             var aboutPoint = (inertia.x + inertia.y + inertia.z) / 3f + mass * reach * reach;
@@ -104,8 +127,11 @@ namespace Forge.Play
 
         void FixedUpdate()
         {
-            if (_grip != null)
-                _grip.MovePosition(Vector3.SmoothDamp(_grip.position, Target, ref _gripVelocity, GripEase, MostSpeed, Time.fixedDeltaTime));
+            if (_grip == null)
+                return;
+            _grip.MovePosition(Vector3.SmoothDamp(_grip.position, Target, ref _gripVelocity, GripEase, MostSpeed, Time.fixedDeltaTime));
+            if (Kind == CarryHold.Steady)
+                _grip.MoveRotation(Quaternion.RotateTowards(_grip.rotation, Facing, MostTurnSpeed * Time.fixedDeltaTime));
         }
 
         void OnDestroy()

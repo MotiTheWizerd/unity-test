@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 namespace Forge.Play
 {
     /// <summary>
-    /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump, ToggleWalk, ToggleView, Zoom, Interact,
+    /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump, ToggleWalk, ToggleView, Zoom, Interact, Lift,
     /// Inventory, ReadyWeapon, AttackRight, AttackLeft) into <see cref="PlayerCommands"/>, <see cref="ViewCommands"/> and the menu key, the rules' only input. Rebinding, a gamepad or
     /// another layout is the actions asset's business; nothing here names a key (the wheel's binding scales its steps to
     /// notches). The map is on only while enabled (while playing).
@@ -23,6 +23,7 @@ namespace Forge.Play
         readonly InputAction _toggleView;
         readonly InputAction _zoom;
         readonly InputAction _interact;
+        readonly InputAction _lift;
         readonly InputAction _inventory;
         readonly InputAction _readyWeapon;
         readonly InputAction _attackRight;
@@ -47,6 +48,7 @@ namespace Forge.Play
             _toggleView = _map.FindAction("ToggleView", throwIfNotFound: true);
             _zoom = _map.FindAction("Zoom", throwIfNotFound: true);
             _interact = _map.FindAction("Interact", throwIfNotFound: true);
+            _lift = _map.FindAction("Lift", throwIfNotFound: true);
             _inventory = _map.FindAction("Inventory", throwIfNotFound: true);
             _readyWeapon = _map.FindAction("ReadyWeapon", throwIfNotFound: true);
             _attackRight = _map.FindAction("AttackRight", throwIfNotFound: true);
@@ -81,6 +83,12 @@ namespace Forge.Play
 
         /// <summary>Whether that attack key was let go this frame (a drawn bow looses); never while the map is off.</summary>
         public bool ReadAttackReleased(bool right) => _map.enabled && (right ? _attackRight : _attackLeft).WasReleasedThisFrame();
+
+        /// <summary>Whether the lift key was pressed this frame (Z: lift what is in reach steadily); never while the map is off.</summary>
+        public bool ReadLift() => _map.enabled && _lift.WasPressedThisFrame();
+
+        /// <summary>Whether the lift key was let go this frame (what it lifted drops); never while the map is off.</summary>
+        public bool ReadLiftReleased() => _map.enabled && _lift.WasReleasedThisFrame();
 
         /// <summary>
         /// What the use key did in the frame <see cref="Read"/> last read: a tap is the commands' activate (E: take); a hold

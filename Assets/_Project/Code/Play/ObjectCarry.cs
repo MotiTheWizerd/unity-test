@@ -7,10 +7,12 @@ using UnityEngine;
 namespace Forge.Play
 {
     /// <summary>
-    /// How an actor grabs and carries loose things, Skyrim's way (the use key held): the physical body of a world object
-    /// in reach, along the middle of the view (<see cref="ReachRay"/>, a thin line then a ball, as the use key aims), no
-    /// heavier than the actor can lift, is held by the point the line met a little way in front of its eyes, where it
-    /// looks (<see cref="Carried"/>): the rest of it hangs from there and swings. It knocks into things and walls stop it;
+    /// How an actor grabs and carries loose things, Skyrim's way: the physical body of a world object in reach, along the
+    /// middle of the view (<see cref="ReachRay"/>, a thin line then a ball, as the use key aims), no heavier than the actor
+    /// can lift, is held a little way in front of its eyes, where it looks (<see cref="Carried"/>), one of two ways
+    /// (<see cref="CarryHold"/>): loose (the use key held), by the point the line met, the rest hanging from there and
+    /// swinging; or steady (the lift key held), by its middle, kept turned as it lay and turning as the actor turns. It
+    /// knocks into things and walls stop it;
     /// held back too far for a while it is let go. Let go, it drops; thrown, it flies the way the actor looks, the lighter
     /// the faster. What is carried passes through the carrier, so it can't be stood on to ride it. Scene coordinates.
     /// </summary>
@@ -37,11 +39,14 @@ namespace Forge.Play
         /// <summary>Whether something is carried now.</summary>
         public bool IsCarrying => _held != null;
 
+        /// <summary>How what is carried is held; null when nothing is.</summary>
+        public CarryHold? Holding => IsCarrying ? _held.Kind : (CarryHold?)null;
+
         /// <summary>
         /// Grabs what physical body of a world object is in reach along <paramref name="view"/> from eyes at
-        /// <paramref name="eyes"/>, if it is light enough, by the point the view's line met it; whether it did.
+        /// <paramref name="eyes"/>, if it is light enough, held <paramref name="hold"/>; whether it did.
         /// </summary>
-        public bool TryGrab(ViewPose view, Vector3 eyes)
+        public bool TryGrab(ViewPose view, Vector3 eyes, CarryHold hold)
         {
             if (IsCarrying || !ReachRay.TryGet(view, eyes.ToNumerics(), _settings.Reach, out var from, out var direction, out var length) ||
                 !TryReach(from.ToUnity(), direction.ToUnity(), length, out var body, out var point) || body.mass > _settings.MostMass)
@@ -50,7 +55,7 @@ namespace Forge.Play
             _heldColliders = body.GetComponentsInChildren<Collider>();
             foreach (var collider in _heldColliders)
                 Physics.IgnoreCollision(_carrier, collider, true);
-            _held = Carried.Take(body, point);
+            _held = Carried.Take(body, point, hold, Facing(view, Quaternion.identity));
             _heldBack = 0f;
             Hold(view, eyes, 0f);
             return true;
@@ -71,8 +76,16 @@ namespace Forge.Play
             }
 
             _held.Target = eyes + view.Forward.ToUnity() * _settings.HoldDistance;
+            _held.Facing = Facing(view, _held.Facing);
             _heldBack = _held.Gap > MostHeldBack ? _heldBack + Mathf.Max(0f, deltaTime) : 0f;
             if (_heldBack > HeldBackSeconds)
+                Drop();
+        }
+
+        /// <summary>Lets go of what is carried if it is held <paramref name="hold"/> (the key that took it came up): it falls.</summary>
+        public void Drop(CarryHold hold)
+        {
+            if (Holding == hold)
                 Drop();
         }
 
@@ -116,6 +129,14 @@ namespace Forge.Play
         {
             _held = null;
             _heldColliders = null;
+        }
+
+        // Which way the view faces, level (a turn about up alone); looking straight up or down it faces no way, so as before.
+        static Quaternion Facing(ViewPose view, Quaternion before)
+        {
+            var forward = view.Forward.ToUnity();
+            forward.y = 0f;
+            return forward.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(forward, Vector3.up) : before;
         }
 
         // The world object's own free body a line from start along way meets within length, else a ball of the aim's
