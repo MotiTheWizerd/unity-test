@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2465096778996619868}
+  - component: {fileID: 4003774047422433858}
   m_Layer: 0
   m_Name: HuntingBow
   m_TagString: Untagged
@@ -32,37 +33,20 @@ Transform:
   - {fileID: 1237823391658665730}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &8703082792958295690
-GameObject:
+--- !u!114 &4003774047422433858
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 8500481387787960490}
-  m_Layer: 0
-  m_Name: Grip (left hand)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &8500481387787960490
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8703082792958295690}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 1, z: 0, w: -0.00000004371139}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1237823391658665730}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_GameObject: {fileID: 6071699247951939278}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17253fba9f7024e4a8c24a0106504f86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Forge.Play::Forge.Play.HeldLook
+  _facesHolder: {x: -1, y: 0, z: 0}
+  _carried: 1
 --- !u!1001 &1632300519051919593
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -121,10 +105,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: c036d7891cecda545a28bfee841c5447, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: becea8816a1a59147bf1b43b00692f38, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 8500481387787960490}
+    m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: becea8816a1a59147bf1b43b00692f38, type: 3}
 --- !u!4 &1237823391658665730 stripped

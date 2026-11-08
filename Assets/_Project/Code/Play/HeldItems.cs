@@ -14,7 +14,8 @@ namespace Forge.Play
     /// the asset the world uses and hung from the bone its slot names (<see cref="EquipSlotRecord.Bone"/>), at the first
     /// slot of its fit (a two-handed sword in the right hand), or hung in its sheath while the model's weapons are put
     /// away and the slot sheathes (<see cref="CharacterModel.InHand"/>); a slot with no bone shows nothing. It is held by
-    /// its grip for that hand (<see cref="ModelGrip"/>).
+    /// its grip (<see cref="ModelGrip"/>), and held and carried as its <see cref="HeldLook"/> says (a bow: string to the
+    /// body, on the back while put away).
     /// </summary>
     public sealed class HeldItems : IDisposable
     {
@@ -41,7 +42,7 @@ namespace Forge.Play
                 return;
 
             var look = _assets.Instantiate(equipped.Record.AssetKey, null);
-            if (look != null && _model.Attach(look, ModelGrip.Of(look, slot.Bone == nameof(HumanBodyBones.LeftHand)), slot.Bone, slot.Sheathes))
+            if (look != null && _model.Attach(look, ModelGrip.Of(look), slot.Bone, slot.Sheathes, look.GetComponent<HeldLook>()))
                 _looks.Add(equipped, look);
         }
 

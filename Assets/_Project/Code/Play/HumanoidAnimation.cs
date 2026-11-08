@@ -28,6 +28,8 @@ namespace Forge.Play
         public const string Drawn = "Drawn";
         /// <summary>The move it stands still in, which every set has.</summary>
         public const string IdleMove = "Idle";
+        /// <summary>The move it stands ready in with its weapons out, when its set has one.</summary>
+        public const string DrawnIdleMove = Drawn + IdleMove;
         public const string DrawTrigger = "Draw";
         public const string SheatheTrigger = "Sheathe";
         public const string ArmsLayer = "Arms";

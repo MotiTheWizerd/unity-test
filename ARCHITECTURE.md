@@ -1144,8 +1144,8 @@ slopes), so results are exact and every edit goes through the edit session.
   from the grip to the chest in its drawn idle, else its idle, measured on a hidden copy), so a bow's string faces the
   archer, for the other hand to take, in either hand and whatever the stance; `"carried": "back"` (bows, as in Skyrim)
   puts it, while weapons are away, across the back instead of in a hip sheath (`BackFinder`: from the left hip up to the
-  right shoulder, its middle on the farthest back the torso reaches in the idle, on the chest bone), holder's side out,
-  standing a scabbard's width off. `"cutout": true` in the json
+  right shoulder, its middle on the farthest back the torso reaches in the idle, on the chest bone), lying flat against
+  it with the holder's side down across the back, standing its thickness and a scabbard's width off. `"cutout": true` in the json
   cuts the model out of its base colour's alpha (clipped at `ModelBuilder.CutoutThreshold`) and draws both faces:
   leaf cards, grass, a thatch's fringe. Models whose source had several materials or tiled textures are baked in
   Blender onto one texture set first (the houses, the arboretum's plants). It lists the prefab in the prefab

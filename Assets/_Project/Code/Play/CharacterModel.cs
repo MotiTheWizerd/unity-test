@@ -33,6 +33,7 @@ namespace Forge.Play
         readonly float _sunk;
         HeadlessBody _headless;
         Transform _eyes;
+        Transform _back;
         bool _firstPerson;
         bool _inHand;
 
@@ -126,6 +127,9 @@ namespace Forge.Play
 
         AnimationClip IdleClip => _animation?.Clip(HumanoidAnimation.IdleMove);
 
+        /// <summary>The clip it stands ready in, holding its weapons out: its drawn idle, else its idle; null without animations.</summary>
+        public AnimationClip StanceClip => _animation?.Clip(HumanoidAnimation.DrawnIdleMove) ?? IdleClip;
+
         /// <summary>Turns the model to <paramref name="heading"/> (compass degrees).</summary>
         public void Face(float heading) => Root.transform.localRotation = Quaternion.Euler(0f, heading, 0f);
 
@@ -180,10 +184,13 @@ namespace Forge.Play
         /// <summary>
         /// Hangs <paramref name="look"/> from the humanoid bone named <paramref name="bone"/> ("RightHand"), held by
         /// <paramref name="grip"/> (a part of it, or itself): the grip's pivot and axes on the bone's attach point; or, when
-        /// it <paramref name="sheathes"/> and is not <see cref="InHand"/>, on that hand's sheath. False, and the look
-        /// destroyed, when the model has no such bone.
+        /// it <paramref name="sheathes"/> and is not <see cref="InHand"/>, where it is carried meanwhile: the hand's sheath
+        /// at the hip, or across the back (<see cref="BackFinder"/>) when <paramref name="how"/> says so. A thing whose
+        /// <paramref name="how"/> names a side that faces its holder (a bow's string) is turned about its length: in the
+        /// hand to face the body as it stands ready (<see cref="HoldFinder"/>); on the back it lies flat, that side down
+        /// across the back, standing just off it. False, and the look destroyed, when the model has no such bone.
         /// </summary>
-        public bool Attach(GameObject look, Transform grip, string bone, bool sheathes = false)
+        public bool Attach(GameObject look, Transform grip, string bone, bool sheathes = false, HeldLook how = null)
         {
             if (look == null)
                 throw new ArgumentNullException(nameof(look));
@@ -199,10 +206,22 @@ namespace Forge.Play
                 Grip = grip,
                 Bone = id,
                 Sheathes = sheathes,
+                Carried = how != null ? how.Carried : CarriedAt.Hip,
                 Size = look.transform.localScale,
                 Renderers = look.GetComponentsInChildren<Renderer>(true),
+                InHandTurn = Quaternion.identity,
+                OnBackTurn = Quaternion.identity,
             };
-            held.Reach = ReachOf(held);
+            var facesHolder = how != null ? how.FacesHolder : null;
+            var hand = id == HumanBodyBones.RightHand || id == HumanBodyBones.LeftHand;
+            if (facesHolder.HasValue && hand && HoldFinder.TryFindBody(_prefab, StanceClip, id == HumanBodyBones.RightHand, out var body))
+                held.InHandTurn = HoldFinder.Facing(facesHolder.Value, body);
+            // On the back it lies flat against it, its holder's side down across the back, away from the neck (the back
+            // spot's -X; its +Z is out of the back), standing clear by its thickness.
+            if (facesHolder.HasValue)
+                held.OnBackTurn = HoldFinder.Facing(facesHolder.Value, Vector3.left);
+            held.Reach = ExtentOf(held, Vector3.up);
+            held.Depth = ExtentOf(held, Quaternion.Inverse(held.OnBackTurn) * Vector3.back);
             RemoveColliders(look);
             SetLayer(look.transform, Root.layer);
             _attached.Add(look, held);
@@ -241,9 +260,9 @@ namespace Forge.Play
             return false;
         }
 
-        // How far a held thing reaches out of the fist along its grip's +Y, in the grip's own units: the farthest corner
-        // of its meshes' bounds.
-        static float ReachOf(Held held)
+        // How far a held thing reaches from its grip along the grip's `axis` (+Y: out of the fist), in the grip's own
+        // units: the farthest corner of its meshes' bounds; zero when nothing of it lies that way.
+        static float ExtentOf(Held held, Vector3 axis)
         {
             var reach = 0f;
             foreach (var renderer in held.Renderers)
@@ -258,26 +277,61 @@ namespace Forge.Play
                     var local = bounds.center + Vector3.Scale(bounds.extents,
                         new Vector3((corner & 1) == 0 ? -1f : 1f, (corner & 2) == 0 ? -1f : 1f, (corner & 4) == 0 ? -1f : 1f));
                     var inGrip = held.Grip.InverseTransformPoint(renderer.transform.TransformPoint(local));
-                    reach = Mathf.Max(reach, inGrip.y);
+                    reach = Mathf.Max(reach, Vector3.Dot(inGrip, axis));
                 }
             }
 
             return reach;
         }
 
-        // In the hand, or in its sheath when sheathed and the model knows where that is.
+        // In the hand; or, put away, where it is carried when the model knows where that is: its sheath, or on the back.
         void Place(Held held)
         {
-            var point = held.Sheathes && !_inHand && TrySheath(held.Bone, out var sheath) ? sheath : _points[held.Bone];
+            var point = _points[held.Bone];
+            var turn = held.InHandTurn;
+            var onBack = false;
+            if (held.Sheathes && !_inHand)
+            {
+                if (held.Carried == CarriedAt.Back && TryBack(out var back))
+                {
+                    point = back;
+                    turn = held.OnBackTurn;
+                    onBack = true;
+                }
+                else if (TrySheath(held.Bone, out var sheath))
+                {
+                    point = sheath;
+                    turn = Quaternion.identity;
+                }
+            }
 
-            // Its own size whatever the skeleton's scale, then turned and moved so that its grip lies on the point.
+            // Its own size whatever the skeleton's scale, then turned (about its length too, so its holder's side faces
+            // the way the place wants) and moved so that its grip lies on the point, or off the back by its depth.
             var look = held.Look.transform;
             look.SetParent(point, false);
             var boneScale = point.lossyScale.x;
             look.localScale = boneScale > 0f ? held.Size / boneScale : held.Size;
             var gripTurn = Quaternion.Inverse(look.rotation) * held.Grip.rotation;
-            look.rotation = point.rotation * Quaternion.Inverse(gripTurn);
-            look.position += point.position - held.Grip.position;
+            look.rotation = point.rotation * turn * Quaternion.Inverse(gripTurn);
+            var standOff = onBack ? SheathFinder.Scabbard + held.Depth * held.Grip.lossyScale.z : 0f;
+            look.position += point.position + point.forward * standOff - held.Grip.position;
+        }
+
+        // The spot across the back, made the first time it is asked for, from where the idle carries the back.
+        bool TryBack(out Transform back)
+        {
+            back = _back;
+            if (back != null)
+                return true;
+            var chest = BackFinder.Chest(_humanoid);
+            if (chest == null || !BackFinder.TryFind(_prefab, IdleClip, out var pose))
+                return false;
+
+            back = _back = new GameObject("Back").transform;
+            back.SetParent(chest, false);
+            back.gameObject.layer = Root.layer;
+            back.SetPositionAndRotation(chest.position + chest.rotation * pose.position, chest.rotation * pose.rotation);
+            return true;
         }
 
         // A hand's sheath at the hip, made the first time it is asked for, from where the draw clip takes the hilt.
@@ -338,7 +392,14 @@ namespace Forge.Play
             public bool Sheathes;
             public Vector3 Size;
             public Renderer[] Renderers;
+            public CarriedAt Carried;
             public float Reach;
+
+            // Turned about its length in the hand and on the back, so its holder's side faces the body, or out; and how
+            // far it reaches, so turned, toward the back (in the grip's units).
+            public Quaternion InHandTurn;
+            public Quaternion OnBackTurn;
+            public float Depth;
         }
 
         // Drawn like the bone it hangs from: seen from within, only the shadow of what the head wears.
