@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Forge.World;
 using NUnit.Framework;
 using UnityEditor;
@@ -46,24 +47,53 @@ namespace Forge.Tests.World
         }
 
         [Test]
-        public void ACutoutModel_ClipsItsBaseColoursAlpha_FromBothSides_AndNoOtherDoes()
+        public void EachPart_DrawsWithItsOwnMaterial_ClippingOrBlendingItsAlpha_OnlyAsItsJsonSays()
         {
             foreach (var folder in AssetDatabase.GetSubFolders(ModelsFolder))
             {
                 var name = Path.GetFileName(folder);
-                var settings = $"{folder}/{name}.json";
-                var cutout = File.Exists(settings) && File.ReadAllText(settings).Replace(" ", "").Contains("\"cutout\":true");
-                var material = AssetDatabase.LoadAssetAtPath<Material>($"{folder}/{name}.mat");
-                Assert.That(material, Is.Not.Null, $"{folder} is not built.");
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{folder}/{name}.prefab");
+                Assert.That(prefab, Is.Not.Null, $"{folder} is not built.");
+                var path = $"{folder}/{name}.json";
+                var settings = File.Exists(path) ? JsonUtility.FromJson<Settings>(File.ReadAllText(path)) : new Settings();
 
-                Assert.That(material.IsKeywordEnabled("_ALPHATEST_ON"), Is.EqualTo(cutout), $"{name} clips its alpha only if cut out.");
-                if (!cutout)
-                    continue;
-                Assert.That(material.GetFloat("_Cull"), Is.EqualTo((float)UnityEngine.Rendering.CullMode.Off), $"{name} draws both faces.");
-                var color = material.GetTexture("_BaseMap");
-                Assert.That(color, Is.Not.Null, $"{name} has a base colour.");
-                Assert.That(GraphicsFormatUtility.HasAlphaChannel(color.graphicsFormat), Is.True, $"{name}'s base colour carries an alpha.");
+                foreach (var renderer in prefab.GetComponentsInChildren<Renderer>(true))
+                {
+                    var part = PartOf(renderer.name, name);
+                    var material = renderer.sharedMaterial;
+                    Assert.That(material, Is.Not.Null, $"{renderer.name} has a material.");
+                    Assert.That(material.name, Is.EqualTo(part == null ? name : $"{name}_{part}"), $"{renderer.name} draws with its part's material.");
+
+                    var transparent = part != null && (settings.transparentParts ?? new string[0]).Contains(part);
+                    var cutout = !transparent && (settings.cutout || (part != null && (settings.cutoutParts ?? new string[0]).Contains(part)));
+                    Assert.That(material.IsKeywordEnabled("_ALPHATEST_ON"), Is.EqualTo(cutout), $"{material.name} clips its alpha only if cut out.");
+                    Assert.That(material.IsKeywordEnabled("_SURFACE_TYPE_TRANSPARENT"), Is.EqualTo(transparent), $"{material.name} blends only if transparent.");
+                    if (cutout)
+                        Assert.That(material.GetFloat("_Cull"), Is.EqualTo((float)UnityEngine.Rendering.CullMode.Off), $"{material.name} draws both faces.");
+                    if (transparent)
+                        Assert.That(material.renderQueue, Is.GreaterThanOrEqualTo((int)UnityEngine.Rendering.RenderQueue.Transparent), $"{material.name} draws after the opaque world.");
+                    if (!cutout && !transparent)
+                        continue;
+                    var color = material.GetTexture("_BaseMap");
+                    Assert.That(color, Is.Not.Null, $"{material.name} has a base colour.");
+                    Assert.That(GraphicsFormatUtility.HasAlphaChannel(color.graphicsFormat), Is.True, $"{material.name}'s base colour carries an alpha.");
+                }
             }
+        }
+
+        // The part a model's renderer draws, as Build Models names them: "Ship_Hull_LOD1" → "Hull"; null for the model's own mesh.
+        static string PartOf(string renderer, string model)
+        {
+            var stem = Regex.Replace(renderer, "_LOD[0-9]+$", "");
+            return stem.StartsWith(model + "_") && stem.Length > model.Length + 1 ? stem.Substring(model.Length + 1) : null;
+        }
+
+        [System.Serializable]
+        sealed class Settings
+        {
+            public bool cutout;
+            public string[] cutoutParts;
+            public string[] transparentParts;
         }
     }
 }

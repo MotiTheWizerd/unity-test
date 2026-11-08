@@ -1,0 +1,132 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2697402286303030488
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5503722510066490806}
+  m_Layer: 0
+  m_Name: DutchShipLarge
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5503722510066490806
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2697402286303030488}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1693572513513037259}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &1155875098250590752
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 5503722510066490806}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.0000019073486
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -0.0013446808
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -4846827082976469979, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: f6a498fd1a3d68d41a3c688fceb2f870, type: 2}
+    - target: {fileID: -4522616643598905714, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1fc8a2434b952394bafdb01efe0f5f4c, type: 2}
+    - target: {fileID: -4445655343510800431, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: c57eb7332c4141a4ea981b2144218673, type: 2}
+    - target: {fileID: -1267330637484318806, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1fc8a2434b952394bafdb01efe0f5f4c, type: 2}
+    - target: {fileID: 78265590974449814, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: f6a498fd1a3d68d41a3c688fceb2f870, type: 2}
+    - target: {fileID: 498414219700319675, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: c57eb7332c4141a4ea981b2144218673, type: 2}
+    - target: {fileID: 919132149155446097, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: m_Name
+      value: DutchShipLarge
+      objectReference: {fileID: 0}
+    - target: {fileID: 2061911218957504376, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: f6a498fd1a3d68d41a3c688fceb2f870, type: 2}
+    - target: {fileID: 4039744278968887955, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: c57eb7332c4141a4ea981b2144218673, type: 2}
+    - target: {fileID: 6243202410665250065, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1fc8a2434b952394bafdb01efe0f5f4c, type: 2}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+--- !u!4 &1693572513513037259 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: af53e0fc5e0017442a43077647f307a5, type: 3}
+  m_PrefabInstance: {fileID: 1155875098250590752}
+  m_PrefabAsset: {fileID: 0}

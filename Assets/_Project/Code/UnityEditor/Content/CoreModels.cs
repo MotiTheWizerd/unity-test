@@ -100,6 +100,50 @@ namespace Forge.UnityEditor.Content
                 yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
                     "Architecture/Buildings", new PlacementRules(randomYaw: false, 1f, 1f, alignToSlope: false));
 
+            // Ships (Poly Haven, CC0), bow to the front: upright, placed as aimed, at their own size, their keel on the
+            // pivot. The two large ones are one ship moored (sails furled) and under sail.
+            foreach (var (folder, id, name) in new[]
+                     {
+                         ("DutchShipMedium", "dutch_ship_medium", "Dutch Merchant Ship"),
+                         ("DutchShipLarge", "dutch_ship_large", "Dutch Galleon, Moored"),
+                         ("DutchShipLargeSailing", "dutch_ship_large_sailing", "Dutch Galleon, Under Sail"),
+                         ("Pinnace", "pinnace", "Pinnace"),
+                     })
+                yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
+                    "Vessels/Ships", new PlacementRules(randomYaw: false, 1f, 1f, alignToSlope: false));
+
+            // A weathered wooden pier (Poly Haven, CC0) in sections that join end to end, and a hoist frame of two posts:
+            // placed as aimed, at their own size, the posts standing in the water below the deck.
+            foreach (var (n, name) in new[]
+                     {
+                         (1, "Pier Section, Rope Rail"),
+                         (2, "Pier Section"),
+                         (3, "Pier Section, Braced"),
+                         (4, "Pier Section, Log Deck"),
+                         (5, "Pier Hoist Frame"),
+                     })
+                yield return new BaseObjectRecord(new RecordId(pluginId, $"pier_section_{n}"), name, ModelImport.KeyFor($"PierSection{n}"),
+                    "Architecture/Docks", new PlacementRules(randomYaw: false, 1f, 1f, alignToSlope: false));
+
+            // Harbor and storehouse props (Poly Haven, CC0): upright, any heading, about their own size.
+            foreach (var (folder, id, name, category) in new[]
+                     {
+                         ("SmallCrate", "small_crate", "Small Wooden Crate", "Props/Containers"),
+                         ("LongCrate", "long_crate", "Long Wooden Crate", "Props/Containers"),
+                         ("WoodenBarrel", "wooden_barrel", "Wooden Barrel", "Props/Containers"),
+                         ("WornBarrel", "worn_barrel", "Worn Wooden Barrel", "Props/Containers"),
+                         ("WineBarrel", "wine_barrel", "Wine Barrel", "Props/Containers"),
+                         ("WoodenBucket", "wooden_bucket", "Wooden Bucket", "Props/Containers"),
+                         ("WashTub", "wash_tub", "Wooden Wash Tub", "Props/Containers"),
+                         ("WickerTray", "wicker_tray", "Wicker Tray", "Props/Containers"),
+                         ("LiddedBasket", "lidded_basket", "Lidded Wicker Basket", "Props/Containers"),
+                         ("TreasureChest", "treasure_chest", "Treasure Chest", "Props/Containers"),
+                         ("WoodenLantern", "wooden_lantern", "Wooden Lantern", "Props/Lighting"),
+                         ("Cannon", "cannon", "Ship's Cannon", "Props/Military"),
+                     })
+                yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder), category,
+                    new PlacementRules(randomYaw: true, 0.9f, 1.1f, alignToSlope: false));
+
             // Trees and plants (OpenGameArt), cut out of their leaves' alpha: upright, any heading, a size about their own.
             foreach (var (folder, id, name, category, minScale, maxScale, alignToSlope) in new[]
                      {

@@ -1156,11 +1156,16 @@ slopes), so results are exact and every edit goes through the edit session.
   back, standing its thickness and a strap's (`BackFinder.Strap`, 1 cm) off. `"cutout": true` in the json
   cuts the model out of its base colour's alpha (clipped at `ModelBuilder.CutoutThreshold`) and draws both faces:
   leaf cards, grass, a thatch's fringe. Models whose source had several materials or tiled textures are baked in
-  Blender onto one texture set first (the houses, the arboretum's plants). It lists the prefab in the prefab
+  Blender onto one texture set first (the houses, the arboretum's plants), or keep them as **parts** (the ships, the
+  pier): meshes named `<Name>_<Part>_LOD0/1/2` (`ModelBuilder.PartOf`) draw with their own material `<Name>_<Part>.mat`
+  from their own maps `<Name>_<Part>_BaseColor`, …; a map without alpha may be a `.jpg` (smaller in plain git).
+  `"cutoutParts": ["Sails"]` cuts out only those parts, and `"transparentParts": ["Glass"]` blends those over what is
+  behind (URP transparent, no depth written, no shadow: a lantern's glass). It lists the prefab in the prefab
   catalog under `models/<name in snake case>` (`ModelImport.KeyFor`); `CoreModels` is forge.core's records for them.
   The first is the **Viking Sword** (from `blender-tests`, an item: weapon, 9, worth 75). `ModelContentTests` fails if
   a model isn't built or breaks the contract (resting on its pivot, centred, colliding only through undrawn convex hulls),
-  or if a cutout model's material doesn't clip a base colour with alpha from both sides (or another model's does).
+  or if a part doesn't draw with its own material, clipping (from both sides) or blending a base colour with alpha
+  exactly when its json says so.
 - `EditorContext.Palette` is an engine-free `ObjectPalette` (`Forge.Editing.Palette`), cached per
   world version. UI and shortcuts read it every frame, and scanning 25k records per frame would cost
   real time. Order: category (uncategorized last), then display name, then id; `Groups` holds the

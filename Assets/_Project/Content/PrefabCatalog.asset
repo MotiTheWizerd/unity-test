@@ -51,8 +51,16 @@ MonoBehaviour:
     _asset: {fileID: 4531339660142659181, guid: c570fec9355b1ec4db6b05eb0a43ba83, type: 3}
   - _key: models/bush5
     _asset: {fileID: 1341343009015678093, guid: 15d5a546e05dc994e897223c237c809f, type: 3}
+  - _key: models/cannon
+    _asset: {fileID: 1137697445927454546, guid: e7ce50a5e2b727642b80df7fbfa6d79a, type: 3}
   - _key: models/cattail
     _asset: {fileID: 1383663623496744173, guid: 4cc92a717e6163542a095d2717987809, type: 3}
+  - _key: models/dutch_ship_large
+    _asset: {fileID: 2697402286303030488, guid: 07d1dcaab061eca48b829c7017decabe, type: 3}
+  - _key: models/dutch_ship_large_sailing
+    _asset: {fileID: 4770905889482213951, guid: 308732ad08f648d4b80717391cd2ecb5, type: 3}
+  - _key: models/dutch_ship_medium
+    _asset: {fileID: 8457608174387692926, guid: 55bd6470e46273c428627e300647a0e9, type: 3}
   - _key: models/flowering_bush
     _asset: {fileID: 8893817114575300684, guid: 38b61b985b7fa23468d6867d0f8ecf48, type: 3}
   - _key: models/greatsword
@@ -65,6 +73,10 @@ MonoBehaviour:
     _asset: {fileID: 2341098379205922753, guid: fbe6215ba2cd2a24dbbda683141b1d51, type: 3}
   - _key: models/lady_fern
     _asset: {fileID: 3092172223361584828, guid: e2b59f125157be54f977aee68dc5d7bf, type: 3}
+  - _key: models/lidded_basket
+    _asset: {fileID: 3586242705119707738, guid: 842bb9e6f4dd751498b10b39374ec7a1, type: 3}
+  - _key: models/long_crate
+    _asset: {fileID: 7682951480815562419, guid: e8269bd1675bc314490de4495972e423, type: 3}
   - _key: models/mage_staff
     _asset: {fileID: 2236154627881610368, guid: 18216220fa6870c41af78d51fc3a9f33, type: 3}
   - _key: models/medieval_cottage
@@ -73,6 +85,18 @@ MonoBehaviour:
     _asset: {fileID: 6538764620331614473, guid: 99e1c679bbc9436448130376df83f5b2, type: 3}
   - _key: models/oxeye_daisy
     _asset: {fileID: 611550241321494667, guid: baa187647c4b76f4a9e22427d95d1374, type: 3}
+  - _key: models/pier_section1
+    _asset: {fileID: 1069244285370180107, guid: 61c9c11591306ab4f9a7f75d4f690ce5, type: 3}
+  - _key: models/pier_section2
+    _asset: {fileID: 6971447101679432127, guid: 7d67a7dfa1a28854b836f5462085d8c2, type: 3}
+  - _key: models/pier_section3
+    _asset: {fileID: 7196614595768174045, guid: b0086f899c044a04d90e402a693796a5, type: 3}
+  - _key: models/pier_section4
+    _asset: {fileID: 3949001905008751710, guid: df018f414bcb1b640a35349def6bade9, type: 3}
+  - _key: models/pier_section5
+    _asset: {fileID: 8613710839396724354, guid: 787229c6f5fd3af4b99ced440d814522, type: 3}
+  - _key: models/pinnace
+    _asset: {fileID: 1530231796718385756, guid: b6a00ffc9357a8e4ba443d25cab53c75, type: 3}
   - _key: models/quiver
     _asset: {fileID: 7848319350537025992, guid: 05d4671fcbda7584fb0134237c08a395, type: 3}
   - _key: models/recurve_bow
@@ -83,12 +107,30 @@ MonoBehaviour:
     _asset: {fileID: 5459911896668073189, guid: c90ae97529241dc4698f6853fe2e8ce1, type: 3}
   - _key: models/short_sword
     _asset: {fileID: 6943891220673529511, guid: 7751170070e0a0f4bb538668efc12ab9, type: 3}
+  - _key: models/small_crate
+    _asset: {fileID: 5675818892761294327, guid: 97989778e15bc294fbaf5518494ce4ce, type: 3}
   - _key: models/timber_house
     _asset: {fileID: 3303310201960172976, guid: 0901b9832732077468c319afc700913f, type: 3}
+  - _key: models/treasure_chest
+    _asset: {fileID: 7410670352420374428, guid: 1cea3e74e8878384bb8b9044f25dd1b0, type: 3}
   - _key: models/viking_sword
     _asset: {fileID: 7334485041194033550, guid: f9cc20fa2cb4dac47b66c046438096e1, type: 3}
+  - _key: models/wash_tub
+    _asset: {fileID: 8076483501211593247, guid: d098929c4cca38c40bd517c30eaef419, type: 3}
+  - _key: models/wicker_tray
+    _asset: {fileID: 4287557882105788372, guid: 9581a75032077f24f957afdd7da4887f, type: 3}
   - _key: models/wild_carrot
     _asset: {fileID: 5688740474388048745, guid: ccb354c8aa6a3344b9f82d0efb5bc82c, type: 3}
+  - _key: models/wine_barrel
+    _asset: {fileID: 8820390349937931553, guid: 6e6041c94b286684a8fc04244706bb20, type: 3}
+  - _key: models/wooden_barrel
+    _asset: {fileID: 6496097174952182961, guid: d4bd2e58a864e144ca498677174c2e15, type: 3}
+  - _key: models/wooden_bucket
+    _asset: {fileID: 7805190219228338305, guid: 4e29f4f120296374a978c3c9fae07fbc, type: 3}
+  - _key: models/wooden_lantern
+    _asset: {fileID: 1452582213391218644, guid: a435c68734e72c843b6a4f578e8cc84d, type: 3}
+  - _key: models/worn_barrel
+    _asset: {fileID: 3429939319350505815, guid: 688850c3dd153614e9338f8616a2ddd1, type: 3}
   - _key: nature/bush
     _asset: {fileID: 6383628795285860037, guid: 5db7512fba635b240b40c81b24ec6ecb, type: 3}
   - _key: nature/rock_cluster

@@ -427,6 +427,19 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:cannon",
+      "displayName": "Ship's Cannon",
+      "assetKey": "models/cannon",
+      "category": "Props/Military",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:cattail",
       "displayName": "Cattails",
       "assetKey": "models/cattail",
@@ -590,6 +603,45 @@
       "displayName": "Crate",
       "assetKey": "primitive/cube",
       "category": "Props/Containers"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:dutch_ship_large",
+      "displayName": "Dutch Galleon, Moored",
+      "assetKey": "models/dutch_ship_large",
+      "category": "Vessels/Ships",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:dutch_ship_large_sailing",
+      "displayName": "Dutch Galleon, Under Sail",
+      "assetKey": "models/dutch_ship_large_sailing",
+      "category": "Vessels/Ships",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:dutch_ship_medium",
+      "displayName": "Dutch Merchant Ship",
+      "assetKey": "models/dutch_ship_medium",
+      "category": "Vessels/Ships",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
     },
     {
       "type": "equip_slot",
@@ -885,6 +937,32 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:lidded_basket",
+      "displayName": "Lidded Wicker Basket",
+      "assetKey": "models/lidded_basket",
+      "category": "Props/Containers",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:long_crate",
+      "displayName": "Long Wooden Crate",
+      "assetKey": "models/long_crate",
+      "category": "Props/Containers",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:mage_staff",
       "displayName": "Mage Staff",
       "assetKey": "models/mage_staff",
@@ -1012,10 +1090,88 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:pier_section_1",
+      "displayName": "Pier Section, Rope Rail",
+      "assetKey": "models/pier_section1",
+      "category": "Architecture/Docks",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:pier_section_2",
+      "displayName": "Pier Section",
+      "assetKey": "models/pier_section2",
+      "category": "Architecture/Docks",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:pier_section_3",
+      "displayName": "Pier Section, Braced",
+      "assetKey": "models/pier_section3",
+      "category": "Architecture/Docks",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:pier_section_4",
+      "displayName": "Pier Section, Log Deck",
+      "assetKey": "models/pier_section4",
+      "category": "Architecture/Docks",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:pier_section_5",
+      "displayName": "Pier Hoist Frame",
+      "assetKey": "models/pier_section5",
+      "category": "Architecture/Docks",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:pillar",
       "displayName": "Pillar",
       "assetKey": "primitive/cylinder",
       "category": "Architecture"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:pinnace",
+      "displayName": "Pinnace",
+      "assetKey": "models/pinnace",
+      "category": "Vessels/Ships",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
     },
     {
       "type": "base_object",
@@ -1209,6 +1365,19 @@
       "category": "Props/Decor"
     },
     {
+      "type": "base_object",
+      "id": "forge.core:small_crate",
+      "displayName": "Small Wooden Crate",
+      "assetKey": "models/small_crate",
+      "category": "Props/Containers",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
       "type": "space",
       "id": "forge.core:space/main",
       "displayName": "Main World",
@@ -1273,6 +1442,19 @@
       "assetKey": "props/training_dummy",
       "category": "Props/Training",
       "actor": "forge.core:actor/training_dummy"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:treasure_chest",
+      "displayName": "Treasure Chest",
+      "assetKey": "models/treasure_chest",
+      "category": "Props/Containers",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
     },
     {
       "type": "base_object",
@@ -1364,6 +1546,32 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:wash_tub",
+      "displayName": "Wooden Wash Tub",
+      "assetKey": "models/wash_tub",
+      "category": "Props/Containers",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:wicker_tray",
+      "displayName": "Wicker Tray",
+      "assetKey": "models/wicker_tray",
+      "category": "Props/Containers",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:wild_carrot",
       "displayName": "Wild Carrot",
       "assetKey": "models/wild_carrot",
@@ -1373,6 +1581,71 @@
         "minScale": 0.8,
         "maxScale": 1.2,
         "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:wine_barrel",
+      "displayName": "Wine Barrel",
+      "assetKey": "models/wine_barrel",
+      "category": "Props/Containers",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:wooden_barrel",
+      "displayName": "Wooden Barrel",
+      "assetKey": "models/wooden_barrel",
+      "category": "Props/Containers",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:wooden_bucket",
+      "displayName": "Wooden Bucket",
+      "assetKey": "models/wooden_bucket",
+      "category": "Props/Containers",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:wooden_lantern",
+      "displayName": "Wooden Lantern",
+      "assetKey": "models/wooden_lantern",
+      "category": "Props/Lighting",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:worn_barrel",
+      "displayName": "Worn Wooden Barrel",
+      "assetKey": "models/worn_barrel",
+      "category": "Props/Containers",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.9,
+        "maxScale": 1.1,
+        "alignToSlope": false
       }
     }
   ],

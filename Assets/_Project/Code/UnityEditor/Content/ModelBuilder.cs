@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Forge.Play;
@@ -15,7 +16,9 @@ namespace Forge.UnityEditor.Content
     /// characters. A folder {Name} holds the model {Name}.fbx (imported by <see cref="ModelImport"/>; meters) and its
     /// textures in the art repo's naming, each optional: {Name}_BaseColor.png, {Name}_MetallicSmoothness.png (metal in R,
     /// smoothness in A), {Name}_Normal.png (OpenGL) and {Name}_Occlusion.png (ambient occlusion); a cutout model's
-    /// {Name}_BaseColor.png carries its alpha. The tool makes a URP Lit material {Name}.mat from them and a
+    /// {Name}_BaseColor.png carries its alpha; a map without alpha may be a .jpg instead. A model of several parts (a ship's
+    /// hull, rigging and sails) names its meshes {Name}_{Part}_LOD0, … and each part's maps {Name}_{Part}_BaseColor, …: each
+    /// part draws with its own material {Name}_{Part}.mat. The tool makes a URP Lit material {Name}.mat from them and a
     /// prefab {Name}.prefab holding the model as it rests in the world: turned as its optional {Name}.json says
     /// (<c>{ "rest": [90, 0, 0] }</c>: a sword modelled point up, as a hand holds it, lies flat with its point to the
     /// front), with its lowest point on the prefab's pivot and its footprint centred on it, as every asset's pivot is. The
@@ -60,7 +63,7 @@ namespace Forge.UnityEditor.Content
             }
 
             var settings = SettingsOf(folder, name);
-            var material = BuildMaterial(folder, name, settings.Cutout);
+            var materials = new Dictionary<string, Material>();
             var scene = EditorSceneManager.NewPreviewScene();
             try
             {
@@ -74,6 +77,10 @@ namespace Forge.UnityEditor.Content
 
                 foreach (var renderer in instance.GetComponentsInChildren<Renderer>(true))
                 {
+                    var part = PartOf(renderer.name, name);
+                    var key = MaterialName(name, part);
+                    if (!materials.TryGetValue(key, out var material))
+                        materials[key] = material = BuildMaterial(folder, key, settings.SurfaceOf(part));
                     renderer.sharedMaterials = Enumerable.Repeat(material, renderer.sharedMaterials.Length).ToArray();
                     renderer.shadowCastingMode = ShadowCastingMode.On;
                 }
@@ -93,17 +100,67 @@ namespace Forge.UnityEditor.Content
         // X, then Y); the side of it that faces whoever holds it ("facesHolder", a direction in the model's own frame: a
         // bow's string, [-1, 0, 0]), none when any side may; where it is carried while put away ("carried": "hip", the
         // default, or "back": a bow) (<see cref="HeldLook"/>). "cutout": its base colour's alpha cuts it out, seen from
-        // both sides (leaves, grass, a thatch's fringe).
-        static (Vector3 Resting, Vector3? FacesHolder, CarriedAt Carried, bool Cutout) SettingsOf(string folder, string name)
+        // both sides (leaves, grass, a thatch's fringe); "cutoutParts" names the parts that are ([ "Sails" ]), and
+        // "transparentParts" the parts seen through by their base colour's alpha (a lantern's glass).
+        static Settings SettingsOf(string folder, string name)
         {
             var path = $"{folder}/{name}.json";
             if (!File.Exists(path))
-                return (Vector3.zero, null, CarriedAt.Hip, false);
+                return new Settings(Vector3.zero, null, CarriedAt.Hip, false, new string[0], new string[0]);
 
             var settings = JsonUtility.FromJson<ModelSettings>(File.ReadAllText(path));
-            return (Triple(path, "rest", settings?.rest) ?? Vector3.zero, Triple(path, "facesHolder", settings?.facesHolder),
-                Carried(path, settings?.carried), settings?.cutout ?? false);
+            return new Settings(Triple(path, "rest", settings?.rest) ?? Vector3.zero, Triple(path, "facesHolder", settings?.facesHolder),
+                Carried(path, settings?.carried), settings?.cutout ?? false, settings?.cutoutParts ?? new string[0],
+                settings?.transparentParts ?? new string[0]);
         }
+
+        sealed class Settings
+        {
+            public readonly Vector3 Resting;
+            public readonly Vector3? FacesHolder;
+            public readonly CarriedAt Carried;
+            readonly bool _cutout;
+            readonly string[] _cutoutParts;
+            readonly string[] _transparentParts;
+
+            public Settings(Vector3 resting, Vector3? facesHolder, CarriedAt carried, bool cutout, string[] cutoutParts, string[] transparentParts)
+            {
+                Resting = resting;
+                FacesHolder = facesHolder;
+                Carried = carried;
+                _cutout = cutout;
+                _cutoutParts = cutoutParts;
+                _transparentParts = transparentParts;
+            }
+
+            /// <summary>How the part <paramref name="part"/> (null: the whole model) draws.</summary>
+            public Surface SurfaceOf(string part) =>
+                part != null && _transparentParts.Contains(part) ? Surface.Transparent
+                : _cutout || (part != null && _cutoutParts.Contains(part)) ? Surface.Cutout
+                : Surface.Opaque;
+        }
+
+        enum Surface { Opaque, Cutout, Transparent }
+
+        const string LodMarker = "_LOD";
+
+        /// <summary>
+        /// The part a renderer of the model <paramref name="model"/> draws: "DutchShip_Hull_LOD1" → "Hull"; null for the
+        /// model's own mesh ("DutchShip", "DutchShip_LOD0"), which draws with the model's one material.
+        /// </summary>
+        public static string PartOf(string rendererName, string model)
+        {
+            var lod = rendererName.LastIndexOf(LodMarker, System.StringComparison.Ordinal);
+            var stem = lod >= 0 && rendererName.Substring(lod + LodMarker.Length).All(char.IsDigit) && lod + LodMarker.Length < rendererName.Length
+                ? rendererName.Substring(0, lod)
+                : rendererName;
+            return stem.StartsWith(model + "_", System.StringComparison.Ordinal) && stem.Length > model.Length + 1
+                ? stem.Substring(model.Length + 1)
+                : null;
+        }
+
+        /// <summary>The material (and texture name stem) of a model's part: "DutchShip_Hull", or the model's own name.</summary>
+        public static string MaterialName(string model, string part) => part == null ? model : $"{model}_{part}";
 
         static CarriedAt Carried(string path, string carried)
         {
@@ -130,21 +187,27 @@ namespace Forge.UnityEditor.Content
             public float[] facesHolder;
             public string carried;
             public bool cutout;
+            public string[] cutoutParts;
+            public string[] transparentParts;
         }
 
         /// <summary>The alpha below which a cutout model's base colour is not drawn.</summary>
         public const float CutoutThreshold = 0.5f;
 
-        static Material BuildMaterial(string folder, string name, bool cutout)
+        // A map {name}_{map}, a .png or (without alpha, for size) a .jpg; null when there is neither.
+        static string MapPath(string folder, string name, string map) =>
+            new[] { ".png", ".jpg" }.Select(ext => $"{folder}/{name}_{map}{ext}").FirstOrDefault(File.Exists);
+
+        static Material BuildMaterial(string folder, string name, Surface surface)
         {
-            var colorPath = $"{folder}/{name}_BaseColor.png";
-            var metalPath = $"{folder}/{name}_MetallicSmoothness.png";
-            var normalPath = $"{folder}/{name}_Normal.png";
-            var occlusionPath = $"{folder}/{name}_Occlusion.png";
-            var hasColor = File.Exists(colorPath);
-            var hasMetal = File.Exists(metalPath);
-            var hasNormal = File.Exists(normalPath);
-            var hasOcclusion = File.Exists(occlusionPath);
+            var colorPath = MapPath(folder, name, "BaseColor");
+            var metalPath = MapPath(folder, name, "MetallicSmoothness");
+            var normalPath = MapPath(folder, name, "Normal");
+            var occlusionPath = MapPath(folder, name, "Occlusion");
+            var hasColor = colorPath != null;
+            var hasMetal = metalPath != null;
+            var hasNormal = normalPath != null;
+            var hasOcclusion = occlusionPath != null;
             if (hasColor)
                 TextureMaps.Configure(colorPath, TextureImporterType.Default, sRGB: true, TextureSize);
             if (hasMetal)
@@ -173,12 +236,25 @@ namespace Forge.UnityEditor.Content
             MaterialBuilder.SetKeyword(material, "_NORMALMAP", hasNormal);
             MaterialBuilder.SetKeyword(material, "_OCCLUSIONMAP", hasOcclusion);
             // Cut out: the base colour's alpha clips it, and both faces draw (a leaf card is one quad).
+            var cutout = surface == Surface.Cutout;
             material.SetFloat("_AlphaClip", cutout ? 1f : 0f);
             material.SetFloat("_Cutoff", CutoutThreshold);
             material.SetFloat("_Cull", (float)(cutout ? CullMode.Off : CullMode.Back));
-            material.SetOverrideTag("RenderType", cutout ? "TransparentCutout" : "Opaque");
-            material.renderQueue = (int)(cutout ? RenderQueue.AlphaTest : RenderQueue.Geometry);
             MaterialBuilder.SetKeyword(material, "_ALPHATEST_ON", cutout);
+            // Transparent: the base colour's alpha blends it over what is behind (glass), drawn after the opaque world
+            // and writing no depth.
+            var transparent = surface == Surface.Transparent;
+            material.SetFloat("_Surface", transparent ? 1f : 0f);
+            material.SetFloat("_Blend", 0f);
+            material.SetFloat("_SrcBlend", (float)(transparent ? BlendMode.SrcAlpha : BlendMode.One));
+            material.SetFloat("_DstBlend", (float)(transparent ? BlendMode.OneMinusSrcAlpha : BlendMode.Zero));
+            material.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
+            material.SetFloat("_DstBlendAlpha", (float)(transparent ? BlendMode.OneMinusSrcAlpha : BlendMode.Zero));
+            material.SetFloat("_ZWrite", transparent ? 0f : 1f);
+            MaterialBuilder.SetKeyword(material, "_SURFACE_TYPE_TRANSPARENT", transparent);
+            material.SetShaderPassEnabled("ShadowCaster", !transparent);
+            material.SetOverrideTag("RenderType", transparent ? "Transparent" : cutout ? "TransparentCutout" : "Opaque");
+            material.renderQueue = (int)(transparent ? RenderQueue.Transparent : cutout ? RenderQueue.AlphaTest : RenderQueue.Geometry);
             EditorUtility.SetDirty(material);
             return material;
         }
