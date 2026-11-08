@@ -42,10 +42,12 @@ namespace Forge.UnityEditor.Content
             move != Jump && move != Fall && move != Land;
 
         /// <summary>
-        /// Whether action <paramref name="move"/> plays on the arms alone (drawing and sheathing: the body walks or runs on
-        /// unchanged) rather than the whole upper body (a slash: the torso turns into the cut, the legs still walk).
+        /// Whether action <paramref name="move"/> plays on the arms alone (drawing and sheathing, a style's too: "BowDraw";
+        /// the body walks or runs on unchanged) rather than the whole upper body (a slash: the torso turns into the cut,
+        /// the legs still walk).
         /// </summary>
-        public static bool ArmsOnly(string move) => move == Draw || move == Sheathe;
+        public static bool ArmsOnly(string move) =>
+            move != null && (move.EndsWith(Draw, StringComparison.Ordinal) || move.EndsWith(Sheathe, StringComparison.Ordinal));
 
         /// <summary>Whether <paramref name="move"/> repeats while it lasts (standing, walking, falling) rather than playing once (a jump, a landing).</summary>
         public static bool Loops(string move) =>

@@ -104,15 +104,18 @@ namespace Forge.Play
             FadeActions(deltaTime);
         }
 
-        /// <summary>Shows the weapons becoming <paramref name="readiness"/>: a draw or a sheathe beginning, or done.</summary>
-        public void Show(Readiness readiness)
+        /// <summary>
+        /// Shows the weapons becoming <paramref name="readiness"/>: a draw or a sheathe beginning (playing
+        /// <paramref name="move"/>, a style's, else its own), or done.
+        /// </summary>
+        public void Show(Readiness readiness, string move = null)
         {
             if (_drawnMoves)
                 _animator.SetBool(DrawnId, readiness == Readiness.Drawing || readiness == Readiness.Drawn);
             if (readiness == Readiness.Drawing)
-                Play(DrawTrigger);
+                Play(move ?? DrawTrigger);
             else if (readiness == Readiness.Sheathing)
-                Play(SheatheTrigger);
+                Play(move ?? SheatheTrigger);
         }
 
         /// <summary>

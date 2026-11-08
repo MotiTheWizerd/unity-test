@@ -794,8 +794,12 @@ from any camera, so both cameras read the same player.
   Body** layer (`<Set> Upper Body.mask`: also the body and head, so the torso turns into a cut). `HumanoidAnimation.Play`
   finds the layer holding the action and weighs it in for as long as the clip lasts: in as it starts, out by its end.
   The layer's own states change at once (no crossfade into its empty rest state, which would pull the limbs toward the
-  rig's neutral pose). The draw and sheathe clips' lengths are the rules' draw and sheathe times (`ReadinessView` binds a
-  `WeaponReadiness` to a `CharacterModel`). A new move is a file dropped in and a rebuild.
+  rig's neutral pose). A draw and a put-away are moves of the weapon's combat style (`CombatMoveKind.Draw`/`Sheathe`:
+  One-Handed's `Draw`/`Sheathe` from the hip, Archery's `BowDraw`/`BowSheathe` from the back; any move ending in Draw or
+  Sheathe plays on the Arms layer), else the set's own `Draw`/`Sheathe`; `WeaponReadiness` names the one to play
+  (`DrawAnimation`) and times it by the look (`IReadyTimings`: `CharacterModel.TryReadyTime`, the clip's length and the
+  moment the hand is at the hip sheath, `SheathFinder`, or at the back spot, `BackFinder.TryFindReach`), so a style's
+  draw is a record and a clip (`ReadinessView` binds a `WeaponReadiness` to a `CharacterModel`). A new move is a file dropped in and a rebuild.
 - **How the body moved** (`BodyMotion`, `Forge.Game.Motion`, shared by anything with a body): `PlayerCharacter.Motion` each frame, from where the body actually went
   (ground speed, vertical speed, grounded), so a run into a wall shows standing. `StrideMatch` keeps the feet planted:
   the speed in the clips' own size (the avatar's `humanScale`) picks the blend, and past the fastest clip it plays
@@ -1143,8 +1147,9 @@ slopes), so results are exact and every edit goes through the edit session.
   a hand turns it about its length so that side faces the chest as the character stands ready (`HoldFinder`: the way
   from the grip to the chest in its drawn idle, else its idle, measured on a hidden copy), so a bow's string faces the
   archer, for the other hand to take, in either hand and whatever the stance; `"carried": "back"` (bows, as in Skyrim)
-  puts it, while weapons are away, across the back instead of in a hip sheath (`BackFinder`: from the left hip up to the
-  right shoulder, its middle on the farthest back the torso reaches in the idle, on the chest bone), lying flat against
+  puts it, while weapons are away, across the back instead of in a hip sheath (`BackFinder`: from the other hip up to
+  the shoulder of the hand that holds it, its middle at the chest bone's height on the farthest back the torso reaches
+  in the idle, riding the chest bone), lying flat against
   it with the holder's side down across the back, standing its thickness and a scabbard's width off. `"cutout": true` in the json
   cuts the model out of its base colour's alpha (clipped at `ModelBuilder.CutoutThreshold`) and draws both faces:
   leaf cards, grass, a thatch's fringe. Models whose source had several materials or tiled textures are baked in

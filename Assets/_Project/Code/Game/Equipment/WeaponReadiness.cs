@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
@@ -21,9 +22,11 @@ namespace Forge.Game.Equipment
     /// <see cref="DrawSeconds"/>; toggling again sheathes it, taking <see cref="SheatheSeconds"/>. A draw or a sheathe
     /// runs to its end (a press meanwhile does nothing), so whatever acts on it (an attack, later) knows the weapon is
     /// in hand only when <see cref="Readiness.Drawn"/>. With nothing to draw it stays sheathed, and taking off the last
-    /// weapon puts the actor back to sheathed at once. Equipping never draws. How long a draw takes is the look's to say
-    /// (its clips, <see cref="SetTimes"/>). Changes are told as they happen (<see cref="Changed"/>) and on the stream
-    /// when done (<see cref="WeaponsDrawn"/>, <see cref="WeaponsSheathed"/>). Engine-free; the game ticks it.
+    /// weapon puts the actor back to sheathed at once. Equipping never draws. What a draw plays is its weapon's style's
+    /// (<see cref="DrawAnimation"/>: a sword from the hip, a bow from the back), else the look's own; how long it takes
+    /// is the look's to say (its clips: <see cref="Timings"/> by the style's move, else <see cref="SetTimes"/>). Changes
+    /// are told as they happen (<see cref="Changed"/>) and on the stream when done (<see cref="WeaponsDrawn"/>,
+    /// <see cref="WeaponsSheathed"/>). Engine-free; the game ticks it.
     /// </summary>
     public sealed class WeaponReadiness : IDisposable
     {
@@ -33,6 +36,8 @@ namespace Forge.Game.Equipment
         readonly ActorEquipment _equipment;
         readonly IRecordStore _records;
         readonly GameEvents _events;
+        ReadyTiming _draw = new ReadyTiming(DefaultSeconds, 1f);
+        ReadyTiming _sheathe = new ReadyTiming(DefaultSeconds, 1f);
         float _elapsed;
 
         /// <param name="records">The world, which the equip slots are read from.</param>
@@ -62,15 +67,26 @@ namespace Forge.Game.Equipment
             }
         }
 
-        public float DrawSeconds { get; private set; } = DefaultSeconds;
+        /// <summary>The look's timings of its weapons' styles' draws and sheathes; until set, every one plays as <see cref="SetTimes"/> says.</summary>
+        public IReadyTimings Timings { get; set; }
 
-        public float SheatheSeconds { get; private set; } = DefaultSeconds;
+        /// <summary>The animation a draw plays now: the style's draw of the weapon it draws; null: the look's own.</summary>
+        public string DrawAnimation => StyleMove(CombatMoveKind.Draw);
 
-        /// <summary>How far into a draw the weapon leaves its sheath for the hand, 0 to 1.</summary>
-        public float DrawnAt { get; private set; } = 1f;
+        /// <summary>The animation a sheathe plays now: the style's sheathe of the weapon it puts away; null: the look's own.</summary>
+        public string SheatheAnimation => StyleMove(CombatMoveKind.Sheathe);
 
-        /// <summary>How far into a sheathe the weapon leaves the hand for its sheath, 0 to 1.</summary>
-        public float SheathedAt { get; private set; } = 1f;
+        /// <summary>How long a draw takes now, seconds.</summary>
+        public float DrawSeconds => TimingOf(DrawAnimation, _draw).Seconds;
+
+        /// <summary>How long a sheathe takes now, seconds.</summary>
+        public float SheatheSeconds => TimingOf(SheatheAnimation, _sheathe).Seconds;
+
+        /// <summary>How far into a draw the weapon leaves where it is carried for the hand, 0 to 1.</summary>
+        public float DrawnAt => TimingOf(DrawAnimation, _draw).At;
+
+        /// <summary>How far into a sheathe the weapon leaves the hand for where it is carried, 0 to 1.</summary>
+        public float SheathedAt => TimingOf(SheatheAnimation, _sheathe).At;
 
         /// <summary>
         /// Whether the weapons are in hand rather than in their sheaths: from the moment a draw takes them
@@ -100,11 +116,8 @@ namespace Forge.Game.Equipment
             {
                 foreach (var equipped in _equipment.All)
                 {
-                    foreach (var slot in equipped.Fit.Slots)
-                    {
-                        if (Sheathes(slot))
-                            return true;
-                    }
+                    if (SheathesAny(equipped.Fit.Slots))
+                        return true;
                 }
 
                 return false;
@@ -115,24 +128,17 @@ namespace Forge.Game.Equipment
         public event Action<Readiness> Changed;
 
         /// <summary>
-        /// How long a draw and a sheathe take, as the look's clips play them (zero is at once), and how far into each the
-        /// weapon changes place (<paramref name="drawnAt"/>: sheath to hand; <paramref name="sheathedAt"/>: hand to sheath).
+        /// How the look's own draw and sheathe play, for weapons whose style names none (zero seconds is at once): how long
+        /// each takes, and how far into each the weapon changes place (<paramref name="drawnAt"/>: sheath to hand;
+        /// <paramref name="sheathedAt"/>: hand to sheath).
         /// </summary>
         public void SetTimes(float drawSeconds, float sheatheSeconds, float drawnAt = 1f, float sheathedAt = 1f)
         {
-            if (!(drawSeconds >= 0f) || float.IsInfinity(drawSeconds))
-                throw new ArgumentOutOfRangeException(nameof(drawSeconds), drawSeconds, "Must be a finite number of seconds, zero or more.");
-            if (!(sheatheSeconds >= 0f) || float.IsInfinity(sheatheSeconds))
-                throw new ArgumentOutOfRangeException(nameof(sheatheSeconds), sheatheSeconds, "Must be a finite number of seconds, zero or more.");
-            if (!(drawnAt >= 0f && drawnAt <= 1f))
-                throw new ArgumentOutOfRangeException(nameof(drawnAt), drawnAt, "Must be a fraction of the draw, 0 to 1.");
-            if (!(sheathedAt >= 0f && sheathedAt <= 1f))
-                throw new ArgumentOutOfRangeException(nameof(sheathedAt), sheathedAt, "Must be a fraction of the sheathe, 0 to 1.");
+            var draw = new ReadyTiming(drawSeconds, drawnAt);
+            var sheathe = new ReadyTiming(sheatheSeconds, sheathedAt);
             var wasInHand = InHand;
-            DrawSeconds = drawSeconds;
-            SheatheSeconds = sheatheSeconds;
-            DrawnAt = drawnAt;
-            SheathedAt = sheathedAt;
+            _draw = draw;
+            _sheathe = sheathe;
             TellInHand(wasInHand);
         }
 
@@ -172,6 +178,36 @@ namespace Forge.Game.Equipment
         public void Dispose() => _equipment.Changed -= OnEquipmentChanged;
 
         bool Sheathes(RecordId slot) => _records.TryGet(slot, out var record) && record is EquipSlotRecord equipSlot && equipSlot.Sheathes;
+
+        // The move of `kind` of the first weapon put away and drawn whose style has one; null when none does.
+        string StyleMove(CombatMoveKind kind)
+        {
+            foreach (var equipped in _equipment.All)
+            {
+                var weapon = equipped.Record.Weapon;
+                if (weapon == null || !SheathesAny(equipped.Fit.Slots))
+                    continue;
+                if (_records.TryGet(weapon.Style, out var record) && record is CombatStyleRecord style && style.TryGetMove(kind, out var move))
+                    return move.Animation;
+            }
+
+            return null;
+        }
+
+        bool SheathesAny(IEnumerable<RecordId> slots)
+        {
+            foreach (var slot in slots)
+            {
+                if (Sheathes(slot))
+                    return true;
+            }
+
+            return false;
+        }
+
+        // The look's timing of a style's move, else of its own draw or sheathe.
+        ReadyTiming TimingOf(string animation, ReadyTiming own) =>
+            animation != null && Timings != null && Timings.TryGet(animation, out var timing) ? timing : own;
 
         // Nothing left to hold: the hands are empty, so the actor is as if sheathed.
         void OnEquipmentChanged()

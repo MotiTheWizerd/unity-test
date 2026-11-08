@@ -14,5 +14,8 @@ namespace Forge.Game.Combat
 
         /// <summary>A one-handed blade: a sword, an axe, a mace.</summary>
         public static readonly RecordId OneHanded = CombatStyleRecord.IdFor(Namespace, "one_handed");
+
+        /// <summary>A bow: drawn from the back, held in the left hand.</summary>
+        public static readonly RecordId Archery = CombatStyleRecord.IdFor(Namespace, "archery");
     }
 }

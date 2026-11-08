@@ -48,16 +48,18 @@ namespace Forge.UnityEditor.Content
                 item: new ItemPart(ItemKind.Weapon, weight: 6f, value: 90),
                 equippable: new EquippablePart(CoreEquipSlots.OneHanded()));
 
-            // Bows (OpenGameArt), lying flat; they take both hands, held in the left. No combat style yet.
-            foreach (var (folder, id, name, weight, value) in new[]
+            // Bows (OpenGameArt), lying flat; they take both hands, held in the left, and are drawn from the back in the
+            // Archery style. An arrow's hit is the bow's damage to health (no shot yet).
+            foreach (var (folder, id, name, weight, value, damage) in new[]
                      {
-                         ("HuntingBow", "hunting_bow", "Hunting Bow", 3f, 50),
-                         ("RecurveBow", "recurve_bow", "Recurve Bow", 3f, 65),
+                         ("HuntingBow", "hunting_bow", "Hunting Bow", 3f, 50, 7f),
+                         ("RecurveBow", "recurve_bow", "Recurve Bow", 3f, 65, 9f),
                      })
                 yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
                     "Items/Weapons", LyingFlat(),
                     item: new ItemPart(ItemKind.Weapon, weight, value),
-                    equippable: new EquippablePart(CoreEquipSlots.Bow()));
+                    equippable: new EquippablePart(CoreEquipSlots.Bow()),
+                    weapon: new WeaponPart(CoreCombatStyles.Archery, new[] { Effect.Damage(CoreAttributes.Health, damage) }));
 
             // Arrows and a quiver of them (OpenGameArt, CC0), lying flat; carried, not held, until there is shooting.
             foreach (var (folder, id, name, weight, value) in new[]

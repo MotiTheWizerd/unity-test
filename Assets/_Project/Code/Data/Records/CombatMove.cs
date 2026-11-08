@@ -7,6 +7,12 @@ namespace Forge.Data.Records
     {
         /// <summary>A plain blow (a click).</summary>
         Attack,
+
+        /// <summary>Taking the weapon from where it is carried into the hand (the ready-weapon key).</summary>
+        Draw,
+
+        /// <summary>Putting the weapon back where it is carried.</summary>
+        Sheathe,
     }
 
     /// <summary>

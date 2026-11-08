@@ -4,6 +4,7 @@ using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Game.Actors;
+using Forge.Game.Attributes;
 using Forge.Game.Equipment;
 using Forge.Game.Events;
 using Forge.Game.Items;
@@ -18,6 +19,28 @@ namespace Forge.Tests.Game
 
         static readonly BaseObjectRecord Sword = Item("sword", new EquippablePart(CoreEquipSlots.OneHanded()));
         static readonly BaseObjectRecord Band = Item("band", new EquippablePart(new[] { EquipFit.Of(Ring) }));
+
+        static readonly CombatStyleRecord Archery = new CombatStyleRecord(CombatStyleRecord.IdFor("forge.core", "archery"), "Archery", new[]
+        {
+            new CombatMove(CombatMoveKind.Draw, "BowDraw"),
+            new CombatMove(CombatMoveKind.Sheathe, "BowSheathe"),
+        });
+
+        static readonly BaseObjectRecord Bow = new BaseObjectRecord(new RecordId("forge.core", "bow"), "bow", "items/bow",
+            item: new ItemPart(ItemKind.Weapon, 1f, 1), equippable: new EquippablePart(CoreEquipSlots.Bow()),
+            weapon: new WeaponPart(Archery.Id, new[] { Effect.Damage(CoreAttributes.Health, 7f) }));
+
+        // The look's timings: each named move lasts `Seconds`, the weapon changing place a quarter of the way in.
+        sealed class Clips : IReadyTimings
+        {
+            public float Seconds = 2f;
+
+            public bool TryGet(string animation, out ReadyTiming timing)
+            {
+                timing = new ReadyTiming(Seconds, 0.25f);
+                return animation == "BowDraw" || animation == "BowSheathe";
+            }
+        }
 
         Inventory _inventory;
         GameEvents _events;
@@ -35,7 +58,9 @@ namespace Forge.Tests.Game
                     new EquipSlotRecord(CoreEquipSlots.LeftHand, "Left Hand", "LeftHand", sheathes: true),
                     new EquipSlotRecord(Ring, "Ring"),
                     Sword,
-                    Band),
+                    Band,
+                    Archery,
+                    Bow),
             }).Records;
             _inventory = new Inventory();
             _events = new GameEvents();
@@ -148,6 +173,32 @@ namespace Forge.Tests.Game
             _readiness.Toggle();
 
             Assert.That(_readiness.State, Is.EqualTo(Readiness.Drawn));
+        }
+
+        [Test]
+        public void ABow_IsDrawnAndPutAwayByItsStylesMoves_TimedAsTheLookPlaysThem()
+        {
+            Wield(Bow);
+            _readiness.Timings = new Clips();
+            Assert.That((_readiness.DrawAnimation, _readiness.SheatheAnimation), Is.EqualTo(("BowDraw", "BowSheathe")));
+
+            _readiness.Toggle();
+            _readiness.Tick(0.4f);
+            Assert.That(_readiness.InHand, Is.False, "Before a quarter of its 2 s it is still on the back...");
+            _readiness.Tick(0.2f);
+            Assert.That(_readiness.InHand, Is.True, "...then in the hand.");
+            _readiness.Tick(1.4f);
+            Assert.That(_readiness.State, Is.EqualTo(Readiness.Drawn), "Its draw lasts its own 2 s, not the look's 0.8 s.");
+        }
+
+        [Test]
+        public void AWeaponWhoseStyleNamesNoDraw_IsDrawnAsTheLookDrawsOwn()
+        {
+            Wield(Sword);
+            _readiness.Timings = new Clips();
+
+            Assert.That(_readiness.DrawAnimation, Is.Null);
+            Assert.That((_readiness.DrawSeconds, _readiness.SheatheSeconds), Is.EqualTo((0.8f, 0.6f)));
         }
 
         void Wield(BaseObjectRecord item)

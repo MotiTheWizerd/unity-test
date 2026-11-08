@@ -33,7 +33,7 @@ namespace Forge.Play
         readonly float _sunk;
         HeadlessBody _headless;
         Transform _eyes;
-        Transform _back;
+        readonly Dictionary<HumanBodyBones, Transform> _backs = new Dictionary<HumanBodyBones, Transform>();
         bool _firstPerson;
         bool _inHand;
 
@@ -136,8 +136,40 @@ namespace Forge.Play
         /// <summary>Shows how the body moved over the last <paramref name="deltaTime"/> seconds (standing, walking, a jump).</summary>
         public void Animate(BodyMotion motion, float deltaTime) => _animation?.Show(motion, deltaTime);
 
-        /// <summary>Shows its weapons becoming <paramref name="readiness"/> (a draw or a sheathe playing, or done).</summary>
-        public void Animate(Readiness readiness) => _animation?.Show(readiness);
+        /// <summary>
+        /// Shows its weapons becoming <paramref name="readiness"/> (a draw or a sheathe playing, or done); a draw or a
+        /// sheathe plays <paramref name="move"/> (a style's: "BowDraw"), else its own.
+        /// </summary>
+        public void Animate(Readiness readiness, string move = null) => _animation?.Show(readiness, move);
+
+        /// <summary>
+        /// How its draw or sheathe <paramref name="move"/> plays: the clip's length, and the moment in it the hand is at
+        /// where what it draws is carried, on the back (<see cref="BackFinder"/>) or at the hip (<see cref="SheathFinder"/>);
+        /// false when it has no such move.
+        /// </summary>
+        public bool TryReadyTime(string move, out ReadyTiming timing)
+        {
+            timing = default;
+            var clip = _animation?.Clip(move);
+            if (clip == null)
+                return false;
+            var moment = 1f;
+            var onBack = false;
+            foreach (var held in _attached.Values)
+            {
+                if (held.Sheathes && held.Carried == CarriedAt.Back &&
+                    BackFinder.TryFindReach(_prefab, clip, IdleClip, held.Bone == HumanBodyBones.RightHand, out moment))
+                {
+                    onBack = true;
+                    break;
+                }
+            }
+
+            if (!onBack)
+                moment = SheathFinder.TryFind(_prefab, clip, out var sheaths) ? sheaths.Moment : 1f;
+            timing = new ReadyTiming(clip.length, moment);
+            return true;
+        }
 
         /// <summary>Plays the action <paramref name="move"/> (a slash) on its arms; false when it has no such move.</summary>
         public bool Play(string move) => _animation != null && _animation.Play(move);
@@ -209,19 +241,12 @@ namespace Forge.Play
                 Carried = how != null ? how.Carried : CarriedAt.Hip,
                 Size = look.transform.localScale,
                 Renderers = look.GetComponentsInChildren<Renderer>(true),
+                FacesHolder = how != null ? how.FacesHolder : null,
                 InHandTurn = Quaternion.identity,
-                OnBackTurn = Quaternion.identity,
             };
-            var facesHolder = how != null ? how.FacesHolder : null;
-            var hand = id == HumanBodyBones.RightHand || id == HumanBodyBones.LeftHand;
-            if (facesHolder.HasValue && hand && HoldFinder.TryFindBody(_prefab, StanceClip, id == HumanBodyBones.RightHand, out var body))
-                held.InHandTurn = HoldFinder.Facing(facesHolder.Value, body);
-            // On the back it lies flat against it, its holder's side down across the back, away from the neck (the back
-            // spot's -X; its +Z is out of the back), standing clear by its thickness.
-            if (facesHolder.HasValue)
-                held.OnBackTurn = HoldFinder.Facing(facesHolder.Value, Vector3.left);
+            if (held.FacesHolder.HasValue && IsHand(id) && HoldFinder.TryFindBody(_prefab, StanceClip, id == HumanBodyBones.RightHand, out var body))
+                held.InHandTurn = HoldFinder.Facing(held.FacesHolder.Value, body);
             held.Reach = ExtentOf(held, Vector3.up);
-            held.Depth = ExtentOf(held, Quaternion.Inverse(held.OnBackTurn) * Vector3.back);
             RemoveColliders(look);
             SetLayer(look.transform, Root.layer);
             _attached.Add(look, held);
@@ -292,10 +317,13 @@ namespace Forge.Play
             var onBack = false;
             if (held.Sheathes && !_inHand)
             {
-                if (held.Carried == CarriedAt.Back && TryBack(out var back))
+                if (held.Carried == CarriedAt.Back && TryBack(held.Bone, out var back))
                 {
+                    // Flat against the back, its holder's side down across it, away from the neck.
                     point = back;
-                    turn = held.OnBackTurn;
+                    turn = held.FacesHolder.HasValue
+                        ? HoldFinder.Facing(held.FacesHolder.Value, back.InverseTransformDirection(Vector3.down))
+                        : Quaternion.identity;
                     onBack = true;
                 }
                 else if (TrySheath(held.Bone, out var sheath))
@@ -313,32 +341,37 @@ namespace Forge.Play
             look.localScale = boneScale > 0f ? held.Size / boneScale : held.Size;
             var gripTurn = Quaternion.Inverse(look.rotation) * held.Grip.rotation;
             look.rotation = point.rotation * turn * Quaternion.Inverse(gripTurn);
-            var standOff = onBack ? SheathFinder.Scabbard + held.Depth * held.Grip.lossyScale.z : 0f;
+            var standOff = onBack ? SheathFinder.Scabbard + ExtentOf(held, Quaternion.Inverse(turn) * Vector3.back) * held.Grip.lossyScale.z : 0f;
             look.position += point.position + point.forward * standOff - held.Grip.position;
         }
 
-        // The spot across the back, made the first time it is asked for, from where the idle carries the back.
-        bool TryBack(out Transform back)
+        // A hand's spot across the back, made the first time it is asked for, from where the idle carries the back.
+        bool TryBack(HumanBodyBones hand, out Transform back)
         {
-            back = _back;
-            if (back != null)
+            back = null;
+            if (!IsHand(hand))
+                return false;
+            if (_backs.TryGetValue(hand, out back))
                 return true;
             var chest = BackFinder.Chest(_humanoid);
-            if (chest == null || !BackFinder.TryFind(_prefab, IdleClip, out var pose))
+            if (chest == null || !BackFinder.TryFind(_prefab, IdleClip, hand == HumanBodyBones.RightHand, out var pose))
                 return false;
 
-            back = _back = new GameObject("Back").transform;
+            back = new GameObject("Back " + hand).transform;
             back.SetParent(chest, false);
             back.gameObject.layer = Root.layer;
             back.SetPositionAndRotation(chest.position + chest.rotation * pose.position, chest.rotation * pose.rotation);
+            _backs.Add(hand, back);
             return true;
         }
+
+        static bool IsHand(HumanBodyBones bone) => bone == HumanBodyBones.RightHand || bone == HumanBodyBones.LeftHand;
 
         // A hand's sheath at the hip, made the first time it is asked for, from where the draw clip takes the hilt.
         bool TrySheath(HumanBodyBones hand, out Transform sheath)
         {
             sheath = null;
-            if (hand != HumanBodyBones.RightHand && hand != HumanBodyBones.LeftHand)
+            if (!IsHand(hand))
                 return false;
             if (_sheaths.TryGetValue(hand, out sheath))
                 return true;
@@ -395,11 +428,10 @@ namespace Forge.Play
             public CarriedAt Carried;
             public float Reach;
 
-            // Turned about its length in the hand and on the back, so its holder's side faces the body, or out; and how
-            // far it reaches, so turned, toward the back (in the grip's units).
+            // The side that faces its holder (a bow's string), in the grip's frame; and the turn about its length that
+            // brings it round to the body in the hand.
+            public Vector3? FacesHolder;
             public Quaternion InHandTurn;
-            public Quaternion OnBackTurn;
-            public float Depth;
         }
 
         // Drawn like the bone it hangs from: seen from within, only the shadow of what the head wears.

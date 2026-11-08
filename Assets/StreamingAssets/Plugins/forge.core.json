@@ -516,12 +516,39 @@
     },
     {
       "type": "combat_style",
+      "id": "forge.core:combat_style/archery",
+      "displayName": "Archery",
+      "moves": [
+        {
+          "kind": "draw",
+          "animation": "BowDraw",
+          "staminaCost": 0.0
+        },
+        {
+          "kind": "sheathe",
+          "animation": "BowSheathe",
+          "staminaCost": 0.0
+        }
+      ]
+    },
+    {
+      "type": "combat_style",
       "id": "forge.core:combat_style/one_handed",
       "displayName": "One-Handed",
       "moves": [
         {
           "kind": "attack",
           "animation": "SwordSlash",
+          "staminaCost": 0.0
+        },
+        {
+          "kind": "draw",
+          "animation": "Draw",
+          "staminaCost": 0.0
+        },
+        {
+          "kind": "sheathe",
+          "animation": "Sheathe",
           "staminaCost": 0.0
         }
       ]
@@ -729,6 +756,16 @@
               "forge.core:equip_slot/left_hand",
               "forge.core:equip_slot/right_hand"
             ]
+          }
+        ]
+      },
+      "weapon": {
+        "style": "forge.core:combat_style/archery",
+        "hit": [
+          {
+            "kind": "damage",
+            "attribute": "forge.core:attribute/health",
+            "amount": 7.0
           }
         ]
       }
@@ -1001,6 +1038,16 @@
               "forge.core:equip_slot/left_hand",
               "forge.core:equip_slot/right_hand"
             ]
+          }
+        ]
+      },
+      "weapon": {
+        "style": "forge.core:combat_style/archery",
+        "hit": [
+          {
+            "kind": "damage",
+            "attribute": "forge.core:attribute/health",
+            "amount": 9.0
           }
         ]
       }
