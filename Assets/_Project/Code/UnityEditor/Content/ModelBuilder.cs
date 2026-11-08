@@ -14,13 +14,14 @@ namespace Forge.UnityEditor.Content
     /// Dev tool: turns each model folder under Content/Models into a placeable asset, as the character builder does for
     /// characters. A folder {Name} holds the model {Name}.fbx (imported by <see cref="ModelImport"/>; meters) and its
     /// textures in the art repo's naming, each optional: {Name}_BaseColor.png, {Name}_MetallicSmoothness.png (metal in R,
-    /// smoothness in A), {Name}_Normal.png (OpenGL) and {Name}_Occlusion.png (ambient occlusion). The tool makes a URP Lit material {Name}.mat from them and a
+    /// smoothness in A), {Name}_Normal.png (OpenGL) and {Name}_Occlusion.png (ambient occlusion); a cutout model's
+    /// {Name}_BaseColor.png carries its alpha. The tool makes a URP Lit material {Name}.mat from them and a
     /// prefab {Name}.prefab holding the model as it rests in the world: turned as its optional {Name}.json says
     /// (<c>{ "rest": [90, 0, 0] }</c>: a sword modelled point up, as a hand holds it, lies flat with its point to the
     /// front), with its lowest point on the prefab's pivot and its footprint centred on it, as every asset's pivot is. The
-    /// model inside keeps its own pivot (a weapon's grip) for whatever holds it later, and, when the json has a "leftGrip"
-    /// (<c>[0, 180, 0]</c>: a bow, whose string must face the archer in either hand), a left-hand grip turned by it
-    /// (<see cref="ModelGrip"/>). The prefab is listed in the prefab
+    /// model inside keeps its own pivot (a weapon's grip) for whatever holds it later, and, when the json has a
+    /// "facesHolder" (<c>[-1, 0, 0]</c>: a bow, whose string must face the archer) or a "carried" (<c>"back"</c>), a
+    /// <see cref="HeldLook"/> saying so. The prefab is listed in the prefab
     /// catalog under <see cref="ModelImport.KeyFor"/>. Existing assets are updated in place, so their GUIDs, and every
     /// reference to them, survive a rebuild.
     /// </summary>
@@ -58,7 +59,8 @@ namespace Forge.UnityEditor.Content
                 return null;
             }
 
-            var material = BuildMaterial(folder, name);
+            var settings = SettingsOf(folder, name);
+            var material = BuildMaterial(folder, name, settings.Cutout);
             var scene = EditorSceneManager.NewPreviewScene();
             try
             {
@@ -66,14 +68,9 @@ namespace Forge.UnityEditor.Content
                 SceneManager.MoveGameObjectToScene(root, scene);
                 var instance = (GameObject)PrefabUtility.InstantiatePrefab(model, scene);
                 instance.transform.SetParent(root.transform, false);
-                var settings = SettingsOf(folder, name);
                 instance.transform.localRotation = Quaternion.Euler(settings.Resting);
-                if (settings.LeftGrip.HasValue)
-                {
-                    var leftGrip = new GameObject(ModelGrip.LeftHand).transform;
-                    leftGrip.SetParent(instance.transform, false);
-                    leftGrip.localRotation = Quaternion.Euler(settings.LeftGrip.Value);
-                }
+                if (settings.FacesHolder.HasValue || settings.Carried != CarriedAt.Hip)
+                    root.AddComponent<HeldLook>().Configure(settings.FacesHolder, settings.Carried);
 
                 foreach (var renderer in instance.GetComponentsInChildren<Renderer>(true))
                 {
@@ -92,36 +89,53 @@ namespace Forge.UnityEditor.Content
             }
         }
 
-        // A model folder's optional {Name}.json, angles in degrees (Unity order: Z, then X, then Y): how the model rests in
-        // the world ("rest"), and the turn the left hand holds it by, about its grip ("leftGrip": a bow half round its
-        // length, so its string faces the archer in either hand); none when it is held alike in both.
-        static (Vector3 Resting, Vector3? LeftGrip) SettingsOf(string folder, string name)
+        // A model folder's optional {Name}.json: how the model rests in the world ("rest", degrees in Unity order: Z, then
+        // X, then Y); the side of it that faces whoever holds it ("facesHolder", a direction in the model's own frame: a
+        // bow's string, [-1, 0, 0]), none when any side may; where it is carried while put away ("carried": "hip", the
+        // default, or "back": a bow) (<see cref="HeldLook"/>). "cutout": its base colour's alpha cuts it out, seen from
+        // both sides (leaves, grass, a thatch's fringe).
+        static (Vector3 Resting, Vector3? FacesHolder, CarriedAt Carried, bool Cutout) SettingsOf(string folder, string name)
         {
             var path = $"{folder}/{name}.json";
             if (!File.Exists(path))
-                return (Vector3.zero, null);
+                return (Vector3.zero, null, CarriedAt.Hip, false);
 
             var settings = JsonUtility.FromJson<ModelSettings>(File.ReadAllText(path));
-            return (Angles(path, "rest", settings?.rest) ?? Vector3.zero, Angles(path, "leftGrip", settings?.leftGrip));
+            return (Triple(path, "rest", settings?.rest) ?? Vector3.zero, Triple(path, "facesHolder", settings?.facesHolder),
+                Carried(path, settings?.carried), settings?.cutout ?? false);
         }
 
-        static Vector3? Angles(string path, string key, float[] angles)
+        static CarriedAt Carried(string path, string carried)
         {
-            if (angles == null || angles.Length == 0)
+            if (string.IsNullOrEmpty(carried))
+                return CarriedAt.Hip;
+            if (System.Enum.TryParse(carried, ignoreCase: true, out CarriedAt at))
+                return at;
+            throw new System.InvalidOperationException($"{path}: \"carried\" is \"hip\" or \"back\".");
+        }
+
+        static Vector3? Triple(string path, string key, float[] values)
+        {
+            if (values == null || values.Length == 0)
                 return null;
-            if (angles.Length != 3)
-                throw new System.InvalidOperationException($"{path}: \"{key}\" is three angles in degrees, [x, y, z].");
-            return new Vector3(angles[0], angles[1], angles[2]);
+            if (values.Length != 3)
+                throw new System.InvalidOperationException($"{path}: \"{key}\" is three numbers, [x, y, z].");
+            return new Vector3(values[0], values[1], values[2]);
         }
 
         [System.Serializable]
         sealed class ModelSettings
         {
             public float[] rest;
-            public float[] leftGrip;
+            public float[] facesHolder;
+            public string carried;
+            public bool cutout;
         }
 
-        static Material BuildMaterial(string folder, string name)
+        /// <summary>The alpha below which a cutout model's base colour is not drawn.</summary>
+        public const float CutoutThreshold = 0.5f;
+
+        static Material BuildMaterial(string folder, string name, bool cutout)
         {
             var colorPath = $"{folder}/{name}_BaseColor.png";
             var metalPath = $"{folder}/{name}_MetallicSmoothness.png";
@@ -158,6 +172,13 @@ namespace Forge.UnityEditor.Content
             MaterialBuilder.SetKeyword(material, "_METALLICSPECGLOSSMAP", hasMetal);
             MaterialBuilder.SetKeyword(material, "_NORMALMAP", hasNormal);
             MaterialBuilder.SetKeyword(material, "_OCCLUSIONMAP", hasOcclusion);
+            // Cut out: the base colour's alpha clips it, and both faces draw (a leaf card is one quad).
+            material.SetFloat("_AlphaClip", cutout ? 1f : 0f);
+            material.SetFloat("_Cutoff", CutoutThreshold);
+            material.SetFloat("_Cull", (float)(cutout ? CullMode.Off : CullMode.Back));
+            material.SetOverrideTag("RenderType", cutout ? "TransparentCutout" : "Opaque");
+            material.renderQueue = (int)(cutout ? RenderQueue.AlphaTest : RenderQueue.Geometry);
+            MaterialBuilder.SetKeyword(material, "_ALPHATEST_ON", cutout);
             EditorUtility.SetDirty(material);
             return material;
         }

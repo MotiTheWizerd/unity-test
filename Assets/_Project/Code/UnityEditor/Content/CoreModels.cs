@@ -82,6 +82,36 @@ namespace Forge.UnityEditor.Content
                     "Items/Shields", LyingFlat(),
                     item: new ItemPart(ItemKind.Weapon, weight, value),
                     equippable: new EquippablePart(CoreEquipSlots.OffHand()));
+
+            // Houses (OpenGameArt): upright, placed as aimed, at their own size.
+            foreach (var (folder, id, name) in new[]
+                     {
+                         ("MedievalCottage", "medieval_cottage", "Medieval Cottage"),
+                         ("TimberHouse", "timber_house", "Timber-Framed House"),
+                         ("OldShack", "old_shack", "Thatched Shack"),
+                     })
+                yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
+                    "Architecture/Buildings", new PlacementRules(randomYaw: false, 1f, 1f, alignToSlope: false));
+
+            // Trees and plants (OpenGameArt), cut out of their leaves' alpha: upright, any heading, a size about their own.
+            foreach (var (folder, id, name, category, minScale, maxScale, alignToSlope) in new[]
+                     {
+                         ("BalsamFir", "balsam_fir", "Balsam Fir", "Nature/Trees", 0.8f, 1.3f, false),
+                         ("BeechTree", "beech_tree", "Beech Tree", "Nature/Trees", 0.8f, 1.3f, false),
+                         ("Bush1", "bush_leafy", "Leafy Bush", "Nature/Plants", 0.7f, 1.3f, true),
+                         ("Bush2", "bush_autumn", "Autumn Bush", "Nature/Plants", 0.7f, 1.3f, true),
+                         ("Bush3", "bush_wild", "Wild Shrub", "Nature/Plants", 0.7f, 1.3f, true),
+                         ("Bush4", "bush_grassy", "Grassy Bush", "Nature/Plants", 0.7f, 1.3f, true),
+                         ("Bush5", "bush_broadleaf", "Broadleaf Bush", "Nature/Plants", 0.7f, 1.3f, true),
+                         ("FloweringBush", "flowering_bush", "Flowering Bush", "Nature/Plants", 0.7f, 1.3f, true),
+                         ("LadyFern", "lady_fern", "Lady Fern", "Nature/Plants", 0.7f, 1.3f, true),
+                         ("Burdock", "burdock", "Burdock", "Nature/Plants", 0.7f, 1.3f, true),
+                         ("Cattail", "cattail", "Cattails", "Nature/Plants", 0.8f, 1.2f, true),
+                         ("OxeyeDaisy", "oxeye_daisy", "Oxeye Daisy", "Nature/Flowers", 0.8f, 1.2f, true),
+                         ("WildCarrot", "wild_carrot", "Wild Carrot", "Nature/Flowers", 0.8f, 1.2f, true),
+                     })
+                yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder), category,
+                    new PlacementRules(randomYaw: true, minScale, maxScale, alignToSlope));
         }
 
         // Laid on the ground as it falls: any heading, following the slope, at its own size.

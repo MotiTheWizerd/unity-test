@@ -232,10 +232,36 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:balsam_fir",
+      "displayName": "Balsam Fir",
+      "assetKey": "models/balsam_fir",
+      "category": "Nature/Trees",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.8,
+        "maxScale": 1.3,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:barrel",
       "displayName": "Barrel",
       "assetKey": "props/barrel",
       "category": "Props/Containers"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:beech_tree",
+      "displayName": "Beech Tree",
+      "assetKey": "models/beech_tree",
+      "category": "Nature/Trees",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.8,
+        "maxScale": 1.3,
+        "alignToSlope": false
+      }
     },
     {
       "type": "base_object",
@@ -277,9 +303,87 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:burdock",
+      "displayName": "Burdock",
+      "assetKey": "models/burdock",
+      "category": "Nature/Plants",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.7,
+        "maxScale": 1.3,
+        "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:bush",
       "displayName": "Bush",
       "assetKey": "nature/bush",
+      "category": "Nature/Plants",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.7,
+        "maxScale": 1.3,
+        "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:bush_autumn",
+      "displayName": "Autumn Bush",
+      "assetKey": "models/bush2",
+      "category": "Nature/Plants",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.7,
+        "maxScale": 1.3,
+        "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:bush_broadleaf",
+      "displayName": "Broadleaf Bush",
+      "assetKey": "models/bush5",
+      "category": "Nature/Plants",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.7,
+        "maxScale": 1.3,
+        "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:bush_grassy",
+      "displayName": "Grassy Bush",
+      "assetKey": "models/bush4",
+      "category": "Nature/Plants",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.7,
+        "maxScale": 1.3,
+        "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:bush_leafy",
+      "displayName": "Leafy Bush",
+      "assetKey": "models/bush1",
+      "category": "Nature/Plants",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.7,
+        "maxScale": 1.3,
+        "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:bush_wild",
+      "displayName": "Wild Shrub",
+      "assetKey": "models/bush3",
       "category": "Nature/Plants",
       "placement": {
         "randomYaw": true,
@@ -298,6 +402,19 @@
         "randomYaw": false,
         "minScale": 1.0,
         "maxScale": 1.0,
+        "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:cattail",
+      "displayName": "Cattails",
+      "assetKey": "models/cattail",
+      "category": "Nature/Plants",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.8,
+        "maxScale": 1.2,
         "alignToSlope": true
       }
     },
@@ -449,6 +566,19 @@
       "displayName": "Wooden Floor",
       "assetKey": "architecture/floor_wood",
       "category": "Architecture/Interior"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:flowering_bush",
+      "displayName": "Flowering Bush",
+      "assetKey": "models/flowering_bush",
+      "category": "Nature/Plants",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.7,
+        "maxScale": 1.3,
+        "alignToSlope": true
+      }
     },
     {
       "type": "base_object",
@@ -659,6 +789,19 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:lady_fern",
+      "displayName": "Lady Fern",
+      "assetKey": "models/lady_fern",
+      "category": "Nature/Plants",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.7,
+        "maxScale": 1.3,
+        "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:lamp_post",
       "displayName": "Lamp Post",
       "assetKey": "props/lamp_post",
@@ -751,6 +894,45 @@
       "displayName": "Weathered Planks",
       "assetKey": "material/weatheredplanks",
       "category": "Wood"
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:medieval_cottage",
+      "displayName": "Medieval Cottage",
+      "assetKey": "models/medieval_cottage",
+      "category": "Architecture/Buildings",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:old_shack",
+      "displayName": "Thatched Shack",
+      "assetKey": "models/old_shack",
+      "category": "Architecture/Buildings",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:oxeye_daisy",
+      "displayName": "Oxeye Daisy",
+      "assetKey": "models/oxeye_daisy",
+      "category": "Nature/Flowers",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.8,
+        "maxScale": 1.2,
+        "alignToSlope": true
+      }
     },
     {
       "type": "base_object",
@@ -979,6 +1161,19 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:timber_house",
+      "displayName": "Timber-Framed House",
+      "assetKey": "models/timber_house",
+      "category": "Architecture/Buildings",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:totem",
       "displayName": "Totem",
       "assetKey": "primitive/capsule",
@@ -1077,6 +1272,19 @@
         "randomYaw": false,
         "minScale": 1.0,
         "maxScale": 1.0,
+        "alignToSlope": true
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:wild_carrot",
+      "displayName": "Wild Carrot",
+      "assetKey": "models/wild_carrot",
+      "category": "Nature/Flowers",
+      "placement": {
+        "randomYaw": true,
+        "minScale": 0.8,
+        "maxScale": 1.2,
         "alignToSlope": true
       }
     }

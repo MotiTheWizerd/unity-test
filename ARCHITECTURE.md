@@ -1138,12 +1138,21 @@ slopes), so results are exact and every edit goes through the edit session.
   its lowest point on the pivot and its footprint centred on it (the asset contract, whatever the file's pivot), the
   model inside keeping its own pivot (the sword's grip) for whatever holds it later; a held thing is modelled as the
   right hand holds it, +Y out of the fist past the thumb (a blade's point, a bow's upper limb), and a bow has its grip
-  at the middle of its handle and its string on -X (toward the right hand's wrist). A `"leftGrip"` in the json
-  (`[0, 180, 0]` for a bow) adds a left-hand grip turned by it under the model (`ModelGrip.LeftHand`), which the left
-  hand holds it by (`ModelGrip.Of`), so a bow's string faces the archer in either hand. It lists the prefab in the prefab
+  at the middle of its handle and its string on -X. How a held thing is held and carried is a `HeldLook` on the prefab,
+  from the json: `"facesHolder"` (`[-1, 0, 0]` for a bow: its string) is the side that must face whoever holds it, and
+  a hand turns it about its length so that side faces the chest as the character stands ready (`HoldFinder`: the way
+  from the grip to the chest in its drawn idle, else its idle, measured on a hidden copy), so a bow's string faces the
+  archer, for the other hand to take, in either hand and whatever the stance; `"carried": "back"` (bows, as in Skyrim)
+  puts it, while weapons are away, across the back instead of in a hip sheath (`BackFinder`: from the left hip up to the
+  right shoulder, its middle on the farthest back the torso reaches in the idle, on the chest bone), holder's side out,
+  standing a scabbard's width off. `"cutout": true` in the json
+  cuts the model out of its base colour's alpha (clipped at `ModelBuilder.CutoutThreshold`) and draws both faces:
+  leaf cards, grass, a thatch's fringe. Models whose source had several materials or tiled textures are baked in
+  Blender onto one texture set first (the houses, the arboretum's plants). It lists the prefab in the prefab
   catalog under `models/<name in snake case>` (`ModelImport.KeyFor`); `CoreModels` is forge.core's records for them.
   The first is the **Viking Sword** (from `blender-tests`, an item: weapon, 9, worth 75). `ModelContentTests` fails if
-  a model isn't built or breaks the contract (resting on its pivot, centred, colliding only through undrawn convex hulls).
+  a model isn't built or breaks the contract (resting on its pivot, centred, colliding only through undrawn convex hulls),
+  or if a cutout model's material doesn't clip a base colour with alpha from both sides (or another model's does).
 - `EditorContext.Palette` is an engine-free `ObjectPalette` (`Forge.Editing.Palette`), cached per
   world version. UI and shortcuts read it every frame, and scanning 25k records per frame would cost
   real time. Order: category (uncategorized last), then display name, then id; `Groups` holds the

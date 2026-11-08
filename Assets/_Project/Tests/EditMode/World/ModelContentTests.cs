@@ -4,6 +4,7 @@ using Forge.World;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 
 namespace Forge.Tests.World
 {
@@ -41,6 +42,27 @@ namespace Forge.Tests.World
                 {
                     Object.DestroyImmediate(instance);
                 }
+            }
+        }
+
+        [Test]
+        public void ACutoutModel_ClipsItsBaseColoursAlpha_FromBothSides_AndNoOtherDoes()
+        {
+            foreach (var folder in AssetDatabase.GetSubFolders(ModelsFolder))
+            {
+                var name = Path.GetFileName(folder);
+                var settings = $"{folder}/{name}.json";
+                var cutout = File.Exists(settings) && File.ReadAllText(settings).Replace(" ", "").Contains("\"cutout\":true");
+                var material = AssetDatabase.LoadAssetAtPath<Material>($"{folder}/{name}.mat");
+                Assert.That(material, Is.Not.Null, $"{folder} is not built.");
+
+                Assert.That(material.IsKeywordEnabled("_ALPHATEST_ON"), Is.EqualTo(cutout), $"{name} clips its alpha only if cut out.");
+                if (!cutout)
+                    continue;
+                Assert.That(material.GetFloat("_Cull"), Is.EqualTo((float)UnityEngine.Rendering.CullMode.Off), $"{name} draws both faces.");
+                var color = material.GetTexture("_BaseMap");
+                Assert.That(color, Is.Not.Null, $"{name} has a base colour.");
+                Assert.That(GraphicsFormatUtility.HasAlphaChannel(color.graphicsFormat), Is.True, $"{name}'s base colour carries an alpha.");
             }
         }
     }
