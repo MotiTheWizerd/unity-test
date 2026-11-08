@@ -48,8 +48,8 @@ namespace Forge.Play
         const float MinPull = 0.01f;
 
         // Along the blade, how often (meters) and how near beside it (meters) the body is looked for.
-        const float BodyStep = 0.05f;
-        const float BodyReach = 0.05f;
+        internal const float BodyStep = 0.05f;
+        internal const float BodyReach = 0.05f;
 
         static readonly Dictionary<(GameObject, AnimationClip), Sheaths?> Found = new Dictionary<(GameObject, AnimationClip), Sheaths?>();
 

@@ -341,7 +341,7 @@ namespace Forge.Play
             look.localScale = boneScale > 0f ? held.Size / boneScale : held.Size;
             var gripTurn = Quaternion.Inverse(look.rotation) * held.Grip.rotation;
             look.rotation = point.rotation * turn * Quaternion.Inverse(gripTurn);
-            var standOff = onBack ? SheathFinder.Scabbard + ExtentOf(held, Quaternion.Inverse(turn) * Vector3.back) * held.Grip.lossyScale.z : 0f;
+            var standOff = onBack ? BackFinder.Strap + ExtentOf(held, Quaternion.Inverse(turn) * Vector3.back) * held.Grip.lossyScale.z : 0f;
             look.position += point.position + point.forward * standOff - held.Grip.position;
         }
 
