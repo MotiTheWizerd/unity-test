@@ -13,13 +13,18 @@ namespace Forge.Play
     /// down as it comes out; by the time it is on the string (the draw's window opens) it lies along the draw
     /// (<see cref="ArcheryAim.TryDrawLine"/>), until it is loosed. As the arrow comes to the string the upper body turns
     /// (<see cref="CharacterModel.TurnUpperBody"/>) so that the draw points at what the archer aims at
-    /// (<see cref="ArcheryAim.Target"/>), high or low, and wherever the clip's own stance would point it; it eases out
-    /// once the shot is gone. Works on each frame's pose (<see cref="CharacterModel.Posed"/>). Bound while the look exists.
+    /// (<see cref="ArcheryAim.Target"/>), high or low, and wherever the clip's own stance would point it, by at most
+    /// <see cref="MostTurn"/> (the body itself turns to the aim meanwhile, <see cref="Game.Player.PlayerCharacter.Aiming"/>);
+    /// it eases out once the shot is gone. Works on each frame's pose (<see cref="CharacterModel.Posed"/>). Bound while the look exists.
     /// </summary>
     public sealed class ShotView : IDisposable
     {
         // Seconds the aim takes to let go of the upper body once the draw is over.
         const float AimFade = 0.2f;
+
+        // Degrees the upper body turns at most to bring the draw onto the aim: the clip's own stance and the aim's
+        // height; the rest is the body's to turn (PlayerCharacter.Aiming), so it never twists round to aim behind.
+        const float MostTurn = 75f;
 
         readonly ActorCombat _combat;
         readonly ActorEquipment _equipment;
@@ -83,7 +88,7 @@ namespace Forge.Play
             var aimed = ArcheryAim.Target(_view(), from) - from;
             if (aimed.sqrMagnitude < 1e-6f)
                 return;
-            var turn = Quaternion.FromToRotation(along, aimed.normalized);
+            var turn = Quaternion.RotateTowards(Quaternion.identity, Quaternion.FromToRotation(along, aimed.normalized), MostTurn);
             _model.TurnUpperBody(Quaternion.Slerp(Quaternion.identity, turn, weight));
         }
 

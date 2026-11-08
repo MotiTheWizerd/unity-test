@@ -80,6 +80,22 @@ namespace Forge.Tests.Game
         }
 
         [Test]
+        public void Aiming_TheBodyTurnsToWhereItLooks_AtTheTurnRate_EvenStandingAndFacingMovement()
+        {
+            var player = Standing(BodyFacing.Movement);
+            player.Tick(Turn(150f), Frame);
+            Assert.That(player.BodyHeading, Is.Zero, "Not aiming: standing, it stays.");
+
+            player.Aiming = true;
+            player.Tick(PlayerCommands.None, Frame);
+            var firstStep = player.BodyHeading;
+            Run(player, PlayerCommands.None, 1f);
+
+            Assert.That(firstStep, Is.EqualTo(LocomotionSettings.Default.TurnRate * Frame).Within(1e-3f), "Turns, not snaps.");
+            Assert.That(player.BodyHeading, Is.EqualTo(150f).Within(1e-3f));
+        }
+
+        [Test]
         public void FacingMovement_TurnsTheShortWayRound()
         {
             var player = Standing(BodyFacing.Movement);

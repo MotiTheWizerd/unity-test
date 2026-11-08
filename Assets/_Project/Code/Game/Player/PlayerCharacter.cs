@@ -56,6 +56,12 @@ namespace Forge.Game.Player
         /// <summary>How the body turns; the camera mode sets it (first person: with the look).</summary>
         public BodyFacing Facing { get; set; } = BodyFacing.Look;
 
+        /// <summary>
+        /// Whether it aims (draws a bow): the body turns to face where it looks, at the turn rate, whether it moves or
+        /// not, as Skyrim's archer squares up to the shot; the game sets it each frame.
+        /// </summary>
+        public bool Aiming { get; set; }
+
         /// <summary>Compass degrees the body faces, which its look (model, animations) is turned to.</summary>
         public float BodyHeading { get; private set; }
 
@@ -117,6 +123,13 @@ namespace Forge.Game.Player
             if (Facing == BodyFacing.Look)
             {
                 BodyHeading = Look.Heading;
+                return;
+            }
+
+            if (Aiming)
+            {
+                if (deltaTime > 0f)
+                    BodyHeading = TurnToward(BodyHeading, Look.Heading, Locomotion.Settings.TurnRate * deltaTime);
                 return;
             }
 

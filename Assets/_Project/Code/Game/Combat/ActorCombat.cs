@@ -92,6 +92,21 @@ namespace Forge.Game.Combat
         /// <summary>What is swinging now, a hand each.</summary>
         public IReadOnlyList<Swing> Swings => _swings;
 
+        /// <summary>Whether it draws a weapon that shoots (a bow), from the draw's start until it is over: it aims.</summary>
+        public bool Aiming
+        {
+            get
+            {
+                foreach (var swing in _swings)
+                {
+                    if (swing.Shoots)
+                        return true;
+                }
+
+                return false;
+            }
+        }
+
         /// <summary>A swing began, for the look.</summary>
         public event Action<Swing> SwingStarted;
 

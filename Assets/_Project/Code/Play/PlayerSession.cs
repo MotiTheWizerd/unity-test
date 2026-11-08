@@ -239,6 +239,7 @@ namespace Forge.Play
                 Combat.Release(CoreEquipSlots.LeftHand);
             Combat.Tick(deltaTime);
             _arrows?.Tick(deltaTime);
+            Player.Aiming = Combat.Aiming;
             Player.Tick(commands, deltaTime);
             Frame(deltaTime);
             _sweep?.Tick();
