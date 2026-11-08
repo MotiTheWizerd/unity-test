@@ -9,6 +9,7 @@ using Forge.Game.Combat;
 using Forge.Game.Equipment;
 using Forge.Game.Events;
 using Forge.Game.Items;
+using Forge.Game.World;
 using NUnit.Framework;
 using static Forge.Tests.Data.TestRecords;
 
@@ -30,7 +31,7 @@ namespace Forge.Tests.Game
             weapon: new WeaponPart(Archery, new[] { Effect.Damage(CoreAttributes.Health, 10f) }, CoreEquipSlots.Ammo));
 
         static readonly BaseObjectRecord Arrow = new BaseObjectRecord(new RecordId("forge.core", "arrow"), "arrow", "items/arrow",
-            item: new ItemPart(ItemKind.Misc, 0.1f, 1), equippable: new EquippablePart(CoreEquipSlots.Ammunition()));
+            item: new ItemPart(ItemKind.Misc, 0.1f, 1), equippable: new EquippablePart(CoreEquipSlots.Ammunition()), ammo: new AmmoPart(0.2f));
 
         // The draw: 1 s, the arrow on the string at 0.5, fully drawn at 1 (where the clip ends, as the real one does).
         static readonly MoveTiming DrawTiming = new MoveTiming(1f, 0.5f, 1f);
@@ -398,6 +399,38 @@ namespace Forge.Tests.Game
             _readiness.Toggle();
 
             Assert.That((shots.Count, _combat.Swings.Count, _inventory.CountOf(Arrow.Id)), Is.EqualTo((0, 0, 5)));
+        }
+
+        [Test]
+        public void ALandedArrow_StaysInTheWorldAsAnArrow_ToBeTakenBack_UnlessItBreaks()
+        {
+            var shots = ReadyBow(5);
+            for (var i = 0; i < 2; i++)
+            {
+                _combat.TryAttack(CoreEquipSlots.RightHand);
+                _combat.Tick(1f);
+                _combat.Release(CoreEquipSlots.RightHand);
+                _combat.Tick(0.01f);
+            }
+
+            var world = new WorldChanges();
+            var rolls = new Queue<float>(new[] { 0.5f, 0.1f });
+            var landings = new ShotLandings(world, _events, () => rolls.Dequeue());
+            var space = new RecordId("forge.core", "space/main");
+            var at = new System.Numerics.Vector3(1f, 2f, 3f);
+            var turned = System.Numerics.Quaternion.CreateFromAxisAngle(System.Numerics.Vector3.UnitX, 0.5f);
+
+            var kept = landings.Land(shots[0], space, at, turned);
+            var broken = landings.Land(shots[1], space, at, turned);
+            _events.Flush();
+
+            Assert.That((kept.BaseId, kept.Space, kept.Position, kept.Rotation), Is.EqualTo((Arrow.Id, space, at, turned)), "Rolled 0.5 against a fifth: it stays, as it landed.");
+            Assert.That(world.AddedObjects, Is.EqualTo(new[] { kept }), "In the world, takeable as any item is.");
+            Assert.That(broken, Is.Null, "Rolled 0.1: it broke.");
+            var landed = _told.OfType<ShotLanded>().ToArray();
+            Assert.That(landed.Select(l => (l.Actor, l.Ammo, l.Placed)),
+                Is.EqualTo(new[] { (ActorId.Player, Arrow.Id, (RecordId?)kept.Id), (ActorId.Player, Arrow.Id, (RecordId?)null) }));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new AmmoPart(1.5f));
         }
 
         [Test]

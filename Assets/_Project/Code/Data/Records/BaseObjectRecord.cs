@@ -7,7 +7,8 @@ namespace Forge.Data.Records
     /// A definition of something that can be placed in the world (a tree, a rock,
     /// a chair). Placed instances reference it by id, so shared data lives once.
     /// What it is beyond its look comes in optional parts: an <see cref="ItemPart"/> makes it something to carry, an
-    /// <see cref="EquippablePart"/> something its carrier can equip, and a <see cref="WeaponPart"/> something to fight with.
+    /// <see cref="EquippablePart"/> something its carrier can equip, a <see cref="WeaponPart"/> something to fight with, and
+    /// an <see cref="AmmoPart"/> something a weapon shoots.
     /// </summary>
     public sealed class BaseObjectRecord : Record
     {
@@ -18,11 +19,14 @@ namespace Forge.Data.Records
         /// <param name="equippable">What makes it something to equip and hold or wear; null = not equippable. Only an item is.</param>
         /// <param name="weapon">What makes it a weapon to fight with; null = not a weapon. Only something equippable is.</param>
         /// <param name="actor">The actor each one placed is while the world plays (an <see cref="ActorRecord"/>: a training dummy, later a character); null = no actor.</param>
+        /// <param name="ammo">What makes it ammunition a weapon shoots; null = not ammo. Only an item is.</param>
         public BaseObjectRecord(RecordId id, string displayName, string assetKey, string category = null, PlacementRules placement = null,
             IEnumerable<MaterialOverride> materials = null, ItemPart item = null, EquippablePart equippable = null, WeaponPart weapon = null,
-            RecordId? actor = null)
+            RecordId? actor = null, AmmoPart ammo = null)
             : base(id)
         {
+            if (ammo != null && item == null)
+                throw new ArgumentException("Only an item is ammunition: give it an item part too.", nameof(ammo));
             if (actor.HasValue && actor.Value.IsDefault)
                 throw new ArgumentException("An actor link names the actor, or is left out.", nameof(actor));
             if (actor.HasValue && item != null)
@@ -46,6 +50,7 @@ namespace Forge.Data.Records
             Equippable = equippable;
             Weapon = weapon;
             Actor = actor;
+            Ammo = ammo;
         }
 
         public string DisplayName { get; }
@@ -80,5 +85,8 @@ namespace Forge.Data.Records
         /// look is this object's; who it is (and, later, what it carries and how it fights) is the actor's.
         /// </summary>
         public RecordId? Actor { get; }
+
+        /// <summary>What makes it ammunition a weapon shoots (an arrow), or null: not ammo.</summary>
+        public AmmoPart Ammo { get; }
     }
 }

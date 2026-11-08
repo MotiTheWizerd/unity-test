@@ -50,7 +50,32 @@ namespace Forge.Game.Combat
         public override string ToString() => $"{Actor}: loosed {Ammo} from {Weapon} at {Power:P0}";
     }
 
-    /// <summary>A blow landed:<see cref="Attacker"/>'s <see cref="Weapon"/> struck <see cref="Target"/>, taking <see cref="Damage"/> health.</summary>
+    /// <summary>
+    /// What <see cref="Actor"/> shot (one <see cref="Ammo"/>) landed: it stays there as <see cref="Placed"/>, to be taken
+    /// back, or it broke (no placed object).
+    /// </summary>
+    public readonly struct ShotLanded : IGameEvent
+    {
+        public ShotLanded(ActorId actor, RecordId ammo, RecordId? placed)
+        {
+            Actor = actor;
+            Ammo = ammo;
+            Placed = placed;
+        }
+
+        public ActorId Actor { get; }
+
+        public RecordId Ammo { get; }
+
+        /// <summary>The placed object it now is, or null: it broke.</summary>
+        public RecordId? Placed { get; }
+
+        public bool Broke => Placed == null;
+
+        public override string ToString() => Broke ? $"{Actor}'s {Ammo} broke" : $"{Actor}'s {Ammo} landed as {Placed}";
+    }
+
+    /// <summary>A blow landed: <see cref="Attacker"/>'s <see cref="Weapon"/> struck <see cref="Target"/>, taking <see cref="Damage"/> health.</summary>
     public readonly struct HitLanded : IGameEvent
     {
         public HitLanded(ActorId attacker, ActorId target, RecordId weapon, float damage)

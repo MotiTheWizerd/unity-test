@@ -45,6 +45,17 @@ namespace Forge.Game.World
         /// <summary>An id for a new placed object, never given before by this world's changes, so nothing stale names it.</summary>
         public RecordId NewId() => new RecordId(Namespace, "placed/" + ++_lastId);
 
+        /// <summary>
+        /// Puts one <paramref name="baseObject"/> (an item dropped, an arrow landed) into <paramref name="space"/> at
+        /// <paramref name="position"/>, turned <paramref name="rotation"/>, at its own size: the placed object it now is.
+        /// </summary>
+        public PlacedObjectRecord Place(RecordId baseObject, RecordId space, System.Numerics.Vector3 position, System.Numerics.Quaternion rotation)
+        {
+            var placed = new PlacedObjectRecord(NewId(), baseObject, space, position, rotation, 1f);
+            Add(placed);
+            return placed;
+        }
+
         /// <summary>Puts <paramref name="placed"/>, made while playing (<see cref="NewId"/>), into the world.</summary>
         public void Add(PlacedObjectRecord placed)
         {

@@ -38,10 +38,9 @@ namespace Forge.Game.Items
             if (inventory.CountOf(item) == 0)
                 return null;
 
-            // Made before the item leaves the pack, so a bad place loses nothing.
-            var placed = new PlacedObjectRecord(_world.NewId(), item, space, position, rotation, 1f);
+            // Placed before the item leaves the pack, so a bad place loses nothing.
+            var placed = _world.Place(item, space, position, rotation);
             inventory.TryRemove(item);
-            _world.Add(placed);
             _events.Publish(new ItemDropped(actor, item, placed.Id, 1));
             return placed;
         }

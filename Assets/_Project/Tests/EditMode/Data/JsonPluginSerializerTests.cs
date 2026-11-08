@@ -526,16 +526,20 @@ namespace Forge.Tests.Data
                 new BaseObjectRecord(RecordId.Parse("core:bow"), "Bow", "items/bow", item: new ItemPart(ItemKind.Weapon, 3f, 50),
                     equippable: new EquippablePart(new[] { EquipFit.Of(ammo) }), weapon: new WeaponPart(archery, hit, ammo)),
                 new BaseObjectRecord(RecordId.Parse("core:sword"), "Sword", "items/sword", item: new ItemPart(ItemKind.Weapon, 9f, 75),
-                    equippable: new EquippablePart(new[] { EquipFit.Of(ammo) }), weapon: new WeaponPart(archery, hit)));
+                    equippable: new EquippablePart(new[] { EquipFit.Of(ammo) }), weapon: new WeaponPart(archery, hit)),
+                new BaseObjectRecord(RecordId.Parse("core:arrow"), "Arrow", "items/arrow", item: new ItemPart(ItemKind.Misc, 0.1f, 1),
+                    ammo: new AmmoPart(0.2f)));
 
             var json = Write(plugin);
             var records = Read(json).Records;
             var objects = records.OfType<BaseObjectRecord>().ToDictionary(r => r.Id.ToString());
 
             Assert.That(records.OfType<CombatStyleRecord>().Single().Moves.Single().Held, Is.True);
+            Assert.That(objects["core:arrow"].Ammo.BreakChance, Is.EqualTo(0.2f), "An arrow is ammo, breaking one time in five.");
+            Assert.That(objects["core:bow"].Ammo, Is.Null);
             Assert.That(objects["core:bow"].Weapon.Ammo, Is.EqualTo(ammo), "A bow shoots what the ammo slot holds...");
             Assert.That(objects["core:sword"].Weapon.Ammo, Is.Null, "...a sword strikes with itself.");
-            Assert.That(Regex.Matches(json, "\"ammo\"").Count, Is.EqualTo(1), "No ammo is written as nothing.");
+            Assert.That(Regex.Matches(json, "\"ammo\"").Count, Is.EqualTo(2), "No ammo is written as nothing: the bow's slot and the arrow's part.");
             Assert.That(Write(Read(json)), Is.EqualTo(json));
         }
 

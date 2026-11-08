@@ -68,6 +68,7 @@ namespace Forge.UnityEditor.Content
                     weapon: new WeaponPart(CoreCombatStyles.Archery, new[] { Effect.Damage(CoreAttributes.Health, damage) }, CoreEquipSlots.Ammo));
 
             // Arrows (OpenGameArt, CC0), lying flat: equipped as ammo, worn as a quiver of them on the back, as in Skyrim.
+            // One in five breaks where it lands; the rest can be taken back.
             foreach (var (folder, id, name, weight, value) in new[]
                      {
                          ("Arrow", Arrow(pluginId), "Arrow", 0.1f, 1),
@@ -76,7 +77,8 @@ namespace Forge.UnityEditor.Content
                 yield return new BaseObjectRecord(id, name, ModelImport.KeyFor(folder),
                     "Items/Ammo", LyingFlat(),
                     item: new ItemPart(ItemKind.Misc, weight, value),
-                    equippable: new EquippablePart(CoreEquipSlots.Ammunition(), worn: ModelImport.KeyFor("Quiver")));
+                    equippable: new EquippablePart(CoreEquipSlots.Ammunition(), worn: ModelImport.KeyFor("Quiver")),
+                    ammo: new AmmoPart(breakChance: 0.2f));
 
             // A quiver of arrows (OpenGameArt, CC0), lying flat; carried, its look the one arrows are worn by.
             yield return new BaseObjectRecord(new RecordId(pluginId, "quiver"), "Quiver of Arrows", ModelImport.KeyFor("Quiver"),

@@ -50,15 +50,18 @@ namespace Forge.Play
         readonly IAssetCatalog _assets;
         readonly Combatants _combatants;
         readonly PlacedActors _placedActors;
+        readonly Action<Shot, Vector3, Quaternion> _landShot;
 
         /// <param name="camera">The camera the player sees through while spawned.</param>
         /// <param name="events">The game's stream, told what happens to the player.</param>
         /// <param name="assets">The looks of the world's things, for what the player holds.</param>
         /// <param name="combatants">Who can be struck in the game; the player is one while spawned.</param>
         /// <param name="placedActors">The world's placed actors, which the player's blows find.</param>
+        /// <param name="landShot">Where what the player shoots goes once it lands, with its pose there (scene space).</param>
         public PlayerSession(PlayerProfile profile, Transform camera, GameEvents events, IAssetCatalog assets, Combatants combatants,
-            PlacedActors placedActors)
+            PlacedActors placedActors, Action<Shot, Vector3, Quaternion> landShot)
         {
+            _landShot = landShot ?? throw new ArgumentNullException(nameof(landShot));
             _profile = profile != null ? profile : throw new ArgumentNullException(nameof(profile));
             Events = events ?? throw new ArgumentNullException(nameof(events));
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
@@ -188,7 +191,7 @@ namespace Forge.Play
                 _combatView = new CombatView(Combat, _avatar.Model);
                 _sweep = new BladeSweep(Combat, _avatar.Model, world, Identify);
                 _shotView = new ShotView(Combat, Equipment, _avatar.Model, _assets, () => _director.Pose);
-                _arrows = new ArrowFlights(Combat, _avatar.Model, _assets, () => _director.Pose, Identify);
+                _arrows = new ArrowFlights(Combat, _avatar.Model, _assets, () => _director.Pose, Identify, _landShot);
             }
 
             Player.PlaceAt(feet.ToNumerics(), heading);

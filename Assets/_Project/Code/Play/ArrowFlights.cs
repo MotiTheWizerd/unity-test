@@ -15,16 +15,13 @@ namespace Forge.Play
     /// at its speed (<see cref="Shot.Speed"/>), and falls as it flies (<see cref="Flight"/>). Every frame the way from
     /// where its point was to where it is is tested through the physics, so a fast arrow misses nothing between frames;
     /// what it meets, it sticks in, and whoever that is takes its blow (<see cref="ActorCombat.Strike(Shot, ActorId)"/>;
-    /// whom a collider belongs to is <c>identify</c>'s to say). Stuck arrows stay a while, the newest
-    /// <see cref="MostStuck"/> of them. Scene coordinates; bound while the look exists.
+    /// whom a collider belongs to is <c>identify</c>'s to say). Stuck, it is handed to <c>landed</c> with its pose there
+    /// (the game keeps it as the item it is, or it breaks: <see cref="ShotLandings"/>) and its flying look goes. Scene
+    /// coordinates; bound while the look exists.
     /// </summary>
     public sealed class ArrowFlights : IDisposable
     {
-        /// <summary>How many arrows stay stuck where they landed at most; the oldest goes first.</summary>
-        public const int MostStuck = 40;
-
-        // Seconds a stuck arrow stays, and the longest an arrow flies before it is given up on (gone out of the world).
-        const float StuckSeconds = 60f;
+        // The longest an arrow flies before it is given up on (gone out of the world), seconds.
         const float LongestFlight = 15f;
 
         // Meters an arrow's point sinks into what it strikes.
@@ -35,26 +32,27 @@ namespace Forge.Play
         readonly IAssetCatalog _assets;
         readonly Func<ViewPose> _aim;
         readonly Func<Collider, ActorId?> _identify;
+        readonly Action<Shot, Vector3, Quaternion> _landed;
         readonly List<Flying> _flying = new List<Flying>();
-        readonly Queue<(GameObject Look, float Until)> _stuck = new Queue<(GameObject, float)>();
 
         /// <param name="aim">Where the archer looks from and which way (the camera): what that line meets is aimed at.</param>
         /// <param name="identify">Whom a collider belongs to, or null for no one who can be struck.</param>
-        public ArrowFlights(ActorCombat combat, CharacterModel model, IAssetCatalog assets, Func<ViewPose> aim, Func<Collider, ActorId?> identify)
+        /// <param name="landed">Where a shot that stuck goes, with its look's pose there (scene space).</param>
+        public ArrowFlights(ActorCombat combat, CharacterModel model, IAssetCatalog assets, Func<ViewPose> aim, Func<Collider, ActorId?> identify,
+            Action<Shot, Vector3, Quaternion> landed)
         {
             _combat = combat ?? throw new ArgumentNullException(nameof(combat));
             _model = model ?? throw new ArgumentNullException(nameof(model));
             _assets = assets ?? throw new ArgumentNullException(nameof(assets));
             _aim = aim ?? throw new ArgumentNullException(nameof(aim));
             _identify = identify ?? throw new ArgumentNullException(nameof(identify));
+            _landed = landed ?? throw new ArgumentNullException(nameof(landed));
             _combat.Loosed += OnLoosed;
         }
 
-        /// <summary>Flies every arrow in the air <paramref name="deltaTime"/> seconds on, and lets old stuck ones go.</summary>
+        /// <summary>Flies every arrow in the air <paramref name="deltaTime"/> seconds on.</summary>
         public void Tick(float deltaTime)
         {
-            while (_stuck.Count > 0 && (_stuck.Peek().Look == null || _stuck.Peek().Until <= Time.time))
-                Destroy(_stuck.Dequeue().Look);
             if (!(deltaTime > 0f))
                 return;
 
@@ -98,8 +96,6 @@ namespace Forge.Play
             foreach (var arrow in _flying)
                 Destroy(arrow.Look);
             _flying.Clear();
-            while (_stuck.Count > 0)
-                Destroy(_stuck.Dequeue().Look);
         }
 
         // It leaves the string with its point where the arrow on it had its point, towards what the aim meets.
@@ -126,10 +122,9 @@ namespace Forge.Play
             if (target.HasValue)
                 _combat.Strike(arrow.Shot, target.Value);
             Pose(arrow, hit.point + heading * Sinks, heading);
-            arrow.Look.transform.SetParent(hit.collider.transform, true);
-            _stuck.Enqueue((arrow.Look, Time.time + StuckSeconds));
-            while (_stuck.Count > MostStuck)
-                Destroy(_stuck.Dequeue().Look);
+            var look = arrow.Look.transform;
+            _landed(arrow.Shot, look.position, look.rotation);
+            Destroy(arrow.Look);
         }
 
         // Its point at `point`, pointing along `heading`.

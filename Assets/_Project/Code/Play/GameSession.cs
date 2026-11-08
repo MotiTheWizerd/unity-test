@@ -35,6 +35,7 @@ namespace Forge.Play
         readonly WorldFrame _frame;
         readonly IItemPlacement _placement;
         readonly ItemDropper _dropper;
+        readonly ShotLandings _landings;
 
         /// <param name="camera">The camera the player sees through while playing.</param>
         /// <param name="view">The scene's world, which shows what playing changed.</param>
@@ -50,10 +51,11 @@ namespace Forge.Play
             Changes = new WorldChanges();
             Combatants = new Combatants();
             PlacedActors = new PlacedActors(Combatants);
-            Player = new PlayerSession(profile, camera, Events, view.Assets, Combatants, PlacedActors);
+            Player = new PlayerSession(profile, camera, Events, view.Assets, Combatants, PlacedActors, LandShot);
             Interactions = new Interactions()
                 .Add(new TakeInteraction(Changes, InventoryOf, Events));
             _dropper = new ItemDropper(Changes, InventoryOf, Events);
+            _landings = new ShotLandings(Changes, Events);
             Changes.Added += _view.ShowAdded;
             Changes.Removed += OnRemoved;
             Changes.Cleared += _view.ShowAsBuilt;
@@ -195,6 +197,14 @@ namespace Forge.Play
         }
 
         Inventory InventoryOf(ActorId actor) => actor == ActorId.Player ? Player.Inventory : null;
+
+        // What was shot landed at a pose in the scene: it stays there in the world's own coordinates as the item it is,
+        // to be taken back, unless it broke.
+        void LandShot(Shot shot, Vector3 position, Quaternion rotation)
+        {
+            if (World != null)
+                _landings.Land(shot, _view.Space, _frame.ToWorld(position).ToNumerics(), rotation.ToNumerics());
+        }
 
         // What was taken leaves the scene, and the player looks again at what is in sight.
         void OnRemoved(RecordId placed)
