@@ -1019,8 +1019,9 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
   asleep where it was placed until touched, swept every step (thin swords tunnel through terrain otherwise). When one
   has come to rest somewhere new, or streams out away from its rest, the game keeps it there: `WorldChanges.Move` (a
   built object is then `MovedObjects`, an added one is replaced), which `PlayedWorld` reads (it is in the block it lies
-  in now) and the view shows (`ShowMoved`). One fallen out of the world is put back. The game ending takes every body
-  off and the world is as built again.
+  in now) and the view shows (`ShowMoved`). One fallen out of the world is put back. A rebase moves the bodies with the
+  land at once and the sleeping sleep on (woken by it, a pile would settle a little apart at every rebase). The game
+  ending takes every body off and the world is as built again.
 - **Clutter**: the light loose things (`PhysicalObjects.IsClutter`, up to `MostClutterMass`, 10 kg: a cup, a sword, a
   basket) are on the `ForgeClutter` layer while they play (`ClutterLayer`; their colliders' own layers come back after).
   The player's controller leaves the layer out (`excludeLayers`), so clutter is never stood on or walked into: each move

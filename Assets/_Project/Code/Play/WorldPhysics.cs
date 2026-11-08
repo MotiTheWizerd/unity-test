@@ -33,6 +33,7 @@ namespace Forge.Play
         readonly Action<RecordId, Vector3, Quaternion> _settled;
         readonly Dictionary<RecordId, Body> _bodies = new Dictionary<RecordId, Body>();
         readonly List<RecordId> _ids = new List<RecordId>();
+        readonly List<Rigidbody> _asleep = new List<Rigidbody>();
 
         /// <param name="world">The world as played, which says what each placed object is.</param>
         /// <param name="settled">Hears a placed object come to rest somewhere new, with its pose there (scene space).</param>
@@ -77,11 +78,26 @@ namespace Forge.Play
             rigidbody.Sleep();
         }
 
-        /// <summary>The scene moved by <paramref name="delta"/> under the world (a rebase): where each body rested moves with it, so nothing seems moved.</summary>
+        /// <summary>
+        /// The scene moved by <paramref name="delta"/> under the world (a rebase): where each body rested moves with it,
+        /// so nothing seems moved, and what was asleep sleeps on.
+        /// </summary>
         public void Shift(Vector3 delta)
         {
+            _asleep.Clear();
             foreach (var body in _bodies.Values)
+            {
                 body.RestPosition += delta;
+                if (body.Rigidbody != null && body.Rigidbody.IsSleeping())
+                    _asleep.Add(body.Rigidbody);
+            }
+
+            // The root's move would reach the bodies at the next physics step and wake them all, and a pile woken settles
+            // again a little apart (a cup creeps at every rebase): moved now, the sleeping are put back to sleep.
+            Physics.SyncTransforms();
+            foreach (var rigidbody in _asleep)
+                rigidbody.Sleep();
+            _asleep.Clear();
         }
 
         public void Dispose()
