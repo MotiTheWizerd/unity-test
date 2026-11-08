@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using Forge.Play;
 using Forge.World;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -17,7 +18,9 @@ namespace Forge.UnityEditor.Content
     /// prefab {Name}.prefab holding the model as it rests in the world: turned as its optional {Name}.json says
     /// (<c>{ "rest": [90, 0, 0] }</c>: a sword modelled point up, as a hand holds it, lies flat with its point to the
     /// front), with its lowest point on the prefab's pivot and its footprint centred on it, as every asset's pivot is. The
-    /// model inside keeps its own pivot (a weapon's grip) for whatever holds it later. The prefab is listed in the prefab
+    /// model inside keeps its own pivot (a weapon's grip) for whatever holds it later, and, when the json has a "leftGrip"
+    /// (<c>[0, 180, 0]</c>: a bow, whose string must face the archer in either hand), a left-hand grip turned by it
+    /// (<see cref="ModelGrip"/>). The prefab is listed in the prefab
     /// catalog under <see cref="ModelImport.KeyFor"/>. Existing assets are updated in place, so their GUIDs, and every
     /// reference to them, survive a rebuild.
     /// </summary>
@@ -63,7 +66,15 @@ namespace Forge.UnityEditor.Content
                 SceneManager.MoveGameObjectToScene(root, scene);
                 var instance = (GameObject)PrefabUtility.InstantiatePrefab(model, scene);
                 instance.transform.SetParent(root.transform, false);
-                instance.transform.localRotation = Quaternion.Euler(RestOf(folder, name));
+                var settings = SettingsOf(folder, name);
+                instance.transform.localRotation = Quaternion.Euler(settings.Resting);
+                if (settings.LeftGrip.HasValue)
+                {
+                    var leftGrip = new GameObject(ModelGrip.LeftHand).transform;
+                    leftGrip.SetParent(instance.transform, false);
+                    leftGrip.localRotation = Quaternion.Euler(settings.LeftGrip.Value);
+                }
+
                 foreach (var renderer in instance.GetComponentsInChildren<Renderer>(true))
                 {
                     renderer.sharedMaterials = Enumerable.Repeat(material, renderer.sharedMaterials.Length).ToArray();
@@ -81,26 +92,33 @@ namespace Forge.UnityEditor.Content
             }
         }
 
-        // How the model rests in the world, in degrees (Unity order: Z, then X, then Y): its optional {Name}.json's "rest".
-        static Vector3 RestOf(string folder, string name)
+        // A model folder's optional {Name}.json, angles in degrees (Unity order: Z, then X, then Y): how the model rests in
+        // the world ("rest"), and the turn the left hand holds it by, about its grip ("leftGrip": a bow half round its
+        // length, so its string faces the archer in either hand); none when it is held alike in both.
+        static (Vector3 Resting, Vector3? LeftGrip) SettingsOf(string folder, string name)
         {
             var path = $"{folder}/{name}.json";
             if (!File.Exists(path))
-                return Vector3.zero;
+                return (Vector3.zero, null);
 
-            var rest = JsonUtility.FromJson<ModelSettings>(File.ReadAllText(path))?.rest;
-            if (rest == null || rest.Length == 0)
-                return Vector3.zero;
-            if (rest.Length != 3)
-                throw new System.InvalidOperationException($"{path}: \"rest\" is three angles in degrees, [x, y, z].");
-            return new Vector3(rest[0], rest[1], rest[2]);
+            var settings = JsonUtility.FromJson<ModelSettings>(File.ReadAllText(path));
+            return (Angles(path, "rest", settings?.rest) ?? Vector3.zero, Angles(path, "leftGrip", settings?.leftGrip));
         }
 
-        // A model folder's optional {Name}.json.
+        static Vector3? Angles(string path, string key, float[] angles)
+        {
+            if (angles == null || angles.Length == 0)
+                return null;
+            if (angles.Length != 3)
+                throw new System.InvalidOperationException($"{path}: \"{key}\" is three angles in degrees, [x, y, z].");
+            return new Vector3(angles[0], angles[1], angles[2]);
+        }
+
         [System.Serializable]
         sealed class ModelSettings
         {
             public float[] rest;
+            public float[] leftGrip;
         }
 
         static Material BuildMaterial(string folder, string name)

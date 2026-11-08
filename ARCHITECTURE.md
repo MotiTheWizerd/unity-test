@@ -1136,7 +1136,11 @@ slopes), so results are exact and every edit goes through the edit session.
   material (2048 px textures) and prefab: the model as it rests in the world, turned as its optional `<Name>.json` says
   (`{ "rest": [90, 0, 0] }`: the sword, modelled point up as a hand holds it, lies flat with its point to the front),
   its lowest point on the pivot and its footprint centred on it (the asset contract, whatever the file's pivot), the
-  model inside keeping its own pivot (the sword's grip) for whatever holds it later. It lists the prefab in the prefab
+  model inside keeping its own pivot (the sword's grip) for whatever holds it later; a held thing is modelled as the
+  right hand holds it, +Y out of the fist past the thumb (a blade's point, a bow's upper limb), and a bow has its grip
+  at the middle of its handle and its string on -X (toward the right hand's wrist). A `"leftGrip"` in the json
+  (`[0, 180, 0]` for a bow) adds a left-hand grip turned by it under the model (`ModelGrip.LeftHand`), which the left
+  hand holds it by (`ModelGrip.Of`), so a bow's string faces the archer in either hand. It lists the prefab in the prefab
   catalog under `models/<name in snake case>` (`ModelImport.KeyFor`); `CoreModels` is forge.core's records for them.
   The first is the **Viking Sword** (from `blender-tests`, an item: weapon, 9, worth 75). `ModelContentTests` fails if
   a model isn't built or breaks the contract (resting on its pivot, centred, colliding only through undrawn convex hulls).

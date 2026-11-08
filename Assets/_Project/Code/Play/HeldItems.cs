@@ -13,8 +13,8 @@ namespace Forge.Play
     /// What a character holds and wears, on its look (<see cref="CharacterModel"/>): each thing equipped is built from
     /// the asset the world uses and hung from the bone its slot names (<see cref="EquipSlotRecord.Bone"/>), at the first
     /// slot of its fit (a two-handed sword in the right hand), or hung in its sheath while the model's weapons are put
-    /// away and the slot sheathes (<see cref="CharacterModel.InHand"/>); a slot with no bone shows nothing. A model asset is held by
-    /// the pivot of the model inside it, which is its grip (Content/Models); anything else by its own pivot.
+    /// away and the slot sheathes (<see cref="CharacterModel.InHand"/>); a slot with no bone shows nothing. It is held by
+    /// its grip for that hand (<see cref="ModelGrip"/>).
     /// </summary>
     public sealed class HeldItems : IDisposable
     {
@@ -41,7 +41,7 @@ namespace Forge.Play
                 return;
 
             var look = _assets.Instantiate(equipped.Record.AssetKey, null);
-            if (look != null && _model.Attach(look, GripOf(look), slot.Bone, slot.Sheathes))
+            if (look != null && _model.Attach(look, ModelGrip.Of(look, slot.Bone == nameof(HumanBodyBones.LeftHand)), slot.Bone, slot.Sheathes))
                 _looks.Add(equipped, look);
         }
 
@@ -66,8 +66,5 @@ namespace Forge.Play
             slot = _records.TryGet(id, out var record) ? record as EquipSlotRecord : null;
             return slot != null;
         }
-
-        // A model asset is a root holding the model, whose own pivot is its grip; anything else is held by its root.
-        static Transform GripOf(GameObject look) => look.transform.childCount == 1 ? look.transform.GetChild(0) : look.transform;
     }
 }

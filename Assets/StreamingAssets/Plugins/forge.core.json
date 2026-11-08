@@ -596,8 +596,8 @@
         "fits": [
           {
             "slots": [
-              "forge.core:equip_slot/right_hand",
-              "forge.core:equip_slot/left_hand"
+              "forge.core:equip_slot/left_hand",
+              "forge.core:equip_slot/right_hand"
             ]
           }
         ]
@@ -816,8 +816,8 @@
         "fits": [
           {
             "slots": [
-              "forge.core:equip_slot/right_hand",
-              "forge.core:equip_slot/left_hand"
+              "forge.core:equip_slot/left_hand",
+              "forge.core:equip_slot/right_hand"
             ]
           }
         ]

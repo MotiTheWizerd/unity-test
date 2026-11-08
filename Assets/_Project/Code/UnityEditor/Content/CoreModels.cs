@@ -48,7 +48,7 @@ namespace Forge.UnityEditor.Content
                 item: new ItemPart(ItemKind.Weapon, weight: 6f, value: 90),
                 equippable: new EquippablePart(CoreEquipSlots.OneHanded()));
 
-            // Bows (OpenGameArt), lying flat; they take both hands to draw. No combat style yet.
+            // Bows (OpenGameArt), lying flat; they take both hands, held in the left. No combat style yet.
             foreach (var (folder, id, name, weight, value) in new[]
                      {
                          ("HuntingBow", "hunting_bow", "Hunting Bow", 3f, 50),
@@ -57,7 +57,7 @@ namespace Forge.UnityEditor.Content
                 yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
                     "Items/Weapons", LyingFlat(),
                     item: new ItemPart(ItemKind.Weapon, weight, value),
-                    equippable: new EquippablePart(CoreEquipSlots.TwoHanded()));
+                    equippable: new EquippablePart(CoreEquipSlots.Bow()));
 
             // Arrows and a quiver of them (OpenGameArt, CC0), lying flat; carried, not held, until there is shooting.
             foreach (var (folder, id, name, weight, value) in new[]
