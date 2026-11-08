@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using Forge.Data.Records;
 using Forge.Editing.Commands;
+using Forge.Editing.Placement;
 using Forge.Editing.Water;
 
 namespace Forge.Editing.Building
@@ -13,6 +14,9 @@ namespace Forge.Editing.Building
     {
         /// <summary>At most this many objects are listed; the count still covers all of them.</summary>
         public const int MaxListedObjects = 200;
+
+        /// <summary>At most this many overlapping pairs are listed.</summary>
+        public const int MaxListedOverlaps = 50;
 
         const int DefaultSamples = 9;
         const float RadiansToDegrees = (float)(180.0 / Math.PI);
@@ -24,8 +28,10 @@ namespace Forge.Editing.Building
                 "Describes a square area of the world: the lowest and highest ground and the steepest slope (read from " +
                 "every terrain sample in the area), an overview grid of heights (meters; rows run south to north, " +
                 "columns west to east, null where there is no terrain), the water (the sea level, the lakes reaching into " +
-                "the area with their ids and levels, how much of the area is under water and how deep), and the objects " +
-                "standing inside, nearest the center first.")
+                "the area with their ids and levels, how much of the area is under water and how deep), the objects " +
+                "standing inside, nearest the center first, and which of them overlap: footprints that cut into each " +
+                "other as they stand (a crate inside a wall, two houses on one spot; things that only touch don't " +
+                "count). Check a layout with it before moving on.")
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
@@ -47,13 +53,15 @@ namespace Forge.Editing.Building
 
         public sealed class Result : ICommandResult
         {
-            internal Result(string summary, TerrainInfo terrain, WaterInfo water, int objectCount, IReadOnlyList<PlacedObjectInfo> objects)
+            internal Result(string summary, TerrainInfo terrain, WaterInfo water, int objectCount, IReadOnlyList<PlacedObjectInfo> objects,
+                IReadOnlyList<OverlapInfo> overlaps)
             {
                 Summary = summary;
                 Terrain = terrain;
                 Water = water;
                 ObjectCount = objectCount;
                 Objects = objects;
+                Overlaps = overlaps;
             }
 
             public string Summary { get; }
@@ -68,6 +76,29 @@ namespace Forge.Editing.Building
             public int ObjectCount { get; }
 
             public IReadOnlyList<PlacedObjectInfo> Objects { get; }
+
+            /// <summary>Pairs of objects in the area whose footprints overlap, at most <see cref="MaxListedOverlaps"/>.</summary>
+            public IReadOnlyList<OverlapInfo> Overlaps { get; }
+        }
+
+        /// <summary>Two objects that stand in each other's way.</summary>
+        public sealed class OverlapInfo
+        {
+            internal OverlapInfo(PlacedObjectInfo first, PlacedObjectInfo second)
+            {
+                First = first.Id;
+                FirstName = first.Name;
+                Second = second.Id;
+                SecondName = second.Name;
+            }
+
+            public string First { get; }
+
+            public string FirstName { get; }
+
+            public string Second { get; }
+
+            public string SecondName { get; }
         }
 
         public sealed class TerrainInfo
@@ -159,7 +190,34 @@ namespace Forge.Editing.Building
                 .Select(p => new PlacedObjectInfo(p, _context.NameOf(p.BaseId)))
                 .ToList();
 
-            return new Result(Summarize(arguments, terrain, water, inside.Count), terrain, water, inside.Count, listed);
+            var overlaps = Overlapping(inside);
+            var summary = Summarize(arguments, terrain, water, inside.Count);
+            if (overlaps.Count > 0)
+                summary += overlaps.Count < MaxListedOverlaps
+                    ? $" {overlaps.Count} pair(s) of them overlap."
+                    : $" At least {overlaps.Count} pairs of them overlap.";
+            return new Result(summary, terrain, water, inside.Count, listed, overlaps);
+        }
+
+        // The pairs among them whose footprints, as they stand, cut into each other (FootprintOverlap).
+        List<OverlapInfo> Overlapping(IReadOnlyList<PlacedObjectRecord> inside)
+        {
+            var known = new List<PlacedObjectRecord>();
+            var standing = new List<FootprintOverlap.Standing>();
+            foreach (var placed in inside)
+            {
+                if (!(_context.Session.World.Records.TryGet(placed.BaseId, out var record) && record is BaseObjectRecord kind))
+                    continue;
+                known.Add(placed);
+                standing.Add(new FootprintOverlap.Standing(new Vector2(placed.Position.X, placed.Position.Z),
+                    _context.Seating.ShapeOf(kind).Footprint, PlacementMath.HeadingOf(placed.Rotation), placed.Scale));
+            }
+
+            return FootprintOverlap.Pairs(standing, MaxListedOverlaps)
+                .Select(pair => new OverlapInfo(
+                    new PlacedObjectInfo(known[pair.A], _context.NameOf(known[pair.A].BaseId)),
+                    new PlacedObjectInfo(known[pair.B], _context.NameOf(known[pair.B].BaseId))))
+                .ToList();
         }
 
         // Like the ground's extremes, the share under water and the deepest point come from every terrain sample.

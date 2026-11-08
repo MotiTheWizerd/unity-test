@@ -756,6 +756,12 @@
     },
     {
       "type": "ground_layer",
+      "id": "forge.core:ground/cobblestone",
+      "displayName": "Cobblestone",
+      "assetKey": "ground/cobblestone"
+    },
+    {
+      "type": "ground_layer",
       "id": "forge.core:ground/dirt",
       "displayName": "Dirt",
       "assetKey": "ground/dirt"
@@ -769,6 +775,12 @@
         "density": 2.5,
         "height": 0.4
       }
+    },
+    {
+      "type": "ground_layer",
+      "id": "forge.core:ground/flagstone",
+      "displayName": "Flagstone",
+      "assetKey": "ground/flagstone"
     },
     {
       "type": "ground_layer",
@@ -810,6 +822,12 @@
     },
     {
       "type": "ground_layer",
+      "id": "forge.core:ground/packedearth",
+      "displayName": "Packed Earth",
+      "assetKey": "ground/packedearth"
+    },
+    {
+      "type": "ground_layer",
       "id": "forge.core:ground/rock",
       "displayName": "Rock",
       "assetKey": "ground/rock"
@@ -825,6 +843,12 @@
       "id": "forge.core:ground/snow",
       "displayName": "Snow",
       "assetKey": "ground/snow"
+    },
+    {
+      "type": "ground_layer",
+      "id": "forge.core:ground/wetmud",
+      "displayName": "Wet Mud",
+      "assetKey": "ground/wetmud"
     },
     {
       "type": "base_object",

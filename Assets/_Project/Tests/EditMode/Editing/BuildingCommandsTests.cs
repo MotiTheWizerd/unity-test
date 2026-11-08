@@ -100,6 +100,22 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void InspectArea_NamesTheObjectsThatOverlap_ButNotThoseThatOnlyTouch()
+        {
+            var world = BuildingFixture.Create();
+            // Two houses (4 × 5 m) on almost one spot, and two 3 m fences end to end.
+            var houses = Place(world, Item(BuildingFixture.House, 30f, 30f, heading: 0f), Item(BuildingFixture.House, 32f, 31f, heading: 0f));
+            Line(world, BuildingFixture.Fence, false, null, (50f, 30f), (56f, 30f));
+
+            var result = new InspectAreaCommand(world.Context).Execute(new InspectAreaCommand.Arguments { X = 40f, Z = 30f, Size = 40f });
+
+            Assert.That(result.Overlaps.Count, Is.EqualTo(1), "Only the houses overlap; the fences just touch.");
+            Assert.That(new[] { result.Overlaps[0].First, result.Overlaps[0].Second }, Is.EquivalentTo(houses.Placed.Select(p => p.Id)));
+            Assert.That(result.Overlaps[0].FirstName, Is.EqualTo("Small House"));
+            Assert.That(result.Summary, Does.EndWith("1 pair(s) of them overlap."));
+        }
+
+        [Test]
         public void InspectArea_OffTheTerrain_SaysSo()
         {
             var result = new InspectAreaCommand(BuildingFixture.Create().Context)
@@ -235,6 +251,41 @@ namespace Forge.Tests.Editing
 
             var headings = Placed(world).Select(p => Math.Round(PlacementMath.HeadingOf(p.Rotation))).Distinct().Count();
             Assert.That(headings, Is.GreaterThan(3), "Natural things don't line up with the path.");
+        }
+
+        [Test]
+        public void PlaceLine_Offset_BothSides_FacingThePath_LinesAStreet()
+        {
+            var world = BuildingFixture.Create();
+
+            // A street walked north up x = 50: its right is east.
+            var result = new PlaceLineCommand(world.Context).Execute(new PlaceLineCommand.Arguments
+            {
+                Object = BuildingFixture.House.ToString(), Gap = 3f, Offset = 6f, BothSides = true, FacePath = true,
+                Points = new[] { new GroundPoint { X = 50f, Z = 20f }, new GroundPoint { X = 50f, Z = 60f } }.ToList(),
+            });
+
+            var houses = Placed(world);
+            var east = houses.Where(h => h.Position.X > 50f).ToList();
+            var west = houses.Where(h => h.Position.X < 50f).ToList();
+            Assert.That(east.Count, Is.EqualTo(west.Count).And.GreaterThan(1), "A row on each side.");
+            Assert.That(houses.Select(h => Math.Abs(h.Position.X - 50f)), Has.All.EqualTo(6f).Within(0.01f), "Each 6 m from the street's middle.");
+            Assert.That(east.All(h => AngleBetween(PlacementMath.HeadingOf(h.Rotation), 270f) < 1f), Is.True, "The east row faces west, to the street.");
+            Assert.That(west.All(h => AngleBetween(PlacementMath.HeadingOf(h.Rotation), 90f) < 1f), Is.True, "The west row faces east.");
+            Assert.That(result.Summary, Does.Contain("6 m to each side, facing it"));
+        }
+
+        [Test]
+        public void PlaceLine_BothSides_WithoutAnOffset_IsRefused()
+        {
+            var world = BuildingFixture.Create();
+
+            Assert.Throws<CommandException>(() => new PlaceLineCommand(world.Context).Execute(new PlaceLineCommand.Arguments
+            {
+                Object = BuildingFixture.Fence.ToString(), BothSides = true,
+                Points = new[] { new GroundPoint { X = 10f, Z = 10f }, new GroundPoint { X = 20f, Z = 10f } }.ToList(),
+            }));
+            Assert.That(Placed(world), Is.Empty);
         }
 
         [Test]

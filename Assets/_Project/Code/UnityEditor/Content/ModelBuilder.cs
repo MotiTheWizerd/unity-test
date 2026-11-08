@@ -246,7 +246,9 @@ namespace Forge.UnityEditor.Content
             var transparent = surface == Surface.Transparent;
             material.SetFloat("_Surface", transparent ? 1f : 0f);
             material.SetFloat("_Blend", 0f);
-            material.SetFloat("_SrcBlend", (float)(transparent ? BlendMode.SrcAlpha : BlendMode.One));
+            // URP Lit preserves specular on glass: it premultiplies by alpha itself, so its source factor is One (as URP
+            // sets it on validating the material; another value is rewritten).
+            material.SetFloat("_SrcBlend", (float)BlendMode.One);
             material.SetFloat("_DstBlend", (float)(transparent ? BlendMode.OneMinusSrcAlpha : BlendMode.Zero));
             material.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
             material.SetFloat("_DstBlendAlpha", (float)(transparent ? BlendMode.OneMinusSrcAlpha : BlendMode.Zero));

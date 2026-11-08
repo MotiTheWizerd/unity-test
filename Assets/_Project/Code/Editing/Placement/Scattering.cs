@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Forge.Data;
 using Forge.Editing.Geometry;
 using Forge.Editing.Terrain;
 using Forge.Editing.Water;
@@ -30,6 +31,15 @@ namespace Forge.Editing.Placement
 
         /// <summary>Keep out of the sea and lakes.</summary>
         public bool DryOnly { get; set; } = true;
+
+        /// <summary>Ground layers to keep off (streets, yards): a spot is refused where any of them shows half or more.</summary>
+        public IReadOnlyList<RecordId> AvoidGrounds { get; set; } = Array.Empty<RecordId>();
+
+        /// <summary>The ground layer unpainted ground shows, so avoiding it avoids unpainted ground too.</summary>
+        public RecordId Unpainted { get; set; }
+
+        /// <summary>The share of an avoided ground at which a spot is refused.</summary>
+        public const float AvoidShare = 0.5f;
     }
 
     /// <summary>
@@ -103,6 +113,12 @@ namespace Forge.Editing.Placement
                     continue;
                 }
 
+                if (OnAvoided(point, rules, terrain))
+                {
+                    AvoidedGround++;
+                    continue;
+                }
+
                 if (rules.Clustering > 0f)
                 {
                     // Where the noise is high, everything is kept; where it is low, less and less as clustering grows.
@@ -145,6 +161,20 @@ namespace Forge.Editing.Placement
 
         /// <summary>Tries too close to a spot or to something standing.</summary>
         public int Crowded { get; }
+
+        /// <summary>Tries on a ground the rules keep off.</summary>
+        public int AvoidedGround { get; }
+
+        static bool OnAvoided(Vector2 point, ScatterRules rules, TerrainGrid terrain)
+        {
+            foreach (var layer in rules.AvoidGrounds)
+            {
+                if (terrain.ShareAt(point, layer, rules.Unpainted) >= ScatterRules.AvoidShare)
+                    return true;
+            }
+
+            return false;
+        }
 
         // Points binned by cells one spacing wide, so "is anything within the spacing" reads nine cells.
         sealed class SpatialBins

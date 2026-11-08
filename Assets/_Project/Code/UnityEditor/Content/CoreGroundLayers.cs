@@ -21,6 +21,11 @@ namespace Forge.UnityEditor.Content
             yield return Layer(pluginId, "forestfloor", "Forest Floor", new GrassSettings(density: 0.6f, height: 0.3f));
             yield return Layer(pluginId, "moss", "Moss");
             yield return Layer(pluginId, "drygrass", "Dry Grass", new GrassSettings(density: 2.5f, height: 0.4f));
+            // Town ground (Poly Haven): streets, yards and squares.
+            yield return Layer(pluginId, "cobblestone", "Cobblestone");
+            yield return Layer(pluginId, "flagstone", "Flagstone");
+            yield return Layer(pluginId, "packedearth", "Packed Earth");
+            yield return Layer(pluginId, "wetmud", "Wet Mud");
         }
 
         static GroundLayerRecord Layer(string pluginId, string name, string displayName, GrassSettings grass = null) =>

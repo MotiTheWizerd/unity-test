@@ -57,6 +57,26 @@ namespace Forge.Editing.Terrain
 
         public bool TryGetChunk(ChunkCoord coord, out TerrainChunkRecord chunk) => _chunks.TryGetValue(coord, out chunk);
 
+        /// <summary>
+        /// How much of the ground layer <paramref name="layer"/> shows at <paramref name="ground"/>, 0 to 1: its share of
+        /// the paint texel there, where a chunk never painted shows all <paramref name="unpainted"/>. Null off the land.
+        /// </summary>
+        public float? ShareAt(Vector2 ground, RecordId layer, RecordId unpainted)
+        {
+            const int texels = GroundPaint.Resolution;
+            var gx = (int)Math.Floor(ground.X / (WorldGrid.ChunkSize / texels));
+            var gz = (int)Math.Floor(ground.Y / (WorldGrid.ChunkSize / texels));
+            var coord = new ChunkCoord((int)Math.Floor((double)gx / texels), (int)Math.Floor((double)gz / texels));
+            if (!_chunks.TryGetValue(coord, out var chunk))
+                return null;
+
+            var paint = chunk.Paint?.Load();
+            if (paint == null)
+                return layer == unpainted ? 1f : 0f;
+            var index = paint.IndexOf(layer);
+            return index < 0 ? 0f : paint[index, gx - coord.X * texels, gz - coord.Z * texels] / (float)GroundPaint.Full;
+        }
+
         /// <summary>The heights of the chunk at <paramref name="coord"/>, read once per grid; null where there is none.</summary>
         public HeightField HeightsOf(ChunkCoord coord)
         {

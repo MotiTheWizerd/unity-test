@@ -13,10 +13,14 @@ MonoBehaviour:
   m_Name: GroundLayerCatalog
   m_EditorClassIdentifier: Forge.World::Forge.World.Assets.GroundLayerCatalog
   _entries:
+  - _key: ground/cobblestone
+    _asset: {fileID: 8574412962073106934, guid: 6efc0f49b62f0de49b66e09b11a7d4ac, type: 2}
   - _key: ground/dirt
     _asset: {fileID: 8574412962073106934, guid: cdbfbe0456126494695bc4a3cc27ccae, type: 2}
   - _key: ground/drygrass
     _asset: {fileID: 8574412962073106934, guid: 550f02f8fce0e1a4b9f0af5cc5aa9d1f, type: 2}
+  - _key: ground/flagstone
+    _asset: {fileID: 8574412962073106934, guid: 0547689cf6edc7d48aa197dda254726e, type: 2}
   - _key: ground/forestfloor
     _asset: {fileID: 8574412962073106934, guid: 57129e9a0fb9bd640a8c24f66ba7d73f, type: 2}
   - _key: ground/grass
@@ -27,18 +31,26 @@ MonoBehaviour:
     _asset: {fileID: 8574412962073106934, guid: d7ab830748ddf2a498f055e1629d6fa3, type: 2}
   - _key: ground/mud
     _asset: {fileID: 8574412962073106934, guid: 43412f738e9a4b6429a993e6b29d5f1d, type: 2}
+  - _key: ground/packedearth
+    _asset: {fileID: 8574412962073106934, guid: f0acc9fd385737b47b558fb046a13460, type: 2}
   - _key: ground/rock
     _asset: {fileID: 8574412962073106934, guid: 393fa266cf6a3074c88021a2126d6f61, type: 2}
   - _key: ground/sand
     _asset: {fileID: 8574412962073106934, guid: 856ebd7e557aded4b92aed4d9979727f, type: 2}
   - _key: ground/snow
     _asset: {fileID: 8574412962073106934, guid: 5de52635c06f2164ea648bd9da02945e, type: 2}
+  - _key: ground/wetmud
+    _asset: {fileID: 8574412962073106934, guid: 2b5f3dc20e70ac844b826707c728dc60, type: 2}
   _baseKey: ground/grass
   _mapColors:
+  - _key: ground/cobblestone
+    _color: {r: 0.19971141, g: 0.18606152, b: 0.1517351, a: 1}
   - _key: ground/dirt
     _color: {r: 0.0754457, g: 0.04503084, b: 0.033223875, a: 1}
   - _key: ground/drygrass
     _color: {r: 0.34487835, g: 0.32718667, b: 0.2848744, a: 1}
+  - _key: ground/flagstone
+    _color: {r: 0.13740033, g: 0.09477852, b: 0.065743975, a: 1}
   - _key: ground/forestfloor
     _color: {r: 0.15319906, g: 0.113693364, b: 0.07607276, a: 1}
   - _key: ground/grass
@@ -49,10 +61,14 @@ MonoBehaviour:
     _color: {r: 0.07424783, g: 0.13925773, b: 0.01115449, a: 1}
   - _key: ground/mud
     _color: {r: 0.18751265, g: 0.17146453, b: 0.16094561, a: 1}
+  - _key: ground/packedearth
+    _color: {r: 0.13541202, g: 0.10238363, b: 0.06363447, a: 1}
   - _key: ground/rock
     _color: {r: 0.084009126, g: 0.078426406, b: 0.06562846, a: 1}
   - _key: ground/sand
     _color: {r: 0.33308125, g: 0.2587604, b: 0.15623695, a: 1}
   - _key: ground/snow
     _color: {r: 0.73531383, g: 0.8597356, b: 0.97257465, a: 1}
+  - _key: ground/wetmud
+    _color: {r: 0.080822535, g: 0.029566884, b: 0.011698407, a: 1}
   _previewMaterial: {fileID: 2100000, guid: af952e0d2d66f9a4a8ffcc75ef088999, type: 2}

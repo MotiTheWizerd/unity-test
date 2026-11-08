@@ -21,7 +21,8 @@ namespace Forge.Editing.Building
                 "rocks on steep ground, reeds by water, bushes in a valley. Give the kinds (picked at random for each " +
                 "spot), how many, and either a rectangle (x, z, width, depth and heading) or points: the corners of any " +
                 "shape. Rules: the slope and the height the ground may have, the spacing between things, and how " +
-                "clustered they are (groves with clearings, or even). They keep their spacing from what already stands " +
+                "clustered they are (groves with clearings, or even), and grounds to keep off (trees out of the cobbled " +
+                "streets and yards). They keep their spacing from what already stands " +
                 "there and stay out of water unless allowed. Each lands on the terrain like place_objects, with its kind's " +
                 "natural turn and size. The reply says how many fit and, if fewer than asked, which rule held them back.")
         {
@@ -76,6 +77,11 @@ namespace Forge.Editing.Building
 
             [Param("Also place under water (reeds, rocks in a stream). Default false.", Optional = true)]
             public bool? InWater { get; set; }
+
+            [Param("Grounds to keep off, ids or names from list_grounds, e.g. [\"Cobblestone\", \"Packed Earth\"] to keep " +
+                   "trees out of streets and yards: no spot where one of them covers half the ground or more.",
+                Optional = true, MinItems = 1, MaxItems = 8)]
+            public List<string> AvoidGrounds { get; set; }
         }
 
         public sealed class Result : ICommandResult
@@ -110,6 +116,9 @@ namespace Forge.Editing.Building
                 Spacing = arguments.Spacing ?? kinds.Max(kind => Math.Max(_context.Seating.ShapeOf(kind).Footprint.SizeX, _context.Seating.ShapeOf(kind).Footprint.SizeZ)) + 1f,
                 Clustering = arguments.Clustering ?? DefaultClustering,
                 DryOnly = !(arguments.InWater ?? false),
+                // Every ground is checked before anything is placed, so a misspelt name places nothing.
+                AvoidGrounds = (arguments.AvoidGrounds ?? new List<string>()).Select(ground => _context.Ground(ground).Id).ToList(),
+                Unpainted = _context.UnpaintedGround ?? default,
             };
 
             var reach = new Vector2(rules.Spacing);
@@ -148,6 +157,7 @@ namespace Forge.Editing.Building
                     (scattering.TooSteepOrFlat, "the slope rule"),
                     (scattering.OutOfHeight, "the height rule"),
                     (scattering.UnderWater, "water"),
+                    (scattering.AvoidedGround, "the grounds to keep off"),
                     (scattering.Crowded, "the spacing (no room left)"),
                     (scattering.Clearing, "the clustering's clearings"),
                     (scattering.NoLand, "no land"),

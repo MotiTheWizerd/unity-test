@@ -41,6 +41,47 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void Scatter_KeepsOffTheGroundsToAvoid_AndSaysSoWhenTheyHeldItBack()
+        {
+            var dirt = GroundLayerRecord.IdFor("core", "dirt");
+            var world = BuildingFixture.Create(
+                new GroundLayerRecord(GroundLayerRecord.IdFor("core", "grass"), "Grass", BuildingFixture.BaseGroundLook),
+                new GroundLayerRecord(dirt, "Dirt", "ground/dirt"));
+            // A street 12 m wide, hard-edged, east-west through the middle of the area.
+            new PaintLineCommand(world.Context).Execute(new PaintLineCommand.Arguments
+            {
+                Ground = "Dirt", Width = 12f, Edge = 0f,
+                Points = new[] { new GroundPoint { X = 20f, Z = 64f }, new GroundPoint { X = 108f, Z = 64f } }.ToList(),
+            });
+
+            var result = new ScatterObjectsCommand(world.Context).Execute(new ScatterObjectsCommand.Arguments
+            {
+                Objects = new[] { BuildingFixture.Tree.ToString() }.ToList(), Count = 200, X = 64f, Z = 64f, Width = 30f, Depth = 30f,
+                Clustering = 0f, AvoidGrounds = new[] { "dirt" }.ToList(),
+            });
+
+            var spots = Placed(world);
+            Assert.That(spots, Is.Not.Empty);
+            Assert.That(spots, Has.None.Matches<Vector2>(p => Math.Abs(p.Y - 64f) < 5.5f), "No tree stands in the street.");
+            Assert.That(spots.Count(p => Math.Abs(p.Y - 64f) < 12f), Is.GreaterThan(0), "Trees still line it.");
+            Assert.That(result.Placed, Is.LessThan(200), "More are asked than fit beside the street.");
+            Assert.That(result.Summary, Does.Contain("the grounds to keep off"));
+        }
+
+        [Test]
+        public void Scatter_AGroundToAvoidThatIsNotThere_PlacesNothing()
+        {
+            var scatter = new ScatterObjectsCommand(BuildingFixture.Create().Context);
+
+            Assert.That(() => scatter.Execute(new ScatterObjectsCommand.Arguments
+                {
+                    Objects = new[] { BuildingFixture.Tree.ToString() }.ToList(), Count = 5, X = 64f, Z = 64f, Width = 20f, Depth = 20f,
+                    AvoidGrounds = new[] { "Cobblestone" }.ToList(),
+                }),
+                Throws.TypeOf<CommandException>());
+        }
+
+        [Test]
         public void Scatter_KeepsToTheHeightRule()
         {
             var world = BuildingFixture.Create();

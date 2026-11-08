@@ -485,7 +485,8 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
     however coarse a grid the agent asks for), an overview height grid (rows south to north, columns west to
     east), the water when there is a sea (its level, the share of samples under water and the deepest, from every
     sample, through `BuildContext.Water`), and the lakes reaching into it (id, point, level, whether it spills), and
-    the objects inside, nearest first. It reads the terrain *data* (`BuildContext.Terrain`, a
+    the objects inside, nearest first, and the pairs of them that overlap (`Placement/FootprintOverlap`: footprints
+    turned and scaled as they stand, a separating-axis test; touching within 10 cm doesn't count). It reads the terrain *data* (`BuildContext.Terrain`, a
     `TerrainGrid` cached per world version), so it answers for unloaded chunks too; placing still seats on the
     loaded scene, and a skipped spot says whether its terrain is missing or just not loaded.
   - `set_sea_level`: sets or removes the worldspace's sea (refused in interiors) and reports how many objects now
@@ -507,11 +508,15 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
     object's natural variation. Unknown ids refuse the whole call; positions without terrain are skipped.
   - `place_line`: one object end to end along a path, stretch by stretch, exactly like the place tool's
     Shift line (`PlacementStroke`); corners shared by two stretches get one object; `closed` encloses an area.
+    `offset` sets the row that far to the path's right as walked (negative: left), `both_sides` mirrors it, and
+    `face_path` turns each toward the path: lamps and crates lining a street, houses fronting it.
   - `scatter_objects`: kinds (one at random per spot) and a count over a rectangle or corners, by rules on the
     ground (`Placement/Scattering`, engine-free: dart throwing inside the `GroundShape`, keeping a spot when its slope
     and height fit, it is dry unless `in_water`, nothing kept or already standing is within the spacing (default the
     widest kind's size plus a meter; `SpatialBins` of one spacing), and `clustering` hasn't thinned it: low
-    `TerrainNoise` makes clearings, so spots gather in groves). Seated like `place_objects`, one undo step; when fewer
+    `TerrainNoise` makes clearings, so spots gather in groves), and it is off the `avoid_grounds` (a spot where one
+    covers half its paint texel or more, `TerrainGrid.ShareAt`; unpainted ground counts as the unpainted layer): trees
+    kept out of cobbled streets and yards. Seated like `place_objects`, one undo step; when fewer
     fit than asked, the reply names the rules that turned spots down, most first. Randomness is
     `PlacementOptions.Random`, the placers' one seed.
   - `ground_at`: exact height, slope (`TerrainGrid.SlopeAt`, from heights half a sample to each side) and water depth
@@ -1104,8 +1109,10 @@ slopes), so results are exact and every edit goes through the edit session.
   warning, for a layer the world or catalog lacks). `TerrainChunkBuilder` gives each chunk one terrain layer per
   ground layer it names and its weights as the alphamap (64 per edge); an unpainted chunk is the base layer (grass)
   alone, and an update touches only heights or paint, whichever changed. The textures are CC0 scans from ambientCG
+  (the town grounds, cobblestone, flagstone, packed earth and wet mud, from Poly Haven in the same naming)
   under `Content/Ground/<Layer>/` (credited in `CREDITS.md`, ~8 MB a layer with its packed mask). *Forge → Ground →
-  Build Ground Layers* makes each folder's `TerrainLayer` (3 m tiles), packs its mask map (metallic 0, occlusion,
+  Build Ground Layers* makes each folder's `TerrainLayer` (3 m tiles, or the scan's real size from its
+  `<Layer>.json`, `{ "tileSize": 2.4 }`, so cobbles are cobble-sized), packs its mask map (metallic 0, occlusion,
   height, smoothness = 1 − roughness) and lists it under `ground/<folder>`; drop a new folder in and rebuild to add
   a layer. `Materials/Terrain.mat` (URP Terrain Lit) has `_NORMALMAP`, `_MASKMAP` and height-based blending on:
   Unity sets those keywords from the Inspector only, never for a runtime terrain.

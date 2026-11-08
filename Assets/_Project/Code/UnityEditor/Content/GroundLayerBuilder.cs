@@ -19,8 +19,11 @@ namespace Forge.UnityEditor.Content
         public const string CatalogPath = "Assets/_Project/Content/GroundLayerCatalog.asset";
         const string PreviewMaterialPath = GroundFolder + "/GroundPreview.mat";
 
-        /// <summary>Meters one repeat of a ground texture covers: the scans are of about a meter or two of ground.</summary>
-        const float TileSize = 3f;
+        /// <summary>
+        /// Meters one repeat of a ground texture covers, unless its folder's {Name}.json says (<c>{ "tileSize": 2.4 }</c>:
+        /// a scan of 2.4 m of cobbles, so each stone is its real size).
+        /// </summary>
+        public const float DefaultTileSize = 3f;
 
         /// <summary>Most smoothness a ground layer shows (its mask map's smoothness is scaled into [0, this]).</summary>
         const float MaxSmoothness = 0.35f;
@@ -83,12 +86,30 @@ namespace Forge.UnityEditor.Content
             layer.normalMapTexture = hasNormal ? AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath) : null;
             layer.normalScale = 1f;
             layer.maskMapTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(maskPath);
-            layer.tileSize = new Vector2(TileSize, TileSize);
+            var tile = TileSizeOf(folder, name);
+            layer.tileSize = new Vector2(tile, tile);
             layer.metallic = 0f;
             // Natural ground is matte: scans' smoothness, taken whole, gives grass a wet sun glare.
             layer.maskMapRemapMax = new Vector4(1f, 1f, 1f, MaxSmoothness);
             EditorUtility.SetDirty(layer);
             return layer;
+        }
+
+        static float TileSizeOf(string folder, string name)
+        {
+            var path = $"{folder}/{name}.json";
+            if (!File.Exists(path))
+                return DefaultTileSize;
+            var settings = JsonUtility.FromJson<LayerSettings>(File.ReadAllText(path));
+            if (settings == null || settings.tileSize <= 0f)
+                throw new System.InvalidOperationException($"{path}: \"tileSize\" is the meters one repeat covers, above 0.");
+            return settings.tileSize;
+        }
+
+        [System.Serializable]
+        sealed class LayerSettings
+        {
+            public float tileSize;
         }
 
         // The template ground material balls are copied from: URP Lit with the maps a layer fills switched on. As an
