@@ -25,6 +25,10 @@ sets their repeat (`<Name>.json`, `tileSize` in meters), and their occlusion is 
 | Flagstone | [monastery_stone_floor](https://polyhaven.com/a/monastery_stone_floor) | Amal Kumar | 1.8 m |
 | PackedEarth | [dry_mud_field_001](https://polyhaven.com/a/dry_mud_field_001) | Rob Tuytel, Rico Cilliers | 3 m |
 | WetMud | [muddy_tracks](https://polyhaven.com/a/muddy_tracks) | Amal Kumar | 2.25 m |
+| GrassyCobblestone | [grassy_cobblestone](https://polyhaven.com/a/grassy_cobblestone) | Poly Haven | 2 m (the street variants: 2K maps scaled to 1K, occlusion from the AO map) |
+| WornCobblestone | [cobblestone_floor_08](https://polyhaven.com/a/cobblestone_floor_08) | Poly Haven | 2 m |
+| GrassPath | [grass_path_3](https://polyhaven.com/a/grass_path_3) | Poly Haven | 1 m |
+| StonyMud | [brown_mud_rocks_01](https://polyhaven.com/a/brown_mud_rocks_01) | Poly Haven | 1.3 m |
 
 Each folder keeps the colour, OpenGL normal, roughness, ambient occlusion and displacement maps. The mask map
 Unity's terrain layers read (metallic, occlusion, height, smoothness) is packed from them by

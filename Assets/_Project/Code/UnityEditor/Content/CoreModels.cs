@@ -215,6 +215,25 @@ namespace Forge.UnityEditor.Content
                      })
                 yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder), category,
                     new PlacementRules(randomYaw: true, minScale, maxScale, alignToSlope));
+
+            // Ground clutter (Poly Haven, CC0): the small things that make ground look lived in, scattered by the
+            // hundred along street edges, walls and paths and under trees. Any heading, a size about their own;
+            // stones, rocks, branches and roots lie with the slope, the stump stands up.
+            foreach (var (folder, id, name, category, minScale, maxScale, alignToSlope) in new[]
+                     {
+                         ("Stone", "small_stone", "Small Stone", "Nature/Rocks", 0.7f, 1.3f, true),
+                         ("MossyRock", "large_mossy_rock", "Large Mossy Rock", "Nature/Rocks", 0.7f, 1.3f, true),
+                         ("MossyRockLow", "mossy_rock_low", "Low Mossy Rock", "Nature/Rocks", 0.7f, 1.3f, true),
+                         ("MossyBoulder", "mossy_rock", "Mossy Rock", "Nature/Rocks", 0.8f, 1.2f, true),
+                         ("DryBranches", "dry_branches", "Fallen Branches", "Nature/Ground Cover", 0.8f, 1.2f, true),
+                         ("Roots", "roots", "Roots", "Nature/Ground Cover", 0.8f, 1.2f, true),
+                         ("TreeStump", "tree_stump", "Tree Stump", "Nature/Ground Cover", 0.8f, 1.2f, false),
+                         ("Fern", "fern", "Fern", "Nature/Plants", 0.7f, 1.3f, true),
+                         ("Weed", "weed", "Weeds", "Nature/Ground Cover", 0.7f, 1.3f, true),
+                         ("Dandelion", "dandelion", "Dandelion", "Nature/Flowers", 0.8f, 1.2f, true),
+                     })
+                yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder), category,
+                    new PlacementRules(randomYaw: true, minScale, maxScale, alignToSlope));
         }
 
         // Laid on the ground as it falls: any heading, following the slope, at its own size.

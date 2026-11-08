@@ -65,6 +65,10 @@ MonoBehaviour:
     _asset: {fileID: 1383663623496744173, guid: 4cc92a717e6163542a095d2717987809, type: 3}
   - _key: models/covered_well
     _asset: {fileID: 7953335360933399773, guid: c0d15d89ce6d89949b7cc047298e8939, type: 3}
+  - _key: models/dandelion
+    _asset: {fileID: 6644106140543864155, guid: b2653bcb4a06dfb43907c2b8c04d022e, type: 3}
+  - _key: models/dry_branches
+    _asset: {fileID: 3911354736506293323, guid: 20c2fcf14a4c3f94d96a50edb047c087, type: 3}
   - _key: models/dutch_ship_large
     _asset: {fileID: 2697402286303030488, guid: 07d1dcaab061eca48b829c7017decabe, type: 3}
   - _key: models/dutch_ship_large_sailing
@@ -75,6 +79,8 @@ MonoBehaviour:
     _asset: {fileID: 7959412028042064504, guid: 72ea7546545db864fa12f8586ad9966b, type: 3}
   - _key: models/fence_gate
     _asset: {fileID: 706377986893671918, guid: 33feb29b3eb579e47b3daebf45880049, type: 3}
+  - _key: models/fern
+    _asset: {fileID: 732174994902439554, guid: 178ddcd6c6c89134693eff7952bd5488, type: 3}
   - _key: models/firewood
     _asset: {fileID: 2967036921510501780, guid: 5c709fae0a226bf439c204ff3f1d48b5, type: 3}
   - _key: models/flowering_bush
@@ -109,6 +115,12 @@ MonoBehaviour:
     _asset: {fileID: 8977112709763463672, guid: 7b707b4879858044a9751bb60aab4baa, type: 3}
   - _key: models/medieval_cottage
     _asset: {fileID: 3077484272994201092, guid: 2b3e553eb0386b346a9975c0c40f753b, type: 3}
+  - _key: models/mossy_boulder
+    _asset: {fileID: 2151834606683292177, guid: dc877d99c8d579e4fbfe16d241395745, type: 3}
+  - _key: models/mossy_rock
+    _asset: {fileID: 4396350846298742975, guid: 8ea064fe5e8cf254ab31731177ca0df9, type: 3}
+  - _key: models/mossy_rock_low
+    _asset: {fileID: 2707746376920008813, guid: 19c50909cb08ae149a9708f9e32069ae, type: 3}
   - _key: models/old_shack
     _asset: {fileID: 6538764620331614473, guid: 99e1c679bbc9436448130376df83f5b2, type: 3}
   - _key: models/outhouse
@@ -135,6 +147,8 @@ MonoBehaviour:
     _asset: {fileID: 7848319350537025992, guid: 05d4671fcbda7584fb0134237c08a395, type: 3}
   - _key: models/recurve_bow
     _asset: {fileID: 8040580631262970227, guid: 08040ec8473475640b842ae8b4052919, type: 3}
+  - _key: models/roots
+    _asset: {fileID: 770811245070173249, guid: 8271de3e3c536bb4abdd743bc1a212b0, type: 3}
   - _key: models/round_shield
     _asset: {fileID: 1266176824123447654, guid: fa33266572f37ce4290e4245b61257d4, type: 3}
   - _key: models/round_shield_painted
@@ -145,6 +159,8 @@ MonoBehaviour:
     _asset: {fileID: 6943891220673529511, guid: 7751170070e0a0f4bb538668efc12ab9, type: 3}
   - _key: models/small_crate
     _asset: {fileID: 5675818892761294327, guid: 97989778e15bc294fbaf5518494ce4ce, type: 3}
+  - _key: models/stone
+    _asset: {fileID: 3441891304440256907, guid: 432bdc5bf6dda9a4abcada1b8e15afe5, type: 3}
   - _key: models/stone_archway
     _asset: {fileID: 3899842153022716660, guid: 2058e766895c5ee4884a89c57358b425, type: 3}
   - _key: models/stone_brazier
@@ -157,6 +173,8 @@ MonoBehaviour:
     _asset: {fileID: 4619596225514408864, guid: eb1c9a4a875166640bd09ccd45a31da8, type: 3}
   - _key: models/treasure_chest
     _asset: {fileID: 7410670352420374428, guid: 1cea3e74e8878384bb8b9044f25dd1b0, type: 3}
+  - _key: models/tree_stump
+    _asset: {fileID: 8373718528879909240, guid: 6fa2f54807fcc8945b97788d1263689b, type: 3}
   - _key: models/viking_sword
     _asset: {fileID: 7334485041194033550, guid: f9cc20fa2cb4dac47b66c046438096e1, type: 3}
   - _key: models/wash_tub
@@ -165,6 +183,8 @@ MonoBehaviour:
     _asset: {fileID: 7733896262846087933, guid: 3280a9a69ad589a4da83ceddec29abee, type: 3}
   - _key: models/water_trough
     _asset: {fileID: 897713714111204845, guid: 7a743d69f18a90f42a6aa84bdd68c6e5, type: 3}
+  - _key: models/weed
+    _asset: {fileID: 6319654793946895701, guid: d5f5f21e9016c184e8cc4a05591041c7, type: 3}
   - _key: models/wicker_tray
     _asset: {fileID: 4287557882105788372, guid: 9581a75032077f24f957afdd7da4887f, type: 3}
   - _key: models/wild_carrot

@@ -48,6 +48,7 @@ Roughness: 0.4 to 0.7 for mountains, 0.2 to 0.4 for hills, 0 for made things (a 
 - Use `scatter_objects`, not one by one: trees with a `max_slope` of about 25° and a `max_height` below the snow line, rocks with a `min_slope` on the steep ground, a few kinds mixed.
 - Keep the default clustering for forests (groves with clearings); 0 spreads them evenly.
 - A forest that reads as one from afar needs about one tree per 100 to 150 m² of wooded ground. A call places up to 200, so call it several times over parts of a large area. When fewer fit than asked, the reply names the rule that held them back.
+- Under a forest, the floor: a second, denser `scatter_objects` of the small ground cover (Ferns, Fallen Branches, Roots, Mossy Rocks, a Tree Stump here and there), `clustering` about 0.7, so the ground between the trees isn't bare. On open slopes, Small Stones and Mossy Rocks in clumps, more on the steeper ground.
 - Check single spots with `ground_at`.
 
 ## Check

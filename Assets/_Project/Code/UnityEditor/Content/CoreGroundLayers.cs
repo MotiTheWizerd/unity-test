@@ -26,6 +26,13 @@ namespace Forge.UnityEditor.Content
             yield return Layer(pluginId, "flagstone", "Flagstone");
             yield return Layer(pluginId, "packedearth", "Packed Earth");
             yield return Layer(pluginId, "wetmud", "Wet Mud");
+            // Their variants (Poly Haven), so a street isn't one ground end to end: grass between the stones at its edges,
+            // a worn and rutted stretch, a trodden path through grass, stony mud where it's wet. The grassy two
+            // grow short, sparse blades, so grass stands between the stones and along the path.
+            yield return Layer(pluginId, "grassycobblestone", "Grassy Cobblestone", new GrassSettings(density: 1.2f, height: 0.25f));
+            yield return Layer(pluginId, "worncobblestone", "Worn Cobblestone");
+            yield return Layer(pluginId, "grasspath", "Grass Path", new GrassSettings(density: 2f, height: 0.3f));
+            yield return Layer(pluginId, "stonymud", "Stony Mud");
         }
 
         static GroundLayerRecord Layer(string pluginId, string name, string displayName, GrassSettings grass = null) =>

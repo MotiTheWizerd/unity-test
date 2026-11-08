@@ -28,6 +28,20 @@ Write the plan down first: each street as its centre line of points, the square'
   - Grounds (`list_grounds`): Cobblestone for a town's streets and square, Flagstone for the square before a hall or a temple, Packed Earth for village lanes, yards and the trodden ground around a well, Wet Mud by troughs and stables and where the well spills, Gravel for paths and courtyards, Dirt for tracks into the country.
   - Where a street leaves the place it becomes a track: paint its last 15 to 30 m narrower, with a `strength` of 0.5 to 0.7, so it wears out into the grass.
   - The square: `paint_area` lined up with it. A footpath from each door to the street: `paint_line`, 1.5 m wide, strength 0.6. Yards: `paint_area` turned to the house's heading, strength 0.5 to 0.7.
+- A street is never one ground from end to end; one ground in one band is what makes it look fake. Paint the main ground first, then wear it, each pass over part of it only:
+  - Its edges, where few feet and wheels go: a `paint_line` 1.5 to 2 m wide along each side (the centre points moved that far out), Grassy Cobblestone on a cobbled street or Grass Path on an earth one, strength 0.6 to 0.9, the default soft edge.
+  - Its middle, where the carts run: stretches of Worn Cobblestone (or Wet Mud on an earth lane) 10 to 25 m long, as wide as half the street, strength 0.4 to 0.7, broken off and starting again, not one stripe.
+  - Wet and trodden spots: small `paint_area` patches 3 to 6 m across of Stony Mud or Wet Mud, strength 0.5 to 0.8, by the well, the troughs, a stable door, a low spot, a gate.
+  - Lanes and back paths out of the village: Grass Path, narrow (1.5 to 2.5 m), strength 0.6 to 0.8.
+
+## 3b. The small things on the ground
+
+What makes ground look lived in is hundreds of small things nobody placed one by one. Scatter them with `scatter_objects` (a narrow rectangle along each street edge, or corners around a yard), `avoid_grounds` naming the street's grounds so nothing lands in the roadway, `clustering` 0.6 to 0.8 so they gather in clumps, a `spacing` of 1 to 2 m:
+- Along street edges and the foot of house walls: Weeds and Small Stones, about one every 2 to 3 m of edge, with a Dandelion or a Burdock here and there. (The grass between the stones grows by itself on Grassy Cobblestone and Grass Path.)
+- Along fences and walls and in the corners of yards: Weeds, Burdock, Wild Carrot, a Small Stone or two.
+- In and around the square: a few Weeds and Small Stones at its edges only, none in the open middle.
+- Under trees and at the village's edge: Ferns, Fallen Branches, Roots, Mossy Rocks, a Tree Stump, Dandelions in the grass.
+Ask `list_objects` with the search "Ground Cover" or "Rocks" to see them and their sizes. Keep the street's middle and every doorway clear.
 
 ## 4. Buildings
 
@@ -51,6 +65,12 @@ Write the plan down first: each street as its centre line of points, the square'
 
 ## 7. Check before you finish
 
+Steps 3 and 3b are not extras: a village without them is the flat, fake-looking one. Before finishing, go through this
+list and do what is missing:
+- Is every street worn, not one ground in one band (grassy edges, worn stretches in the middle, wet spots)?
+- Do its edges, the foot of the walls and the fences have their small things (Weeds, Small Stones, Burdock), and the
+  trees their ferns, branches and rocks below them?
+
 - `inspect_area` over the whole place: its `overlaps` list every pair whose footprints cut into each other (a tree into a house, a lamp into a stall, two houses on one spot). Fix each with `adjust_objects`, or `delete_objects` for what shouldn't be there. Tell the user nothing overlaps only after `inspect_area` said so; a picture can't show it.
 - `look` straight down (`pitch` 90) from a distance about the place's width: the streets should read clearly, the plots evenly, and no building stand in a street. Then look along the main street from one end at walking height (distance 25 to 40 m, `pitch` 10 to 20, heading along the street).
 
@@ -60,4 +80,5 @@ Write the plan down first: each street as its centre line of points, the square'
 - Houses with their backs to the street: `face_path` was left out, or the offset went to the wrong side of the path.
 - Everything on a grid, every house the same distance from the street, the two sides mirrored: vary the setback and the gaps, bend the street, mix the kinds.
 - A street painted after the houses stand: they sit on its edge. Paint first.
+- A street of one ground at full strength, with clean edges and nothing on them: wear it (step 3) and dress its edges (step 3b).
 - Many props spread evenly: a few in the right places say more.
