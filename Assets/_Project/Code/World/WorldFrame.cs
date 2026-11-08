@@ -14,6 +14,14 @@ namespace Forge.World
     /// </summary>
     public sealed class WorldFrame
     {
+        /// <summary>
+        /// The shader global holding the world position at the scene's zero (xyz), so shaders that vary by place (the
+        /// ground's tiling) read world coordinates and don't jump when the scene is rebased.
+        /// </summary>
+        public const string OriginProperty = "_ForgeWorldOrigin";
+
+        static readonly int OriginId = Shader.PropertyToID(OriginProperty);
+
         readonly int _maxDistance;
 
         /// <param name="root">The transform the world is built under; it is moved and must not be rotated or scaled.</param>
@@ -25,6 +33,7 @@ namespace Forge.World
                 throw new ArgumentOutOfRangeException(nameof(maxDistanceChunks), maxDistanceChunks, "The distance must not be negative.");
             _maxDistance = maxDistanceChunks;
             Root.position = Vector3.zero;
+            Shader.SetGlobalVector(OriginId, Vector4.zero);
         }
 
         public Transform Root { get; }
@@ -53,6 +62,7 @@ namespace Forge.World
             var delta = (Origin.Position - next.Position).ToUnity();
             Origin = next;
             Root.position = -next.Position.ToUnity();
+            Shader.SetGlobalVector(OriginId, next.Position.ToUnity());
             Shifted?.Invoke(delta);
             return true;
         }

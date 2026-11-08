@@ -40,7 +40,7 @@ Assets/_Project/
                  Placeholder/ holds generated placeholder prefabs + materials; Ground/ the ground textures (CC0);
                  Characters/ one folder per rigged character (model, texture, built material and prefab);
                  Models/ one folder per static model (the real art: model, textures, built material and prefab)
-  Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview), Water.shader (sea and lakes), Sky.shader (the skybox)
+  Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview), Water.shader (sea and lakes), Sky.shader (the skybox), Terrain/ (the ground: URP Terrain Lit with its tiling broken up)
   Materials/     GizmoOverlay.mat, PlacementGhost.mat, Water.mat, Sky.mat, InteriorFloor.mat (runtime code copies
                  materials assets reference, never Shader.Find, so builds include the shaders)
   Settings/      URP, input (InputSystem_Actions: the project-wide actions, its Player map drives the player) and volume assets;
@@ -1172,8 +1172,16 @@ slopes), so results are exact and every edit goes through the edit session.
   Build Ground Layers* makes each folder's `TerrainLayer` (3 m tiles, or the scan's real size from its
   `<Layer>.json`, `{ "tileSize": 2.4 }`, so cobbles are cobble-sized), packs its mask map (metallic 0, occlusion,
   height, smoothness = 1 − roughness) and lists it under `ground/<folder>`; drop a new folder in and rebuild to add
-  a layer. `Materials/Terrain.mat` (URP Terrain Lit) has `_NORMALMAP`, `_MASKMAP` and height-based blending on:
+  a layer. `Materials/Terrain.mat` (`Forge/Terrain`) has `_NORMALMAP`, `_MASKMAP` and height-based blending on:
   Unity sets those keywords from the Inspector only, never for a runtime terrain.
+- **The ground's tiling** (`Shaders/Terrain`, `Forge/Terrain` and its add pass): URP's Terrain Lit, copied, with one
+  change, `ForgeTerrainTiling.hlsl`: each layer's colour, normal and mask maps are read twice, shifted by offsets a slow
+  value noise over the world picks (patches about 7 m across), and blended only where the noise crosses from one offset
+  to the next (Inigo Quilez's texture repetition, technique 3), so a street of one ground shows no grid of repeats;
+  a second noise (about 23 m) varies the brightness by up to 12%. The noise reads world coordinates through the
+  `_ForgeWorldOrigin` global, which `WorldFrame` sets at every rebase, so the pattern holds still when the scene moves.
+  A pass that skips the setup samples exactly as URP's (the depth-normals pass does: it has no world position). The
+  base map and its generator stay URP's. On a URP upgrade, re-copy the four files and re-apply the marked change.
 - **Material looks**: a `MaterialRecord`'s asset key is looked up in the `MaterialCatalog`
   (`Content/MaterialCatalog.asset`, on `EditorAppBootstrap._materials`, optional: without it every object wears its own
   materials) to a Unity material (`MaterialLooks`; a material the world or catalog lacks leaves the slot in its base

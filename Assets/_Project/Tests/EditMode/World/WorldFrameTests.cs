@@ -61,6 +61,19 @@ namespace Forge.Tests.World
         }
 
         [Test]
+        public void ShadersSeeTheWorldOrigin_AndItFollowsARebase()
+        {
+            var frame = new WorldFrame(_root.transform, 8);
+            Assert.That((Vector3)Shader.GetGlobalVector(WorldFrame.OriginProperty), Is.EqualTo(Vector3.zero));
+
+            frame.Follow(new Vector3(20.5f * WorldGrid.ChunkSize, 50f, -12.5f * WorldGrid.ChunkSize));
+
+            Assert.That((Vector3)Shader.GetGlobalVector(WorldFrame.OriginProperty), Is.EqualTo(frame.ToWorld(Vector3.zero)),
+                "Scene zero is where the ground's tiling noise starts, in world coordinates.");
+            Assert.That(frame.ToWorld(Vector3.zero), Is.Not.EqualTo(Vector3.zero));
+        }
+
+        [Test]
         public void Rays_ConvertTheirOrigin_AndKeepTheirDirection()
         {
             var frame = new WorldFrame(_root.transform, 0);
