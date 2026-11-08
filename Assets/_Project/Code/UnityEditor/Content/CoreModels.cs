@@ -16,6 +16,12 @@ namespace Forge.UnityEditor.Content
         /// <summary>The Viking Sword's id in <paramref name="pluginId"/>.</summary>
         public static RecordId VikingSword(string pluginId) => new RecordId(pluginId, "viking_sword");
 
+        /// <summary>The Hunting Bow's id in <paramref name="pluginId"/>.</summary>
+        public static RecordId HuntingBow(string pluginId) => new RecordId(pluginId, "hunting_bow");
+
+        /// <summary>The (plain) Arrow's id in <paramref name="pluginId"/>.</summary>
+        public static RecordId Arrow(string pluginId) => new RecordId(pluginId, "arrow");
+
         /// <summary>The Greatsword's id in <paramref name="pluginId"/>.</summary>
         public static RecordId Greatsword(string pluginId) => new RecordId(pluginId, "greatsword");
 
@@ -52,10 +58,10 @@ namespace Forge.UnityEditor.Content
             // Archery style, shooting the arrows equipped as ammo. An arrow's hit is the bow's damage to health, times how far it was drawn.
             foreach (var (folder, id, name, weight, value, damage) in new[]
                      {
-                         ("HuntingBow", "hunting_bow", "Hunting Bow", 3f, 50, 7f),
-                         ("RecurveBow", "recurve_bow", "Recurve Bow", 3f, 65, 9f),
+                         ("HuntingBow", HuntingBow(pluginId), "Hunting Bow", 3f, 50, 7f),
+                         ("RecurveBow", new RecordId(pluginId, "recurve_bow"), "Recurve Bow", 3f, 65, 9f),
                      })
-                yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
+                yield return new BaseObjectRecord(id, name, ModelImport.KeyFor(folder),
                     "Items/Weapons", LyingFlat(),
                     item: new ItemPart(ItemKind.Weapon, weight, value),
                     equippable: new EquippablePart(CoreEquipSlots.Bow()),
@@ -64,10 +70,10 @@ namespace Forge.UnityEditor.Content
             // Arrows (OpenGameArt, CC0), lying flat: equipped as ammo, worn as a quiver of them on the back, as in Skyrim.
             foreach (var (folder, id, name, weight, value) in new[]
                      {
-                         ("Arrow", "arrow", "Arrow", 0.1f, 1),
-                         ("BroadheadArrow", "broadhead_arrow", "Broadhead Arrow", 0.1f, 2),
+                         ("Arrow", Arrow(pluginId), "Arrow", 0.1f, 1),
+                         ("BroadheadArrow", new RecordId(pluginId, "broadhead_arrow"), "Broadhead Arrow", 0.1f, 2),
                      })
-                yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
+                yield return new BaseObjectRecord(id, name, ModelImport.KeyFor(folder),
                     "Items/Ammo", LyingFlat(),
                     item: new ItemPart(ItemKind.Misc, weight, value),
                     equippable: new EquippablePart(CoreEquipSlots.Ammunition(), worn: ModelImport.KeyFor("Quiver")));

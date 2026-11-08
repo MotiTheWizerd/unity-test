@@ -15,9 +15,20 @@
       "items": [
         {
           "item": "forge.core:viking_sword",
+          "count": 1
+        },
+        {
+          "item": "forge.core:hunting_bow",
           "count": 1,
           "equip": [
-            "forge.core:equip_slot/right_hand"
+            "forge.core:equip_slot/left_hand"
+          ]
+        },
+        {
+          "item": "forge.core:arrow",
+          "count": 100,
+          "equip": [
+            "forge.core:equip_slot/ammo"
           ]
         }
       ]
