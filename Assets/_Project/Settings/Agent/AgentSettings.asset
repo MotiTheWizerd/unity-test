@@ -16,6 +16,7 @@ MonoBehaviour:
   _model: sonnet
   _effort: 
   _instructions: {fileID: 4900000, guid: fa6ccc22b7af9cb4aae93772c85687ad, type: 3}
+  _guidesFolder: AgentGuides
   _keepsMemory: 1
   _memoryServer: https://api.semantixstudio.com
   _memoryName: Forge

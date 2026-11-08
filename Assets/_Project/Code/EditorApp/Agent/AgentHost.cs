@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using Forge.Agent;
 using Forge.Agent.ClaudeCode;
+using Forge.Agent.Guides;
 using Forge.Agent.Memory;
 using Forge.Agent.Tools;
 using Forge.Data.Records;
@@ -17,7 +18,7 @@ namespace Forge.EditorApp.Agent
 {
     /// <summary>
     /// The world-building agent inside the running editor: its commands, over the same seating and placement
-    /// options as the place tool; the Claude Code backend; and the conversation the panel shows. Ticked every
+    /// options as the place tool, and its guides; the Claude Code backend; and the conversation the panel shows. Ticked every
     /// frame to run the agent's work on the main thread. While it works the app keeps running in the background,
     /// so a build carries on when the window loses focus.
     /// </summary>
@@ -48,15 +49,18 @@ namespace Forge.EditorApp.Agent
             if (settings == null)
                 throw new ArgumentNullException(nameof(settings));
 
+            var guides = settings.Guides(Application.streamingAssetsPath);
             var commands = new CommandRegistry();
             BuildingCommands.AddTo(commands, new BuildContext(context.Session, () => context.ActiveSpace, seating, context.PlacementOptions, slots.SlotsOf,
                 () => context.UnpaintedGround));
             commands.Add(new LookCommand(eyes));
+            commands.Add(new ReadGuideCommand(guides));
             var tools = new AgentToolHost(new ToolInvoker(commands), _mainThread);
             var claudeCode = settings.ClaudeCode(Path.Combine(Application.persistentDataPath, WorkingFolder));
             var backend = new ClaudeCodeBackend(claudeCode, tools);
             backend.EndpointFailed += ex => _mainThread.Post(() => Debug.LogException(ex));
-            Conversation = new AgentConversation(backend, tools, context.Session, _mainThread, briefing.Describe, settings.Instructions,
+            // The guides' index ends the instructions, so the agent knows which guides there are and when to read each.
+            Conversation = new AgentConversation(backend, tools, context.Session, _mainThread, briefing.Describe, guides.AppendIndex(settings.Instructions),
                 Memory(settings, claudeCode));
             _runInBackground = Application.runInBackground;
         }

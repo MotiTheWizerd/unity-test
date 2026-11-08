@@ -1,12 +1,15 @@
 using System;
+using System.IO;
 using Forge.Agent.ClaudeCode;
+using Forge.Agent.Guides;
 using UnityEngine;
 
 namespace Forge.EditorApp.Agent
 {
     /// <summary>
     /// How the world-building agent runs: the Claude Code command and model it uses, its standing
-    /// instructions (a text asset, so they can be edited without touching code), and its memory in Semantix.
+    /// instructions (a text asset, so they can be edited without touching code), the folder of its guides,
+    /// and its memory in Semantix.
     /// </summary>
     [CreateAssetMenu(menuName = "Forge/Agent Settings", fileName = "AgentSettings")]
     public sealed class AgentSettings : ScriptableObject
@@ -22,6 +25,9 @@ namespace Forge.EditorApp.Agent
 
         [SerializeField, Tooltip("The agent's standing instructions (its system prompt).")]
         TextAsset _instructions;
+
+        [SerializeField, Tooltip("Folder under StreamingAssets holding the agent's guides, one Markdown file per topic; empty for none.")]
+        string _guidesFolder = "AgentGuides";
 
         [Header("Memory")]
         [SerializeField, Tooltip("Keep the agent's long-term memory in Semantix. Needs the Semantix app signed in on this machine.")]
@@ -44,6 +50,10 @@ namespace Forge.EditorApp.Agent
             _instructions != null && !string.IsNullOrWhiteSpace(_instructions.text)
                 ? _instructions.text
                 : throw new InvalidOperationException($"Agent settings '{name}' have no instructions assigned.");
+
+        /// <summary>The agent's guides, read from their folder under <paramref name="streamingAssets"/>; none when no folder is set.</summary>
+        public AgentGuides Guides(string streamingAssets) =>
+            string.IsNullOrEmpty(_guidesFolder) ? AgentGuides.None : AgentGuides.Read(Path.Combine(streamingAssets, _guidesFolder));
 
         /// <param name="workingDirectory">Where Claude Code runs and keeps the agent's conversations.</param>
         public ClaudeCodeSettings ClaudeCode(string workingDirectory) =>

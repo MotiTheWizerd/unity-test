@@ -48,6 +48,7 @@ Assets/_Project/
                  Player/ the PlayerProfile
 Assets/StreamingAssets/Plugins/   shipped base plugins (forge.core.json = our "Skyrim.esm", its heights in forge.core.<hash>.terrain)
 Assets/StreamingAssets/StressWorld/  generated stress-test world (git-ignored, Forge/Generate Stress World)
+Assets/StreamingAssets/AgentGuides/  the world-building agent's guides, one Markdown file per topic (see the agent's Guides)
 <persistentDataPath>/Plugins/     user plugins; the active plugin (forge.user) is saved here
 <persistentDataPath>/Editor/      the editor's state between sessions: prefs.json (the user's), Worlds/<edit plugin id>.json (per world)
 Builds/Windows/Forge.exe          the standalone player (git-ignored; Forge → Build and Run (Windows), `PlayerBuilder`):
@@ -745,10 +746,10 @@ from any camera, so both cameras read the same player.
   changes go. A placed object taken out of the world leaves the scene (`WorldView.Hide`, which also keeps it out when its
   chunk streams in again) and the focus looks again; one dropped joins it (`WorldView.ShowAdded`: streamed with its
   chunk like the world's own); when the changes are let go, `WorldView.ShowAsBuilt` puts the world back as built.
-  `Drop(item)` sets one down 0.9 m ahead of the player's feet, turned the way it faces: an `IItemPlacement` (Game.Items)
-  finds where it rests, in the editor `SeatedItemPlacement` (the first thing below, seated by the editor's own
-  `ObjectSeating`, so a dropped item lies as a placed one), else at the feet. The editor's play from here runs one; the
-  game app will run one as it is, with its own placement.
+  `Drop(item)` lets one go from the player's hands, as Skyrim's drops are: 0.6 m ahead of the eyes the way the body
+  faces and 0.5 m below them (nearer when a wall is), turned that way, moving as the player moves, tossed a little ahead
+  and spinning (`WorldPhysics.Release`), so it falls, tumbles and stays wherever it comes to rest. The editor's play from
+  here runs one; the game app will run one as it is.
 - **The model** (`PlayerAvatar`, Play): the profile's `_model` as a `CharacterModel` (any character's look on any body:
   the prefab riding on the body's object, turned to the body's heading, its colliders removed since the body is the
   collider, on the body's layer, animated from a `BodyMotion`; the world's characters will use it too), plus the
@@ -1020,6 +1021,13 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
   built object is then `MovedObjects`, an added one is replaced), which `PlayedWorld` reads (it is in the block it lies
   in now) and the view shows (`ShowMoved`). One fallen out of the world is put back. The game ending takes every body
   off and the world is as built again.
+- **Clutter**: the light loose things (`PhysicalObjects.IsClutter`, up to `MostClutterMass`, 10 kg: a cup, a sword, a
+  basket) are on the `ForgeClutter` layer while they play (`ClutterLayer`; their colliders' own layers come back after).
+  The player's controller leaves the layer out (`excludeLayers`), so clutter is never stood on or walked into: each move
+  kicks what clutter the capsule comes to (`ClutterKicker`, by the engine-free `ClutterKick`: sent on away from the body,
+  level, a quarter faster than the body comes on that way, at most 6 m/s; what is inside the body is eased out at up to
+  2 m/s; what is carried is left alone). The third-person camera looks past clutter. Heavier loose things stand in the
+  way as the rest of the world does.
 - **Carrying** (`ObjectCarry`, Play): the use key is tap-or-hold (`UseKey`, `PlayerControls.Use`): a tap is
   `PlayerCommands.Activate` (take), a hold of `GrabHold` grabs the body in reach (as the use key aims) if no heavier than
   `MostCarriedMass`; `Carried` drives it each physics step to a point in front of the eyes where the view looks, turned
@@ -1044,6 +1052,21 @@ slopes), so results are exact and every edit goes through the edit session.
   one render (`AgentPictures.Snapshot`) and puts it back, so the user's view never moves. The build under review is
   the selection, so it shows highlighted. Only what the streaming has loaded is drawn: views far from the user's camera
   lack the grass and show the far land's coarse tiles. The instructions ask for a few looks after building, not one per step.
+- **Guides** (`Agent/Guides`): the know-how for a kind of work that runs across tools (the sizes and distances that
+  look right, the order of steps, the pitfalls), kept out of the system prompt until it is needed. Three layers: the
+  instructions hold the agent's identity, the world's conventions and its working loop; each tool's description holds
+  that tool's own facts (always loaded, so the guides don't repeat them); a guide holds a recipe across tools. A guide
+  is a Markdown file in `StreamingAssets/AgentGuides`, named after its topic (`towns.md`; lowercase snake_case), opening
+  with a front matter that says when to read it (`when: before laying out a town…`; the only field, and required).
+  `AgentGuides.Read` loads the folder (a misnamed or malformed file is an `InvalidDataException` naming it; a missing
+  folder throws), and `AppendIndex` ends the instructions with a **Guides** section: how to use them, then each topic
+  and its trigger, so the model knows which exist and when each applies. The agent's Claude Code can't read files, so a
+  guide reaches it through `read_guide` (`ReadGuideCommand`: a topic's text, any case; no topic lists them; an unknown
+  topic is refused with the list), whose line in the chat says which guide it read. `AgentGuidesTests` checks the
+  shipped texts against the tools: every snake_case word in the instructions and the guides must be a tool or an
+  argument that exists, and the system prompt (instructions and index) stays under 24,000 characters, since it goes on
+  the command line. The first guides are `terrain` (shaping, levelling, water, painting and planting land, with the
+  slope each profile gives by its width) and `towns` (streets, squares, rows of buildings, the ground, the check).
 - **Threading**: the edit session belongs to the main thread. `AgentToolHost` carries every call there through
   a `MainThreadQueue`, which the editor pumps each frame, and takes calls only while a request is open.
 - **MCP**: `McpServer` answers MCP's `initialize`, `ping`, `tools/list` and `tools/call` (JSON-RPC 2.0; unknown
@@ -1308,8 +1331,10 @@ slopes), so results are exact and every edit goes through the edit session.
     the options bar shows its level and Remove, and Del removes it (`EditorCommands.RemoveCurrentLake`).
 - **The agent in the editor**: `EditorController` builds an `AgentHost` when the bootstrap has `AgentSettings`
   (`Settings/Agent/AgentSettings.asset`: Claude Code command, model `sonnet`, effort, the instructions as a
-  text asset, `WorldBuilderInstructions.md`, and the memory: on, its Semantix server and its name). The host registers the building commands over the controller's
-  `ObjectSeating` and the context's `PlacementOptions`, pumps the agent's main-thread queue every frame, selects
+  text asset, `WorldBuilderInstructions.md`, the guides' folder under StreamingAssets, `AgentGuides`, and the memory:
+  on, its Semantix server and its name). The host reads the guides once, registers the building commands over the controller's
+  `ObjectSeating` and the context's `PlacementOptions` beside `look` and `read_guide`, appends the guides' index to the
+  instructions, pumps the agent's main-thread queue every frame, selects
   the draft's objects (so they stand out and F frames them), and keeps the app running in the background while
   the agent works. `EditorBriefing` tells the agent where the camera looks (the default site), the terrain's
   extent and the selection. **While a draft is open, editing rests**: the controller deactivates the current tool
