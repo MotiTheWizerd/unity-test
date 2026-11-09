@@ -27,6 +27,20 @@ namespace Forge.Play
         }
 
         /// <summary>
+        /// The turn, in a place whose +Z stands out of the body (the back), that hangs a strapped thing flat against it as
+        /// a shield is slung: <paramref name="facesBody"/> (in the thing's frame: a shield's back) against the body, and
+        /// its +Y (up out of the fist that held it: a kite shield's top) towards <paramref name="up"/>, seen across the
+        /// body. None when either lies along the other's way.
+        /// </summary>
+        public static Quaternion Against(Vector3 facesBody, Vector3 up)
+        {
+            up.z = 0f;
+            if (up.sqrMagnitude < 1e-8f || Vector3.Cross(facesBody, Vector3.up).sqrMagnitude < 1e-8f)
+                return Quaternion.identity;
+            return Quaternion.LookRotation(Vector3.back, up) * Quaternion.Inverse(Quaternion.LookRotation(facesBody, Vector3.up));
+        }
+
+        /// <summary>
         /// The turn about a grip's length (+Y) that brings <paramref name="side"/> (in the grip's frame) round to face
         /// <paramref name="toward"/>, both seen across the length; none when either lies along it.
         /// </summary>

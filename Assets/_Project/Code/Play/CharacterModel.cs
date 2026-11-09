@@ -447,10 +447,11 @@ namespace Forge.Play
             {
                 if (held.Carried == CarriedAt.Back && TryBack(held.Bone != HumanBodyBones.LeftHand, out var back))
                 {
-                    // Flat against the back, its holder's side down across it, away from the neck.
+                    // Flat against the back: its holder's side down across it, away from the neck; or, strapped (a
+                    // shield), that side against the back, upright, slung by its middle.
                     point = back;
-                    turn = held.FacesHolder.HasValue
-                        ? HoldFinder.Facing(held.FacesHolder.Value, back.InverseTransformDirection(Vector3.down))
+                    turn = held.Strapped ? HoldFinder.Against(held.FacesHolder.Value, back.InverseTransformDirection(Vector3.up))
+                        : held.FacesHolder.HasValue ? HoldFinder.Facing(held.FacesHolder.Value, back.InverseTransformDirection(Vector3.down))
                         : Quaternion.identity;
                     held.OnBack = true;
                 }
@@ -463,7 +464,7 @@ namespace Forge.Play
 
             // Its own size whatever the skeleton's scale, then turned (about its length too, so its holder's side faces
             // the way the place wants) and moved so that its grip lies on the point, or off the back by its depth (and on
-            // top of what a hand carries there, for what no hand holds).
+            // top of what a hand carries there, for what no hand holds), a strapped thing's middle over the point.
             var look = held.Look.transform;
             look.SetParent(point, false);
             var boneScale = point.lossyScale.x;
@@ -477,7 +478,20 @@ namespace Forge.Play
             var standOff = held.OnBack
                 ? BackFinder.Strap + (hand ? 0f : HandCarriedOnBack()) + ExtentOf(held, Quaternion.Inverse(turn) * Vector3.back) * scale
                 : 0f;
-            look.position += point.position + point.forward * standOff - held.Grip.position;
+            var hangsBy = held.Grip.position;
+            if (held.OnBack && held.Strapped)
+                hangsBy += Vector3.ProjectOnPlane(held.Grip.TransformVector(MiddleOf(held)), point.forward);
+            look.position += point.position + point.forward * standOff - hangsBy;
+        }
+
+        // The middle of what a held thing draws, from its grip, in the grip's own frame: halfway between its farthest
+        // reaches each way along each axis.
+        static Vector3 MiddleOf(Held held)
+        {
+            var middle = Vector3.zero;
+            foreach (var axis in new[] { Vector3.right, Vector3.up, Vector3.forward })
+                middle += axis * ((ExtentOf(held, axis) - ExtentOf(held, -axis)) * 0.5f);
+            return middle;
         }
 
         // What a hand holds with a side that faces its holder (a bow's string) turns about its length, on this frame's

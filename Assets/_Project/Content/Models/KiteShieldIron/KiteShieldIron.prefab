@@ -47,7 +47,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Forge.Play::Forge.Play.HeldLook
   _facesHolder: {x: 0, y: 0, z: -1}
   _alongArm: {x: -1, y: 0, z: 0}
-  _carried: 0
+  _carried: 1
 --- !u!1001 &4041082517054572012
 PrefabInstance:
   m_ObjectHideFlags: 0

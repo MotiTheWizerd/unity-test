@@ -88,6 +88,26 @@ namespace Forge.Tests.Play
         }
 
         [Test]
+        public void Against_SlingsAShieldFlatOnTheBack_ItsBackIn_ItsTopUp()
+        {
+            // The back's +Z stands out of the body; up runs along its +Y and a little out, as a back leans.
+            var turn = HoldFinder.Against(Vector3.back, new Vector3(0f, 1f, 0.3f));
+
+            AssertNear(turn * Vector3.back, Vector3.back);
+            AssertNear(turn * Vector3.up, Vector3.up);
+        }
+
+        [Test]
+        public void Against_UpAcrossTheBack_TurnsItsTopThatWay()
+        {
+            // The back's frame lies across the body (a bow's diagonal): up is along its +X.
+            var turn = HoldFinder.Against(Vector3.back, Vector3.right);
+
+            AssertNear(turn * Vector3.back, Vector3.back);
+            AssertNear(turn * Vector3.up, Vector3.right);
+        }
+
+        [Test]
         public void Strapped_TheTwoWaysTogether_IsNoTurn()
         {
             Assert.That(HoldFinder.Strapped(Vector3.back, Vector3.back, right: false), Is.EqualTo(Quaternion.identity));
