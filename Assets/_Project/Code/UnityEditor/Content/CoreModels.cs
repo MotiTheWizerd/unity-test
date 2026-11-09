@@ -25,6 +25,11 @@ namespace Forge.UnityEditor.Content
         /// <summary>The Greatsword's id in <paramref name="pluginId"/>.</summary>
         public static RecordId Greatsword(string pluginId) => new RecordId(pluginId, "greatsword");
 
+        /// <summary>The Painted Round Shield's id in <paramref name="pluginId"/>.</summary>
+        public static RecordId PaintedRoundShield(string pluginId) => new RecordId(pluginId, PaintedRoundShieldKey);
+
+        const string PaintedRoundShieldKey = "round_shield_painted";
+
         // A shield bash's damage, and the stamina every shield's block costs per point of damage it stops.
         const float ShieldBash = 3f;
         const float BlockEffort = 0.5f;
@@ -94,7 +99,7 @@ namespace Forge.UnityEditor.Content
             foreach (var (folder, id, name, weight, value, stops) in new[]
                      {
                          ("RoundShield", "round_shield", "Round Shield", 12f, 30, 0.5f),
-                         ("RoundShieldPainted", "round_shield_painted", "Painted Round Shield", 12f, 40, 0.5f),
+                         ("RoundShieldPainted", PaintedRoundShieldKey, "Painted Round Shield", 12f, 40, 0.5f),
                          ("KiteShield", "kite_shield", "Kite Shield", 14f, 45, 0.6f),
                          ("KiteShieldIron", "kite_shield_iron", "Iron Kite Shield", 18f, 80, 0.75f),
                      })
