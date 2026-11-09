@@ -39,6 +39,16 @@ namespace Forge.Tests.Play
         }
 
         [Test]
+        public void ABlock_IsUpWhereTheShieldHandHasComeMostOfItsWay()
+        {
+            // Eleven samples, as the real clip: the shield hand still a moment, then up and forward, settling at the end.
+            var moved = new[] { 0f, 0f, 0.01f, 0.03f, 0.08f, 0.14f, 0.17f, 0.19f, 0.2f, 0.2f, 0.2f };
+
+            Assert.That(RaiseFinder.Up(moved), Is.EqualTo(0.6f).Within(1e-5f), "0.17 is past 0.8 of the 0.2 it ends at.");
+            Assert.That(RaiseFinder.Up(new[] { 0f, 0f }), Is.EqualTo(1f), "A hand that never moves is never up before the end.");
+        }
+
+        [Test]
         public void ABowsRelease_LetsGoWhereTheHandsPartFastest()
         {
             // Eleven samples, as the real clip: the draw anchored a little further, the string hand flicking back from

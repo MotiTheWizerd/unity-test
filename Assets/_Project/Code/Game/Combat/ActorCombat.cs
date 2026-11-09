@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
@@ -48,16 +49,26 @@ namespace Forge.Game.Combat
     /// <see cref="Release"/>, as Skyrim's bow is: let go once the arrow is on the string (its window open), a weapon that
     /// shoots uses up one of its ammo (<see cref="WeaponPart.Ammo"/>) and looses it (<see cref="Loosed"/>), as hard as it
     /// was drawn (<see cref="Shot.Power"/>); let go sooner, it looses as soon as the arrow is on. What it looses strikes
-    /// the first it reaches (<see cref="Strike(Shot, ActorId)"/>), the weapon's blow times its power.
+    /// the first it reaches (<see cref="Strike(Shot, ActorId, Vector3?)"/>), the weapon's blow times its power.
+    /// </para>
+    /// <para>
+    /// A hand is used as its weapon's style says (<see cref="TryUse"/>): attacked with, or, a shield, raised as a block
+    /// (<see cref="CombatMoveKind.Block"/>, held like a draw). It is the actor's guard (<see cref="IGuard"/>): a blow
+    /// coming at it from within <see cref="GuardArc"/> of where it faces (<see cref="Facing"/>) while the block is up is
+    /// stopped as much as the shield's <see cref="BlockPart"/> says, for stamina; too little stamina breaks the guard.
     /// </para>
     /// Told as it happens (<see cref="SwingStarted"/>, <see cref="SwingHeld"/>, <see cref="SwingLetGo"/>,
-    /// <see cref="Loosed"/>, <see cref="SwingEnded"/>) for the look, and on the stream (<see cref="AttackStarted"/>,
-    /// <see cref="ShotLoosed"/>, <see cref="HitLanded"/>, <see cref="ActorKilled"/>) for the rest. Engine-free; the game ticks it.
+    /// <see cref="Loosed"/>, <see cref="Blocked"/>, <see cref="SwingEnded"/>) for the look, and on the stream
+    /// (<see cref="AttackStarted"/>, <see cref="ShotLoosed"/>, <see cref="HitLanded"/>, <see cref="HitBlocked"/>,
+    /// <see cref="GuardBroken"/>, <see cref="ActorKilled"/>) for the rest. Engine-free; the game ticks it.
     /// </summary>
-    public sealed class ActorCombat : IDisposable
+    public sealed class ActorCombat : IDisposable, IGuard
     {
         /// <summary>How hard a shot loosed the moment it is on the string flies and strikes, of a full draw's.</summary>
         public const float WeakestShot = 0.3f;
+
+        /// <summary>Degrees either side of where it faces that a raised guard covers.</summary>
+        public const float GuardArc = 60f;
 
         readonly ActorEquipment _equipment;
         readonly WeaponReadiness _readiness;
@@ -141,10 +152,47 @@ namespace Forge.Game.Combat
         public event Action<Shot> Loosed;
 
         /// <summary>
+        /// A raised guard (the swing raising it) stopped a blow, for the look to jolt it by its style's
+        /// <see cref="CombatMoveKind.Blocked"/> move (null when the style has none).
+        /// </summary>
+        public event Action<Swing, CombatMove> Blocked;
+
+        /// <summary>
+        /// Which way the actor faces (scene space; only its level part counts), which its guard covers; until set, its
+        /// guard covers every way.
+        /// </summary>
+        public Func<Vector3> Facing { get; set; }
+
+        /// <summary>The block raised now, its guard up (a shield in its window); null when none is.</summary>
+        public Swing Guard
+        {
+            get
+            {
+                foreach (var swing in _swings)
+                {
+                    if (swing.Guards && swing.IsStriking)
+                        return swing;
+                }
+
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Attacks with what <paramref name="slot"/> holds (the right hand's sword); a held move (a bow's draw) is held
         /// until <see cref="Release"/>.
         /// </summary>
         public AttackOutcome TryAttack(RecordId slot) => TryMove(slot, CombatMoveKind.Attack);
+
+        /// <summary>
+        /// Uses what <paramref name="slot"/> holds as its style says, Skyrim's way: attacks with a weapon, raises a shield
+        /// (its block, held until <see cref="Release"/>).
+        /// </summary>
+        public AttackOutcome TryUse(RecordId slot)
+        {
+            var outcome = TryMove(slot, CombatMoveKind.Attack);
+            return outcome == AttackOutcome.NoMove ? TryMove(slot, CombatMoveKind.Block) : outcome;
+        }
 
         /// <summary>
         /// The attack asked for with <paramref name="slot"/> is released: its held swing (a bow's draw) lets go now, if its
@@ -190,28 +238,30 @@ namespace Forge.Game.Combat
         }
 
         /// <summary>
-        /// <paramref name="swing"/>'s weapon passed through <paramref name="target"/>: its blow lands, if the swing is in
-        /// its hit window, its weapon strikes with itself (not a bow: what it shoots strikes), the target can be struck and
-        /// isn't the swinger, and this swing hasn't struck it yet. Whether it landed.
+        /// <paramref name="swing"/>'s weapon passed through <paramref name="target"/>, travelling
+        /// <paramref name="direction"/> (scene space; null: from wherever): its blow lands, met first by the target's guard,
+        /// if the swing is in its hit window, its weapon strikes with itself (not a bow: what it shoots strikes; not a
+        /// block), the target can be struck and isn't the swinger, and this swing hasn't struck it yet. Whether it landed.
         /// </summary>
-        public bool Strike(Swing swing, ActorId target)
+        public bool Strike(Swing swing, ActorId target, Vector3? direction = null)
         {
             if (swing == null)
                 throw new ArgumentNullException(nameof(swing));
-            if (!_swings.Contains(swing) || !swing.IsStriking || swing.Shoots || target == Owner)
+            if (!_swings.Contains(swing) || !swing.IsStriking || swing.Shoots || swing.Guards || target == Owner)
                 return false;
             if (!_combatants.TryGet(target, out var attributes) || IsDead(attributes) || !swing.MarkStruck(target))
                 return false;
 
-            Land(swing.Weapon.Record, 1f, target, attributes);
+            Land(swing.Weapon.Record, 1f, target, attributes, direction);
             return true;
         }
 
         /// <summary>
-        /// What this actor shot reached <paramref name="target"/>: the weapon's blow lands, times the shot's power, if the
-        /// target can be struck and isn't the shooter, and the shot hasn't struck anyone yet. Whether it landed.
+        /// What this actor shot reached <paramref name="target"/>, flying <paramref name="direction"/> (scene space; null:
+        /// from wherever): the weapon's blow lands, times the shot's power, met first by the target's guard, if the target
+        /// can be struck and isn't the shooter, and the shot hasn't struck anyone yet. Whether it landed.
         /// </summary>
-        public bool Strike(Shot shot, ActorId target)
+        public bool Strike(Shot shot, ActorId target, Vector3? direction = null)
         {
             if (shot == null)
                 throw new ArgumentNullException(nameof(shot));
@@ -221,24 +271,90 @@ namespace Forge.Game.Combat
                 return false;
 
             shot.Landed = true;
-            Land(shot.Weapon, shot.Power, target, attributes);
+            Land(shot.Weapon, shot.Power, target, attributes, direction);
             return true;
         }
 
-        // The weapon's blow, `power` times as strong, on the target; told on the stream.
-        void Land(BaseObjectRecord weapon, float power, ActorId target, ActorAttributes attributes)
+        /// <inheritdoc/>
+        public float Block(ActorId attacker, RecordId weapon, float damage, Vector3? direction)
         {
+            var guard = Guard;
+            var block = guard?.Weapon.Record.Block;
+            if (block == null || !Covers(direction))
+                return 0f;
+
+            var stopped = Math.Max(0f, damage) * block.Stops;
+            if (_attributes != null && _attributes.Set.Contains(CoreAttributes.Stamina) &&
+                !_attributes.TrySpend(CoreAttributes.Stamina, stopped * block.Effort))
+            {
+                Stop(guard);
+                _events?.Publish(new GuardBroken(Owner, attacker));
+                return 0f;
+            }
+
+            Blocked?.Invoke(guard, StyleMove(guard.Weapon, CombatMoveKind.Blocked));
+            _events?.Publish(new HitBlocked(attacker, Owner, weapon, stopped));
+            return block.Stops;
+        }
+
+        // The move of `kind` of the style `equipped` is fought with; null when it has none.
+        CombatMove StyleMove(EquippedItem equipped, CombatMoveKind kind)
+        {
+            var style = equipped.Record.Weapon?.Style;
+            return style.HasValue && _records.TryGet(style.Value, out var record) && record is CombatStyleRecord combatStyle &&
+                   combatStyle.TryGetMove(kind, out var move)
+                ? move
+                : null;
+        }
+
+        // Whether a blow travelling `direction` comes at where it faces, within the guard's arc (level only).
+        bool Covers(Vector3? direction)
+        {
+            if (direction == null || Facing == null)
+                return true;
+            var facing = Facing();
+            var at = new Vector2(facing.X, facing.Z);
+            var from = -new Vector2(direction.Value.X, direction.Value.Z);
+            if (at.LengthSquared() < 1e-8f || from.LengthSquared() < 1e-8f)
+                return true;
+            return Vector2.Dot(Vector2.Normalize(at), Vector2.Normalize(from)) >= (float)Math.Cos(GuardArc * Math.PI / 180.0);
+        }
+
+        // The weapon's blow, `power` times as strong, on the target, less what its guard stops of the harm to its health;
+        // told on the stream.
+        void Land(BaseObjectRecord weapon, float power, ActorId target, ActorAttributes attributes, Vector3? direction)
+        {
+            var stops = _combatants.TryGetGuard(target, out var guard)
+                ? guard.Block(Owner, weapon.Id, HealthDamage(weapon, power), direction)
+                : 0f;
             var health = 0f;
             foreach (var effect in weapon.Weapon.Hit)
             {
-                var applied = AttributeEffects.Apply(effect.Times(power), attributes);
-                if (effect.Kind == EffectKind.Damage && effect.Attribute == CoreAttributes.Health)
+                var harmsHealth = effect.Kind == EffectKind.Damage && effect.Attribute == CoreAttributes.Health;
+                var factor = harmsHealth ? power * (1f - stops) : power;
+                if (!(factor > 0f))
+                    continue;
+                var applied = AttributeEffects.Apply(effect.Times(factor), attributes);
+                if (harmsHealth)
                     health += applied;
             }
 
             _events?.Publish(new HitLanded(Owner, target, weapon.Id, health));
             if (IsDead(attributes))
                 _events?.Publish(new ActorKilled(target, Owner));
+        }
+
+        // What `weapon`'s blow, `power` times as strong, would take from health.
+        static float HealthDamage(BaseObjectRecord weapon, float power)
+        {
+            var damage = 0f;
+            foreach (var effect in weapon.Weapon.Hit)
+            {
+                if (effect.Kind == EffectKind.Damage && effect.Attribute == CoreAttributes.Health)
+                    damage += effect.Amount * power;
+            }
+
+            return damage;
         }
 
         // A held swing lets go: one that shoots uses up one of its ammo and looses it, as hard as it was drawn (none
@@ -295,7 +411,7 @@ namespace Forge.Game.Combat
                 !_attributes.TrySpend(CoreAttributes.Stamina, move.StaminaCost))
                 return AttackOutcome.Tired;
 
-            var timing = Timings != null && Timings.TryGet(move.Animation, weapon.Ammo.HasValue, out var timed) ? timed : MoveTiming.Default;
+            var timing = Timings != null && Timings.TryGet(move.Animation, Swing.MeasureOf(move, weapon), out var timed) ? timed : MoveTiming.Default;
             var release = move.Release != null && Timings != null && Timings.TryGetRelease(move.Release, out var seconds) ? seconds : (float?)null;
             var swing = new Swing(slot, equipped, move, timing, release);
             _swings.Add(swing);
@@ -319,12 +435,16 @@ namespace Forge.Game.Combat
         {
             for (var i = _swings.Count - 1; i >= 0; i--)
             {
-                var swing = _swings[i];
-                if (swing.Weapon != equipped)
-                    continue;
-                _swings.RemoveAt(i);
-                SwingEnded?.Invoke(swing);
+                if (_swings[i].Weapon == equipped)
+                    Stop(_swings[i]);
             }
+        }
+
+        // Stops one swing at once (its weapon taken off, its guard broken).
+        void Stop(Swing swing)
+        {
+            if (_swings.Remove(swing))
+                SwingEnded?.Invoke(swing);
         }
 
         static bool Overlaps(EquipFit a, EquipFit b)

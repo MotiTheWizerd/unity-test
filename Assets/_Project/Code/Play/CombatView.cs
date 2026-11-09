@@ -1,4 +1,5 @@
 using System;
+using Forge.Data.Records;
 using Forge.Game.Combat;
 
 namespace Forge.Play
@@ -8,7 +9,8 @@ namespace Forge.Play
     /// (<see cref="CharacterModel.TryTime"/>, a release by <see cref="CharacterModel.TryTimeRelease"/>), and each swing
     /// plays its move on the look's arms; a held one (a bow's draw) is held still at the end of its window while the rules
     /// hold it, and once let go goes into its move's release (a bow's: the string let go, the bow coming down), else plays
-    /// on from there. Bound while the look exists (the player while spawned); the rules never know it is there.
+    /// on from there; a raised block that takes a blow is jolted by its style's reaction, then held up again. Bound while
+    /// the look exists (the player while spawned); the rules never know it is there.
     /// </summary>
     public sealed class CombatView : IDisposable
     {
@@ -24,6 +26,7 @@ namespace Forge.Play
             _combat.SwingHeld += OnSwingHeld;
             _combat.SwingLetGo += OnSwingLetGo;
             _combat.SwingEnded += OnSwingEnded;
+            _combat.Blocked += OnBlocked;
         }
 
         public void Dispose()
@@ -32,7 +35,15 @@ namespace Forge.Play
             _combat.SwingHeld -= OnSwingHeld;
             _combat.SwingLetGo -= OnSwingLetGo;
             _combat.SwingEnded -= OnSwingEnded;
+            _combat.Blocked -= OnBlocked;
             _combat.Timings = null;
+        }
+
+        // A raised shield took a blow: it jolts, then is held up again.
+        void OnBlocked(Swing guard, CombatMove reaction)
+        {
+            if (reaction != null)
+                _model.React(guard.Move.Animation, reaction.Animation);
         }
 
         void OnSwingStarted(Swing swing) => _model.Play(swing.Move.Animation);
@@ -58,7 +69,7 @@ namespace Forge.Play
 
             public ModelTimings(CharacterModel model) => _model = model;
 
-            public bool TryGet(string animation, bool shoots, out MoveTiming timing) => _model.TryTime(animation, shoots, out timing);
+            public bool TryGet(string animation, MoveMeasure measure, out MoveTiming timing) => _model.TryTime(animation, measure, out timing);
 
             public bool TryGetRelease(string animation, out float seconds) => _model.TryTimeRelease(animation, out seconds);
         }

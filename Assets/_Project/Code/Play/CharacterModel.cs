@@ -189,18 +189,29 @@ namespace Forge.Play
         public bool Play(string move) => _animation != null && _animation.Play(move);
 
         /// <summary>
-        /// How its move <paramref name="move"/> plays, measured from the clip: a draw of a weapon that
-        /// <paramref name="shoots"/> by the string's pull (<see cref="ShotFinder"/>), else by the blade's cut
-        /// (<see cref="SwingFinder"/>); false when it has none.
+        /// How its move <paramref name="move"/> plays, measured from the clip as <paramref name="measure"/> says: a bow's
+        /// draw by the string's pull (<see cref="ShotFinder"/>), a block by the shield coming up (<see cref="RaiseFinder"/>),
+        /// else by the blade's cut (<see cref="SwingFinder"/>); false when it has none.
         /// </summary>
-        public bool TryTime(string move, bool shoots, out MoveTiming timing)
+        public bool TryTime(string move, MoveMeasure measure, out MoveTiming timing)
         {
             timing = default;
             if (_animation == null)
                 return false;
             var clip = _animation.Clip(move);
-            return shoots ? ShotFinder.TryFind(_prefab, clip, out timing) : SwingFinder.TryFind(_prefab, clip, out timing);
+            switch (measure)
+            {
+                case MoveMeasure.Draw: return ShotFinder.TryFind(_prefab, clip, out timing);
+                case MoveMeasure.Raise: return RaiseFinder.TryFind(_prefab, clip, out timing);
+                default: return SwingFinder.TryFind(_prefab, clip, out timing);
+            }
         }
+
+        /// <summary>
+        /// Plays the action <paramref name="reaction"/> (a shield jolted) over its held action <paramref name="held"/> (a
+        /// raised block), then holds that again; false when it can't (not where the held one plays).
+        /// </summary>
+        public bool React(string held, string reaction) => _animation != null && _animation.React(held, reaction);
 
         /// <summary>Holds its action <paramref name="move"/> still <paramref name="at"/> (a fraction of it: a bow at full draw).</summary>
         public bool Hold(string move, float at) => _animation != null && _animation.Hold(move, at);

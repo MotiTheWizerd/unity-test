@@ -8,7 +8,7 @@ namespace Forge.UnityEditor.Content
     /// The combat styles the base game ships (<see cref="CoreCombatStyles"/>), each move the move set's clip that plays it:
     /// one-handed, drawn from the hip and a slash that costs nothing; archery, drawn from the back, its attack an arrow
     /// drawn while held and loosed on release, the string let go and the bow brought down after, stood in with the bow
-    /// held low.
+    /// held low; a shield, raised against blows while held and jolted when one lands on it.
     /// </summary>
     static class CoreCombatStyleSet
     {
@@ -32,6 +32,10 @@ namespace Forge.UnityEditor.Content
         /// <summary>The move set's stance a drawn bow is stood in: held low in the bow hand, the other at the side.</summary>
         public const string BowIdle = "BowIdle";
 
+        /// <summary>The move set's moves a shield is raised by, held up while blocking, and jolted by when it takes a blow.</summary>
+        public const string ShieldBlock = "ShieldBlock";
+        public const string ShieldImpact = "ShieldImpact";
+
         public static IEnumerable<CombatStyleRecord> All()
         {
             yield return new CombatStyleRecord(CoreCombatStyles.OneHanded, "One-Handed", new[]
@@ -46,6 +50,11 @@ namespace Forge.UnityEditor.Content
                 new CombatMove(CombatMoveKind.Draw, BowDraw),
                 new CombatMove(CombatMoveKind.Sheathe, BowSheathe),
                 new CombatMove(CombatMoveKind.Stance, BowIdle),
+            });
+            yield return new CombatStyleRecord(CoreCombatStyles.Shield, "Shield", new[]
+            {
+                new CombatMove(CombatMoveKind.Block, ShieldBlock, held: true),
+                new CombatMove(CombatMoveKind.Blocked, ShieldImpact),
             });
         }
     }

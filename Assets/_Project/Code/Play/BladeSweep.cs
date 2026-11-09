@@ -5,6 +5,7 @@ using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.Game.Actors;
 using Forge.Game.Combat;
+using Forge.World;
 using UnityEngine;
 
 namespace Forge.Play
@@ -14,7 +15,8 @@ namespace Forge.Play
     /// frame, lines from where points along the blade were the frame before to where they are now, and the blade itself,
     /// so a fast swing misses nothing between frames, whatever the weapon's length (<see cref="CharacterModel.TryGetBlade"/>).
     /// Whom each collider belongs to is <paramref name="identify"/>'s to say; the rules decide the rest
-    /// (<see cref="ActorCombat.Strike"/>: once per swing and target, never the swinger). Bound while the look exists.
+    /// (<see cref="ActorCombat.Strike"/>: once per swing and target, never the swinger), the blow coming from the swinger
+    /// toward where it struck, for the target's guard. A block's swing sweeps nothing. Bound while the look exists.
     /// </summary>
     public sealed class BladeSweep : IDisposable
     {
@@ -44,7 +46,7 @@ namespace Forge.Play
         {
             foreach (var swing in _combat.Swings)
             {
-                if (!swing.IsStriking || !TryBone(swing.Slot, out var bone) || !_model.TryGetBlade(bone, out var from, out var to))
+                if (!swing.IsStriking || swing.Guards || !TryBone(swing.Slot, out var bone) || !_model.TryGetBlade(bone, out var from, out var to))
                 {
                     _last.Remove(swing);
                     continue;
@@ -77,7 +79,7 @@ namespace Forge.Play
             {
                 var target = _identify(_hits[i].collider);
                 if (target.HasValue)
-                    _combat.Strike(swing, target.Value);
+                    _combat.Strike(swing, target.Value, (_hits[i].point - _model.Root.transform.position).ToNumerics());
             }
         }
 

@@ -19,6 +19,12 @@ namespace Forge.Data.Records
         /// from; a style without one stands as the actor's move set does with any weapon drawn.
         /// </summary>
         Stance,
+
+        /// <summary>Raising the weapon against blows (a shield), held for as long as asked; its weapon's block part stops them.</summary>
+        Block,
+
+        /// <summary>What plays when a block takes a blow (the shield jolted).</summary>
+        Blocked,
     }
 
     /// <summary>

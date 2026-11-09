@@ -98,6 +98,49 @@ namespace Forge.Game.Combat
         public override string ToString() => $"{Attacker} hit {Target} with {Weapon} for {Damage:0.#}";
     }
 
+    /// <summary>
+    /// <see cref="Target"/> blocked <see cref="Attacker"/>'s blow with <see cref="Weapon"/>, its guard stopping
+    /// <see cref="Stopped"/> health of it (what got through lands as a <see cref="HitLanded"/>).
+    /// </summary>
+    public readonly struct HitBlocked : IGameEvent
+    {
+        public HitBlocked(ActorId attacker, ActorId target, RecordId weapon, float stopped)
+        {
+            Attacker = attacker;
+            Target = target;
+            Weapon = weapon;
+            Stopped = stopped;
+        }
+
+        public ActorId Attacker { get; }
+
+        public ActorId Target { get; }
+
+        /// <summary>The attacker's weapon: its base object.</summary>
+        public RecordId Weapon { get; }
+
+        /// <summary>Health the guard stopped.</summary>
+        public float Stopped { get; }
+
+        public override string ToString() => $"{Target} blocked {Attacker}'s {Weapon}, stopping {Stopped:0.#}";
+    }
+
+    /// <summary><see cref="Actor"/>'s guard broke under <see cref="By"/>'s blow: too little stamina left to hold it, the blow lands whole.</summary>
+    public readonly struct GuardBroken : IGameEvent
+    {
+        public GuardBroken(ActorId actor, ActorId by)
+        {
+            Actor = actor;
+            By = by;
+        }
+
+        public ActorId Actor { get; }
+
+        public ActorId By { get; }
+
+        public override string ToString() => $"{Actor}'s guard broken by {By}";
+    }
+
     /// <summary>An actor's health ran out from a blow; <see cref="By"/> struck it.</summary>
     public readonly struct ActorKilled : IGameEvent
     {

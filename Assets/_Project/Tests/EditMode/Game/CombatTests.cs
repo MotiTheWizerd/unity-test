@@ -33,6 +33,17 @@ namespace Forge.Tests.Game
         static readonly BaseObjectRecord Arrow = new BaseObjectRecord(new RecordId("forge.core", "arrow"), "arrow", "items/arrow",
             item: new ItemPart(ItemKind.Misc, 0.1f, 1), equippable: new EquippablePart(CoreEquipSlots.Ammunition()), ammo: new AmmoPart(0.2f));
 
+        static readonly RecordId ShieldStyle = CombatStyleRecord.IdFor("forge.core", "shield");
+
+        // Stops 60% of a blocked blow, half a stamina point for each point stopped.
+        static readonly BaseObjectRecord Shield = new BaseObjectRecord(new RecordId("forge.core", "shield"), "shield", "items/shield",
+            item: new ItemPart(ItemKind.Weapon, 12f, 30), equippable: new EquippablePart(CoreEquipSlots.OffHand()),
+            weapon: new WeaponPart(ShieldStyle, new[] { Effect.Damage(CoreAttributes.Health, 3f) }), block: new BlockPart(0.6f, 0.5f));
+
+        // A blow coming at the player from in front of it (the player faces +Z), and one from behind.
+        static readonly System.Numerics.Vector3 FromTheFront = -System.Numerics.Vector3.UnitZ;
+        static readonly System.Numerics.Vector3 FromBehind = System.Numerics.Vector3.UnitZ;
+
         // The draw: 1 s, the arrow on the string at 0.5, fully drawn at 1 (where the clip ends, as the real one does).
         static readonly MoveTiming DrawTiming = new MoveTiming(1f, 0.5f, 1f);
 
@@ -68,7 +79,13 @@ namespace Forge.Tests.Game
                     new CombatStyleRecord(OneHanded, "One-Handed", new[] { new CombatMove(CombatMoveKind.Attack, "SwordSlash") }),
                     new CombatStyleRecord(Greatsword, "Two-Handed", new[] { new CombatMove(CombatMoveKind.Attack, "Cleave", staminaCost: 8f) }),
                     Sword,
-                    Claymore),
+                    Claymore,
+                    new CombatStyleRecord(ShieldStyle, "Shield", new[]
+                    {
+                        new CombatMove(CombatMoveKind.Block, "ShieldBlock", held: true),
+                        new CombatMove(CombatMoveKind.Blocked, "ShieldImpact"),
+                    }),
+                    Shield),
             }).Records;
             var set = AttributeSet.From(_world.OfType<AttributeRecord>());
             _inventory = new Inventory();
@@ -491,6 +508,126 @@ namespace Forge.Tests.Game
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new AmmoPart(1.5f));
         }
 
+        // The player with a sword and a shield drawn, its shield raised (the left hand used, held into its window), a
+        // guard facing +Z; and the dummy, fighting back with a sword.
+        ActorCombat RaiseShieldAgainstAFoe()
+        {
+            Hold(Sword, CoreEquipSlots.RightHand);
+            Hold(Shield);
+            Draw();
+            _combatants.Add(ActorId.Player, _attacker, "You", _combat);
+            _combat.Facing = () => System.Numerics.Vector3.UnitZ;
+            Assert.That(_combat.TryUse(CoreEquipSlots.LeftHand), Is.EqualTo(AttackOutcome.Attacking), "A shield's use is its block.");
+            _combat.Tick(1f);
+
+            var inventory = new Inventory();
+            var equipment = new ActorEquipment(Dummy, inventory, _events);
+            inventory.Add(Sword.Id);
+            equipment.TryEquip(Sword);
+            var readiness = new WeaponReadiness(equipment, _world, _events);
+            readiness.SetTimes(0f, 0f);
+            readiness.Toggle();
+            readiness.Tick(0f);
+            var foe = new ActorCombat(equipment, readiness, _world, null, _combatants, _events)
+            {
+                Timings = new FixedTimings(new MoveTiming(1f, 0.4f, 0.6f)),
+            };
+            foe.TryAttack(CoreEquipSlots.RightHand);
+            foe.Tick(0.5f);
+            return foe;
+        }
+
+        [Test]
+        public void AShield_IsRaisedByItsHandsUse_HeldWhileTheKeyIs_AndStrikesNoOne()
+        {
+            Hold(Shield);
+            Draw();
+
+            Assert.That(_combat.TryAttack(CoreEquipSlots.LeftHand), Is.EqualTo(AttackOutcome.NoMove), "A shield doesn't attack...");
+            Assert.That(_combat.TryUse(CoreEquipSlots.LeftHand), Is.EqualTo(AttackOutcome.Attacking), "...it blocks.");
+            var block = _combat.Swings.Single();
+            Assert.That((block.Guards, block.Move.Held, _combat.Guard), Is.EqualTo((true, true, (Swing)null)), "Not up yet.");
+            _combat.Tick(3f);
+
+            Assert.That(_combat.Guard, Is.SameAs(block), "Up, and held.");
+            Assert.That(_combat.Strike(block, Dummy), Is.False, "A raised shield strikes no one.");
+            _combat.Release(CoreEquipSlots.LeftHand);
+            _combat.Tick(0.01f);
+            Assert.That(_combat.Guard, Is.Null, "Lowered once let go...");
+            _combat.Tick(0.5f);
+            Assert.That(_combat.Swings, Is.Empty, "...and over once the rest of its clip has played.");
+        }
+
+        [Test]
+        public void ARaisedShield_StopsItsShareOfABlowFromTheFront_ForStamina_AndIsJolted()
+        {
+            var foe = RaiseShieldAgainstAFoe();
+            var jolts = new List<CombatMove>();
+            _combat.Blocked += (_, reaction) => jolts.Add(reaction);
+
+            Assert.That(foe.Strike(foe.Swings.Single(), ActorId.Player, FromTheFront), Is.True);
+            _events.Flush();
+
+            Assert.That(_attacker.Current(CoreAttributes.Health), Is.EqualTo(30f - 12f * 0.4f).Within(1e-4f), "60% of 12 stopped.");
+            Assert.That(_attacker.Current(CoreAttributes.Stamina), Is.EqualTo(10f - 12f * 0.6f * 0.5f).Within(1e-4f), "Half a point per point stopped.");
+            var blocked = _told.OfType<HitBlocked>().Single();
+            Assert.That((blocked.Attacker, blocked.Target, blocked.Weapon), Is.EqualTo((Dummy, ActorId.Player, Sword.Id)));
+            Assert.That(blocked.Stopped, Is.EqualTo(7.2f).Within(1e-4f));
+            Assert.That(_told.OfType<HitLanded>().Single().Damage, Is.EqualTo(4.8f).Within(1e-4f), "What got through.");
+            Assert.That(jolts.Single().Animation, Is.EqualTo("ShieldImpact"), "The style's reaction.");
+            Assert.That(_combat.Guard, Is.Not.Null, "Still up.");
+        }
+
+        [Test]
+        public void ABlowFromBehind_GetsPastTheShield()
+        {
+            var foe = RaiseShieldAgainstAFoe();
+
+            foe.Strike(foe.Swings.Single(), ActorId.Player, FromBehind);
+            _events.Flush();
+
+            Assert.That(_attacker.Current(CoreAttributes.Health), Is.EqualTo(18f).Within(1e-4f), "All 12.");
+            Assert.That(_attacker.Current(CoreAttributes.Stamina), Is.EqualTo(10f), "Nothing spent.");
+            Assert.That(_told.OfType<HitBlocked>(), Is.Empty);
+        }
+
+        [Test]
+        public void TooTiredToHoldIt_TheGuardBreaks_AndTheBlowLandsWhole()
+        {
+            var foe = RaiseShieldAgainstAFoe();
+            _attacker.Drain(CoreAttributes.Stamina, 8f);
+
+            foe.Strike(foe.Swings.Single(), ActorId.Player, FromTheFront);
+            _events.Flush();
+
+            Assert.That(_attacker.Current(CoreAttributes.Health), Is.EqualTo(18f).Within(1e-4f));
+            var broken = _told.OfType<GuardBroken>().Single();
+            Assert.That((broken.Actor, broken.By), Is.EqualTo((ActorId.Player, Dummy)));
+            Assert.That((_combat.Guard, _combat.Swings.Count), Is.EqualTo(((Swing)null, 0)), "The shield is down.");
+        }
+
+        [Test]
+        public void AShieldNotYetUp_StopsNothing()
+        {
+            Hold(Shield);
+            Draw();
+            _combatants.Add(ActorId.Player, _attacker, "You", _combat);
+            _combat.TryUse(CoreEquipSlots.LeftHand);
+
+            Assert.That(_combat.Block(Dummy, Sword.Id, 12f, FromTheFront), Is.Zero, "Still coming up.");
+            _combat.Tick(1f);
+            Assert.That(_combat.Block(Dummy, Sword.Id, 12f, null), Is.EqualTo(0.6f), "Up: from wherever, without a facing.");
+        }
+
+        [Test]
+        public void ABlockPart_IsAFraction_ForSomeEffort_AndOnlyAWeaponHasOne()
+        {
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new BlockPart(1.5f, 0.5f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new BlockPart(0.5f, -1f));
+            Assert.Throws<System.ArgumentException>(() => new BaseObjectRecord(new RecordId("forge.core", "plank"), "plank", "items/plank",
+                item: new ItemPart(ItemKind.Misc, 1f, 1), equippable: new EquippablePart(CoreEquipSlots.OffHand()), block: new BlockPart(0.5f, 0.5f)));
+        }
+
         [Test]
         public void AFlight_FallsAsItGoes_AndPointsTheWayItMoves()
         {
@@ -518,7 +655,7 @@ namespace Forge.Tests.Game
             /// <summary>How long a release plays; null: the look can't time one.</summary>
             public float? Release { get; set; }
 
-            public bool TryGet(string animation, bool shoots, out MoveTiming timing)
+            public bool TryGet(string animation, MoveMeasure measure, out MoveTiming timing)
             {
                 timing = _timing;
                 return _only == null || animation == _only;

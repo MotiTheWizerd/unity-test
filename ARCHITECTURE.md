@@ -1032,6 +1032,17 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
     struck), and hands what sticks to `ShotLandings` (`ArrowFlights.Landing`, with the loose thing it is in): it breaks
     as often as its `AmmoPart.BreakChance` says, else it stays there as the item it is (`WorldChanges.Place`), takeable
     again, stuck (`WorldPhysics.Stick`); the stream hears `ShotLanded`.
+  - **Blocking** (a shield): an attack key uses its hand (`ActorCombat.TryUse`): its style's attack, else its
+    `Block` move, held like a draw (the Shield style's `ShieldBlock`, Mixamo Sword And Shield Block, timed by
+    `RaiseFinder`: the guard is up once the hand that travels farthest has come 80% of its way, held at the clip's end).
+    A block's swing strikes no one (`Swing.Guards`). Each `ActorCombat` is its actor's `IGuard`, kept beside its
+    attributes in `Combatants`: every blow (a blade's from the swinger toward where it struck, an arrow's along its
+    flight) asks the target's guard first; a guard raised and facing the blow within `GuardArc` (60°, by `Facing`, the
+    player's body heading) stops the shield's `BlockPart.Stops` share of its health damage for `Effort` stamina a
+    point; too little stamina breaks it (`GuardBroken`, the block stopped, the blow lands whole). The stream hears
+    `HitBlocked`; the look jolts the shield by the style's `Blocked` move (`ShieldImpact`) and holds it up again
+    (`HumanoidAnimation.React`: blended back at pace and pinned, since a state at pace 0 can't be blended into).
+    Shields: Round 0.5, Kite 0.6, Iron Kite 0.75 stopped, 0.5 stamina a point, a 3-damage bash for later.
 - **Physics** (loose things): every item, and anything with a `PhysicsPart`, is a physical body while the world plays
   (`PhysicalObjects.TryGetMass`: an item weighs its weight read as Skyrim's pounds, a part its mass). `WorldPhysics`
   (Play, one per game) gives each such object the view shows (`WorldView.PlacedShown` / `PlacedRemoving`) a rigid body,

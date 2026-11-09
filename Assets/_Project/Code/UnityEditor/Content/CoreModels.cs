@@ -25,6 +25,10 @@ namespace Forge.UnityEditor.Content
         /// <summary>The Greatsword's id in <paramref name="pluginId"/>.</summary>
         public static RecordId Greatsword(string pluginId) => new RecordId(pluginId, "greatsword");
 
+        // A shield bash's damage, and the stamina every shield's block costs per point of damage it stops.
+        const float ShieldBash = 3f;
+        const float BlockEffort = 0.5f;
+
         public static IEnumerable<BaseObjectRecord> All(string pluginId)
         {
             // One-handed swords, lying flat: any heading, following the ground. Held in either hand, so two make a pair,
@@ -85,18 +89,21 @@ namespace Forge.UnityEditor.Content
                 "Items/Ammo", LyingFlat(),
                 item: new ItemPart(ItemKind.Misc, 2f, 20));
 
-            // Shields (OpenGameArt, CC0), two looks of each shape, lying face up; held in the off hand.
-            foreach (var (folder, id, name, weight, value) in new[]
+            // Shields (OpenGameArt, CC0), two looks of each shape, lying face up; held in the off hand and raised against
+            // blows (the Shield style), stopping more of one the sturdier they are, a bash a light blow.
+            foreach (var (folder, id, name, weight, value, stops) in new[]
                      {
-                         ("RoundShield", "round_shield", "Round Shield", 12f, 30),
-                         ("RoundShieldPainted", "round_shield_painted", "Painted Round Shield", 12f, 40),
-                         ("KiteShield", "kite_shield", "Kite Shield", 14f, 45),
-                         ("KiteShieldIron", "kite_shield_iron", "Iron Kite Shield", 18f, 80),
+                         ("RoundShield", "round_shield", "Round Shield", 12f, 30, 0.5f),
+                         ("RoundShieldPainted", "round_shield_painted", "Painted Round Shield", 12f, 40, 0.5f),
+                         ("KiteShield", "kite_shield", "Kite Shield", 14f, 45, 0.6f),
+                         ("KiteShieldIron", "kite_shield_iron", "Iron Kite Shield", 18f, 80, 0.75f),
                      })
                 yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder),
                     "Items/Shields", LyingFlat(),
                     item: new ItemPart(ItemKind.Weapon, weight, value),
-                    equippable: new EquippablePart(CoreEquipSlots.OffHand()));
+                    equippable: new EquippablePart(CoreEquipSlots.OffHand()),
+                    weapon: new WeaponPart(CoreCombatStyles.Shield, new[] { Effect.Damage(CoreAttributes.Health, ShieldBash) }),
+                    block: new BlockPart(stops, BlockEffort));
 
             // Houses (OpenGameArt): upright, placed as aimed, at their own size.
             foreach (var (folder, id, name) in new[]

@@ -57,6 +57,9 @@ namespace Forge.Play
         // Seconds an action layer takes to come in as an action starts, and to go out before it ends.
         const float ActionFade = 0.15f;
 
+        // Seconds a reaction blends in over a held action (a shield jolted), and back to it.
+        const float ReactBlend = 0.1f;
+
         static readonly int SpeedId = Animator.StringToHash(Speed);
         static readonly int PaceId = Animator.StringToHash(Pace);
         static readonly int TopSpeedId = Animator.StringToHash(TopSpeed);
@@ -158,6 +161,7 @@ namespace Forge.Play
             _animator.SetTrigger(move);
             SetPace(layer, 1f);
             layer.Held = layer.Thawing = false;
+            layer.Reacting = layer.Returning = 0f;
             layer.Left = clip.length;
             return true;
         }
@@ -168,13 +172,35 @@ namespace Forge.Play
         /// </summary>
         public bool Hold(string move, float at)
         {
-            if (!TryAction(move, out var layer, out _) || layer.Pace == null)
+            if (!TryAction(move, out var layer, out var clip) || layer.Pace == null)
                 return false;
             // Just short of its end, where it would leave for the layer's rest.
-            _animator.Play(Animator.StringToHash(move), layer.Index, Mathf.Clamp(at, 0f, HeldShortOfEnd));
+            var held = Mathf.Clamp(at, 0f, HeldShortOfEnd);
+            _animator.Play(Animator.StringToHash(move), layer.Index, held);
             SetPace(layer, 0f);
             layer.Held = true;
             layer.Thawing = false;
+            layer.Reacting = layer.Returning = 0f;
+            layer.HeldState = Animator.StringToHash(move);
+            layer.HeldAt = held;
+            layer.HeldLength = clip.length;
+            return true;
+        }
+
+        /// <summary>
+        /// Plays the action <paramref name="reaction"/> (a shield jolted by a blow) over the held action
+        /// <paramref name="held"/> (a raised block), blended in, then blends back to holding that where it was held; false
+        /// when it isn't held, or the reaction isn't on its layer.
+        /// </summary>
+        public bool React(string held, string reaction)
+        {
+            if (!TryAction(held, out var layer, out _) || !layer.Held || !TryAction(reaction, out var reactionLayer, out var clip) ||
+                reactionLayer != layer)
+                return false;
+            _animator.CrossFadeInFixedTime(Animator.StringToHash(reaction), ReactBlend, layer.Index, 0f);
+            SetPace(layer, 1f);
+            layer.Reacting = Mathf.Max(ReactBlend, clip.length - ReactBlend);
+            layer.Returning = 0f;
             return true;
         }
 
@@ -187,6 +213,7 @@ namespace Forge.Play
             if (!TryAction(move, out var layer, out var clip) || !layer.Held)
                 return;
             layer.Held = false;
+            layer.Reacting = layer.Returning = 0f;
             var left = (1f - Mathf.Clamp01(from)) * clip.length;
             if (left > ActionFade)
             {
@@ -212,6 +239,7 @@ namespace Forge.Play
                 releaseLayer != layer)
                 return false;
             layer.Held = layer.Thawing = false;
+            layer.Reacting = layer.Returning = 0f;
             var start = Mathf.Clamp01(from) * clip.length;
             _animator.CrossFadeInFixedTime(Animator.StringToHash(release), Mathf.Max(0f, blend), layer.Index, start);
             SetPace(layer, 1f);
@@ -270,6 +298,9 @@ namespace Forge.Play
             {
                 if (!layer.Held)
                     layer.Left = Mathf.Max(0f, layer.Left - Mathf.Max(0f, deltaTime));
+                else if (layer.Reacting > 0f || layer.Returning > 0f)
+                    React(layer, Mathf.Max(0f, deltaTime));
+
                 var target = layer.Held || layer.Left > ActionFade ? 1f : 0f;
                 if (layer.Weight != target)
                 {
@@ -285,6 +316,31 @@ namespace Forge.Play
             }
         }
 
+        // A reaction over a held action plays out, then blends back into the held one, at pace (a state at pace 0 neither
+        // takes a time to start at nor lets a blend into it advance), from just short of where it was held so it arrives
+        // there as the blend ends; there it is pinned and stilled again.
+        void React(ActionLayer layer, float deltaTime)
+        {
+            if (layer.Reacting > 0f)
+            {
+                layer.Reacting -= deltaTime;
+                if (layer.Reacting > 0f)
+                    return;
+                layer.Reacting = 0f;
+                var arrive = layer.HeldAt * layer.HeldLength;
+                _animator.CrossFadeInFixedTime(layer.HeldState, ReactBlend, layer.Index, Mathf.Max(0f, arrive - ReactBlend));
+                layer.Returning = ReactBlend;
+                return;
+            }
+
+            layer.Returning -= deltaTime;
+            if (layer.Returning > 0f)
+                return;
+            layer.Returning = 0f;
+            _animator.Play(layer.HeldState, layer.Index, layer.HeldAt);
+            SetPace(layer, 0f);
+        }
+
         // How near its end a held action stays (a fraction of it): not at its very end, which it would leave by.
         const float HeldShortOfEnd = 0.995f;
 
@@ -298,6 +354,14 @@ namespace Forge.Play
             public float Left;
             public bool Held;
             public bool Thawing;
+
+            // While held: the state held, how far into it (normalized) and its length; and a reaction over it: how long it
+            // has left to play, then to blend back.
+            public int HeldState;
+            public float HeldAt;
+            public float HeldLength;
+            public float Reacting;
+            public float Returning;
         }
 
         static AnimationClip ClipNamed(Animator animator, string name)

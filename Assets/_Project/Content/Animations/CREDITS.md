@@ -32,6 +32,8 @@ Humanoid/
 | BowIdle | Mixamo "Standing Idle 01" (longbow) | Adobe Mixamo |
 | BowShot | Mixamo "Standing Draw Arrow" | Adobe Mixamo |
 | BowRelease | Mixamo "Standing Aim Recoil" | Adobe Mixamo |
+| ShieldBlock | Mixamo "Sword And Shield Block" | Adobe Mixamo |
+| ShieldImpact | Mixamo "Sword And Shield Impact" | Adobe Mixamo |
 
 Downloaded by Moti from mixamo.com as FBX for Unity, 30 fps, without skin, travel left in (not "in place"). Mixamo
 animations are free to use in games under Adobe's terms.

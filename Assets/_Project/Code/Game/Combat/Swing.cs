@@ -77,6 +77,16 @@ namespace Forge.Game.Combat
         /// <summary>Whether its weapon shoots (a bow): its blow is what it looses.</summary>
         public bool Shoots => Weapon.Record.Weapon?.Ammo != null;
 
+        /// <summary>Whether it is a block (a shield raised): it strikes no one, and in its window (raised) its guard is up.</summary>
+        public bool Guards => Move.Kind == CombatMoveKind.Block;
+
+        /// <summary>How its move's window is read off its clip: a raise, a draw or a cut.</summary>
+        public MoveMeasure Measure => MeasureOf(Move, Weapon.Record.Weapon);
+
+        /// <summary>How the window of <paramref name="move"/> with <paramref name="weapon"/> is read off its clip.</summary>
+        public static MoveMeasure MeasureOf(CombatMove move, WeaponPart weapon) =>
+            move.Kind == CombatMoveKind.Block ? MoveMeasure.Raise : weapon?.Ammo != null ? MoveMeasure.Draw : MoveMeasure.Cut;
+
         /// <summary>Whether it has let its blow go (an arrow loosed).</summary>
         public bool Loosed { get; private set; }
 

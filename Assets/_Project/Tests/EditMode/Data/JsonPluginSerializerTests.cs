@@ -526,7 +526,10 @@ namespace Forge.Tests.Data
                 {
                     new CombatMove(CombatMoveKind.Attack, "BowShot", held: true, release: "BowRelease"),
                     new CombatMove(CombatMoveKind.Draw, "BowDraw"),
+                    new CombatMove(CombatMoveKind.Block, "ShieldBlock", held: true),
                 }),
+                new BaseObjectRecord(RecordId.Parse("core:shield"), "Shield", "items/shield", item: new ItemPart(ItemKind.Weapon, 12f, 30),
+                    equippable: new EquippablePart(new[] { EquipFit.Of(ammo) }), weapon: new WeaponPart(archery, hit), block: new BlockPart(0.6f, 0.5f)),
                 new BaseObjectRecord(RecordId.Parse("core:bow"), "Bow", "items/bow", item: new ItemPart(ItemKind.Weapon, 3f, 50),
                     equippable: new EquippablePart(new[] { EquipFit.Of(ammo) }), weapon: new WeaponPart(archery, hit, ammo)),
                 new BaseObjectRecord(RecordId.Parse("core:sword"), "Sword", "items/sword", item: new ItemPart(ItemKind.Weapon, 9f, 75),
@@ -542,6 +545,9 @@ namespace Forge.Tests.Data
             Assert.That((moves[0].Held, moves[0].Release), Is.EqualTo((true, "BowRelease")), "A held move and what plays once it is let go.");
             Assert.That((moves[1].Held, moves[1].Release), Is.EqualTo((false, (string)null)));
             Assert.That(Regex.Matches(json, "\"release\"").Count, Is.EqualTo(1), "No release is written as nothing.");
+            Assert.That(objects["core:sword"].Block, Is.Null, "No block part is written as nothing.");
+            Assert.That((objects["core:shield"].Block.Stops, objects["core:shield"].Block.Effort), Is.EqualTo((0.6f, 0.5f)), "A shield's block.");
+            Assert.That((moves[2].Kind, moves[2].Held), Is.EqualTo((CombatMoveKind.Block, true)));
             Assert.That(objects["core:arrow"].Ammo.BreakChance, Is.EqualTo(0.2f), "An arrow is ammo, breaking one time in five.");
             Assert.That(objects["core:bow"].Ammo, Is.Null);
             Assert.That(objects["core:bow"].Weapon.Ammo, Is.EqualTo(ammo), "A bow shoots what the ammo slot holds...");

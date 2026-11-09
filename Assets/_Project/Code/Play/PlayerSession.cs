@@ -185,9 +185,9 @@ namespace Forge.Play
             if (Attributes != null)
                 _equipmentModifiers = new EquipmentModifiers(Equipment, Attributes);
             Readiness = new WeaponReadiness(Equipment, world, Events);
-            Combat = new ActorCombat(Equipment, Readiness, world, Attributes, _combatants, Events);
+            Combat = new ActorCombat(Equipment, Readiness, world, Attributes, _combatants, Events) { Facing = BodyForward };
             if (Attributes != null)
-                _combatants.Add(ActorId.Player, Attributes, "You");
+                _combatants.Add(ActorId.Player, Attributes, "You", Combat);
             if (_avatar != null)
             {
                 _equipmentView = new EquipmentView(Equipment, _avatar.Model, world, _assets);
@@ -212,8 +212,8 @@ namespace Forge.Play
 
         /// <summary>
         /// Plays one frame: the inventory's key opens or closes the inventory, and while it is open the player waits.
-        /// Otherwise the view and the player take their commands (the ready-weapon key draws or sheathes; while something is
-        /// carried, an attack key throws it), the camera and the model follow, then what is in sight is looked for from where
+        /// Otherwise the view and the player take their commands (the ready-weapon key draws or sheathes; an attack key uses
+        /// its hand, attacking or, with a shield, blocking while held; while something is carried, it throws it), the camera and the model follow, then what is in sight is looked for from where
         /// the camera now is, so the prompt and the use key go by what this frame shows: a tap uses it, a hold grabs and
         /// carries it loose, the lift key held lifts it steady (<see cref="ObjectCarry"/>), letting go drops it.
         /// </summary>
@@ -245,9 +245,9 @@ namespace Forge.Play
             else
             {
                 if (attackRight)
-                    Combat.TryAttack(CoreEquipSlots.RightHand);
+                    Combat.TryUse(CoreEquipSlots.RightHand);
                 if (attackLeft)
-                    Combat.TryAttack(CoreEquipSlots.LeftHand);
+                    Combat.TryUse(CoreEquipSlots.LeftHand);
             }
 
             if (_controls.ReadAttackReleased(right: true))
@@ -362,6 +362,13 @@ namespace Forge.Play
         {
             var link = collider.GetComponentInParent<RecordLink>();
             return link != null && World != null && _placedActors.TryGet(World, link.RecordId, out var actor) ? actor : (ActorId?)null;
+        }
+
+        // Which way the player's body faces, level (what its guard covers); straight ahead of the scene while unspawned.
+        System.Numerics.Vector3 BodyForward()
+        {
+            var forward = Player != null ? Forge.Core.Geometry.Compass.Forward(Player.BodyHeading) : System.Numerics.Vector2.UnitY;
+            return new System.Numerics.Vector3(forward.X, 0f, forward.Y);
         }
 
         // Captured, the mouse turns the look and hides; freed, it points at the screen.

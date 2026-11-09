@@ -661,6 +661,25 @@
       ]
     },
     {
+      "type": "combat_style",
+      "id": "forge.core:combat_style/shield",
+      "displayName": "Shield",
+      "moves": [
+        {
+          "kind": "block",
+          "animation": "ShieldBlock",
+          "staminaCost": 0.0,
+          "held": true
+        },
+        {
+          "kind": "blocked",
+          "animation": "ShieldImpact",
+          "staminaCost": 0.0,
+          "held": false
+        }
+      ]
+    },
+    {
       "type": "base_object",
       "id": "forge.core:covered_well",
       "displayName": "Covered Well",
@@ -1122,6 +1141,20 @@
             ]
           }
         ]
+      },
+      "weapon": {
+        "style": "forge.core:combat_style/shield",
+        "hit": [
+          {
+            "kind": "damage",
+            "attribute": "forge.core:attribute/health",
+            "amount": 3.0
+          }
+        ]
+      },
+      "block": {
+        "stops": 0.6,
+        "effort": 0.5
       }
     },
     {
@@ -1149,6 +1182,20 @@
             ]
           }
         ]
+      },
+      "weapon": {
+        "style": "forge.core:combat_style/shield",
+        "hit": [
+          {
+            "kind": "damage",
+            "attribute": "forge.core:attribute/health",
+            "amount": 3.0
+          }
+        ]
+      },
+      "block": {
+        "stops": 0.75,
+        "effort": 0.5
       }
     },
     {
@@ -1665,6 +1712,20 @@
             ]
           }
         ]
+      },
+      "weapon": {
+        "style": "forge.core:combat_style/shield",
+        "hit": [
+          {
+            "kind": "damage",
+            "attribute": "forge.core:attribute/health",
+            "amount": 3.0
+          }
+        ]
+      },
+      "block": {
+        "stops": 0.5,
+        "effort": 0.5
       }
     },
     {
@@ -1692,6 +1753,20 @@
             ]
           }
         ]
+      },
+      "weapon": {
+        "style": "forge.core:combat_style/shield",
+        "hit": [
+          {
+            "kind": "damage",
+            "attribute": "forge.core:attribute/health",
+            "amount": 3.0
+          }
+        ]
+      },
+      "block": {
+        "stops": 0.5,
+        "effort": 0.5
       }
     },
     {

@@ -38,14 +38,27 @@ namespace Forge.Game.Combat
         public override string ToString() => $"{Seconds:0.##} s, hits {HitFrom:0.##}–{HitTo:0.##}";
     }
 
+    /// <summary>What a move's window is, which is how the look reads it off the move's clip.</summary>
+    public enum MoveMeasure
+    {
+        /// <summary>A blade's cut: the window is where it moves fastest.</summary>
+        Cut,
+
+        /// <summary>A bow's draw: from the arrow on the string to full draw.</summary>
+        Draw,
+
+        /// <summary>A shield coming up: from where it is up to the end, where it is held.</summary>
+        Raise,
+    }
+
     /// <summary>The look's timings of an actor's moves, by the animation that plays them (<see cref="Data.Records.CombatMove.Animation"/>).</summary>
     public interface IMoveTimings
     {
         /// <summary>
-        /// How <paramref name="animation"/> plays, the move of a weapon that <paramref name="shoots"/> (a bow's draw:
-        /// timed by the string's pull) or one that strikes with itself (timed by its cut); false when the look has no such move.
+        /// How <paramref name="animation"/> plays, its window read as <paramref name="measure"/> says (a slash by its cut,
+        /// a bow's draw by the string's pull, a block by the shield coming up); false when the look has no such move.
         /// </summary>
-        bool TryGet(string animation, bool shoots, out MoveTiming timing);
+        bool TryGet(string animation, MoveMeasure measure, out MoveTiming timing);
 
         /// <summary>
         /// How long <paramref name="animation"/> plays as a held move's release (<see cref="Data.Records.CombatMove.Release"/>:

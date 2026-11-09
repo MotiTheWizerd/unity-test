@@ -128,7 +128,7 @@ namespace Forge.Play
         {
             var target = _identify(hit.collider);
             if (target.HasValue)
-                _combat.Strike(arrow.Shot, target.Value);
+                _combat.Strike(arrow.Shot, target.Value, heading.ToNumerics());
             // It stops in what it strikes, so all it carried goes into it (Skyrim knocks a cup off a shelf so).
             var struck = hit.rigidbody != null && !hit.rigidbody.isKinematic ? hit.rigidbody : null;
             if (struck != null && PhysicalObjects.TryGetMass(arrow.Shot.Ammo, out var mass))
