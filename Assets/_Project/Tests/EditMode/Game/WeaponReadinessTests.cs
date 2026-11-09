@@ -24,6 +24,7 @@ namespace Forge.Tests.Game
         {
             new CombatMove(CombatMoveKind.Draw, "BowDraw"),
             new CombatMove(CombatMoveKind.Sheathe, "BowSheathe"),
+            new CombatMove(CombatMoveKind.Stance, "BowIdle"),
         });
 
         static readonly BaseObjectRecord Bow = new BaseObjectRecord(new RecordId("forge.core", "bow"), "bow", "items/bow",
@@ -199,6 +200,16 @@ namespace Forge.Tests.Game
 
             Assert.That(_readiness.DrawAnimation, Is.Null);
             Assert.That((_readiness.DrawSeconds, _readiness.SheatheSeconds), Is.EqualTo((0.8f, 0.6f)));
+        }
+
+        [Test]
+        public void ABow_IsStoodInItsStylesStance_ASwordInTheLooksOwn()
+        {
+            Wield(Bow);
+            Assert.That(_readiness.StanceAnimation, Is.EqualTo("BowIdle"));
+
+            Wield(Sword);
+            Assert.That(_readiness.StanceAnimation, Is.Null, "One-Handed names no stance: the look's own drawn idle.");
         }
 
         void Wield(BaseObjectRecord item)

@@ -612,7 +612,8 @@
           "kind": "attack",
           "animation": "BowShot",
           "staminaCost": 0.0,
-          "held": true
+          "held": true,
+          "release": "BowRelease"
         },
         {
           "kind": "draw",
@@ -623,6 +624,12 @@
         {
           "kind": "sheathe",
           "animation": "BowSheathe",
+          "staminaCost": 0.0,
+          "held": false
+        },
+        {
+          "kind": "stance",
+          "animation": "BowIdle",
           "staminaCost": 0.0,
           "held": false
         }

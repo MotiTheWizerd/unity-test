@@ -15,6 +15,13 @@ set's controller.
 | Draw | Mixamo "Withdrawing Sword" | Adobe Mixamo |
 | Sheathe | Mixamo "Sheathing Sword" | Adobe Mixamo |
 | DrawnRun | Mixamo "Run With Sword" | Adobe Mixamo |
+| DrawnIdle | Mixamo "Sword And Shield Idle" | Adobe Mixamo |
+| SwordSlash | Mixamo "Sword And Shield Slash" | Adobe Mixamo |
+| BowDraw | Mixamo "Standing Equip Bow" | Adobe Mixamo |
+| BowSheathe | Mixamo "Standing Disarm Bow" | Adobe Mixamo |
+| BowIdle | Mixamo "Standing Idle 01" (longbow) | Adobe Mixamo |
+| BowShot | Mixamo "Standing Draw Arrow" | Adobe Mixamo |
+| BowRelease | Mixamo "Standing Aim Recoil" | Adobe Mixamo |
 
 Downloaded by Moti from mixamo.com as FBX for Unity, 30 fps, without skin, travel left in (not "in place"). Mixamo
 animations are free to use in games under Adobe's terms.

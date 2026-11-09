@@ -12,7 +12,8 @@ namespace Forge.Play
     /// Build Characters) blends the ground moves by <see cref="Speed"/>, plays <see cref="Pace"/> faster past its fastest
     /// clip, and turns to the air moves by <see cref="Grounded"/> and <see cref="VerticalSpeed"/>; <see cref="TopSpeed"/>
     /// is the fastest clip's speed, which the builder leaves as that parameter's default. With weapons drawn it walks
-    /// the drawn ground moves (<see cref="Drawn"/>), and actions (a draw, a sheathe, a slash: <see cref="Play"/>, each
+    /// the drawn ground moves (<see cref="Drawn"/>), standing in the drawn weapon's style's stance when the set has it
+    /// (<see cref="Stance"/>: a bow held low rather than a sword up), and actions (a draw, a sheathe, a slash: <see cref="Play"/>, each
     /// started by a trigger named after its clip) play on an action layer, the <see cref="ArmsLayer"/> (a draw) or the
     /// <see cref="UpperBodyLayer"/> (a slash), whichever holds them, weighed in only while they play, so the legs move on
     /// beneath. The weight fades in as an action starts and is out by the time it ends. A controller built without them
@@ -26,6 +27,8 @@ namespace Forge.Play
         public const string Grounded = "Grounded";
         public const string VerticalSpeed = "VerticalSpeed";
         public const string Drawn = "Drawn";
+        /// <summary>Which stance it stands in with weapons drawn (<see cref="StanceKey"/>); 0: the set's own drawn moves.</summary>
+        public const string Stance = "Stance";
         /// <summary>The move it stands still in, which every set has.</summary>
         public const string IdleMove = "Idle";
         /// <summary>The move it stands ready in with its weapons out, when its set has one.</summary>
@@ -37,6 +40,16 @@ namespace Forge.Play
 
         /// <summary>The pace an action layer's actions play at ("Arms Pace"), 1 as they are, 0 held still (a bow at full draw).</summary>
         public static string ActionPace(string layer) => layer + " Pace";
+
+        /// <summary>The ground state that walks a stance's moves ("BowIdle Ground").</summary>
+        public static string StanceGround(string stance) => stance + " Ground";
+
+        /// <summary>
+        /// What <see cref="Stance"/> is set to for <paramref name="stance"/> ("BowIdle"): from its name, so the builder and
+        /// the player agree without a list; never 0 (the set's own), and small enough for a transition's threshold to hold
+        /// it exactly.
+        /// </summary>
+        public static int StanceKey(string stance) => (Animator.StringToHash(stance) & 0xFFFF) + 1;
 
         // Seconds the blend takes to catch up with a new speed, so a stop or a start eases rather than snaps.
         const float SpeedDamping = 0.1f;
@@ -50,10 +63,12 @@ namespace Forge.Play
         static readonly int GroundedId = Animator.StringToHash(Grounded);
         static readonly int VerticalSpeedId = Animator.StringToHash(VerticalSpeed);
         static readonly int DrawnId = Animator.StringToHash(Drawn);
+        static readonly int StanceId = Animator.StringToHash(Stance);
 
         readonly Animator _animator;
         readonly float _topSpeed;
         readonly bool _drawnMoves;
+        readonly bool _stances;
         readonly List<ActionLayer> _actionLayers = new List<ActionLayer>();
         readonly Dictionary<string, AnimationClip> _clips = new Dictionary<string, AnimationClip>(StringComparer.Ordinal);
 
@@ -63,7 +78,10 @@ namespace Forge.Play
             _animator.applyRootMotion = false;
             _topSpeed = animator.GetFloat(TopSpeedId);
             foreach (var parameter in animator.parameters)
+            {
                 _drawnMoves |= parameter.nameHash == DrawnId;
+                _stances |= parameter.nameHash == StanceId;
+            }
             foreach (var name in new[] { ArmsLayer, UpperBodyLayer })
             {
                 var index = animator.GetLayerIndex(name);
@@ -114,10 +132,13 @@ namespace Forge.Play
 
         /// <summary>
         /// Shows the weapons becoming <paramref name="readiness"/>: a draw or a sheathe beginning (playing
-        /// <paramref name="move"/>, a style's, else its own), or done.
+        /// <paramref name="move"/>, a style's, else its own), or done; drawn, it stands in <paramref name="stance"/> (a
+        /// style's), when its set has it, else its own drawn moves.
         /// </summary>
-        public void Show(Readiness readiness, string move = null)
+        public void Show(Readiness readiness, string move = null, string stance = null)
         {
+            if (_stances)
+                _animator.SetInteger(StanceId, HasStance(stance) ? StanceKey(stance) : 0);
             if (_drawnMoves)
                 _animator.SetBool(DrawnId, readiness == Readiness.Drawing || readiness == Readiness.Drawn);
             if (readiness == Readiness.Drawing)
@@ -178,6 +199,29 @@ namespace Forge.Play
             layer.Left = 0f;
             layer.Thawing = true;
         }
+
+        /// <summary>
+        /// Lets the held action <paramref name="held"/> go into the action <paramref name="release"/> (a bow's draw into
+        /// its release), blended over <paramref name="blend"/> seconds, starting <paramref name="from"/> (a fraction of the
+        /// release) and played out on the same layer; false, and the held one left as it was, when the release isn't on
+        /// that layer (or either isn't an action).
+        /// </summary>
+        public bool FollowThrough(string held, string release, float from, float blend)
+        {
+            if (!TryAction(held, out var layer, out _) || !layer.Held || !TryAction(release, out var releaseLayer, out var clip) ||
+                releaseLayer != layer)
+                return false;
+            layer.Held = layer.Thawing = false;
+            var start = Mathf.Clamp01(from) * clip.length;
+            _animator.CrossFadeInFixedTime(Animator.StringToHash(release), Mathf.Max(0f, blend), layer.Index, start);
+            SetPace(layer, 1f);
+            layer.Left = clip.length - start;
+            return true;
+        }
+
+        // Whether the set stands in `stance` (the builder gave it a ground state).
+        bool HasStance(string stance) =>
+            !string.IsNullOrEmpty(stance) && _animator.HasState(0, Animator.StringToHash(StanceGround(stance)));
 
         // The action layer that holds `move`, and its clip.
         bool TryAction(string move, out ActionLayer found, out AnimationClip clip)

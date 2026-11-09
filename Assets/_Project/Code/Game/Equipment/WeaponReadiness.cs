@@ -76,6 +76,12 @@ namespace Forge.Game.Equipment
         /// <summary>The animation a sheathe plays now: the style's sheathe of the weapon it puts away; null: the look's own.</summary>
         public string SheatheAnimation => StyleMove(CombatMoveKind.Sheathe);
 
+        /// <summary>
+        /// The animation it stands in with its weapons drawn: the style's stance of the weapon it draws ("BowIdle");
+        /// null: the look's own drawn stance.
+        /// </summary>
+        public string StanceAnimation => StyleMove(CombatMoveKind.Stance);
+
         /// <summary>How long a draw takes now, seconds.</summary>
         public float DrawSeconds => TimingOf(DrawAnimation, _draw).Seconds;
 

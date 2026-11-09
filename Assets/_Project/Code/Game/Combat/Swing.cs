@@ -20,21 +20,24 @@ namespace Forge.Game.Combat
     /// <para>
     /// A <see cref="CombatMove.Held"/> move (a bow's draw) comes on only while it is <see cref="Holding"/>: it stops at
     /// the end of its hit window (full draw) and stays there until let go; let go, it lets its blow go as soon as its window
-    /// is open (the arrow is on the string), and plays on from the window's end. A swing of a weapon that
-    /// <see cref="Shoots"/> lands nothing itself: what it looses does (<see cref="Shot"/>).
+    /// is open (the arrow is on the string), and plays on from the window's end, or, when its move has a release, lasts
+    /// as long as that plays (<see cref="ReleaseSeconds"/>). A swing of a weapon that <see cref="Shoots"/> lands nothing
+    /// itself: what it looses does (<see cref="Shot"/>).
     /// </para>
     /// </summary>
     public sealed class Swing
     {
         readonly HashSet<ActorId> _struck = new HashSet<ActorId>();
+        float _loosedAt;
 
-        internal Swing(RecordId slot, EquippedItem weapon, CombatMove move, MoveTiming timing)
+        internal Swing(RecordId slot, EquippedItem weapon, CombatMove move, MoveTiming timing, float? releaseSeconds = null)
         {
             Slot = slot;
             Weapon = weapon;
             Move = move;
             Timing = timing;
             Holding = move.Held;
+            ReleaseSeconds = releaseSeconds;
         }
 
         /// <summary>The slot it was asked for with (the right hand).</summary>
@@ -46,6 +49,12 @@ namespace Forge.Game.Combat
         public CombatMove Move { get; }
 
         public MoveTiming Timing { get; }
+
+        /// <summary>
+        /// How long its release plays once let go (<see cref="CombatMove.Release"/>, as the look times it), seconds;
+        /// null: let go, it plays on to the end of its move.
+        /// </summary>
+        public float? ReleaseSeconds { get; }
 
         /// <summary>Seconds since it began, less any it was held still.</summary>
         public float Elapsed { get; private set; }
@@ -75,8 +84,9 @@ namespace Forge.Game.Combat
         public float Pull =>
             Timing.HitTo > Timing.HitFrom ? Clamp01((Progress - Timing.HitFrom) / (Timing.HitTo - Timing.HitFrom)) : 1f;
 
-        // A held move held still is not over, even at the move's end (a clip that ends at full draw).
-        public bool IsOver => !Holding && Elapsed >= Timing.Seconds;
+        // A held move held still is not over, even at the move's end (a clip that ends at full draw); let go with a
+        // release, it is over once that has played.
+        public bool IsOver => !Holding && (Loosed && ReleaseSeconds.HasValue ? Elapsed - _loosedAt >= ReleaseSeconds.Value : Elapsed >= Timing.Seconds);
 
         /// <summary>Whom it has struck.</summary>
         public IReadOnlyCollection<ActorId> Struck => _struck;
@@ -100,12 +110,13 @@ namespace Forge.Game.Combat
 
         internal void Release() => Holding = false;
 
-        // Let go: on from the end of its window (what was left of the draw is the shot).
+        // Let go: on from the end of its window (what was left of the draw is the shot), its release counted from here.
         internal void Loose()
         {
             Loosed = true;
             if (Elapsed < HoldAt)
                 Elapsed = HoldAt;
+            _loosedAt = Elapsed;
         }
 
         internal bool MarkStruck(ActorId target) => _struck.Add(target);

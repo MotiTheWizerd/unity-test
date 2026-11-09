@@ -7,7 +7,8 @@ namespace Forge.Play
     /// An actor's ready-weapon shown on its look: the rules take their draw and sheathe times from the look's clips (its
     /// own, and its weapons' styles' by name: <see cref="CharacterModel.TryReadyTime"/>), and the moments in them when the
     /// hand takes the weapon and lets it go (<see cref="SheathFinder"/> at the hip, <see cref="BackFinder"/> on the back);
-    /// each change plays on the look (the style's draw on the arms, the drawn moves underneath), and the weapons go from
+    /// each change plays on the look (the style's draw on the arms, the drawn moves underneath, standing in the style's
+    /// stance when it has one: <see cref="WeaponReadiness.StanceAnimation"/>), and the weapons go from
     /// where they are carried to the hand and back at those moments. Bound while the look exists (the player while
     /// spawned); the rules never know it is there.
     /// </summary>
@@ -24,7 +25,7 @@ namespace Forge.Play
             _readiness.Timings = new ModelTimings(model);
             _readiness.Changed += OnChanged;
             _readiness.InHandChanged += OnInHandChanged;
-            _model.Animate(_readiness.State);
+            _model.Animate(_readiness.State, stance: _readiness.StanceAnimation);
             _model.InHand = _readiness.InHand;
         }
 
@@ -37,7 +38,7 @@ namespace Forge.Play
 
         void OnChanged(Readiness state) =>
             _model.Animate(state, state == Readiness.Drawing ? _readiness.DrawAnimation
-                : state == Readiness.Sheathing ? _readiness.SheatheAnimation : null);
+                : state == Readiness.Sheathing ? _readiness.SheatheAnimation : null, _readiness.StanceAnimation);
 
         void OnInHandChanged(bool inHand) => _model.InHand = inHand;
 

@@ -796,7 +796,11 @@ from any camera, so both cameras read the same player.
   from the moves present: the ground moves blended at their clips' speeds; a jump when the body leaves the ground going
   up, a fall when it drops past 3 m/s, a landing when it touches down, each optional. With any drawn ground move
   (`DrawnIdle`, `DrawnWalk`, `DrawnRun`, `DrawnSprint`) a second ground state plays while `Drawn`, each missing drawn
-  move falling back to its plain one. Every other clip is an **action** (`HumanoidMoves.IsAction`: `Draw`, `Sheathe`,
+  move falling back to its plain one. A combat style can name a **stance** (`CombatMoveKind.Stance`; Archery's
+  `BowIdle`, Mixamo Standing Idle 01, the bow held low, side-on as its draw ends): any `{Style}Idle` clip
+  (`HumanoidMoves.IsStance`) gets its own drawn ground state, the same moves standing in it, entered while `Drawn` and
+  the int `Stance` holds its key (`HumanoidAnimation.StanceKey`, from its name, so builder and player agree; 0: the
+  set's own drawn moves); `WeaponReadiness.StanceAnimation` names it. Every other clip is an **action** (`HumanoidMoves.IsAction`: `Draw`, `Sheathe`,
   a combat style's `SwordSlash`), played on a trigger named after it over whatever the legs do: a draw or a sheathe
   on an **Arms** layer (`<Set> Arms.mask`: arms and fingers, `HumanoidMoves.ArmsOnly`), anything else on an **Upper
   Body** layer (`<Set> Upper Body.mask`: also the body and head, so the torso turns into a cut). `HumanoidAnimation.Play`
@@ -1008,6 +1012,10 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
     `ActorCombat.Release(slot)` (the attack key coming up): once its window is open it uses up one ammo
     (`ActorEquipment.TryUse`) and looses a `Shot` (`Loosed`; the stream's `ShotLoosed`), its `Power` from
     `WeakestShot` (0.3) to 1 by how far it was drawn; let go sooner, it looses the weakest as the arrow comes on.
+    A held move can name its `Release` (Archery's `BowRelease`, Mixamo Standing Aim Recoil): let go, the look
+    cross-fades from the held draw into it (`HumanoidAnimation.FollowThrough`), from `ReleaseFinder.Lead` (0.06 s)
+    before where the hands part fastest (the string let go, read off the clip), and the swing lasts until it has played
+    (`Swing.ReleaseSeconds`, from `IMoveTimings.TryGetRelease`), still aiming meanwhile.
     `NoAmmo` without arrows; a bow's swing never strikes itself, its shot does (`Strike(shot, target)`: once, the bow's
     hit times the power). `Flight` is a shot's path (gravity only). The look: `ShotFinder` times a draw (arrow on where
     the hands meet, full where they are farthest apart after), action states have a per-layer pace so

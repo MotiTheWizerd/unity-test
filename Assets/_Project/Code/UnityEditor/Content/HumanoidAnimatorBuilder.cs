@@ -18,6 +18,9 @@ namespace Forge.UnityEditor.Content
     /// keep pace; past the fastest clip it plays faster (<see cref="HumanoidAnimation.Pace"/>).</item>
     /// <item>Air: a jump when the body leaves the ground going up, a fall when it drops, a landing when it touches down.
     /// Each is optional; without it the body goes straight on to the next.</item>
+    /// <item>Drawn: the drawn ground moves while weapons are out, and a ground state per combat style's stance
+    /// ({Style}Idle: the same moves standing in it), picked by <see cref="HumanoidAnimation.Stance"/>.</item>
+    /// <item>Actions: draws, sheathes and blows on masked layers, each started by a trigger of its name.</item>
     /// </list>
     /// A set is a whole controller rather than an override of the base's, because its clips walk at their own speeds and
     /// the blend has to sit at them. Parameters are <see cref="HumanoidAnimation"/>'s, which feeds them. Controllers are
@@ -84,22 +87,66 @@ namespace Forge.UnityEditor.Content
             machine.defaultState = moving;
             var grounds = new List<AnimatorState> { moving };
 
-            // Weapons drawn: the drawn ground moves, each falling back to its plain one, when the set has any of them.
-            var drawn = HumanoidMoves.Ground.Select((move, i) => (move, clip: Clip(set, HumanoidMoves.DrawnGround[i]) ?? Clip(set, move)))
-                .Where(m => m.clip != null).ToArray();
-            if (HumanoidMoves.DrawnGround.Any(move => Clip(set, move) != null))
-            {
-                controller.AddParameter(HumanoidAnimation.Drawn, AnimatorControllerParameterType.Bool);
-                var drawnMoving = GroundState(machine, "Drawn Ground", GroundTree(controller, "Drawn Ground", drawn, out _));
-                When(moving, drawnMoving, new AnimatorCondition { mode = AnimatorConditionMode.If, parameter = HumanoidAnimation.Drawn });
-                When(drawnMoving, moving, new AnimatorCondition { mode = AnimatorConditionMode.IfNot, parameter = HumanoidAnimation.Drawn });
-                grounds.Add(drawnMoving);
-            }
-
+            BuildDrawn(set, controller, machine, moving, grounds);
             BuildAir(set, machine, moving, grounds);
             BuildActions(set, controller);
             EditorUtility.SetDirty(controller);
             return controller;
+        }
+
+        // Weapons drawn: the drawn ground moves, each falling back to its plain one, when the set has any of them; and
+        // each stance (HumanoidMoves.IsStance), the same moves standing in it instead, entered while drawn and the Stance
+        // parameter holds its key (HumanoidAnimation.StanceKey), else the set's own drawn moves (Stance 0).
+        static void BuildDrawn(string set, AnimatorController controller, AnimatorStateMachine machine, AnimatorState moving,
+            List<AnimatorState> grounds)
+        {
+            var drawn = HumanoidMoves.Ground.Select((move, i) => (move, clip: Clip(set, HumanoidMoves.DrawnGround[i]) ?? Clip(set, move)))
+                .Where(m => m.clip != null).ToArray();
+            var stances = Moves(set, HumanoidMoves.IsStance).Select(move => Clip(set, move)).Where(clip => clip != null).ToArray();
+            var ownDrawn = HumanoidMoves.DrawnGround.Any(move => Clip(set, move) != null);
+            if (!ownDrawn && stances.Length == 0)
+                return;
+
+            controller.AddParameter(HumanoidAnimation.Drawn, AnimatorControllerParameterType.Bool);
+            if (stances.Length > 0)
+                controller.AddParameter(HumanoidAnimation.Stance, AnimatorControllerParameterType.Int);
+            if (ownDrawn)
+                DrawnGround(controller, machine, moving, grounds, "Drawn Ground", drawn, 0);
+
+            var keys = new Dictionary<int, string>();
+            foreach (var stance in stances)
+            {
+                var key = HumanoidAnimation.StanceKey(stance.name);
+                if (keys.TryGetValue(key, out var other))
+                {
+                    Debug.LogWarning($"[Forge] Stances {other} and {stance.name} of {set} share a key; rename one. {stance.name} is left out.");
+                    continue;
+                }
+
+                keys.Add(key, stance.name);
+                var moves = drawn.Select(m => m.move == HumanoidMoves.Idle ? (m.move, stance) : m);
+                DrawnGround(controller, machine, moving, grounds, HumanoidAnimation.StanceGround(stance.name), moves, key);
+            }
+        }
+
+        // One drawn ground state of `moves`, entered from the plain ground while drawn in the stance keyed `key` (when the
+        // set has stances), and left back to it when either changes.
+        static void DrawnGround(AnimatorController controller, AnimatorStateMachine machine, AnimatorState moving, List<AnimatorState> grounds,
+            string name, IEnumerable<(string move, AnimationClip clip)> moves, int key)
+        {
+            var state = GroundState(machine, name, GroundTree(controller, name, moves, out _));
+            var drawnOn = new AnimatorCondition { mode = AnimatorConditionMode.If, parameter = HumanoidAnimation.Drawn };
+            var stances = controller.parameters.Any(p => p.name == HumanoidAnimation.Stance);
+            if (stances)
+            {
+                When(moving, state, drawnOn, new AnimatorCondition { mode = AnimatorConditionMode.Equals, parameter = HumanoidAnimation.Stance, threshold = key });
+                When(state, moving, new AnimatorCondition { mode = AnimatorConditionMode.NotEqual, parameter = HumanoidAnimation.Stance, threshold = key });
+            }
+            else
+                When(moving, state, drawnOn);
+
+            When(state, moving, new AnimatorCondition { mode = AnimatorConditionMode.IfNot, parameter = HumanoidAnimation.Drawn });
+            grounds.Add(state);
         }
 
         // The ground moves blended by speed, each clip at the speed it walks (an idle at rest).
@@ -140,7 +187,7 @@ namespace Forge.UnityEditor.Content
         // Each starts by a trigger named after it. A layer is left out when the set has no action for it.
         static void BuildActions(string set, AnimatorController controller)
         {
-            var actions = Actions(set).Select(move => Clip(set, move)).Where(clip => clip != null).ToArray();
+            var actions = Moves(set, HumanoidMoves.IsAction).Select(move => Clip(set, move)).Where(clip => clip != null).ToArray();
             BuildActionLayer(set, controller, HumanoidAnimation.ArmsLayer, ArmsParts,
                 actions.Where(clip => HumanoidMoves.ArmsOnly(clip.name)));
             BuildActionLayer(set, controller, HumanoidAnimation.UpperBodyLayer, UpperBodyParts,
@@ -299,14 +346,14 @@ namespace Forge.UnityEditor.Content
         // How fast the clip walks: its root motion over the ground, in the clips' own size.
         static float ClipSpeed(AnimationClip clip) => new Vector2(clip.averageSpeed.x, clip.averageSpeed.z).magnitude;
 
-        // The actions of the set: its own clips and the base set's that are actions, by name, each once.
-        static IEnumerable<string> Actions(string set)
+        // The moves of the set that are of a kind (actions, stances): its own clips and the base set's, by name, each once.
+        static IEnumerable<string> Moves(string set, System.Func<string, bool> kind)
         {
             var folders = set == BaseSet ? new[] { SetFolder(set) } : new[] { SetFolder(set), SetFolder(BaseSet) };
             return folders.Where(Directory.Exists)
                 .SelectMany(folder => Directory.GetFiles(folder, "*.fbx", SearchOption.TopDirectoryOnly))
                 .Select(Path.GetFileNameWithoutExtension)
-                .Where(HumanoidMoves.IsAction)
+                .Where(kind)
                 .Distinct(System.StringComparer.Ordinal)
                 .OrderBy(move => move, System.StringComparer.Ordinal);
         }

@@ -5,9 +5,10 @@ namespace Forge.Play
 {
     /// <summary>
     /// An actor's fighting shown on its look: the rules time each move as the look's clip plays it
-    /// (<see cref="CharacterModel.TryTime"/>), and each swing plays its move on the look's arms; a held one (a bow's draw)
-    /// is held still at the end of its window while the rules hold it, and plays on from there once let go. Bound while
-    /// the look exists (the player while spawned); the rules never know it is there.
+    /// (<see cref="CharacterModel.TryTime"/>, a release by <see cref="CharacterModel.TryTimeRelease"/>), and each swing
+    /// plays its move on the look's arms; a held one (a bow's draw) is held still at the end of its window while the rules
+    /// hold it, and once let go goes into its move's release (a bow's: the string let go, the bow coming down), else plays
+    /// on from there. Bound while the look exists (the player while spawned); the rules never know it is there.
     /// </summary>
     public sealed class CombatView : IDisposable
     {
@@ -38,7 +39,11 @@ namespace Forge.Play
 
         void OnSwingHeld(Swing swing) => _model.Hold(swing.Move.Animation, swing.Timing.HitTo);
 
-        void OnSwingLetGo(Swing swing) => _model.Resume(swing.Move.Animation, swing.Timing.HitTo);
+        void OnSwingLetGo(Swing swing)
+        {
+            if (swing.Move.Release == null || !_model.Release(swing.Move.Animation, swing.Move.Release))
+                _model.Resume(swing.Move.Animation, swing.Timing.HitTo);
+        }
 
         // Stopped while held (the weapon put away): it fades out where it is.
         void OnSwingEnded(Swing swing)
@@ -54,6 +59,8 @@ namespace Forge.Play
             public ModelTimings(CharacterModel model) => _model = model;
 
             public bool TryGet(string animation, bool shoots, out MoveTiming timing) => _model.TryTime(animation, shoots, out timing);
+
+            public bool TryGetRelease(string animation, out float seconds) => _model.TryTimeRelease(animation, out seconds);
         }
     }
 }

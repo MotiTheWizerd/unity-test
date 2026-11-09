@@ -34,11 +34,19 @@ namespace Forge.UnityEditor.Content
         public static string Drawn(string move) => "Drawn" + move;
 
         /// <summary>
-        /// Whether <paramref name="move"/> is an action: anything beyond the ground and air moves (a draw, a sheathe, a
-        /// combat style's slash), played on the arms by a trigger of its name, so a clip dropped in is playable by name.
+        /// Whether <paramref name="move"/> is a combat style's stance: how it stands with that style's weapon drawn, any
+        /// idle beyond the plain and the drawn one ("BowIdle"); the drawn ground moves start from it instead.
+        /// </summary>
+        public static bool IsStance(string move) =>
+            move != null && move.EndsWith(Idle, StringComparison.Ordinal) && move != Idle && Array.IndexOf(DrawnGround, move) < 0;
+
+        /// <summary>
+        /// Whether <paramref name="move"/> is an action: anything beyond the ground and air moves and the stances (a draw,
+        /// a sheathe, a combat style's slash), played on the arms by a trigger of its name, so a clip dropped in is
+        /// playable by name.
         /// </summary>
         public static bool IsAction(string move) =>
-            Array.IndexOf(Ground, move) < 0 && Array.IndexOf(DrawnGround, move) < 0 &&
+            Array.IndexOf(Ground, move) < 0 && Array.IndexOf(DrawnGround, move) < 0 && !IsStance(move) &&
             move != Jump && move != Fall && move != Land;
 
         /// <summary>
@@ -51,7 +59,8 @@ namespace Forge.UnityEditor.Content
 
         /// <summary>Whether <paramref name="move"/> repeats while it lasts (standing, walking, falling) rather than playing once (a jump, a landing).</summary>
         public static bool Loops(string move) =>
-            Array.IndexOf(Ground, move) >= 0 || Array.IndexOf(DrawnGround, move) >= 0 || string.Equals(move, Fall, StringComparison.Ordinal);
+            Array.IndexOf(Ground, move) >= 0 || Array.IndexOf(DrawnGround, move) >= 0 || IsStance(move) ||
+            string.Equals(move, Fall, StringComparison.Ordinal);
 
         /// <summary>
         /// Whether <paramref name="move"/> lifts the body off the ground (a jump). The body's own rise already does that,

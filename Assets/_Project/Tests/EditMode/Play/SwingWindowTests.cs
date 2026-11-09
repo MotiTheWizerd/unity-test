@@ -37,5 +37,17 @@ namespace Forge.Tests.Play
             Assert.That(to, Is.EqualTo(0.9f).Within(1e-5f), "The hands' start apart doesn't count: it is before the arrow is on.");
             Assert.That(ShotFinder.Window(new[] { 1f }), Is.EqualTo((0f, 1f)));
         }
+
+        [Test]
+        public void ABowsRelease_LetsGoWhereTheHandsPartFastest()
+        {
+            // Eleven samples, as the real clip: the draw anchored a little further, the string hand flicking back from
+            // 0.3 to 0.4, then the bow brought down (the hands coming together again).
+            var apart = new[] { 0.72f, 0.75f, 0.79f, 0.83f, 1.12f, 1.24f, 1.27f, 1.25f, 1.2f, 1.1f, 1.03f };
+
+            Assert.That(ReleaseFinder.Moment(apart), Is.EqualTo(0.3f).Within(1e-5f));
+            Assert.That(ReleaseFinder.Moment(new[] { 1f, 0.9f, 0.8f }), Is.Zero, "Hands that never part: from the start.");
+            Assert.That(ReleaseFinder.Moment(new float[0]), Is.Zero);
+        }
     }
 }

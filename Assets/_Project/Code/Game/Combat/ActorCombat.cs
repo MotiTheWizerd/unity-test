@@ -242,7 +242,7 @@ namespace Forge.Game.Combat
         }
 
         // A held swing lets go: one that shoots uses up one of its ammo and looses it, as hard as it was drawn (none
-        // left: it lets go of nothing). It plays on from the end of its window.
+        // left: it lets go of nothing). It plays on from the end of its window, or into its move's release.
         void LetGo(Swing swing)
         {
             var power = WeakestShot + (1f - WeakestShot) * swing.Pull;
@@ -296,7 +296,8 @@ namespace Forge.Game.Combat
                 return AttackOutcome.Tired;
 
             var timing = Timings != null && Timings.TryGet(move.Animation, weapon.Ammo.HasValue, out var timed) ? timed : MoveTiming.Default;
-            var swing = new Swing(slot, equipped, move, timing);
+            var release = move.Release != null && Timings != null && Timings.TryGetRelease(move.Release, out var seconds) ? seconds : (float?)null;
+            var swing = new Swing(slot, equipped, move, timing, release);
             _swings.Add(swing);
             SwingStarted?.Invoke(swing);
             _events?.Publish(new AttackStarted(Owner, slot, equipped.Item, kind));

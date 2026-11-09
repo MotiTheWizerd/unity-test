@@ -522,7 +522,11 @@ namespace Forge.Tests.Data
             var archery = CombatStyleRecord.IdFor("core", "archery");
             var hit = new[] { Effect.Damage(RecordId.Parse("core:attribute/health"), 7f) };
             var plugin = Plugin("core",
-                new CombatStyleRecord(archery, "Archery", new[] { new CombatMove(CombatMoveKind.Attack, "BowShot", held: true) }),
+                new CombatStyleRecord(archery, "Archery", new[]
+                {
+                    new CombatMove(CombatMoveKind.Attack, "BowShot", held: true, release: "BowRelease"),
+                    new CombatMove(CombatMoveKind.Draw, "BowDraw"),
+                }),
                 new BaseObjectRecord(RecordId.Parse("core:bow"), "Bow", "items/bow", item: new ItemPart(ItemKind.Weapon, 3f, 50),
                     equippable: new EquippablePart(new[] { EquipFit.Of(ammo) }), weapon: new WeaponPart(archery, hit, ammo)),
                 new BaseObjectRecord(RecordId.Parse("core:sword"), "Sword", "items/sword", item: new ItemPart(ItemKind.Weapon, 9f, 75),
@@ -534,7 +538,10 @@ namespace Forge.Tests.Data
             var records = Read(json).Records;
             var objects = records.OfType<BaseObjectRecord>().ToDictionary(r => r.Id.ToString());
 
-            Assert.That(records.OfType<CombatStyleRecord>().Single().Moves.Single().Held, Is.True);
+            var moves = records.OfType<CombatStyleRecord>().Single().Moves;
+            Assert.That((moves[0].Held, moves[0].Release), Is.EqualTo((true, "BowRelease")), "A held move and what plays once it is let go.");
+            Assert.That((moves[1].Held, moves[1].Release), Is.EqualTo((false, (string)null)));
+            Assert.That(Regex.Matches(json, "\"release\"").Count, Is.EqualTo(1), "No release is written as nothing.");
             Assert.That(objects["core:arrow"].Ammo.BreakChance, Is.EqualTo(0.2f), "An arrow is ammo, breaking one time in five.");
             Assert.That(objects["core:bow"].Ammo, Is.Null);
             Assert.That(objects["core:bow"].Weapon.Ammo, Is.EqualTo(ammo), "A bow shoots what the ammo slot holds...");

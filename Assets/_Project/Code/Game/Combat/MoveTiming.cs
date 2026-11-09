@@ -46,5 +46,11 @@ namespace Forge.Game.Combat
         /// timed by the string's pull) or one that strikes with itself (timed by its cut); false when the look has no such move.
         /// </summary>
         bool TryGet(string animation, bool shoots, out MoveTiming timing);
+
+        /// <summary>
+        /// How long <paramref name="animation"/> plays as a held move's release (<see cref="Data.Records.CombatMove.Release"/>:
+        /// a bow's follow-through), seconds, from where it lets go to its end; false when the look has no such move.
+        /// </summary>
+        bool TryGetRelease(string animation, out float seconds);
     }
 }

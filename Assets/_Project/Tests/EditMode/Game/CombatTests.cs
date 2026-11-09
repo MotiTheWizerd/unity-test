@@ -60,7 +60,7 @@ namespace Forge.Tests.Game
                     new EquipSlotRecord(CoreEquipSlots.RightHand, "Right Hand", "RightHand", sheathes: true),
                     new EquipSlotRecord(CoreEquipSlots.LeftHand, "Left Hand", "LeftHand", sheathes: true),
                     new EquipSlotRecord(CoreEquipSlots.Ammo, "Ammo", "Chest"),
-                    new CombatStyleRecord(Archery, "Archery", new[] { new CombatMove(CombatMoveKind.Attack, "BowShot", held: true) }),
+                    new CombatStyleRecord(Archery, "Archery", new[] { new CombatMove(CombatMoveKind.Attack, "BowShot", held: true, release: "BowRelease") }),
                     Bow,
                     Arrow,
                     new AttributeRecord(CoreAttributes.Health, "Health", AttributeKind.Resource, 30f),
@@ -404,6 +404,35 @@ namespace Forge.Tests.Game
         }
 
         [Test]
+        public void ADrawLetGo_LastsAsLongAsItsReleasePlays_StillAiming_ThenIsOver()
+        {
+            var shots = ReadyBow(5);
+            _combat.Timings = new FixedTimings(DrawTiming) { Release = 0.5f };
+            var ended = new List<Swing>();
+            _combat.SwingEnded += ended.Add;
+            _combat.TryAttack(CoreEquipSlots.RightHand);
+            _combat.Tick(2f);
+
+            _combat.Release(CoreEquipSlots.RightHand);
+            Assert.That(shots.Count, Is.EqualTo(1), "Loosed at once, as the release starts.");
+            _combat.Tick(0.3f);
+            Assert.That((_combat.Aiming, ended.Count), Is.EqualTo((true, 0)), "Still in its release.");
+            Assert.That(_combat.Swings.Single().ReleaseSeconds, Is.EqualTo(0.5f));
+
+            _combat.Tick(0.25f);
+            Assert.That((_combat.Aiming, ended.Count), Is.EqualTo((false, 1)), "Played out.");
+        }
+
+        [Test]
+        public void AReleaseNamesAnAnimation_AndOnlyAHeldMoveHasOne()
+        {
+            Assert.That(new CombatMove(CombatMoveKind.Attack, "BowShot", held: true, release: "BowRelease").Release, Is.EqualTo("BowRelease"));
+            Assert.That(new CombatMove(CombatMoveKind.Attack, "BowShot", held: true).Release, Is.Null);
+            Assert.Throws<System.ArgumentException>(() => new CombatMove(CombatMoveKind.Attack, "SwordSlash", release: "BowRelease"));
+            Assert.Throws<System.ArgumentException>(() => new CombatMove(CombatMoveKind.Attack, "BowShot", held: true, release: " "));
+        }
+
+        [Test]
         public void TheLastArrow_IsLoosed_ThenTheBowHasNone()
         {
             var shots = ReadyBow(1);
@@ -486,10 +515,19 @@ namespace Forge.Tests.Game
                 _only = only;
             }
 
+            /// <summary>How long a release plays; null: the look can't time one.</summary>
+            public float? Release { get; set; }
+
             public bool TryGet(string animation, bool shoots, out MoveTiming timing)
             {
                 timing = _timing;
                 return _only == null || animation == _only;
+            }
+
+            public bool TryGetRelease(string animation, out float seconds)
+            {
+                seconds = Release ?? 0f;
+                return Release.HasValue;
             }
         }
     }

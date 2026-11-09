@@ -151,9 +151,10 @@ namespace Forge.Play
 
         /// <summary>
         /// Shows its weapons becoming <paramref name="readiness"/> (a draw or a sheathe playing, or done); a draw or a
-        /// sheathe plays <paramref name="move"/> (a style's: "BowDraw"), else its own.
+        /// sheathe plays <paramref name="move"/> (a style's: "BowDraw"), else its own; drawn, it stands in
+        /// <paramref name="stance"/> (a style's: "BowIdle"), else its own drawn stance.
         /// </summary>
-        public void Animate(Readiness readiness, string move = null) => _animation?.Show(readiness, move);
+        public void Animate(Readiness readiness, string move = null, string stance = null) => _animation?.Show(readiness, move, stance);
 
         /// <summary>
         /// How its draw or sheathe <paramref name="move"/> plays: the clip's length, and the moment in it the hand is at
@@ -206,6 +207,32 @@ namespace Forge.Play
 
         /// <summary>Lets its held action <paramref name="move"/> play on <paramref name="from"/> (a fraction of it).</summary>
         public void Resume(string move, float from) => _animation?.Resume(move, from);
+
+        /// <summary>
+        /// How long its move <paramref name="release"/> plays as a held move's release (a bow's follow-through), seconds,
+        /// from where it starts (<see cref="ReleaseFinder"/>) to its end; false when it has none.
+        /// </summary>
+        public bool TryTimeRelease(string release, out float seconds)
+        {
+            seconds = 0f;
+            var clip = _animation?.Clip(release);
+            if (clip == null || !ReleaseFinder.TryFind(_prefab, clip, out var from))
+                return false;
+            seconds = (1f - from) * clip.length;
+            return true;
+        }
+
+        /// <summary>
+        /// Lets its held action <paramref name="held"/> go into <paramref name="release"/> (a bow's draw into its
+        /// release), from where the release starts (<see cref="ReleaseFinder"/>); false when it can't (no such release,
+        /// or not where the held one plays), and the held one is left as it was.
+        /// </summary>
+        public bool Release(string held, string release)
+        {
+            var clip = _animation?.Clip(release);
+            return clip != null && ReleaseFinder.TryFind(_prefab, clip, out var from) &&
+                _animation.FollowThrough(held, release, from, ReleaseFinder.Lead);
+        }
 
         /// <summary>
         /// How far into its draw <paramref name="move"/> (a bow's) the right hand is nearest the back over the right
