@@ -721,6 +721,19 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:dragon",
+      "displayName": "Dragon",
+      "assetKey": "models/dragon",
+      "category": "Creatures/Dragons",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:dry_branches",
       "displayName": "Fallen Branches",
       "assetKey": "models/dry_branches",

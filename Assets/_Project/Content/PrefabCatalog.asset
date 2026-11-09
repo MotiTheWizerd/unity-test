@@ -67,6 +67,8 @@ MonoBehaviour:
     _asset: {fileID: 7953335360933399773, guid: c0d15d89ce6d89949b7cc047298e8939, type: 3}
   - _key: models/dandelion
     _asset: {fileID: 6644106140543864155, guid: b2653bcb4a06dfb43907c2b8c04d022e, type: 3}
+  - _key: models/dragon
+    _asset: {fileID: 1668694114473109824, guid: eb9b2c483bb43dc42a029ce089a5eb72, type: 3}
   - _key: models/dry_branches
     _asset: {fileID: 3911354736506293323, guid: 20c2fcf14a4c3f94d96a50edb047c087, type: 3}
   - _key: models/dutch_ship_large
