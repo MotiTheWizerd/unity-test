@@ -25,7 +25,8 @@ namespace Forge.UnityEditor.Content
     /// The moves a humanoid's animations are made of, each one file named after it in a move set
     /// (Content/Animations/{Set}/...), and what each is, by the folder it sits in:
     /// <list type="bullet">
-    /// <item><see cref="LocomotionFolder"/>: the ground moves, blended by speed, and their versions with weapons drawn.</item>
+    /// <item><see cref="LocomotionFolder"/>: the ground moves, blended by speed, their versions with weapons drawn and
+    /// crouched, and the moves between standing and crouching.</item>
     /// <item><see cref="AirFolder"/>: the jump, the fall, the landing.</item>
     /// <item><see cref="StylesFolder"/>/{Style}: a combat style's moves; its {Style}Idle is its stance, the rest actions.</item>
     /// <item>Any other folder (Interact, Emotes, ...): actions.</item>
@@ -62,11 +63,26 @@ namespace Forge.UnityEditor.Content
         /// <summary>The ground moves with weapons drawn, in the same order; each falls back to its plain move when missing.</summary>
         public static readonly string[] DrawnGround = { Drawn(Idle), Drawn(Walk), Drawn(Run), Drawn(Sprint) };
 
+        /// <summary>The ground moves crouched, in the same order; a set crouches when it has the crouched idle, with whichever others it has.</summary>
+        public static readonly string[] CrouchedGround = { Crouched(Idle), Crouched(Walk), Crouched(Run), Crouched(Sprint) };
+
+        /// <summary>Getting down into a crouch while standing still, played once (Locomotion/).</summary>
+        public const string CrouchDown = "CrouchDown";
+
+        /// <summary>Standing back up from a crouch while standing still, played once (Locomotion/).</summary>
+        public const string StandUp = "StandUp";
+
+        /// <summary>The ground moves played once, from one way of standing to another, rather than walked.</summary>
+        public static readonly string[] PostureChanges = { CrouchDown, StandUp };
+
         /// <summary>The air moves.</summary>
         public static readonly string[] Air = { Jump, Fall, Land };
 
         /// <summary>A ground move's drawn version ("DrawnRun").</summary>
         public static string Drawn(string move) => "Drawn" + move;
+
+        /// <summary>A ground move's crouched version ("CrouchWalk").</summary>
+        public static string Crouched(string move) => "Crouch" + move;
 
         /// <summary>
         /// What the move at <paramref name="path"/> (in its set, "Styles/Archery/BowShot.fbx", '/' or '\' between
@@ -97,7 +113,7 @@ namespace Forge.UnityEditor.Content
 
         /// <summary>Whether a move of <paramref name="role"/> named <paramref name="move"/> repeats while it lasts (standing, walking, falling) rather than playing once.</summary>
         public static bool Loops(MoveRole role, string move) =>
-            role == MoveRole.Ground || role == MoveRole.Stance || (role == MoveRole.Air && move == Fall);
+            (role == MoveRole.Ground && Array.IndexOf(PostureChanges, move) < 0) || role == MoveRole.Stance || (role == MoveRole.Air && move == Fall);
 
         /// <summary>
         /// Whether a move of <paramref name="role"/> named <paramref name="move"/> lifts the body off the ground (a jump).
@@ -111,7 +127,8 @@ namespace Forge.UnityEditor.Content
         /// </summary>
         public static string Misplaced(string move, MoveRole role)
         {
-            if (role != MoveRole.Ground && (Array.IndexOf(Ground, move) >= 0 || Array.IndexOf(DrawnGround, move) >= 0))
+            if (role != MoveRole.Ground && (Array.IndexOf(Ground, move) >= 0 || Array.IndexOf(DrawnGround, move) >= 0 ||
+                    Array.IndexOf(CrouchedGround, move) >= 0 || Array.IndexOf(PostureChanges, move) >= 0))
                 return LocomotionFolder;
             if (role != MoveRole.Air && Array.IndexOf(Air, move) >= 0)
                 return AirFolder;

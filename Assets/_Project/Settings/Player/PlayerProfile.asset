@@ -15,10 +15,12 @@ MonoBehaviour:
   _height: 1.85
   _radius: 0.3
   _eyeHeight: 1.72
+  _crouchHeight: 1
   _stepHeight: 0.4
   _slopeLimit: 50
   _model: {fileID: 8301520851496015657, guid: a69373ee747a66a4496309ea698c2843, type: 3}
   _walkSpeed: 1.8
+  _crouchSpeed: 1.2
   _runSpeed: 4.5
   _sprintSpeed: 6
   _jumpHeight: 1.1
@@ -27,15 +29,27 @@ MonoBehaviour:
   _airAcceleration: 6
   _coyoteTime: 0.12
   _turnRate: 720
+  _firstPersonHeadEase: 0.1
+  _firstPersonNearClip: 0.05
   _startInThirdPerson: 0
   _cameraDistance: 3.5
   _cameraMinDistance: 1.2
   _cameraMaxDistance: 8
   _cameraZoomStep: 0.6
+  _cameraZoomEase: 0.12
   _cameraPivotHeight: 1.6
   _cameraShoulderOffset: 0.35
   _cameraRadius: 0.2
   _cameraReturnSpeed: 6
+  _reach: 2.5
+  _aimRadius: 0.1
+  _grabHold: 0.3
+  _holdDistance: 1.3
+  _mostCarriedMass: 30
+  _throwImpulse: 15
+  _throwSpeed: 12
+  _fullDrawZoom: 1.2
+  _drawZoomEase: 0.15
   _controls: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   _controlsMap: Player
   _lookSensitivity: 0.1

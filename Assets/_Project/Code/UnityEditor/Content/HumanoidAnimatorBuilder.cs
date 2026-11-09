@@ -21,6 +21,8 @@ namespace Forge.UnityEditor.Content
     /// Each is optional; without it the body goes straight on to the next.</item>
     /// <item>Drawn: the drawn ground moves while weapons are out, and a ground state per combat style's stance
     /// ({Style}Idle: the same moves standing in it), picked by <see cref="HumanoidAnimation.Stance"/>.</item>
+    /// <item>Crouched: the crouched ground moves while <see cref="HumanoidAnimation.Crouched"/>, whatever is drawn, gone
+    /// down into and stood up from by CrouchDown and StandUp when standing still.</item>
     /// <item>Actions: draws, sheathes and blows on masked layers, each started by a trigger of its name.</item>
     /// </list>
     /// A set is a whole controller rather than an override of the base's, because its clips walk at their own speeds and
@@ -89,7 +91,13 @@ namespace Forge.UnityEditor.Content
             machine.defaultState = moving;
             var grounds = new List<AnimatorState> { moving };
 
+            // Crouching is known before the drawn moves are built: a crouch outranks them.
+            var crouches = Clip(set, HumanoidMoves.CrouchedGround[0]) != null;
+            if (crouches)
+                controller.AddParameter(HumanoidAnimation.Crouched, AnimatorControllerParameterType.Bool);
             BuildDrawn(set, controller, machine, moving, grounds);
+            if (crouches)
+                BuildCrouch(set, controller, machine, moving, grounds);
             BuildAir(set, machine, moving, grounds);
             BuildActions(set, controller);
             EditorUtility.SetDirty(controller);
@@ -137,19 +145,78 @@ namespace Forge.UnityEditor.Content
             string name, IEnumerable<(string move, AnimationClip clip)> moves, int key)
         {
             var state = GroundState(machine, name, GroundTree(controller, name, moves, out _));
-            var drawnOn = new AnimatorCondition { mode = AnimatorConditionMode.If, parameter = HumanoidAnimation.Drawn };
-            var stances = controller.parameters.Any(p => p.name == HumanoidAnimation.Stance);
-            if (stances)
+            // Entered only standing, when the set crouches: crouched, the crouch's moves play whatever is drawn.
+            var enter = new List<AnimatorCondition> { new AnimatorCondition { mode = AnimatorConditionMode.If, parameter = HumanoidAnimation.Drawn } };
+            if (HasParameter(controller, HumanoidAnimation.Crouched))
+                enter.Add(CrouchOff());
+            if (HasParameter(controller, HumanoidAnimation.Stance))
             {
-                When(moving, state, drawnOn, new AnimatorCondition { mode = AnimatorConditionMode.Equals, parameter = HumanoidAnimation.Stance, threshold = key });
+                enter.Add(new AnimatorCondition { mode = AnimatorConditionMode.Equals, parameter = HumanoidAnimation.Stance, threshold = key });
                 When(state, moving, new AnimatorCondition { mode = AnimatorConditionMode.NotEqual, parameter = HumanoidAnimation.Stance, threshold = key });
             }
-            else
-                When(moving, state, drawnOn);
+
+            When(moving, state, enter.ToArray());
 
             When(state, moving, new AnimatorCondition { mode = AnimatorConditionMode.IfNot, parameter = HumanoidAnimation.Drawn });
             grounds.Add(state);
         }
+
+        // Crouched: the crouched ground moves (MoveRole.Ground's Crouch{Move}), from any standing ground state while
+        // Crouched, and back to the plain ground (which goes on to the drawn one if drawn) when not. Standing still, the
+        // set's CrouchDown and StandUp play the way down and up when it has them; moving, the moves just crossfade.
+        static void BuildCrouch(string set, AnimatorController controller, AnimatorStateMachine machine, AnimatorState moving,
+            List<AnimatorState> grounds)
+        {
+            var moves = HumanoidMoves.Ground.Select((move, i) => (move, clip: Clip(set, HumanoidMoves.CrouchedGround[i])))
+                .Where(m => m.clip != null);
+            const string name = "Crouch Ground";
+            var crouched = GroundState(machine, name, GroundTree(controller, name, moves, out _));
+            var down = State(set, machine, HumanoidMoves.CrouchDown);
+            var up = State(set, machine, HumanoidMoves.StandUp);
+
+            foreach (var ground in grounds)
+            {
+                if (down != null)
+                {
+                    When(ground, down, CrouchOn(), Still());
+                    When(ground, crouched, CrouchOn(), Moving());
+                }
+                else
+                    When(ground, crouched, CrouchOn());
+            }
+
+            if (down != null)
+            {
+                AtEnd(down, crouched);
+                When(down, crouched, Moving());
+                When(down, moving, CrouchOff());
+                grounds.Add(down);
+            }
+
+            if (up != null)
+            {
+                When(crouched, up, CrouchOff(), Still());
+                When(crouched, moving, CrouchOff(), Moving());
+                AtEnd(up, moving);
+                When(up, moving, Moving());
+                When(up, crouched, CrouchOn());
+                grounds.Add(up);
+            }
+            else
+                When(crouched, moving, CrouchOff());
+
+            grounds.Add(crouched);
+        }
+
+        static bool HasParameter(AnimatorController controller, string name) => controller.parameters.Any(p => p.name == name);
+
+        static AnimatorCondition CrouchOn() => new AnimatorCondition { mode = AnimatorConditionMode.If, parameter = HumanoidAnimation.Crouched };
+
+        static AnimatorCondition CrouchOff() => new AnimatorCondition { mode = AnimatorConditionMode.IfNot, parameter = HumanoidAnimation.Crouched };
+
+        static AnimatorCondition Still() => new AnimatorCondition { mode = AnimatorConditionMode.Less, parameter = HumanoidAnimation.Speed, threshold = MovingOn };
+
+        static AnimatorCondition Moving() => new AnimatorCondition { mode = AnimatorConditionMode.Greater, parameter = HumanoidAnimation.Speed, threshold = MovingOn };
 
         // The ground moves blended by speed, each clip at the speed it walks (an idle at rest).
         static BlendTree GroundTree(AnimatorController controller, string name, IEnumerable<(string move, AnimationClip clip)> moves, out float topSpeed)
@@ -307,7 +374,7 @@ namespace Forge.UnityEditor.Content
             if (land != null)
             {
                 AtEnd(land, moving);
-                When(land, moving, new AnimatorCondition { mode = AnimatorConditionMode.Greater, parameter = HumanoidAnimation.Speed, threshold = MovingOn });
+                When(land, moving, Moving());
                 if (fall != null)
                     When(land, fall, Airborne(), Dropping());
             }

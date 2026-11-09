@@ -12,13 +12,19 @@ namespace Forge.Game.Player
     /// The player in the world: where it looks (<see cref="PlayerLook"/>), how it moves (<see cref="PlayerLocomotion"/>),
     /// its body (<see cref="IPlayerMotor"/>) and which way that body faces (<see cref="BodyHeading"/>, by
     /// <see cref="Facing"/>). Each frame it turns the look, works out the move, has the body make it, keeping what the
-    /// body touched for the next frame, and turns the body. Engine-free; positions are the motor's.
+    /// body touched for the next frame, and turns the body. A body that can crouch (<see cref="ICrouchingBody"/>) crouches
+    /// as the moves say, and stays down where there is no room to stand; the eyes come down with it. Engine-free;
+    /// positions are the motor's.
     /// </summary>
     public sealed class PlayerCharacter
     {
         // Slower than this on the ground (m/s), the body keeps the way it faces rather than following jitter.
         const float TurnSpeedThreshold = 0.2f;
 
+        // Seconds the eyes take to come down to a crouch, or back up.
+        const float CrouchSeconds = 0.25f;
+
+        readonly ICrouchingBody _crouching;
         MotorContact _contact;
 
         /// <param name="eyeHeight">Meters from the feet to the eyes, where a first-person camera sits.</param>
@@ -28,6 +34,7 @@ namespace Forge.Game.Player
         public PlayerCharacter(IPlayerMotor motor, LocomotionSettings locomotion, float eyeHeight, ActorAttributes attributes = null, GameEvents events = null)
         {
             Motor = motor ?? throw new ArgumentNullException(nameof(motor));
+            _crouching = motor as ICrouchingBody;
             if (!(eyeHeight > 0f) || float.IsInfinity(eyeHeight))
                 throw new ArgumentOutOfRangeException(nameof(eyeHeight), eyeHeight, "Must be a positive number.");
             EyeHeight = eyeHeight;
@@ -68,8 +75,14 @@ namespace Forge.Game.Player
         /// <summary>Where the feet are.</summary>
         public Vector3 Feet => Motor.Position;
 
-        /// <summary>Where the eyes are.</summary>
-        public Vector3 Eyes => Motor.Position + new Vector3(0f, EyeHeight, 0f);
+        /// <summary>Where the eyes are, lowered as far as a crouch has brought them down.</summary>
+        public Vector3 Eyes => Motor.Position + new Vector3(0f, EyeHeight - Lowered, 0f);
+
+        /// <summary>Whether the body is crouched.</summary>
+        public bool Crouched => _crouching != null && _crouching.Crouched;
+
+        /// <summary>Meters the eyes are down now from standing, easing as the body crouches or stands (a camera follows).</summary>
+        public float Lowered { get; private set; }
 
         /// <summary>Whether the last move ended standing on something.</summary>
         public bool IsGrounded => _contact.Grounded;
@@ -83,17 +96,21 @@ namespace Forge.Game.Player
             Look.Turn(commands.Turn);
             foreach (var limit in Limits)
                 commands = limit.Allow(commands);
+            commands = Headroom(commands);
             if (Costs != null)
                 commands = Costs.Afford(commands, deltaTime);
             var from = Motor.Position;
             var move = Locomotion.Step(commands, Look.Heading, _contact, deltaTime);
+            if (_crouching != null && _crouching.Crouched != Locomotion.Crouching)
+                _crouching.Crouch(Locomotion.Crouching);
             if (move != Vector3.Zero)
                 _contact = Motor.Move(move);
             if (deltaTime > 0f)
             {
-                Motion = BodyMotion.Between(from, Motor.Position, deltaTime, _contact.Grounded);
+                Motion = BodyMotion.Between(from, Motor.Position, deltaTime, _contact.Grounded, Crouched);
                 Costs?.Pay(Locomotion.Jumped, _contact.Grounded, Motor.Position.Y);
                 Attributes?.Tick(deltaTime);
+                LowerEyes(deltaTime);
             }
 
             TurnBody(deltaTime);
@@ -115,7 +132,30 @@ namespace Forge.Game.Player
             Locomotion.Stop();
             _contact = default;
             Motion = BodyMotion.Still;
+            Lowered = CrouchedEyeDrop;
             Costs?.Reset();
+        }
+
+        // A body that can't crouch never does; one crouched with no room overhead stays down, whatever it is told: it
+        // neither stands, nor sprints, nor jumps.
+        PlayerCommands Headroom(PlayerCommands commands)
+        {
+            if (_crouching == null)
+                return commands.AllowingCrouchToggle(false);
+            if (Locomotion.Crouching && !_crouching.CanStand)
+                return commands.Allowing(sprint: false, jump: false, walk: commands.Walk).AllowingCrouchToggle(false);
+            return commands;
+        }
+
+        // How far down the eyes are with the body as it is: its crouch's depth, or none.
+        float CrouchedEyeDrop => Crouched ? _crouching.CrouchDepth : 0f;
+
+        // The eyes ease down to a crouch, or up, at the depth over CrouchSeconds a second.
+        void LowerEyes(float deltaTime)
+        {
+            var target = CrouchedEyeDrop;
+            var step = (_crouching?.CrouchDepth ?? 0f) / CrouchSeconds * deltaTime;
+            Lowered = Math.Abs(target - Lowered) <= step ? target : Lowered + Math.Sign(target - Lowered) * step;
         }
 
         void TurnBody(float deltaTime)

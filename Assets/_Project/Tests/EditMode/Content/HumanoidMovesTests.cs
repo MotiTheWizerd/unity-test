@@ -49,6 +49,18 @@ namespace Forge.Tests.Content
         }
 
         [Test]
+        public void CrouchedMoves_AreGroundMoves_WalkedOnLoop_ButGoingDownOrUpPlaysOnce()
+        {
+            Assert.That(HumanoidMoves.Crouched("Walk"), Is.EqualTo("CrouchWalk"));
+            Assert.That(HumanoidMoves.RoleOf("Locomotion/CrouchIdle.fbx"), Is.EqualTo(MoveRole.Ground));
+            Assert.That(HumanoidMoves.Loops(MoveRole.Ground, "CrouchWalk"), Is.True);
+            Assert.That(HumanoidMoves.Loops(MoveRole.Ground, HumanoidMoves.CrouchDown), Is.False);
+            Assert.That(HumanoidMoves.Loops(MoveRole.Ground, HumanoidMoves.StandUp), Is.False);
+            Assert.That(HumanoidMoves.Misplaced("CrouchIdle", MoveRole.UpperBodyAction), Is.EqualTo(HumanoidMoves.LocomotionFolder));
+            Assert.That(HumanoidMoves.Misplaced(HumanoidMoves.StandUp, MoveRole.UpperBodyAction), Is.EqualTo(HumanoidMoves.LocomotionFolder));
+        }
+
+        [Test]
         public void AClipsPlaceInItsSet_AndItsMove()
         {
             Assert.That(AnimationImport.InSet(AnimationImport.AnimationsFolder + "/Humanoid/Styles/Archery/BowShot.fbx"), Is.EqualTo("Styles/Archery/BowShot.fbx"));

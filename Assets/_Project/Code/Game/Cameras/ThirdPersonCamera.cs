@@ -66,8 +66,8 @@ namespace Forge.Game.Cameras
             var back = -Vector3.Transform(Vector3.UnitZ, rotation);
             var shoulderSide = Compass.Right(player.Look.Heading);
 
-            // The shoulder sits beside the head; a wall right beside the player keeps it in.
-            var head = player.Feet + new Vector3(0f, _settings.PivotHeight, 0f);
+            // The shoulder sits beside the head, down with it in a crouch; a wall right beside the player keeps it in.
+            var head = player.Feet + new Vector3(0f, _settings.PivotHeight - player.Lowered, 0f);
             var shoulder = head + new Vector3(shoulderSide.X, 0f, shoulderSide.Y) * _settings.ShoulderOffset;
             var pivot = Toward(head, shoulder);
 

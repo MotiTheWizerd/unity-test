@@ -22,6 +22,9 @@ namespace Forge.Play
         [SerializeField, Min(0.1f), Tooltip("Meters from the feet to the eyes, where the first-person camera sits.")]
         float _eyeHeight = 1.65f;
 
+        [SerializeField, Min(0.5f), Tooltip("Meters from the feet to the top of the head while crouched (Left Ctrl): what it passes under.")]
+        float _crouchHeight = 1.0f;
+
         [SerializeField, Min(0f), Tooltip("The highest step walked up without jumping (a stair, a kerb, a root).")]
         float _stepHeight = 0.4f;
 
@@ -34,6 +37,9 @@ namespace Forge.Play
         [Header("Moving")]
         [SerializeField, Min(0.1f), Tooltip("While walking is switched on (Caps Lock), meters per second. Matches the Walk clip's stride.")]
         float _walkSpeed = 1.8f;
+
+        [SerializeField, Min(0.1f), Tooltip("While crouched, meters per second. Matches the CrouchWalk clip's stride.")]
+        float _crouchSpeed = 1.2f;
 
         [SerializeField, Min(0.1f), Tooltip("The everyday pace, meters per second.")]
         float _runSpeed = 4.5f;
@@ -142,6 +148,9 @@ namespace Forge.Play
 
         public float EyeHeight => Mathf.Min(_eyeHeight, _height);
 
+        /// <summary>How tall the body is crouched: never above standing, nor shorter than its width.</summary>
+        public float CrouchHeight => Mathf.Clamp(_crouchHeight, 2f * Radius, _height);
+
         public float StepHeight => Mathf.Min(_stepHeight, _height - 2f * Radius);
 
         public float SlopeLimit => _slopeLimit;
@@ -182,7 +191,8 @@ namespace Forge.Play
                 airAcceleration: _airAcceleration,
                 coyoteTime: _coyoteTime,
                 turnRate: _turnRate,
-                walkSpeed: _walkSpeed);
+                walkSpeed: _walkSpeed,
+                crouchSpeed: _crouchSpeed);
 
         public FirstPersonSettings FirstPerson() => new FirstPersonSettings(headEase: _firstPersonHeadEase, nearClip: _firstPersonNearClip);
 

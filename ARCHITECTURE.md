@@ -652,21 +652,26 @@ from any camera, so both cameras read the same player.
 - `PlayerCharacter` is the player in the world: its `PlayerLook` (a compass heading, which also turns the body, and a
   pitch up positive, held within ±85°), its `PlayerLocomotion` and its body, an `IPlayerMotor` (feet position, `Move`
   that says what it touched in a `MotorContact`, `Teleport`). `Tick(PlayerCommands, dt)` turns the look, steps the
-  rules and has the body make the move; `PlaceAt(feet, heading)` stands it somewhere at rest. `Eyes` = feet + eye height.
+  rules and has the body make the move; `PlaceAt(feet, heading)` stands it somewhere at rest. `Eyes` = feet + eye height,
+  less `Lowered`: a body that can crouch (`ICrouchingBody`) crouches as the rules say, the eyes easing down by its
+  `CrouchDepth` over 0.25 s (the third-person pivot comes down with them), and crouched with no room overhead
+  (`CanStand`) it stays down, neither standing, sprinting nor jumping, whatever it is told.
 - `PlayerCommands` are the only input the rules see (move: x right, y forward in [-1, 1]; turn in degrees; sprint
-  held; jump and toggle-walk pressed this frame), so a gamepad, a script or a test drives the player alike.
+  held; jump, toggle-walk and toggle-crouch pressed this frame), so a gamepad, a script or a test drives the player alike.
 - `PlayerLocomotion` (`LocomotionSettings`: run 4.5 m/s, the default pace as in Skyrim, walk 1.8 while
-  walking is toggled on (Caps Lock, as Skyrim's, kept between spawns), sprint 6 over either (faster and the clips show it as fast-forward), a 1.1 m jump, gravity
+  walking is toggled on (Caps Lock, as Skyrim's, kept between spawns), crouch 1.2 (the CrouchWalk clip's stride) while
+  crouched (Left Ctrl toggles it, as Skyrim's sneak; a sprint or a jump stands it up), sprint 6 over either (faster and the clips show it as fast-forward), a 1.1 m jump, gravity
   18 m/s², ground and air acceleration, a 50 m/s fall cap, 0.12 s coyote time): on the ground the pace eases toward the
   wanted one in about a tenth of a second and the body is pressed into the ground (`GroundStickSpeed`) so it stays on
   downhill slopes; in the air gravity pulls and steering is weak; a head against a ceiling stops rising; one jump per
   landing, still allowed just after stepping off an edge. Diagonals are no faster. Headings turn into directions through
   `Forge.Core.Geometry.Compass` (also behind `PlacementMath`).
 - `CharacterControllerMotor` (Play) is the body: Unity's `CharacterController` sized from the profile (1.8 m tall,
-  0.3 m radius, 0.4 m steps, 50° slopes), its own scene object on the Ignore Raycast layer, so the editor's picks and the
+  0.3 m radius, 0.4 m steps, 50° slopes; crouched, 1 m (the crouch idle's head is at 0.75 m), the feet kept, standing back up only when a capsule check
+  finds the room above clear of all but clutter), its own scene object on the Ignore Raycast layer, so the editor's picks and the
   camera's probes look through it. It collides with the terrain and the placed objects' colliders.
 - `PlayerControls` (Play) read the profile's action map (`Settings/InputSystem_Actions`, map Player: Move, Look, Sprint,
-  Jump, ToggleWalk, ToggleView, Zoom; WASD and arrows, mouse, Shift, Space, Caps Lock, F, the wheel, and the gamepad) into `PlayerCommands` and
+  Jump, ToggleWalk, Crouch, ToggleView, Zoom; WASD and arrows, mouse, Shift, Space, Caps Lock, Left Ctrl, F, the wheel, and the gamepad) into `PlayerCommands` and
   `ViewCommands`; the look is pointer pixels × the profile's sensitivity (0.1° per pixel), and the wheel's binding scales
   its steps (120 a notch) to notches with a Scale processor. No key is named in code.
 - `PlayerProfile` (`Settings/Player/PlayerProfile.asset`) holds the body, the pace and the controls, tuned in the
@@ -800,7 +805,10 @@ from any camera, so both cameras read the same player.
   from the moves present: the ground moves blended at their clips' speeds; a jump when the body leaves the ground going
   up, a fall when it drops past 3 m/s, a landing when it touches down, each optional. With any drawn ground move
   (`DrawnIdle`, `DrawnWalk`, `DrawnRun`, `DrawnSprint`) a second ground state plays while `Drawn`, each missing drawn
-  move falling back to its plain one. A combat style can name a **stance** (`CombatMoveKind.Stance`; Archery's
+  move falling back to its plain one. With a `CrouchIdle` (and whichever of `CrouchWalk`, `CrouchRun`, `CrouchSprint`
+  it has) a crouched ground state plays while `Crouched`, whatever is drawn (the drawn states are entered only
+  standing); standing still, `CrouchDown` and `StandUp` (played once, `HumanoidMoves.PostureChanges`) go down and up
+  when the set has them, moving it just crossfades. A combat style can name a **stance** (`CombatMoveKind.Stance`; Archery's
   `BowIdle`, Mixamo Standing Idle 01, the bow held low, side-on as its draw ends): any `Styles/<Style>/{Style}Idle`
   clip (`MoveRole.Stance`) gets its own drawn ground state, the same moves standing in it, entered while `Drawn` and
   the int `Stance` holds its key (`HumanoidAnimation.StanceKey`, from its name, so builder and player agree; 0: the

@@ -17,7 +17,9 @@ namespace Forge.Game.Player
         /// <param name="toggleWalk">Pressed this frame: switches between walking and the everyday run, as Skyrim's Caps Lock.</param>
         /// <param name="walk">Walk this frame whatever was switched (held, or forced: too tired to run).</param>
         /// <param name="activate">Pressed this frame: use what is in sight (take it, later open it, talk), Skyrim's Activate.</param>
-        public PlayerCommands(Vector2 move, Vector2 turn, bool sprint, bool jump, bool toggleWalk = false, bool walk = false, bool activate = false)
+        /// <param name="toggleCrouch">Pressed this frame: crouches, or stands back up, as Skyrim's sneak key.</param>
+        public PlayerCommands(Vector2 move, Vector2 turn, bool sprint, bool jump, bool toggleWalk = false, bool walk = false, bool activate = false,
+            bool toggleCrouch = false)
         {
             Move = move;
             Turn = turn;
@@ -26,6 +28,7 @@ namespace Forge.Game.Player
             ToggleWalk = toggleWalk;
             Walk = walk;
             Activate = activate;
+            ToggleCrouch = toggleCrouch;
         }
 
         public Vector2 Move { get; }
@@ -42,8 +45,14 @@ namespace Forge.Game.Player
 
         public bool Activate { get; }
 
+        public bool ToggleCrouch { get; }
+
         /// <summary>These commands as a rule lets them through (too tired to sprint, too laden to run): the rest unchanged.</summary>
         public PlayerCommands Allowing(bool sprint, bool jump, bool walk) =>
-            new PlayerCommands(Move, Turn, sprint, jump, ToggleWalk, walk, Activate);
+            new PlayerCommands(Move, Turn, sprint, jump, ToggleWalk, walk, Activate, ToggleCrouch);
+
+        /// <summary>These commands with the crouch key let through or not (no room to stand, a body that can't crouch): the rest unchanged.</summary>
+        public PlayerCommands AllowingCrouchToggle(bool toggle) =>
+            new PlayerCommands(Move, Turn, Sprint, Jump, ToggleWalk, Walk, Activate, toggle);
     }
 }

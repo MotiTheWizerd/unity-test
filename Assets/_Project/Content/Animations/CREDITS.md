@@ -5,7 +5,8 @@ folder that says what it is:
 
 ```
 Humanoid/
-  Locomotion/        Idle Walk Run Sprint, and with weapons drawn DrawnIdle DrawnWalk DrawnRun DrawnSprint
+  Locomotion/        Idle Walk Run Sprint, and with weapons drawn DrawnIdle DrawnWalk DrawnRun DrawnSprint,
+                     crouched CrouchIdle CrouchWalk CrouchRun CrouchSprint, and CrouchDown StandUp between
   Air/               Jump Fall Land
   Styles/<Style>/    a combat style's moves: its stance <Style>Idle, its draw and sheathe (on the arms), its blows
   <Other>/           more actions (Interact, Emotes, ...)
@@ -34,6 +35,10 @@ Humanoid/
 | BowRelease | Mixamo "Standing Aim Recoil" | Adobe Mixamo |
 | ShieldBlock | Mixamo "Sword And Shield Block" | Adobe Mixamo |
 | ShieldImpact | Mixamo "Sword And Shield Impact" | Adobe Mixamo |
+| CrouchIdle | Mixamo "Crouching Idle" | Adobe Mixamo |
+| CrouchWalk | Mixamo "Crouched Walking" | Adobe Mixamo |
+| CrouchDown | Mixamo "Standing To Crouch" | Adobe Mixamo |
+| StandUp | Mixamo "Crouched To Standing" | Adobe Mixamo |
 
 Downloaded by Moti from mixamo.com as FBX for Unity, 30 fps, without skin, travel left in (not "in place"). Mixamo
 animations are free to use in games under Adobe's terms.

@@ -20,6 +20,7 @@ namespace Forge.Game.Player
         /// <param name="coyoteTime">Seconds after stepping off an edge in which a jump still counts, so it never feels missed.</param>
         /// <param name="turnRate">Degrees per second the body turns toward where it goes, when it faces its movement.</param>
         /// <param name="walkSpeed">The pace while walking is switched on.</param>
+        /// <param name="crouchSpeed">The pace while crouched.</param>
         public LocomotionSettings(
             float runSpeed = 4.5f,
             float sprintSpeed = 7.5f,
@@ -30,10 +31,12 @@ namespace Forge.Game.Player
             float maxFallSpeed = 50f,
             float coyoteTime = 0.12f,
             float turnRate = 720f,
-            float walkSpeed = 1.8f)
+            float walkSpeed = 1.8f,
+            float crouchSpeed = 1.2f)
         {
             TurnRate = Positive(turnRate, nameof(turnRate));
             WalkSpeed = Positive(walkSpeed, nameof(walkSpeed));
+            CrouchSpeed = Positive(crouchSpeed, nameof(crouchSpeed));
             RunSpeed = Positive(runSpeed, nameof(runSpeed));
             SprintSpeed = Positive(sprintSpeed, nameof(sprintSpeed));
             JumpHeight = NotNegative(jumpHeight, nameof(jumpHeight));
@@ -45,6 +48,8 @@ namespace Forge.Game.Player
         }
 
         public float WalkSpeed { get; }
+
+        public float CrouchSpeed { get; }
 
         public float RunSpeed { get; }
 

@@ -7,8 +7,8 @@ using UnityEngine.InputSystem;
 namespace Forge.Play
 {
     /// <summary>
-    /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump, ToggleWalk, ToggleView, Zoom, Interact, Lift,
-    /// Inventory, ReadyWeapon, AttackRight, AttackLeft) into <see cref="PlayerCommands"/>, <see cref="ViewCommands"/> and the menu key, the rules' only input. Rebinding, a gamepad or
+    /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump, ToggleWalk, Crouch, ToggleView, Zoom, Interact,
+    /// Lift, Inventory, ReadyWeapon, AttackRight, AttackLeft) into <see cref="PlayerCommands"/>, <see cref="ViewCommands"/> and the menu key, the rules' only input. Rebinding, a gamepad or
     /// another layout is the actions asset's business; nothing here names a key (the wheel's binding scales its steps to
     /// notches). The map is on only while enabled (while playing).
     /// </summary>
@@ -20,6 +20,7 @@ namespace Forge.Play
         readonly InputAction _sprint;
         readonly InputAction _jump;
         readonly InputAction _toggleWalk;
+        readonly InputAction _crouch;
         readonly InputAction _toggleView;
         readonly InputAction _zoom;
         readonly InputAction _interact;
@@ -45,6 +46,7 @@ namespace Forge.Play
             _sprint = _map.FindAction("Sprint", throwIfNotFound: true);
             _jump = _map.FindAction("Jump", throwIfNotFound: true);
             _toggleWalk = _map.FindAction("ToggleWalk", throwIfNotFound: true);
+            _crouch = _map.FindAction("Crouch", throwIfNotFound: true);
             _toggleView = _map.FindAction("ToggleView", throwIfNotFound: true);
             _zoom = _map.FindAction("Zoom", throwIfNotFound: true);
             _interact = _map.FindAction("Interact", throwIfNotFound: true);
@@ -125,7 +127,8 @@ namespace Forge.Play
                 _sprint.IsPressed(),
                 _jump.WasPressedThisFrame(),
                 _toggleWalk.WasPressedThisFrame(),
-                activate: Use == UseKeyEvent.Tap);
+                activate: Use == UseKeyEvent.Tap,
+                toggleCrouch: _crouch.WasPressedThisFrame());
         }
 
         /// <summary>This frame's view commands; nothing while the map is off.</summary>

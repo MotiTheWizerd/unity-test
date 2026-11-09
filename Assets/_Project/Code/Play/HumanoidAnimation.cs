@@ -12,6 +12,7 @@ namespace Forge.Play
     /// Build Characters) blends the ground moves by <see cref="Speed"/>, plays <see cref="Pace"/> faster past its fastest
     /// clip, and turns to the air moves by <see cref="Grounded"/> and <see cref="VerticalSpeed"/>; <see cref="TopSpeed"/>
     /// is the fastest clip's speed, which the builder leaves as that parameter's default. With weapons drawn it walks
+    /// the crouched ground moves while crouched (<see cref="Crouched"/>, when the set has them), and
     /// the drawn ground moves (<see cref="Drawn"/>), standing in the drawn weapon's style's stance when the set has it
     /// (<see cref="Stance"/>: a bow held low rather than a sword up), and actions (a draw, a sheathe, a slash: <see cref="Play"/>, each
     /// started by a trigger named after its clip) play on an action layer, the <see cref="ArmsLayer"/> (a draw) or the
@@ -27,6 +28,7 @@ namespace Forge.Play
         public const string Grounded = "Grounded";
         public const string VerticalSpeed = "VerticalSpeed";
         public const string Drawn = "Drawn";
+        public const string Crouched = "Crouched";
         /// <summary>Which stance it stands in with weapons drawn (<see cref="StanceKey"/>); 0: the set's own drawn moves.</summary>
         public const string Stance = "Stance";
         /// <summary>The move it stands still in, which every set has.</summary>
@@ -67,9 +69,11 @@ namespace Forge.Play
         static readonly int VerticalSpeedId = Animator.StringToHash(VerticalSpeed);
         static readonly int DrawnId = Animator.StringToHash(Drawn);
         static readonly int StanceId = Animator.StringToHash(Stance);
+        static readonly int CrouchedId = Animator.StringToHash(Crouched);
 
         readonly Animator _animator;
         readonly float _topSpeed;
+        readonly bool _crouchedMoves;
         readonly bool _drawnMoves;
         readonly bool _stances;
         readonly List<ActionLayer> _actionLayers = new List<ActionLayer>();
@@ -83,6 +87,7 @@ namespace Forge.Play
             foreach (var parameter in animator.parameters)
             {
                 _drawnMoves |= parameter.nameHash == DrawnId;
+                _crouchedMoves |= parameter.nameHash == CrouchedId;
                 _stances |= parameter.nameHash == StanceId;
             }
             foreach (var name in new[] { ArmsLayer, UpperBodyLayer })
@@ -130,6 +135,8 @@ namespace Forge.Play
             _animator.SetFloat(PaceId, stride.Pace);
             _animator.SetBool(GroundedId, motion.Grounded);
             _animator.SetFloat(VerticalSpeedId, motion.VerticalSpeed);
+            if (_crouchedMoves)
+                _animator.SetBool(CrouchedId, motion.Crouched);
             FadeActions(deltaTime);
         }
 

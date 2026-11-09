@@ -8,8 +8,9 @@ namespace Forge.Game.Player
     /// The player's movement rules: given the commands, which way it faces and what the body touched last, how far to
     /// move this frame. On the ground the pace eases toward the wanted one quickly and the body is held down so it stays
     /// on downhill slopes; in the air gravity pulls and steering is weak. A jump needs the ground, or a moment after
-    /// leaving it (coyote time), and only one per landing. Engine-free: the motor (<see cref="IPlayerMotor"/>) carries
-    /// the move out.
+    /// leaving it (coyote time), and only one per landing. The crouch key crouches, at a crouch's pace, until pressed
+    /// again; a sprint or a jump stands it up first, as Skyrim's sneak. Engine-free: the motor (<see cref="IPlayerMotor"/>)
+    /// carries the move out, and whoever plays it (<see cref="PlayerCharacter"/>) lowers the body.
     /// </summary>
     public sealed class PlayerLocomotion
     {
@@ -33,6 +34,9 @@ namespace Forge.Game.Player
         /// <summary>Whether the last step took off in a jump.</summary>
         public bool Jumped { get; private set; }
 
+        /// <summary>Crouched, at a crouch's pace, until the crouch key, a sprint or a jump stands it up.</summary>
+        public bool Crouching { get; private set; }
+
         /// <summary>
         /// The move for one frame of <paramref name="deltaTime"/> seconds, facing <paramref name="heading"/> (compass
         /// degrees), after a move that touched <paramref name="contact"/>.
@@ -41,6 +45,10 @@ namespace Forge.Game.Player
         {
             if (commands.ToggleWalk)
                 Walking = !Walking;
+            if (commands.ToggleCrouch)
+                Crouching = !Crouching;
+            if (commands.Sprint && commands.Move.LengthSquared() > 1e-8f)
+                Crouching = false;
             Jumped = false;
             if (!(deltaTime > 0f))
                 return Vector3.Zero;
@@ -66,6 +74,7 @@ namespace Forge.Game.Player
                 up = _settings.JumpSpeed;
                 _jumped = true;
                 Jumped = true;
+                Crouching = false;
             }
             else if (contact.Grounded && velocity.Y <= 0f)
             {
@@ -82,7 +91,7 @@ namespace Forge.Game.Player
             return Velocity * deltaTime;
         }
 
-        /// <summary>Stands still: no speed, no jump in progress (after a teleport, say). Walking or running stays as chosen.</summary>
+        /// <summary>Stands still: no speed, no jump in progress (after a teleport, say). Walking or running, and crouching, stay as chosen.</summary>
         public void Stop()
         {
             Velocity = Vector3.Zero;
@@ -100,7 +109,10 @@ namespace Forge.Game.Player
             if (length > 1f)
                 move /= length;
 
-            var pace = commands.Sprint ? _settings.SprintSpeed : Walking || commands.Walk ? _settings.WalkSpeed : _settings.RunSpeed;
+            var pace = commands.Sprint ? _settings.SprintSpeed
+                : Crouching ? _settings.CrouchSpeed
+                : Walking || commands.Walk ? _settings.WalkSpeed
+                : _settings.RunSpeed;
             return (Compass.Right(heading) * move.X + Compass.Forward(heading) * move.Y) * pace;
         }
 
