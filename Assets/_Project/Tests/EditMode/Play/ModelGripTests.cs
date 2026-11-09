@@ -52,6 +52,45 @@ namespace Forge.Tests.Play
             how.Configure(new Vector3(-2f, 0f, 0f), CarriedAt.Back);
             AssertNear(how.FacesHolder.Value, Vector3.left);
             Assert.That(how.Carried, Is.EqualTo(CarriedAt.Back));
+            Assert.That(how.AlongArm, Is.Null, "Not strapped to the arm unless it says so.");
+        }
+
+        [Test]
+        public void HeldLook_SaysWhichWayItIsStrappedAlongTheArm()
+        {
+            _look = new GameObject("Shield");
+            var how = _look.AddComponent<HeldLook>();
+
+            how.Configure(Vector3.back, CarriedAt.Hip, new Vector3(3f, 0f, 0f));
+
+            AssertNear(how.AlongArm.Value, Vector3.right);
+        }
+
+        [Test]
+        public void Strapped_InTheLeftHand_LaysTheShieldUpTheArm_ItsBackToTheHand()
+        {
+            // A shield's face on +Z, its middle on +X from the handle. The left grip's +X runs back up the arm, its +Z
+            // out of the palm: the back comes to the palm, the middle over the forearm, the face out past the knuckles.
+            var turn = HoldFinder.Strapped(Vector3.back, Vector3.right, right: false);
+
+            AssertNear(turn * Vector3.back, Vector3.forward);
+            AssertNear(turn * Vector3.right, Vector3.right);
+        }
+
+        [Test]
+        public void Strapped_InTheRightHand_LaysItUpTheArm_TheOtherWayAlongTheGrip()
+        {
+            // The right grip lays its +X along the fingers, so up the arm is -X.
+            var turn = HoldFinder.Strapped(Vector3.back, Vector3.right, right: true);
+
+            AssertNear(turn * Vector3.back, Vector3.forward);
+            AssertNear(turn * Vector3.right, Vector3.left);
+        }
+
+        [Test]
+        public void Strapped_TheTwoWaysTogether_IsNoTurn()
+        {
+            Assert.That(HoldFinder.Strapped(Vector3.back, Vector3.back, right: false), Is.EqualTo(Quaternion.identity));
         }
 
         [Test]

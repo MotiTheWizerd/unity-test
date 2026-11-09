@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8492380675876974058}
+  - component: {fileID: 52933637382120006}
   m_Layer: 0
   m_Name: KiteShield
   m_TagString: Untagged
@@ -32,6 +33,21 @@ Transform:
   - {fileID: 6541061891759357082}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &52933637382120006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4194851168021817485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17253fba9f7024e4a8c24a0106504f86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Forge.Play::Forge.Play.HeldLook
+  _facesHolder: {x: 0, y: 0, z: -1}
+  _alongArm: {x: -1, y: 0, z: 0}
+  _carried: 0
 --- !u!1001 &6722814722721471345
 PrefabInstance:
   m_ObjectHideFlags: 0

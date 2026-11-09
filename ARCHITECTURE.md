@@ -1257,7 +1257,10 @@ slopes), so results are exact and every edit goes through the edit session.
   from the json: `"facesHolder"` (`[-1, 0, 0]` for a bow: its string) is the side that must face whoever holds it, and
   a hand turns it about its length so that side faces the chest as the character stands ready (`HoldFinder`: the way
   from the grip to the chest in its drawn idle, else its idle, measured on a hidden copy), so a bow's string faces the
-  archer, for the other hand to take, in either hand and whatever the stance; `"carried": "back"` (bows, as in Skyrim)
+  archer, for the other hand to take, in either hand and whatever the stance; `"alongArm"` straps it to the forearm
+  instead (shields: `"facesHolder": [0, 0, -1]`, their back, with `"alongArm"` the way from the handle up the arm), laid
+  once along the arm with that side to the hand, fixed to it as a strapped shield is (`HoldFinder.Strapped`, the left
+  grip being the right's mirror), not turned to the chest; `"carried": "back"` (bows, as in Skyrim)
   puts it, while weapons are away, across the back instead of in a hip sheath (`BackFinder`: from the other hip up to
   the shoulder of the hand that holds it, its middle at the chest bone's height on the farthest back the torso reaches
   in the idle, riding the chest bone, leaning on the back as a straight edge rests on it: `BackFinder.TryRest`, so a

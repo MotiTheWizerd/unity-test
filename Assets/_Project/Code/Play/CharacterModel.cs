@@ -337,9 +337,10 @@ namespace Forge.Play
         /// it <paramref name="sheathes"/> and is not <see cref="InHand"/>, where it is carried meanwhile: the hand's sheath
         /// at the hip, or across the back (<see cref="BackFinder"/>) when <paramref name="how"/> says so. A thing whose
         /// <paramref name="how"/> names a side that faces its holder (a bow's string) is turned about its length: in the
-        /// hand to face the chest, every frame, whatever pose the hand is in (<see cref="FaceHolders"/>); on the back it
-        /// lies flat, that side down across the back, standing just off it. False, and the look destroyed, when the model
-        /// has no such bone.
+        /// hand to face the chest, every frame, whatever pose the hand is in (<see cref="FaceHolders"/>), or, strapped to
+        /// the forearm (a shield), laid along it once with that side to the hand (<see cref="HoldFinder.Strapped"/>); on
+        /// the back it lies flat, that side down across the back, standing just off it. False, and the look destroyed,
+        /// when the model has no such bone.
         /// </summary>
         public bool Attach(GameObject look, Transform grip, string bone, bool sheathes = false, HeldLook how = null)
         {
@@ -363,6 +364,11 @@ namespace Forge.Play
                 FacesHolder = how != null ? how.FacesHolder : null,
                 InHandTurn = Quaternion.identity,
             };
+            if (how != null && how.AlongArm.HasValue && how.FacesHolder.HasValue && IsHand(id))
+            {
+                held.Strapped = true;
+                held.InHandTurn = HoldFinder.Strapped(how.FacesHolder.Value, how.AlongArm.Value, id == HumanBodyBones.RightHand);
+            }
             held.Reach = ExtentOf(held, Vector3.up);
             RemoveColliders(look);
             SetLayer(look.transform, Root.layer);
@@ -483,7 +489,7 @@ namespace Forge.Play
                 return;
             foreach (var held in _attached.Values)
             {
-                if (!held.FacesHolder.HasValue || held.OnBack || !IsHand(held.Bone) || (held.Sheathes && !_inHand))
+                if (!held.FacesHolder.HasValue || held.Strapped || held.OnBack || !IsHand(held.Bone) || (held.Sheathes && !_inHand))
                     continue;
                 var point = _points[held.Bone];
                 var toward = Quaternion.Inverse(point.rotation) * (chest.position - point.position);
@@ -600,8 +606,10 @@ namespace Forge.Play
             public float Reach;
 
             // The side that faces its holder (a bow's string), in the grip's frame; and the turn about its length that
-            // brings it round to the body in the hand.
+            // brings it round to the body in the hand, or, strapped to the forearm (a shield), the one turn that lays it
+            // along the arm, that side to the hand.
             public Vector3? FacesHolder;
+            public bool Strapped;
             public Quaternion InHandTurn;
 
             // Whether it is on the back now, and how thick it lies there (meters).

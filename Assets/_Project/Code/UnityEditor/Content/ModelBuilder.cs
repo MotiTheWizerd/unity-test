@@ -23,8 +23,8 @@ namespace Forge.UnityEditor.Content
     /// (<c>{ "rest": [90, 0, 0] }</c>: a sword modelled point up, as a hand holds it, lies flat with its point to the
     /// front), with its lowest point on the prefab's pivot and its footprint centred on it, as every asset's pivot is. The
     /// model inside keeps its own pivot (a weapon's grip) for whatever holds it later, and, when the json has a
-    /// "facesHolder" (<c>[-1, 0, 0]</c>: a bow, whose string must face the archer) or a "carried" (<c>"back"</c>), a
-    /// <see cref="HeldLook"/> saying so. The prefab is listed in the prefab
+    /// "facesHolder" (<c>[-1, 0, 0]</c>: a bow, whose string must face the archer), an "alongArm" (<c>[1, 0, 0]</c>: a
+    /// shield, strapped to the forearm) or a "carried" (<c>"back"</c>), a <see cref="HeldLook"/> saying so. The prefab is listed in the prefab
     /// catalog under <see cref="ModelImport.KeyFor"/>. Existing assets are updated in place, so their GUIDs, and every
     /// reference to them, survive a rebuild.
     /// </summary>
@@ -72,8 +72,8 @@ namespace Forge.UnityEditor.Content
                 var instance = (GameObject)PrefabUtility.InstantiatePrefab(model, scene);
                 instance.transform.SetParent(root.transform, false);
                 instance.transform.localRotation = Quaternion.Euler(settings.Resting);
-                if (settings.FacesHolder.HasValue || settings.Carried != CarriedAt.Hip)
-                    root.AddComponent<HeldLook>().Configure(settings.FacesHolder, settings.Carried);
+                if (settings.FacesHolder.HasValue || settings.AlongArm.HasValue || settings.Carried != CarriedAt.Hip)
+                    root.AddComponent<HeldLook>().Configure(settings.FacesHolder, settings.Carried, settings.AlongArm);
 
                 foreach (var renderer in instance.GetComponentsInChildren<Renderer>(true))
                 {
@@ -98,18 +98,24 @@ namespace Forge.UnityEditor.Content
 
         // A model folder's optional {Name}.json: how the model rests in the world ("rest", degrees in Unity order: Z, then
         // X, then Y); the side of it that faces whoever holds it ("facesHolder", a direction in the model's own frame: a
-        // bow's string, [-1, 0, 0]), none when any side may; where it is carried while put away ("carried": "hip", the
-        // default, or "back": a bow) (<see cref="HeldLook"/>). "cutout": its base colour's alpha cuts it out, seen from
-        // both sides (leaves, grass, a thatch's fringe); "cutoutParts" names the parts that are ([ "Sails" ]), and
-        // "transparentParts" the parts seen through by their base colour's alpha (a lantern's glass).
+        // bow's string, [-1, 0, 0]), none when any side may; the way from its grip up the forearm it is strapped to
+        // ("alongArm", in the model's own frame: a shield's middle, its back the side facing its holder), none when the
+        // hand alone holds it; where it is carried while put away ("carried": "hip", the default, or "back": a bow)
+        // (<see cref="HeldLook"/>). "cutout": its base colour's alpha cuts it out, seen from both sides (leaves, grass, a
+        // thatch's fringe); "cutoutParts" names the parts that are ([ "Sails" ]), and "transparentParts" the parts seen
+        // through by their base colour's alpha (a lantern's glass).
         static Settings SettingsOf(string folder, string name)
         {
             var path = $"{folder}/{name}.json";
             if (!File.Exists(path))
-                return new Settings(Vector3.zero, null, CarriedAt.Hip, false, new string[0], new string[0]);
+                return new Settings(Vector3.zero, null, null, CarriedAt.Hip, false, new string[0], new string[0]);
 
             var settings = JsonUtility.FromJson<ModelSettings>(File.ReadAllText(path));
-            return new Settings(Triple(path, "rest", settings?.rest) ?? Vector3.zero, Triple(path, "facesHolder", settings?.facesHolder),
+            var facesHolder = Triple(path, "facesHolder", settings?.facesHolder);
+            var alongArm = Triple(path, "alongArm", settings?.alongArm);
+            if (alongArm.HasValue && !facesHolder.HasValue)
+                throw new System.InvalidOperationException($"{path}: \"alongArm\" needs a \"facesHolder\", the side strapped to the hand.");
+            return new Settings(Triple(path, "rest", settings?.rest) ?? Vector3.zero, facesHolder, alongArm,
                 Carried(path, settings?.carried), settings?.cutout ?? false, settings?.cutoutParts ?? new string[0],
                 settings?.transparentParts ?? new string[0]);
         }
@@ -118,15 +124,18 @@ namespace Forge.UnityEditor.Content
         {
             public readonly Vector3 Resting;
             public readonly Vector3? FacesHolder;
+            public readonly Vector3? AlongArm;
             public readonly CarriedAt Carried;
             readonly bool _cutout;
             readonly string[] _cutoutParts;
             readonly string[] _transparentParts;
 
-            public Settings(Vector3 resting, Vector3? facesHolder, CarriedAt carried, bool cutout, string[] cutoutParts, string[] transparentParts)
+            public Settings(Vector3 resting, Vector3? facesHolder, Vector3? alongArm, CarriedAt carried, bool cutout, string[] cutoutParts,
+                string[] transparentParts)
             {
                 Resting = resting;
                 FacesHolder = facesHolder;
+                AlongArm = alongArm;
                 Carried = carried;
                 _cutout = cutout;
                 _cutoutParts = cutoutParts;
@@ -185,6 +194,7 @@ namespace Forge.UnityEditor.Content
         {
             public float[] rest;
             public float[] facesHolder;
+            public float[] alongArm;
             public string carried;
             public bool cutout;
             public string[] cutoutParts;
