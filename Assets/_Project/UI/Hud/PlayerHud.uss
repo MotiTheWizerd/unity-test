@@ -32,11 +32,23 @@
     align-items: center;
 }
 
-/* The middle of the view: faint, and lit while something in sight can be used. */
+/*
+ * The middle of the view (Forge.Play.Hud.Crosshair): a point everything centres on. Its dot is faint, and lit while
+ * something in sight can be used. While a bow is drawn, four ticks round it make a target cross; the code sets only how
+ * far out they sit (closing in with the pull), and at full draw they light up.
+ */
 .forge-hud-crosshair {
     position: absolute;
     left: 50%;
     top: 50%;
+    width: 0;
+    height: 0;
+}
+
+.forge-hud-crosshair__dot {
+    position: absolute;
+    left: 0;
+    top: 0;
     width: 4px;
     height: 4px;
     translate: -50% -50%;
@@ -44,8 +56,56 @@
     background-color: rgba(255, 255, 255, 0.45);
 }
 
-.forge-hud-crosshair--on {
+.forge-hud-crosshair--on .forge-hud-crosshair__dot,
+.forge-hud-crosshair--aim .forge-hud-crosshair__dot {
     background-color: var(--forge-hud-text);
+}
+
+.forge-hud-crosshair__tick {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 0;
+    border-width: 1px;
+    border-color: var(--forge-hud-shadow);
+    background-color: rgba(244, 238, 226, 0.75);
+}
+
+.forge-hud-crosshair--aim .forge-hud-crosshair__tick {
+    display: flex;
+}
+
+.forge-hud-crosshair--full .forge-hud-crosshair__tick {
+    background-color: var(--forge-hud-text);
+}
+
+/* Each tick reaches outward from where the code puts it: up and down are tall, left and right wide. */
+.forge-hud-crosshair__tick--up,
+.forge-hud-crosshair__tick--down {
+    width: 4px;
+    height: 11px;
+}
+
+.forge-hud-crosshair__tick--left,
+.forge-hud-crosshair__tick--right {
+    width: 11px;
+    height: 4px;
+}
+
+.forge-hud-crosshair__tick--up {
+    translate: -50% -100%;
+}
+
+.forge-hud-crosshair__tick--down {
+    translate: -50% 0;
+}
+
+.forge-hud-crosshair__tick--left {
+    translate: -100% -50%;
+}
+
+.forge-hud-crosshair__tick--right {
+    translate: 0 -50%;
 }
 
 /* The use key's prompt, under the middle of the view: the name, the key and what it does, a line about it. */
@@ -153,6 +213,40 @@
 
 .forge-hud-target .forge-hud-bar {
     width: 300px;
+}
+
+/* What the drawn bow has left to shoot, at the bottom right: the arrows' name, then how many; marked when none. */
+.forge-hud-ammo {
+    position: absolute;
+    right: 40px;
+    bottom: 26px;
+    flex-direction: row;
+    align-items: center;
+}
+
+.forge-hud-ammo Label {
+    margin: 0;
+    padding: 0;
+    color: var(--forge-hud-text);
+    text-shadow: 1px 1px 3px var(--forge-hud-shadow);
+}
+
+.forge-hud-ammo Label.forge-hud-ammo__name {
+    margin-right: 10px;
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: var(--forge-hud-text-muted);
+}
+
+.forge-hud-ammo__count {
+    min-width: 28px;
+    font-size: 22px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-right;
+}
+
+.forge-hud-ammo--empty Label.forge-hud-ammo__count {
+    color: var(--forge-hud-health);
 }
 
 /* Too little for a move: the frame lights up while the flash blinks on. */

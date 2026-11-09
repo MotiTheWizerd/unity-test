@@ -107,6 +107,24 @@ namespace Forge.Game.Combat
             }
         }
 
+        /// <summary>
+        /// How far a weapon that shoots is drawn while its attack is held: 0 with none held (or the arrow not yet on the
+        /// string) to 1 at full draw (<see cref="Swing.Pull"/>); 0 again once let go.
+        /// </summary>
+        public float DrawPull
+        {
+            get
+            {
+                foreach (var swing in _swings)
+                {
+                    if (swing.Shoots && swing.Holding)
+                        return swing.Pull;
+                }
+
+                return 0f;
+            }
+        }
+
         /// <summary>A swing began, for the look.</summary>
         public event Action<Swing> SwingStarted;
 

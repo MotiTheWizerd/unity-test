@@ -119,6 +119,13 @@ namespace Forge.Play
         [SerializeField, Min(0f), Tooltip("...up to this many meters a second.")]
         float _throwSpeed = 12f;
 
+        [Header("Archery")]
+        [SerializeField, Min(1f), Tooltip("How many times nearer the view is at a bow's full draw (1: no zoom); it closes in as the string is pulled.")]
+        float _fullDrawZoom = 1.2f;
+
+        [SerializeField, Min(0f), Tooltip("Seconds the draw's zoom takes to come most of the way in, and back out once the arrow is loosed.")]
+        float _drawZoomEase = 0.15f;
+
         [Header("Controls")]
         [SerializeField, Tooltip("The input actions; the player reads its map (Settings/InputSystem_Actions).")]
         InputActionAsset _controls;
@@ -155,6 +162,9 @@ namespace Forge.Play
 
         /// <summary>How the player grabs, carries and throws loose things.</summary>
         public CarrySettings Carry() => new CarrySettings(_reach, _aimRadius, _holdDistance, _mostCarriedMass, _throwImpulse, _throwSpeed);
+
+        /// <summary>How the view closes in as a bow is drawn.</summary>
+        public DrawZoom DrawZoom() => new DrawZoom(_fullDrawZoom, _drawZoomEase);
 
         public InputActionAsset Controls => _controls;
 

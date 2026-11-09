@@ -13,20 +13,19 @@ namespace Forge.Play.Hud
     /// <summary>
     /// The player's HUD while playing, as Skyrim's: magicka, health and stamina bars along the bottom (PlayerHud.uss),
     /// each shown while not full and for a moment after it changes, then faded (<see cref="BarFade"/>), and a dot in the
-    /// middle of the view with the use key's prompt under it (<see cref="InteractionPrompt"/>, from the player's
+    /// middle of the view (<see cref="Crosshair"/>, a target cross while a bow is drawn) with the use key's prompt under it (<see cref="InteractionPrompt"/>, from the player's
     /// <see cref="PlayerSession.Focus"/>). The bars read the player's numbers as they change
     /// (<see cref="ActorAttributes.Changed"/>); what happens to the player comes from the game's stream: the stamina bar
     /// blinks when the player is exhausted (<see cref="ActorExhausted"/>) and a bar blinks when it held too little for a
     /// move (<see cref="ActorShortOf"/>). Whoever the player's blows land on shows its health at the top
-    /// (<see cref="TargetHealth"/>, on <see cref="HitLanded"/>). It follows whichever player the <see cref="PlayerSession"/> has, so whatever
+    /// (<see cref="TargetHealth"/>, on <see cref="HitLanded"/>), and while a bow is out, what it has left to shoot shows at
+    /// the bottom right (<see cref="AmmoCounter"/>). It follows whichever player the <see cref="PlayerSession"/> has, so whatever
     /// plays the world (the editor's play, the game later) hosts it the same.
     /// </summary>
     public sealed class PlayerHud : IDisposable
     {
         public const string UssClass = "forge-hud";
         public const string BarsClass = UssClass + "-bars";
-        public const string CrosshairClass = UssClass + "-crosshair";
-        public const string CrosshairOnClass = CrosshairClass + "--on";
 
         sealed class Bar
         {
@@ -46,9 +45,10 @@ namespace Forge.Play.Hud
         readonly PlayerSession _session;
         readonly VisualElement _root;
         readonly VisualElement _barRow;
-        readonly VisualElement _crosshair;
+        readonly Crosshair _crosshair;
         readonly InteractionPrompt _prompt;
         readonly TargetHealth _target;
+        readonly AmmoCounter _ammo;
         readonly List<Bar> _bars = new List<Bar>();
         readonly IDisposable[] _subscriptions;
         ActorAttributes _attributes;
@@ -71,14 +71,15 @@ namespace Forge.Play.Hud
                 _barRow.Add(bar.View);
             }
 
-            _crosshair = new VisualElement { pickingMode = PickingMode.Ignore };
-            _crosshair.AddToClassList(CrosshairClass);
+            _crosshair = new Crosshair();
             _prompt = new InteractionPrompt();
             _target = new TargetHealth();
+            _ammo = new AmmoCounter();
             _root.Add(_barRow);
             _root.Add(_crosshair);
             _root.Add(_prompt);
             _root.Add(_target);
+            _root.Add(_ammo);
 
             parent.Add(_root);
             _root.style.display = DisplayStyle.None;
@@ -102,8 +103,12 @@ namespace Forge.Play.Hud
             _root.style.display = player != null && !_session.InventoryOpen ? DisplayStyle.Flex : DisplayStyle.None;
             var offer = _session.Focus?.Offer;
             _prompt.Show(offer, _session.InteractKey);
-            _crosshair.EnableInClassList(CrosshairOnClass, offer != null);
+            var combat = _session.Combat;
+            _crosshair.Draw(offer != null, combat != null && combat.Aiming, combat?.DrawPull ?? 0f);
             _target.Tick(_session.Combatants, deltaTime);
+            _ammo.Show(_session.Readiness != null
+                ? AmmoCount.Of(_session.Equipment, _session.Inventory, _session.Readiness, _session.World)
+                : AmmoCount.Hidden);
 
             var attributes = player != null ? player.Attributes : null;
             Bind(attributes);

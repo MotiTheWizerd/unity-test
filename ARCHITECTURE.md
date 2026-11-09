@@ -868,10 +868,13 @@ where it came from.
   Skyrim's magicka, health and stamina bars along the bottom (`AttributeBar`, styled by UI/Hud/PlayerHud.uss, imported
   by the runtime theme; a bar's kind is a style class, so a mod's bar is a style and one layout entry). `BarFade`
   (Game.Hud, engine-free) decides when each shows: while not full, then 2.5 s after it fills or changes, then a fade;
-  the stream's `ActorExhausted` and `ActorShortOf` make a bar blink. A dot marks the middle of the view, lit while
-  something in sight can be used, and the use key's prompt sits under it (`InteractionPrompt`: the name, the key and
-  the verb, the detail line; from the player's focus, redrawn only when the offer changes). It follows whichever player
-  the session has, rebinding on a new spawn.
+  the stream's `ActorExhausted` and `ActorShortOf` make a bar blink. A dot marks the middle of the view (`Crosshair`),
+  lit while something in sight can be used; while a bow is drawn four ticks round it make a target cross, closing in
+  with `ActorCombat.DrawPull` and lit at full draw (the code sets only their spread, the USS their look), and the use key's prompt sits under it (`InteractionPrompt`: the name, the key and
+  the verb, the detail line; from the player's focus, redrawn only when the offer changes). While a bow is drawing or
+  drawn, what it shoots and how many are carried sit at the bottom right (`AmmoCounter`; `AmmoCount`, Game.Hud,
+  engine-free: the equipped ammo's name and count, or the ammo slot's name and 0, marked red). It follows whichever
+  player the session has, rebinding on a new spawn.
 - **Live numbers are game state, not world data**: an actor's damage, own bases and timed effects belong to a save
   game, never to a plugin; modifiers from equipment are rebuilt from what is worn, so each fact lives in one place.
 
@@ -1010,7 +1013,9 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
     the hands meet, full where they are farthest apart after), action states have a per-layer pace so
     `HumanoidAnimation.Hold` / `Resume` freeze the draw; `ShotView` lays the arrow (`ArrowLook`: an arrow's model points
     +Y) from the drawing hand to the bow and turns the upper body so the draw points at what the view's centre meets
-    (`ArcheryAim`); `PlayerCharacter.Aiming` turns the body to the look meanwhile. `ArrowFlights` flies what is loosed,
+    (`ArcheryAim`); `PlayerCharacter.Aiming` turns the body to the look meanwhile, and the view closes in with the pull
+    (`ActorCombat.DrawPull` → `DrawZoom`, Game.Cameras: up to the profile's full-draw zoom, 1.2×, eased; the
+    `CameraDirector` narrows the lens's field of view by it and gives it back). `ArrowFlights` flies what is loosed,
     swept by rays, pushes a loose thing it strikes (its whole momentum, the ammo's mass times its speed, at the point
     struck), and hands what sticks to `ShotLandings` (`ArrowFlights.Landing`, with the loose thing it is in): it breaks
     as often as its `AmmoPart.BreakChance` says, else it stays there as the item it is (`WorldChanges.Place`), takeable

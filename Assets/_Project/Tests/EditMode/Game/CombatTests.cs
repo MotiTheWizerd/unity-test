@@ -326,6 +326,35 @@ namespace Forge.Tests.Game
         }
 
         [Test]
+        public void TheDrawPull_RisesWithTheString_AndDropsOnceLetGo()
+        {
+            ReadyBow(5);
+            Assert.That(_combat.DrawPull, Is.Zero, "Nothing drawn.");
+            _combat.TryAttack(CoreEquipSlots.RightHand);
+
+            _combat.Tick(0.4f);
+            Assert.That(_combat.DrawPull, Is.Zero, "The arrow not yet on the string.");
+            _combat.Tick(0.35f);
+            Assert.That(_combat.DrawPull, Is.EqualTo(0.5f).Within(1e-4f));
+            _combat.Tick(2f);
+            Assert.That(_combat.DrawPull, Is.EqualTo(1f), "Held at full draw.");
+
+            _combat.Release(CoreEquipSlots.RightHand);
+            Assert.That(_combat.DrawPull, Is.Zero, "Loosed.");
+        }
+
+        [Test]
+        public void ASwordsSwing_IsNoDraw()
+        {
+            Hold(Sword);
+            Draw();
+            _combat.TryAttack(CoreEquipSlots.RightHand);
+            _combat.Tick(0.5f);
+
+            Assert.That(_combat.DrawPull, Is.Zero);
+        }
+
+        [Test]
         public void LettingGo_AtFullDraw_LoosesOneArrow_AtFullPower_AndItStrikesOnce()
         {
             var shots = ReadyBow(5);

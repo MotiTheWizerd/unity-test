@@ -22,7 +22,7 @@ namespace Forge.Play
     /// The player while the world is played, all built from one <see cref="PlayerProfile"/>: its body
     /// (<see cref="CharacterControllerMotor"/>), its look (<see cref="PlayerAvatar"/>), its controls, its rules
     /// (<see cref="PlayerCharacter"/>), its camera (first or third person, <see cref="ViewSwitch"/>, put in place by the
-    /// <see cref="CameraDirector"/>), what it has in sight (<see cref="Focus"/>) and what it carries
+    /// <see cref="CameraDirector"/>, closing in as a bow is drawn, <see cref="DrawZoom"/>), what it has in sight (<see cref="Focus"/>) and what it carries
     /// (<see cref="Inventory"/>, weighed against its carry weight by <see cref="Burden"/>). <see cref="Spawn"/> stands it
     /// somewhere, takes the camera and captures the mouse; <see cref="Despawn"/> takes it all away again. The inventory's
     /// key opens and closes the inventory (<see cref="InventoryOpen"/>): while it is open the mouse is free for the
@@ -35,6 +35,7 @@ namespace Forge.Play
         readonly PlayerProfile _profile;
         readonly PlayerControls _controls;
         readonly CameraDirector _director;
+        readonly DrawZoom _zoom;
         readonly PhysicsInteractionProbe _probe;
         CharacterControllerMotor _motor;
         PlayerAvatar _avatar;
@@ -74,6 +75,7 @@ namespace Forge.Play
                 new ThirdPersonCamera(profile.ThirdPerson(), new PhysicsCameraObstacles()),
                 profile.StartInThirdPerson);
             _director = new CameraDirector(camera, Views.Current);
+            _zoom = profile.DrawZoom();
             _probe = new PhysicsInteractionProbe(profile.AimRadius);
             Equipment = new ActorEquipment(ActorId.Player, Inventory, events);
         }
@@ -254,6 +256,8 @@ namespace Forge.Play
                 Combat.Release(CoreEquipSlots.LeftHand);
             Combat.Tick(deltaTime);
             _arrows?.Tick(deltaTime);
+            _zoom.Tick(Combat.DrawPull, deltaTime);
+            _director.Magnification = _zoom.Magnification;
             Player.Aiming = Combat.Aiming;
             Player.Tick(commands, deltaTime);
             Frame(deltaTime);
@@ -327,6 +331,7 @@ namespace Forge.Play
             Combat = null;
             _combatants.Remove(ActorId.Player);
             Views.FirstPerson.Head = null;
+            _zoom.Reset();
             _director.Release();
             _avatar?.Dispose();
             _avatar = null;
