@@ -1,9 +1,19 @@
 # Animations
 
-Each folder is a move set; each file in it is one move (`Idle`, `Walk`, `Run`, `Jump`, ...; with weapons drawn
-`DrawnIdle`, `DrawnWalk`, `DrawnRun`, `DrawnSprint`, each falling back to its plain move; `Draw` and `Sheathe` on the arms). `Humanoid/` is the base set,
-played by every character unless its `<Name>.json` names another; *Forge → Characters → Build Characters* builds each
-set's controller.
+Each top folder is a move set; each file in it is one move, named after it (a name of its own in the set), in the
+folder that says what it is:
+
+```
+Humanoid/
+  Locomotion/        Idle Walk Run Sprint, and with weapons drawn DrawnIdle DrawnWalk DrawnRun DrawnSprint
+  Air/               Jump Fall Land
+  Styles/<Style>/    a combat style's moves: its stance <Style>Idle, its draw and sheathe (on the arms), its blows
+  <Other>/           more actions (Interact, Emotes, ...)
+  _Built/            made by the builder: the controller and its masks; don't put clips here
+```
+
+`Humanoid/` is the base set, played by every character unless its `<Name>.json` names another;
+*Forge → Characters → Build Characters* builds each set's controller.
 
 | Move | Source | Made by |
 |------|--------|---------|

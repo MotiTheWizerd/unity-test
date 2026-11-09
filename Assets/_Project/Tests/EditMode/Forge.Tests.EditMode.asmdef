@@ -12,7 +12,8 @@
         "Forge.Streaming",
         "Forge.World",
         "Forge.Game",
-        "Forge.Play"
+        "Forge.Play",
+        "Forge.UnityEditor"
     ],
     "includePlatforms": [
         "Editor"

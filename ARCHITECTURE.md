@@ -783,13 +783,17 @@ from any camera, so both cameras read the same player.
   stands in its animation's first frame), with an `Animator` on the avatar, no root motion (the body moves it) and
   culled transforms off screen. A new character is a folder dropped in and a rebuild. The models and textures are plain
   git objects (`.gitattributes`), as the ground's are.
-- **Animations** (`Content/Animations/<Set>/<Move>.fbx`): one Mixamo clip per move (FBX for Unity, 30 fps, without
-  skin, travel left in), named after its move (`HumanoidMoves`: ground moves Idle, Walk, Run, Sprint blended by speed;
-  Jump, Fall, Land in the air). `AnimationImport` imports each as a humanoid clip read against one T-posed Mixamo
+- **Animations** (`Content/Animations/<Set>/<Folder>/<Move>.fbx`): one Mixamo clip per move (FBX for Unity, 30 fps,
+  without skin, travel left in), named after its move, a name of its own across the set, and sorted by what it is: the
+  folder says (`HumanoidMoves.RoleOf` → `MoveRole`): `Locomotion/` the ground moves (Idle, Walk, Run, Sprint blended
+  by speed, and their `Drawn…` versions), `Air/` Jump, Fall, Land, `Styles/<Style>/` a combat style's moves (its
+  `{Style}Idle` its stance, the rest actions), any other folder (Interact, Emotes, later) actions; `_Built/` holds what
+  the builder makes (the controller, its masks). A clip in no folder, a ground or air move out of its folder, or a
+  second move of one name is left out of the build with a warning. `AnimationImport` imports each as a humanoid clip read against one T-posed Mixamo
   skeleton (`ReferenceRig`, the hero's today: a skinless file has no rest pose and Unity would take its first frame,
   mid-stride, for one, turning the legs out), loops the repeating moves, bakes turning into the pose and keeps travel as
   root motion, which the body ignores but which gives each clip's own speed; a jump's rise is left out of its pose (the
-  body's rise shows it). *Build Characters* first builds each **move set**'s `<Set>.controller` (`HumanoidAnimatorBuilder`):
+  body's rise shows it). *Build Characters* first builds each **move set**'s `_Built/<Set>.controller` (`HumanoidAnimatorBuilder`):
   `Humanoid` is the base every character plays, and another set (a guard's, an elder's) holds only the moves it
   changes, the rest coming from the base; a whole controller per set rather than an override, since its clips walk at
   their own speeds. A character plays the set its optional `<Name>.json` names (`{ "moves": "Guard" }`). Each is built
@@ -797,13 +801,13 @@ from any camera, so both cameras read the same player.
   up, a fall when it drops past 3 m/s, a landing when it touches down, each optional. With any drawn ground move
   (`DrawnIdle`, `DrawnWalk`, `DrawnRun`, `DrawnSprint`) a second ground state plays while `Drawn`, each missing drawn
   move falling back to its plain one. A combat style can name a **stance** (`CombatMoveKind.Stance`; Archery's
-  `BowIdle`, Mixamo Standing Idle 01, the bow held low, side-on as its draw ends): any `{Style}Idle` clip
-  (`HumanoidMoves.IsStance`) gets its own drawn ground state, the same moves standing in it, entered while `Drawn` and
+  `BowIdle`, Mixamo Standing Idle 01, the bow held low, side-on as its draw ends): any `Styles/<Style>/{Style}Idle`
+  clip (`MoveRole.Stance`) gets its own drawn ground state, the same moves standing in it, entered while `Drawn` and
   the int `Stance` holds its key (`HumanoidAnimation.StanceKey`, from its name, so builder and player agree; 0: the
-  set's own drawn moves); `WeaponReadiness.StanceAnimation` names it. Every other clip is an **action** (`HumanoidMoves.IsAction`: `Draw`, `Sheathe`,
+  set's own drawn moves); `WeaponReadiness.StanceAnimation` names it. Every other clip is an **action** (`Draw`, `Sheathe`,
   a combat style's `SwordSlash`), played on a trigger named after it over whatever the legs do: a draw or a sheathe
-  on an **Arms** layer (`<Set> Arms.mask`: arms and fingers, `HumanoidMoves.ArmsOnly`), anything else on an **Upper
-  Body** layer (`<Set> Upper Body.mask`: also the body and head, so the torso turns into a cut). `HumanoidAnimation.Play`
+  on an **Arms** layer (`MoveRole.ArmsAction`, by its name's ending; `<Set> Arms.mask`: arms and fingers), anything
+  else on an **Upper Body** layer (`MoveRole.UpperBodyAction`; `<Set> Upper Body.mask`: also the body and head, so the torso turns into a cut). `HumanoidAnimation.Play`
   finds the layer holding the action and weighs it in for as long as the clip lasts: in as it starts, out by its end.
   The layer's own states change at once (no crossfade into its empty rest state, which would pull the limbs toward the
   rig's neutral pose). A draw and a put-away are moves of the weapon's combat style (`CombatMoveKind.Draw`/`Sheathe`:

@@ -11,7 +11,7 @@ namespace Forge.UnityEditor.Content
     /// The clip never turns the body it plays on (its turn is baked into the pose); its travel stays root motion, which
     /// the player ignores (its body moves itself) but which tells how fast the clip walks. Its rise and fall stay in the
     /// pose (a stride's bob), except a jump's, which the body's own rise already shows. Whether a clip loops or lifts is
-    /// its move's (<see cref="HumanoidMoves"/>).
+    /// its move's, by the folder it sits in (<see cref="HumanoidMoves.RoleOf"/>).
     /// </summary>
     sealed class AnimationImport : AssetPostprocessor
     {
@@ -58,8 +58,9 @@ namespace Forge.UnityEditor.Content
 
             var importer = (ModelImporter)assetImporter;
             var name = Path.GetFileNameWithoutExtension(assetPath);
-            var loops = HumanoidMoves.Loops(name);
-            var lifts = HumanoidMoves.Lifts(name);
+            var role = HumanoidMoves.RoleOf(InSet(assetPath));
+            var loops = role.HasValue && HumanoidMoves.Loops(role.Value, name);
+            var lifts = role.HasValue && HumanoidMoves.Lifts(role.Value, name);
             importer.clipAnimations = importer.defaultClipAnimations.Take(1).Select(clip =>
             {
                 clip.name = name;
@@ -72,6 +73,16 @@ namespace Forge.UnityEditor.Content
                 clip.lockRootPositionXZ = false;
                 return clip;
             }).ToArray();
+        }
+
+        /// <summary>Where <paramref name="assetPath"/> sits in its move set ("Styles/Archery/BowShot.fbx"); null outside the animations.</summary>
+        public static string InSet(string assetPath)
+        {
+            if (assetPath == null || !assetPath.StartsWith(AnimationsFolder + "/", System.StringComparison.Ordinal))
+                return null;
+            var inSets = assetPath.Substring(AnimationsFolder.Length + 1);
+            var slash = inSets.IndexOf('/');
+            return slash < 0 ? null : inSets.Substring(slash + 1);
         }
     }
 }

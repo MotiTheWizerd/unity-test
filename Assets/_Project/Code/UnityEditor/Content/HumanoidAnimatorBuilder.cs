@@ -10,9 +10,10 @@ namespace Forge.UnityEditor.Content
 {
     /// <summary>
     /// Builds an animator controller per move set. A set is a folder Content/Animations/{Set} of <see cref="HumanoidMoves"/>
-    /// clips ({Move}.fbx); <see cref="BaseSet"/> (Humanoid) is every character's default, and any other set (a guard's,
-    /// an elder's) holds only the moves it changes, the rest coming from the base. Each set's {Set}.controller is built
-    /// from its moves, so a clip dropped in joins at the next build:
+    /// clips ({Move}.fbx), sorted into folders by what they are (Locomotion, Air, Styles/{Style}, ...);
+    /// <see cref="BaseSet"/> (Humanoid) is every character's default, and any other set (a guard's, an elder's) holds only
+    /// the moves it changes, the rest coming from the base. Each set's _Built/{Set}.controller is built from its moves,
+    /// so a clip dropped in joins at the next build:
     /// <list type="bullet">
     /// <item>Ground: the ground moves blended by speed. Each clip sits at the speed it walks (its root motion), so the feet
     /// keep pace; past the fastest clip it plays faster (<see cref="HumanoidAnimation.Pace"/>).</item>
@@ -62,6 +63,7 @@ namespace Forge.UnityEditor.Content
         /// <summary>The set's controller, built from the clips present; null when there are no ground moves to build from.</summary>
         public static AnimatorController Build(string set)
         {
+            Indexes.Clear();
             var ground = HumanoidMoves.Ground.Select(move => (move, clip: Clip(set, move))).Where(m => m.clip != null).ToArray();
             if (ground.Length == 0)
             {
@@ -95,14 +97,14 @@ namespace Forge.UnityEditor.Content
         }
 
         // Weapons drawn: the drawn ground moves, each falling back to its plain one, when the set has any of them; and
-        // each stance (HumanoidMoves.IsStance), the same moves standing in it instead, entered while drawn and the Stance
+        // each stance (MoveRole.Stance), the same moves standing in it instead, entered while drawn and the Stance
         // parameter holds its key (HumanoidAnimation.StanceKey), else the set's own drawn moves (Stance 0).
         static void BuildDrawn(string set, AnimatorController controller, AnimatorStateMachine machine, AnimatorState moving,
             List<AnimatorState> grounds)
         {
             var drawn = HumanoidMoves.Ground.Select((move, i) => (move, clip: Clip(set, HumanoidMoves.DrawnGround[i]) ?? Clip(set, move)))
                 .Where(m => m.clip != null).ToArray();
-            var stances = Moves(set, HumanoidMoves.IsStance).Select(move => Clip(set, move)).Where(clip => clip != null).ToArray();
+            var stances = Moves(set, MoveRole.Stance).Select(move => Clip(set, move)).Where(clip => clip != null).ToArray();
             var ownDrawn = HumanoidMoves.DrawnGround.Any(move => Clip(set, move) != null);
             if (!ownDrawn && stances.Length == 0)
                 return;
@@ -181,18 +183,18 @@ namespace Forge.UnityEditor.Content
             return state;
         }
 
-        // The set's actions (HumanoidMoves.IsAction), each on a layer of its own body parts, which HumanoidAnimation
-        // weighs in while one plays: a draw or a sheathe on the arms (HumanoidMoves.ArmsOnly), so the body walks or runs
-        // on unchanged; any other (a slash) on the upper body, so the torso turns into it while the legs still walk.
-        // Each starts by a trigger named after it. A layer is left out when the set has no action for it.
+        // The set's actions, each on a layer of its own body parts, which HumanoidAnimation weighs in while one plays: a
+        // draw or a sheathe on the arms (MoveRole.ArmsAction), so the body walks or runs on unchanged; any other (a slash)
+        // on the upper body (MoveRole.UpperBodyAction), so the torso turns into it while the legs still walk. Each starts
+        // by a trigger named after it. A layer is left out when the set has no action for it.
         static void BuildActions(string set, AnimatorController controller)
         {
-            var actions = Moves(set, HumanoidMoves.IsAction).Select(move => Clip(set, move)).Where(clip => clip != null).ToArray();
-            BuildActionLayer(set, controller, HumanoidAnimation.ArmsLayer, ArmsParts,
-                actions.Where(clip => HumanoidMoves.ArmsOnly(clip.name)));
-            BuildActionLayer(set, controller, HumanoidAnimation.UpperBodyLayer, UpperBodyParts,
-                actions.Where(clip => !HumanoidMoves.ArmsOnly(clip.name)));
+            BuildActionLayer(set, controller, HumanoidAnimation.ArmsLayer, ArmsParts, Actions(set, MoveRole.ArmsAction));
+            BuildActionLayer(set, controller, HumanoidAnimation.UpperBodyLayer, UpperBodyParts, Actions(set, MoveRole.UpperBodyAction));
         }
+
+        static IEnumerable<AnimationClip> Actions(string set, MoveRole role) =>
+            Moves(set, role).Select(move => Clip(set, move)).Where(clip => clip != null);
 
         // A layer masked to parts, resting until a trigger starts one of its clips. The layer's weight does the
         // blending in and out (HumanoidAnimation), so its states change at once: a crossfade into the empty rest state
@@ -250,7 +252,7 @@ namespace Forge.UnityEditor.Content
         // The set's mask of a layer's parts, made once and kept (rebuilt in place) beside its controller.
         static AvatarMask Mask(string set, string layer, AvatarMaskBodyPart[] parts)
         {
-            var path = $"{SetFolder(set)}/{set} {layer}.mask";
+            var path = $"{BuiltFolder(set)}/{set} {layer}.mask";
             var mask = AssetDatabase.LoadAssetAtPath<AvatarMask>(path);
             if (mask == null)
             {
@@ -266,7 +268,16 @@ namespace Forge.UnityEditor.Content
 
         static string SetFolder(string set) => $"{AnimationImport.AnimationsFolder}/{set}";
 
-        static string ControllerPath(string set) => $"{SetFolder(set)}/{set}.controller";
+        static string ControllerPath(string set) => $"{BuiltFolder(set)}/{set}.controller";
+
+        // Where the set's built assets go (made when missing), apart from its clips.
+        static string BuiltFolder(string set)
+        {
+            var folder = $"{SetFolder(set)}/{HumanoidMoves.BuiltFolder}";
+            if (!AssetDatabase.IsValidFolder(folder))
+                AssetDatabase.CreateFolder(SetFolder(set), HumanoidMoves.BuiltFolder);
+            return folder;
+        }
 
         // From any ground state into the air; back down onto the plain ground, which goes on to the drawn one if drawn.
         static void BuildAir(string set, AnimatorStateMachine machine, AnimatorState moving, IReadOnlyList<AnimatorState> grounds)
@@ -346,14 +357,11 @@ namespace Forge.UnityEditor.Content
         // How fast the clip walks: its root motion over the ground, in the clips' own size.
         static float ClipSpeed(AnimationClip clip) => new Vector2(clip.averageSpeed.x, clip.averageSpeed.z).magnitude;
 
-        // The moves of the set that are of a kind (actions, stances): its own clips and the base set's, by name, each once.
-        static IEnumerable<string> Moves(string set, System.Func<string, bool> kind)
+        // The moves of the set in `role` (its stances, its arm actions): its own clips and the base set's, by name, each once.
+        static IEnumerable<string> Moves(string set, MoveRole role)
         {
-            var folders = set == BaseSet ? new[] { SetFolder(set) } : new[] { SetFolder(set), SetFolder(BaseSet) };
-            return folders.Where(Directory.Exists)
-                .SelectMany(folder => Directory.GetFiles(folder, "*.fbx", SearchOption.TopDirectoryOnly))
-                .Select(Path.GetFileNameWithoutExtension)
-                .Where(kind)
+            var sets = set == BaseSet ? new[] { set } : new[] { set, BaseSet };
+            return sets.SelectMany(s => Index(s).Where(m => m.Value.Role == role).Select(m => m.Key))
                 .Distinct(System.StringComparer.Ordinal)
                 .OrderBy(move => move, System.StringComparer.Ordinal);
         }
@@ -363,7 +371,57 @@ namespace Forge.UnityEditor.Content
             OwnClip(set, move) ?? (set == BaseSet ? null : OwnClip(BaseSet, move));
 
         static AnimationClip OwnClip(string set, string move) =>
-            AssetDatabase.LoadAllAssetsAtPath($"{SetFolder(set)}/{move}.fbx").OfType<AnimationClip>().FirstOrDefault(c => c.name == move);
+            Index(set).TryGetValue(move, out var found)
+                ? AssetDatabase.LoadAllAssetsAtPath(found.Path).OfType<AnimationClip>().FirstOrDefault(c => c.name == move)
+                : null;
+
+        // Each set's own moves by name, where each is and what it is (HumanoidMoves.RoleOf), read once per build.
+        static readonly Dictionary<string, Dictionary<string, (string Path, MoveRole Role)>> Indexes =
+            new Dictionary<string, Dictionary<string, (string Path, MoveRole Role)>>(System.StringComparer.Ordinal);
+
+        // The set's own moves: every clip in its folders, the ones it can't play left out, each said why.
+        static Dictionary<string, (string Path, MoveRole Role)> Index(string set)
+        {
+            if (Indexes.TryGetValue(set, out var index))
+                return index;
+            index = new Dictionary<string, (string Path, MoveRole Role)>(System.StringComparer.Ordinal);
+            Indexes.Add(set, index);
+            var folder = SetFolder(set);
+            if (!Directory.Exists(folder))
+                return index;
+
+            var files = Directory.GetFiles(folder, "*.fbx", SearchOption.AllDirectories)
+                .Select(file => file.Replace('\\', '/'))
+                .OrderBy(file => file, System.StringComparer.Ordinal);
+            foreach (var file in files)
+            {
+                var move = HumanoidMoves.MoveName(file);
+                var role = HumanoidMoves.RoleOf(file.Substring(folder.Length + 1));
+                if (role == null)
+                {
+                    Debug.LogWarning($"[Forge] {file} is in no move folder of {set} ({HumanoidMoves.LocomotionFolder}, " +
+                        $"{HumanoidMoves.AirFolder}, {HumanoidMoves.StylesFolder}/<Style>, or one for actions); left out.");
+                    continue;
+                }
+
+                var belongs = HumanoidMoves.Misplaced(move, role.Value);
+                if (belongs != null)
+                {
+                    Debug.LogWarning($"[Forge] {file}: {move} belongs in {set}/{belongs}; left out.");
+                    continue;
+                }
+
+                if (index.TryGetValue(move, out var first))
+                {
+                    Debug.LogWarning($"[Forge] {set} has two moves named {move} ({first.Path}, {file}); a move's name is its own. The second is left out.");
+                    continue;
+                }
+
+                index.Add(move, (file, role.Value));
+            }
+
+            return index;
+        }
 
         // Empties the controller for a rebuild: its parameters, its layers past the first, its states and the blend trees they played.
         static void Clear(AnimatorController controller, string path)
