@@ -946,6 +946,30 @@ running game (the editor's play from here owns one today; the game app will own 
 - Lookups are an array read per event type (each type gets a small index once), listener lists are copied on change,
   queues keep their capacity: no allocation in steady play. Not thread-safe; it belongs to the game's loop.
 
+## Character modes (Forge.Game.Actors)
+
+What an actor is up to, the player's or anyone's, is one fact (`Mode`: `Normal`, `Fight`; alert, fleeing and the
+like to come, one each) decided by engine-free rules and told on the stream. Its animation, its behaviour and the
+music are listeners to that fact, never the fact itself, so each joins or changes alone.
+
+- **`ActorModes`**: one table per game (`GameSession.Modes`), every actor a row by `ActorId`, the player and the
+  world's characters alike. A mode is a fact with a reason: an actor is in `Fight` *against someone*
+  (`Fight(actor, opponent)`, `OpponentsOf`, `Fights`), one way (the opponent fights back when its own cause says so),
+  and stays so until each opponent is `Settle`d and then `CoolOff` seconds more (5, as Skyrim's combat ends a while
+  after the last foe, so the music needn't stop on the blow; a fight joined meanwhile calls the cool-off off, without
+  a change). `Fallen(actor)` ends the fallen one's own fight at once and settles everyone with it. Everyone is `Normal`
+  until something happens, and again when the game ends (`Clear`). Each change is one `ModeChanged(actor, from, to)`
+  on the stream; `Tick` runs the cool-offs.
+- **Causes** bind beside the table, each reading the stream for what it knows: `FightCauses` (Game.Combat) has a blow
+  that lands or is blocked (`HitLanded`, `HitBlocked`) put both in `Fight` against each other, and a death
+  (`ActorKilled`) settle everyone with the fallen. **Hitting someone starts a fight; drawing a weapon never does**
+  (Moti's call: walking with a sword out is not a fight), and swinging at air starts nothing. A foe that sees you, a
+  crime, a faction's grudge will be causes of their own.
+- **Listeners** (to come): the music crossfades on the player's `ModeChanged`; a character's mind branches on its
+  mode (`Fight`: face the opponent, draw, strike; `Normal`: its day); Skyrim's slower regen in a fight is an
+  `AttributeModifier` under a `ModifierSource` added and removed with it. Until one exists, `GameSession` logs each
+  change to the console.
+
 ## Sound (Forge.Play.Sound)
 
 The rules never play a sound; they only say what happened, and the sound layer hears it. The same happenings will

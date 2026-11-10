@@ -46,6 +46,8 @@ namespace Forge.Play
         readonly ShotLandings _landings;
         readonly SoundDirector _director;
         readonly SoundListener _listener;
+        readonly IDisposable _fightCauses;
+        readonly IDisposable _modeTrace;
 
         /// <param name="camera">The camera the player sees through while playing, which the game's ears turn with (<see cref="SoundListener"/>).</param>
         /// <param name="view">The scene's world, which shows what playing changed.</param>
@@ -61,6 +63,10 @@ namespace Forge.Play
             Changes = new WorldChanges();
             Combatants = new Combatants();
             PlacedActors = new PlacedActors(Combatants);
+            Modes = new ActorModes(Events);
+            _fightCauses = FightCauses.Bind(Modes, Events);
+            // Until something is built on the modes (the music, the world's characters' minds), the console says.
+            _modeTrace = Events.Subscribe<ModeChanged>(e => Debug.Log($"[Forge] {e.Actor} is in {e.To} mode (was {e.From})."));
             // Silent or not, the scene has its ears (Unity wants one listener), at the camera until the player plays.
             _listener = new SoundListener(camera);
             if (sound != null)
@@ -100,6 +106,9 @@ namespace Forge.Play
         /// <summary>The world's placed actors (a training dummy) as combatants, by their placed objects.</summary>
         public PlacedActors PlacedActors { get; }
 
+        /// <summary>What every actor is up to (at ease, fighting whom), the player's too; a blow starts a fight (<see cref="FightCauses"/>).</summary>
+        public ActorModes Modes { get; }
+
         /// <summary>What actors can do with the use key, in order.</summary>
         public Interactions Interactions { get; }
 
@@ -132,6 +141,7 @@ namespace Forge.Play
         public void Tick(float deltaTime)
         {
             Player.Tick(deltaTime);
+            Modes.Tick(deltaTime);
             _listener.HearFrom(Player.Player?.Eyes.ToUnity());
             Bodies?.Tick();
             Events.Flush();
@@ -221,6 +231,7 @@ namespace Forge.Play
             Bodies?.Dispose();
             Bodies = null;
             Player.Inventory.Clear();
+            Modes.Clear();
             Combatants.Clear();
             PlacedActors.Clear();
             Changes.Clear();
@@ -242,6 +253,8 @@ namespace Forge.Play
             Changes.Removed -= OnRemoved;
             Changes.Cleared -= _view.ShowAsBuilt;
             Player.Dispose();
+            _modeTrace.Dispose();
+            _fightCauses.Dispose();
             _director?.Dispose();
             Sounds?.Dispose();
             _listener.Dispose();
