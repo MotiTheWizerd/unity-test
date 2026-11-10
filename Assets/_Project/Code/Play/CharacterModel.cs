@@ -363,7 +363,7 @@ namespace Forge.Play
                 throw new ArgumentNullException(nameof(look));
             if (!Enum.TryParse(bone, out HumanBodyBones id) || !TryPoint(id, out _))
             {
-                UnityEngine.Object.Destroy(look);
+                Discard(look);
                 return false;
             }
 
@@ -400,7 +400,7 @@ namespace Forge.Play
             if (look == null || !_attached.TryGetValue(look, out var held))
                 return;
             _attached.Remove(look);
-            UnityEngine.Object.Destroy(look);
+            Discard(look);
             PlaceWornOnBack();
         }
 
@@ -550,13 +550,24 @@ namespace Forge.Play
             // Eased, so the turn comes over a moment as the moves hand over (a draw ending) rather than in a frame.
             ref var eased = ref (right ? ref _rightAim : ref _leftAim);
             eased = Vector3.MoveTowards(eased, aim, Time.deltaTime / AimEase);
-            if (eased == Vector3.zero)
+            AimHand(right, eased);
+        }
+
+        /// <summary>
+        /// Turns the right or left hand, on its pose as it stands now, the least that points what it holds (its grip's +Y)
+        /// along <paramref name="aim"/> in the body's frame, by as much as its length (<see cref="HandAim"/>); nothing for
+        /// no aim. What the moves playing want is applied each frame by itself; this is for a pose held still (the
+        /// editor's hold stage).
+        /// </summary>
+        public void AimHand(bool right, Vector3 aim)
+        {
+            if (aim == Vector3.zero)
                 return;
             var id = right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand;
             if (!TryPoint(id, out var point))
                 return;
             var hand = _humanoid.GetBoneTransform(id);
-            hand.rotation = HandAim.Turn(point.up, Root.transform.TransformDirection(eased)) * hand.rotation;
+            hand.rotation = HandAim.Turn(point.up, Root.transform.TransformDirection(aim)) * hand.rotation;
         }
 
         // Seconds a hand's aim takes to come all the way in or out.
@@ -652,7 +663,17 @@ namespace Forge.Play
         public void Dispose()
         {
             if (Root != null)
-                UnityEngine.Object.Destroy(Root);
+                Discard(Root);
+        }
+
+        // Gone at the end of the frame while playing; at once in the editor, where a deferred destroy is refused
+        // (the editor's hold stage builds a model outside play).
+        static void Discard(UnityEngine.Object thing)
+        {
+            if (Application.isPlaying)
+                UnityEngine.Object.Destroy(thing);
+            else
+                UnityEngine.Object.DestroyImmediate(thing);
         }
 
         // A bone's attach point, made the first time it is asked for: a hand's grip, any other bone itself.
@@ -715,7 +736,7 @@ namespace Forge.Play
             foreach (var collider in root.GetComponentsInChildren<Collider>(true))
             {
                 collider.enabled = false;
-                UnityEngine.Object.Destroy(collider);
+                Discard(collider);
             }
         }
 
