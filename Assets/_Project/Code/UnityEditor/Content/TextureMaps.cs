@@ -19,9 +19,10 @@ namespace Forge.UnityEditor.Content
         /// <summary>
         /// Packs the folder's metalness, occlusion, height and smoothness (1 − roughness) into R, G, B, A of
         /// {Name}_Mask.png, the mask both a terrain layer and URP Lit (metallic-smoothness and occlusion maps) read; a
-        /// missing map gives its neutral value (metal 0, no occlusion, mid height, mid roughness). Imported linear.
+        /// missing map gives its neutral value (metal 0, no occlusion, mid height, mid roughness). Imported linear, at
+        /// most <paramref name="maxSize"/> px.
         /// </summary>
-        public static string PackMask(string folder, string name)
+        public static string PackMask(string folder, string name, int maxSize = 1024)
         {
             var metalness = Load($"{folder}/{name}_Metalness.jpg");
             var occlusion = Load($"{folder}/{name}_AmbientOcclusion.jpg");
@@ -51,7 +52,7 @@ namespace Forge.UnityEditor.Content
                 Object.DestroyImmediate(map);
 
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-            Configure(path, TextureImporterType.Default, sRGB: false);
+            Configure(path, TextureImporterType.Default, sRGB: false, maxSize);
             return path;
         }
 

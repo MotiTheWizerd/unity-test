@@ -43,6 +43,8 @@ MonoBehaviour:
     _asset: {fileID: 8574412962073106934, guid: 856ebd7e557aded4b92aed4d9979727f, type: 2}
   - _key: ground/snow
     _asset: {fileID: 8574412962073106934, guid: 5de52635c06f2164ea648bd9da02945e, type: 2}
+  - _key: ground/stoneroad
+    _asset: {fileID: 8574412962073106934, guid: 23407f2312e87f640ab39da8c128d2bc, type: 2}
   - _key: ground/stonymud
     _asset: {fileID: 8574412962073106934, guid: b67c685e61deee747be689e775b27a9e, type: 2}
   - _key: ground/wetmud
@@ -81,6 +83,8 @@ MonoBehaviour:
     _color: {r: 0.33308125, g: 0.2587604, b: 0.15623695, a: 1}
   - _key: ground/snow
     _color: {r: 0.73531383, g: 0.8597356, b: 0.97257465, a: 1}
+  - _key: ground/stoneroad
+    _color: {r: 0.117782384, g: 0.09912212, b: 0.07762199, a: 1}
   - _key: ground/stonymud
     _color: {r: 0.1020092, g: 0.0789973, b: 0.05035457, a: 1}
   - _key: ground/wetmud

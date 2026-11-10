@@ -29,6 +29,7 @@ sets their repeat (`<Name>.json`, `tileSize` in meters), and their occlusion is 
 | WornCobblestone | [cobblestone_floor_08](https://polyhaven.com/a/cobblestone_floor_08) | Poly Haven | 2 m |
 | GrassPath | [grass_path_3](https://polyhaven.com/a/grass_path_3) | Poly Haven | 1 m |
 | StonyMud | [brown_mud_rocks_01](https://polyhaven.com/a/brown_mud_rocks_01) | Poly Haven | 1.3 m |
+| StoneRoad | [grey_stone_path](https://polyhaven.com/a/grey_stone_path) | Poly Haven | 2.7 m, not its real 1.8 m: Skyrim-sized stones read as a road, real ones as pavement (2K maps, imported at 2K: `"textureSize": 2048`) |
 
 Each folder keeps the colour, OpenGL normal, roughness, ambient occlusion and displacement maps. The mask map
 Unity's terrain layers read (metallic, occlusion, height, smoothness) is packed from them by

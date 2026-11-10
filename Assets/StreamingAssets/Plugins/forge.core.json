@@ -1076,6 +1076,13 @@
     },
     {
       "type": "ground_layer",
+      "id": "forge.core:ground/stoneroad",
+      "displayName": "Stone Road",
+      "assetKey": "ground/stoneroad",
+      "surface": "stone"
+    },
+    {
+      "type": "ground_layer",
       "id": "forge.core:ground/stonymud",
       "displayName": "Stony Mud",
       "assetKey": "ground/stonymud",

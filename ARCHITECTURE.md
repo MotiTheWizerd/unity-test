@@ -1306,7 +1306,8 @@ slopes), so results are exact and every edit goes through the edit session.
   (the town grounds, cobblestone, flagstone, packed earth and wet mud, from Poly Haven in the same naming)
   under `Content/Ground/<Layer>/` (credited in `CREDITS.md`, ~8 MB a layer with its packed mask). *Forge → Ground →
   Build Ground Layers* makes each folder's `TerrainLayer` (3 m tiles, or the scan's real size from its
-  `<Layer>.json`, `{ "tileSize": 2.4 }`, so cobbles are cobble-sized), packs its mask map (metallic 0, occlusion,
+  `<Layer>.json`, `{ "tileSize": 2.4 }`, so cobbles are cobble-sized; textures import at 1K unless it also says
+  `"textureSize": 2048`, kept for grounds seen underfoot such as Stone Road), packs its mask map (metallic 0, occlusion,
   height, smoothness = 1 − roughness) and lists it under `ground/<folder>`; drop a new folder in and rebuild to add
   a layer. `Materials/Terrain.mat` (`Forge/Terrain`) has `_NORMALMAP`, `_MASKMAP` and height-based blending on:
   Unity sets those keywords from the Inspector only, never for a runtime terrain.

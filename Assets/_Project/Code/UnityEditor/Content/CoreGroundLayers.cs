@@ -36,6 +36,9 @@ namespace Forge.UnityEditor.Content
             yield return Layer(pluginId, "worncobblestone", "Worn Cobblestone", Stone);
             yield return Layer(pluginId, "grasspath", "Grass Path", Dirt, new GrassSettings(density: 2f, height: 0.3f));
             yield return Layer(pluginId, "stonymud", "Stony Mud", Wet);
+            // A road of flat stones laid in earth (Poly Haven, 2K: seen underfoot), the kind that runs between towns. Its
+            // stones stand high in its height map, so at a road's soft edge they thin out into the ground beside it.
+            yield return Layer(pluginId, "stoneroad", "Stone Road", Stone);
         }
 
         static GroundLayerRecord Layer(string pluginId, string name, string displayName, string surface, GrassSettings grass = null) =>

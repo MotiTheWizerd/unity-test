@@ -25,6 +25,12 @@ namespace Forge.UnityEditor.Content
         /// </summary>
         public const float DefaultTileSize = 3f;
 
+        /// <summary>
+        /// Pixels a ground texture imports at, unless its folder's {Name}.json says (<c>{ "textureSize": 2048 }</c>: a
+        /// road the player walks and looks down at, kept sharp underfoot; the rest stay at 1K to spare memory).
+        /// </summary>
+        public const int DefaultTextureSize = 1024;
+
         /// <summary>Most smoothness a ground layer shows (its mask map's smoothness is scaled into [0, this]).</summary>
         const float MaxSmoothness = 0.35f;
 
@@ -68,11 +74,12 @@ namespace Forge.UnityEditor.Content
                 return null;
             }
 
-            TextureMaps.Configure(colorPath, TextureImporterType.Default, sRGB: true);
+            var settings = SettingsOf(folder, name);
+            TextureMaps.Configure(colorPath, TextureImporterType.Default, sRGB: true, settings.textureSize);
             var hasNormal = File.Exists(normalPath);
             if (hasNormal)
-                TextureMaps.Configure(normalPath, TextureImporterType.NormalMap, sRGB: false);
-            var maskPath = TextureMaps.PackMask(folder, name);
+                TextureMaps.Configure(normalPath, TextureImporterType.NormalMap, sRGB: false, settings.textureSize);
+            var maskPath = TextureMaps.PackMask(folder, name, settings.textureSize);
 
             var layerPath = $"{folder}/{name}.terrainlayer";
             var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
@@ -86,8 +93,7 @@ namespace Forge.UnityEditor.Content
             layer.normalMapTexture = hasNormal ? AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath) : null;
             layer.normalScale = 1f;
             layer.maskMapTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(maskPath);
-            var tile = TileSizeOf(folder, name);
-            layer.tileSize = new Vector2(tile, tile);
+            layer.tileSize = new Vector2(settings.tileSize, settings.tileSize);
             layer.metallic = 0f;
             // Natural ground is matte: scans' smoothness, taken whole, gives grass a wet sun glare.
             layer.maskMapRemapMax = new Vector4(1f, 1f, 1f, MaxSmoothness);
@@ -95,21 +101,24 @@ namespace Forge.UnityEditor.Content
             return layer;
         }
 
-        static float TileSizeOf(string folder, string name)
+        static LayerSettings SettingsOf(string folder, string name)
         {
             var path = $"{folder}/{name}.json";
             if (!File.Exists(path))
-                return DefaultTileSize;
+                return new LayerSettings();
             var settings = JsonUtility.FromJson<LayerSettings>(File.ReadAllText(path));
             if (settings == null || settings.tileSize <= 0f)
                 throw new System.InvalidOperationException($"{path}: \"tileSize\" is the meters one repeat covers, above 0.");
-            return settings.tileSize;
+            if (settings.textureSize != DefaultTextureSize && settings.textureSize != 2048)
+                throw new System.InvalidOperationException($"{path}: \"textureSize\" is {DefaultTextureSize} or 2048 px.");
+            return settings;
         }
 
         [System.Serializable]
         sealed class LayerSettings
         {
-            public float tileSize;
+            public float tileSize = DefaultTileSize;
+            public int textureSize = DefaultTextureSize;
         }
 
         // The template ground material balls are copied from: URP Lit with the maps a layer fills switched on. As an
