@@ -141,6 +141,16 @@ namespace Forge.Play
             return _eyes;
         }
 
+        /// <summary>
+        /// How far above its body's feet its eyes are as it stands in its idle, meters, read off its own head
+        /// (<see cref="HumanoidHead.TryFindEyeLevel"/>), which <see cref="Eyes"/> takes; false without a head or an idle.
+        /// </summary>
+        public bool TryGetEyeHeight(out float height)
+        {
+            height = HumanoidHead.TryFindEyeLevel(_prefab, IdleClip, out var aboveRoot) ? aboveRoot - _sunk : 0f;
+            return height > 0f;
+        }
+
         AnimationClip IdleClip => _animation?.Clip(HumanoidAnimation.IdleMove);
 
         /// <summary>The clip it stands ready in, holding its weapons out: its drawn idle, else its idle; null without animations.</summary>

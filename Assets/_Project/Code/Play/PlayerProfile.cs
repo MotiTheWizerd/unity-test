@@ -22,7 +22,7 @@ namespace Forge.Play
         [SerializeField, Min(0.1f), Tooltip("Meters from the body's middle to its side.")]
         float _radius = 0.3f;
 
-        [SerializeField, Min(0.1f), Tooltip("Meters from the feet to the eyes, where the first-person camera sits.")]
+        [SerializeField, Min(0.1f), Tooltip("Meters from the feet to the eyes, for a look without a head; a character's own eyes are found on its head.")]
         float _eyeHeight = 1.65f;
 
         [SerializeField, Min(0.5f), Tooltip("Meters from the feet to the top of the head while crouched (Left Ctrl): what it passes under.")]

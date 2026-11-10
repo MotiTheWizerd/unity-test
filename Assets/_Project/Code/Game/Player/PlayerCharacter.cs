@@ -28,6 +28,7 @@ namespace Forge.Game.Player
         readonly ICrouchingBody _crouching;
         readonly GameEvents _events;
         MotorContact _contact;
+        float _eyeHeight;
 
         /// <param name="eyeHeight">Meters from the feet to the eyes, where a first-person camera sits.</param>
         /// <param name="attributes">The player's attributes, which moving costs (<see cref="MovementCosts"/>) are paid from
@@ -37,8 +38,6 @@ namespace Forge.Game.Player
         {
             Motor = motor ?? throw new ArgumentNullException(nameof(motor));
             _crouching = motor as ICrouchingBody;
-            if (!(eyeHeight > 0f) || float.IsInfinity(eyeHeight))
-                throw new ArgumentOutOfRangeException(nameof(eyeHeight), eyeHeight, "Must be a positive number.");
             EyeHeight = eyeHeight;
             Locomotion = new PlayerLocomotion(locomotion);
             _events = events;
@@ -61,7 +60,20 @@ namespace Forge.Game.Player
 
         public PlayerLocomotion Locomotion { get; }
 
-        public float EyeHeight { get; }
+        /// <summary>
+        /// Meters from the feet to the eyes standing, where a first-person camera sits; its look sets it, as a woman's
+        /// eyes are lower than a man's.
+        /// </summary>
+        public float EyeHeight
+        {
+            get => _eyeHeight;
+            set
+            {
+                if (!(value > 0f) || float.IsInfinity(value))
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "Must be a positive number.");
+                _eyeHeight = value;
+            }
+        }
 
         /// <summary>How the body turns; the camera mode sets it (first person: with the look).</summary>
         public BodyFacing Facing { get; set; } = BodyFacing.Look;

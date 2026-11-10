@@ -380,12 +380,14 @@ namespace Forge.Play
         }
 
         // The look on the body and what shows on it: what is equipped hangs from it; the weapons' readiness, the swings,
-        // the shots and the steps play on it; the first-person camera rides its eyes.
+        // the shots and the steps play on it; the first-person camera rides its eyes, and the player sees from their height.
         void ShowLook()
         {
+            Player.EyeHeight = _profile.EyeHeight;
             if (_look == null)
                 return;
             _avatar = new PlayerAvatar(_motor.Body, _look, _motor.Hover, _profile.EyeHeight);
+            Player.EyeHeight = _avatar.EyeHeight;
             _equipmentView = new EquipmentView(Equipment, _avatar.Model, World, _assets);
             _readinessView = new ReadinessView(Readiness, _avatar.Model);
             _combatView = new CombatView(Combat, _avatar.Model);

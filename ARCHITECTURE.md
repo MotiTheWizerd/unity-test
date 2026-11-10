@@ -758,15 +758,19 @@ from any camera, so both cameras read the same player.
 - **The model** (`PlayerAvatar`, Play): the profile's `_model` as a `CharacterModel` (any character's look on any body:
   the prefab riding on the body's object, turned to the body's heading, its colliders removed since the body is the
   collider, on the body's layer, animated from a `BodyMotion`; the world's characters will use it too), plus the
-  player's own extras: its eyes (`CharacterModel.Eyes(height)`: a point riding the head bone at the profile's eye height
-  as it stands in its idle, at the front of its face, found by `HumanoidHead` from the mesh its head carries), which
-  the first-person camera rides, and its animator always animates. **Changing look** (`PlayerSession.ChangeLook`): the
+  player's own extras: its eyes (`CharacterModel.Eyes(height)`: a point riding the head bone at the character's own
+  eye height as it stands in its idle, at the front of its face, found by `HumanoidHead` from the mesh its head
+  carries), which the first-person camera rides, and its animator always animates. The eye height is read off the
+  head too (`HumanoidHead.TryFindEyeLevel`: halfway from the head joint to the head's top, which matched the faces of
+  all four Mixamo-rigged characters within 1 cm), so a woman sees from lower than a man; it sets the rules' eyes
+  (`PlayerCharacter.EyeHeight`: reach, carrying, the ears), and the profile's `_eyeHeight` serves only a look without
+  a head. **Changing look** (`PlayerSession.ChangeLook`): the
   look and everything shown on it (equipment, readiness, combat, blade sweep, shot, arrows, footsteps, the first-person
   head) are built and taken down together (`ShowLook` / `HideLook`), so a spawned player can become another character
   where it stands, keeping what it carries, has equipped and has drawn; the look chosen is kept between spawns. For now
   a dev key drives it: `NextLook` (F8) steps through the profile's `_looks`, which *Build Characters* fills with every
-  character, until a character picker or character creation calls `ChangeLook` instead. Height and eye height are
-  still the profile's, the same for every look. **Seen from within** (`CharacterModel.FirstPerson`):
+  character, until a character picker or character creation calls `ChangeLook` instead. The body's height (the
+  capsule) and the third-person camera's pivot are still the profile's, the same for every look. **Seen from within** (`CharacterModel.FirstPerson`):
   `HeadlessBody` draws each skinned mesh the head moves a second time with the head's bones (`HumanoidHead.Bones`)
   folded into one point of no size at the head bone, so the neck closes over, while the whole mesh casts only its
   shadow; what hangs from the head casts only its shadow, what the hands hold draws as ever. **Holding**: `CharacterModel.Attach(look, grip, bone)` hangs a look
