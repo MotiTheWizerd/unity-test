@@ -41,6 +41,22 @@ namespace Forge.UnityEditor.Content
             return curves;
         }
 
+        /// <summary>
+        /// The .json saying where each hand points (<paramref name="right"/>, <paramref name="left"/>; zero: it doesn't
+        /// say), as <see cref="Parse"/> reads it back.
+        /// </summary>
+        public static string Write(Vector3 right, Vector3 left)
+        {
+            var hands = new List<string>(2);
+            if (right != Vector3.zero)
+                hands.Add($"\"rightHand\": {{ \"points\": [{Number(right.x)}, {Number(right.y)}, {Number(right.z)}] }}");
+            if (left != Vector3.zero)
+                hands.Add($"\"leftHand\": {{ \"points\": [{Number(left.x)}, {Number(left.y)}, {Number(left.z)}] }}");
+            return "{ " + string.Join(", ", hands) + " }\n";
+        }
+
+        static string Number(float value) => value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+
         static void Add(List<(string, float)> curves, bool right, Vector3 points)
         {
             for (var axis = 0; axis < 3; axis++)

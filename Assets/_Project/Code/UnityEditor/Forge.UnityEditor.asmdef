@@ -7,7 +7,8 @@
         "Forge.Data.Json",
         "Forge.World",
         "Forge.Play",
-        "Forge.Game"
+        "Forge.Game",
+        "Forge.EditorApp"
     ],
     "includePlatforms": [
         "Editor"

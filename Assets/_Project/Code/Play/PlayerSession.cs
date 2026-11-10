@@ -141,6 +141,9 @@ namespace Forge.Play
         /// <summary>What the player looks like (a character prefab: the profile's until <see cref="ChangeLook"/>); null when it has no look.</summary>
         public GameObject Model => _look;
 
+        /// <summary>The look as it stands on the body while spawned, with what it holds (for the editor's hold tuner); else null.</summary>
+        public CharacterModel Character => _avatar?.Model;
+
         /// <summary>The use key as a prompt shows it ("E").</summary>
         public string InteractKey => _controls.InteractKey;
 

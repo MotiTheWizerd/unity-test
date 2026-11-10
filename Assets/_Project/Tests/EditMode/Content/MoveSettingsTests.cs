@@ -57,6 +57,16 @@ namespace Forge.Tests.Content
         }
 
         [Test]
+        public void WhatIsWritten_ReadsBack()
+        {
+            var json = MoveSettings.Write(new UnityEngine.Vector3(0f, 1f, -0.3f), UnityEngine.Vector3.zero);
+
+            Assert.That(json, Is.EqualTo("{ \"rightHand\": { \"points\": [0, 1, -0.3] } }\n"));
+            Assert.That(MoveSettings.Parse(json, "a.json").Select(c => c.Value), Is.EqualTo(new[] { 0f, 1f, -0.3f, 0f, 0f, 0f }));
+            Assert.That(MoveSettings.Write(UnityEngine.Vector3.zero, UnityEngine.Vector3.zero), Is.EqualTo("{  }\n"));
+        }
+
+        [Test]
         public void ReadingAClipWithoutAJson_IsAllZero()
         {
             var clip = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "Idle.fbx");

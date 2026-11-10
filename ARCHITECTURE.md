@@ -863,8 +863,11 @@ from any camera, so both cameras read the same player.
   blends them as it blends the moves: the aim fades out as the stance walks or strikes, is out while a draw plays on
   the arms, and comes back as it ends. Each frame, once posed (`CharacterModel.AimHands`, on `Posed` before what the
   hands hold is laid on them), the hand is turned the least that points its grip's +Y where the blended aim says, by
-  as much as its length (`HandAim.Turn`); the fingers, the grip and what hangs from it come along. A change to the
-  .json reimports the clip (a source-asset dependency); no clip is edited.
+  as much as its length (`HandAim.Turn`), eased over 0.35 s; the fingers, the grip and what hangs from it come
+  along. A change to the .json reimports the clip (a source-asset dependency); no clip is edited. It is tuned by eye
+  with *Forge → Characters → Hold Tuner* (`HoldTuner`): while the editor plays and the player stands in the move,
+  the held thing is selected and turned with the Scene view's rotate gizmo, and one button writes where it points
+  into the move's .json (`MoveSettings.Write`) and puts it back in the hand, which now carries it there.
 - **How the body moved** (`BodyMotion`, `Forge.Game.Motion`, shared by anything with a body): `PlayerCharacter.Motion` each frame, from where the body actually went
   (ground speed, vertical speed, grounded), so a run into a wall shows standing. `StrideMatch` keeps the feet planted:
   the speed in the clips' own size (the avatar's `humanScale`) picks the blend, and past the fastest clip it plays

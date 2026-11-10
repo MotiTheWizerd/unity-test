@@ -171,6 +171,26 @@ namespace Forge.Play
             return ids;
         }
 
+        /// <summary>The clip weighing most on the ground (base) layer now; null when none plays.</summary>
+        public AnimationClip PlayingGround
+        {
+            get
+            {
+                AnimationClip heaviest = null;
+                var weight = 0f;
+                foreach (var info in _animator.GetCurrentAnimatorClipInfo(0))
+                {
+                    if (info.weight > weight)
+                    {
+                        weight = info.weight;
+                        heaviest = info.clip;
+                    }
+                }
+
+                return heaviest;
+            }
+        }
+
         /// <summary>Shows <paramref name="motion"/>, the body's last <paramref name="deltaTime"/> seconds.</summary>
         public void Show(BodyMotion motion, float deltaTime)
         {

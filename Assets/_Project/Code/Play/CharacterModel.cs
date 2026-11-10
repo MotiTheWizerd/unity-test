@@ -425,6 +425,28 @@ namespace Forge.Play
             return false;
         }
 
+        /// <summary>The look <paramref name="bone"/> ("RightHand") holds in hand now, and its grip; false when it holds nothing, or it is sheathed.</summary>
+        public bool TryGetHeld(string bone, out GameObject look, out Transform grip)
+        {
+            look = null;
+            grip = null;
+            if (!Enum.TryParse(bone, out HumanBodyBones id))
+                return false;
+            foreach (var held in _attached.Values)
+            {
+                if (held.Bone != id || (held.Sheathes && !_inHand))
+                    continue;
+                look = held.Look;
+                grip = held.Grip;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>The ground move it plays most of now (its idle, its drawn idle), for whatever tunes a move by its look; null without animations.</summary>
+        public AnimationClip PlayingMove => _animation?.PlayingGround;
+
         // How far a held thing reaches from its grip along the grip's `axis` (+Y: out of the fist), in the grip's own
         // units: the farthest corner of its meshes' bounds; zero when nothing of it lies that way.
         static float ExtentOf(Held held, Vector3 axis)
