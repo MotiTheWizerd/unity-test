@@ -36,6 +36,8 @@ namespace Forge.UnityEditor.Content
         CharacterModel _character;
         GameObject _held;
         Quaternion _heldAsPlaced;
+        float _leanForward;
+        float _leanRight;
         AnimationClip _clip;
         PlayableGraph _graph;
 
@@ -90,16 +92,22 @@ namespace Forge.UnityEditor.Content
             }
 
             var jsonPath = _clip != null ? MoveSettings.PathFor(AssetDatabase.GetAssetPath(_clip)) : null;
-            if (_held == null || !_character.TryGrip(_hand == 0, out var grip))
+            // Where the held thing itself points (its own grip's +Y), which the sliders and the gizmo turn; the hand's point stays.
+            if (_held == null || !_character.TryGetHeld(Hands[_hand], out _, out var grip))
             {
                 EditorGUILayout.HelpBox($"Nothing in the {Hands[_hand]}: no prefab '{_heldKey}' in {CatalogPath}, or the character lacks the hand.", MessageType.Warning);
             }
             else
             {
+                EditorGUILayout.HelpBox("Lean it with the sliders (or select it and turn it with the rotate gizmo), then save: the hand will carry it there.", MessageType.None);
+                EditorGUI.BeginChangeCheck();
+                _leanForward = EditorGUILayout.Slider("Lean forward (+) / back (−)", _leanForward, -180f, 180f);
+                _leanRight = EditorGUILayout.Slider("Lean right (+) / left (−)", _leanRight, -180f, 180f);
+                if (EditorGUI.EndChangeCheck())
+                    Lean();
                 var points = _character.Root.transform.InverseTransformDirection(grip.up).normalized;
                 EditorGUILayout.LabelField("Points now", $"[{points.x:0.00}, {points.y:0.00}, {points.z:0.00}]  (x right, y up, z forward)");
                 EditorGUILayout.LabelField("Writes to", jsonPath ?? "(no clip)");
-                EditorGUILayout.HelpBox("Select the held thing (below), turn it with the rotate gizmo (E) in the Scene view, then save: the hand will carry it there.", MessageType.None);
                 if (GUILayout.Button("Select it in the Scene view"))
                 {
                     Selection.activeGameObject = _held;
@@ -187,6 +195,19 @@ namespace Forge.UnityEditor.Content
 
             if (_held != null)
                 _held.transform.localRotation = _heldAsPlaced;
+            _leanForward = _leanRight = 0f;
+            SceneView.RepaintAll();
+        }
+
+        // The held thing leaned from where the hand carries it, in the body's frame: forward about the body's right axis,
+        // right about its forward axis (degrees), as a thing held upright leans.
+        void Lean()
+        {
+            if (_held == null)
+                return;
+            var body = _character.Root.transform.rotation;
+            var placed = _held.transform.parent.rotation * _heldAsPlaced;
+            _held.transform.rotation = body * Quaternion.Euler(_leanForward, 0f, -_leanRight) * Quaternion.Inverse(body) * placed;
             SceneView.RepaintAll();
         }
 
@@ -203,6 +224,9 @@ namespace Forge.UnityEditor.Content
 
         void Clear()
         {
+            // The Inspector would keep showing what is about to go.
+            if (_stage != null && Selection.activeTransform != null && Selection.activeTransform.IsChildOf(_stage.transform))
+                Selection.activeGameObject = null;
             if (_graph.IsValid())
                 _graph.Destroy();
             _character?.Dispose();
