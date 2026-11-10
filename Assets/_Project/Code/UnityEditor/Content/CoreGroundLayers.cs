@@ -9,33 +9,36 @@ namespace Forge.UnityEditor.Content
     /// </summary>
     static class CoreGroundLayers
     {
+        // What each is underfoot, which its footsteps are found by (Content/Sounds/Footsteps/<Surface>).
+        const string Grass = "grass", Dirt = "dirt", Stone = "stone", Sand = "sand", Snow = "snow", Gravel = "gravel", Wet = "wet";
+
         public static IEnumerable<GroundLayerRecord> All(string pluginId)
         {
-            yield return Layer(pluginId, "grass", "Grass", new GrassSettings(density: 5f, height: 0.5f));
-            yield return Layer(pluginId, "dirt", "Dirt");
-            yield return Layer(pluginId, "rock", "Rock");
-            yield return Layer(pluginId, "sand", "Sand");
-            yield return Layer(pluginId, "snow", "Snow");
-            yield return Layer(pluginId, "gravel", "Gravel");
-            yield return Layer(pluginId, "mud", "Mud");
-            yield return Layer(pluginId, "forestfloor", "Forest Floor", new GrassSettings(density: 0.6f, height: 0.3f));
-            yield return Layer(pluginId, "moss", "Moss");
-            yield return Layer(pluginId, "drygrass", "Dry Grass", new GrassSettings(density: 2.5f, height: 0.4f));
+            yield return Layer(pluginId, "grass", "Grass", Grass, new GrassSettings(density: 5f, height: 0.5f));
+            yield return Layer(pluginId, "dirt", "Dirt", Dirt);
+            yield return Layer(pluginId, "rock", "Rock", Stone);
+            yield return Layer(pluginId, "sand", "Sand", Sand);
+            yield return Layer(pluginId, "snow", "Snow", Snow);
+            yield return Layer(pluginId, "gravel", "Gravel", Gravel);
+            yield return Layer(pluginId, "mud", "Mud", Wet);
+            yield return Layer(pluginId, "forestfloor", "Forest Floor", Dirt, new GrassSettings(density: 0.6f, height: 0.3f));
+            yield return Layer(pluginId, "moss", "Moss", Grass);
+            yield return Layer(pluginId, "drygrass", "Dry Grass", Grass, new GrassSettings(density: 2.5f, height: 0.4f));
             // Town ground (Poly Haven): streets, yards and squares.
-            yield return Layer(pluginId, "cobblestone", "Cobblestone");
-            yield return Layer(pluginId, "flagstone", "Flagstone");
-            yield return Layer(pluginId, "packedearth", "Packed Earth");
-            yield return Layer(pluginId, "wetmud", "Wet Mud");
+            yield return Layer(pluginId, "cobblestone", "Cobblestone", Stone);
+            yield return Layer(pluginId, "flagstone", "Flagstone", Stone);
+            yield return Layer(pluginId, "packedearth", "Packed Earth", Dirt);
+            yield return Layer(pluginId, "wetmud", "Wet Mud", Wet);
             // Their variants (Poly Haven), so a street isn't one ground end to end: grass between the stones at its edges,
             // a worn and rutted stretch, a trodden path through grass, stony mud where it's wet. The grassy two
             // grow short, sparse blades, so grass stands between the stones and along the path.
-            yield return Layer(pluginId, "grassycobblestone", "Grassy Cobblestone", new GrassSettings(density: 1.2f, height: 0.25f));
-            yield return Layer(pluginId, "worncobblestone", "Worn Cobblestone");
-            yield return Layer(pluginId, "grasspath", "Grass Path", new GrassSettings(density: 2f, height: 0.3f));
-            yield return Layer(pluginId, "stonymud", "Stony Mud");
+            yield return Layer(pluginId, "grassycobblestone", "Grassy Cobblestone", Stone, new GrassSettings(density: 1.2f, height: 0.25f));
+            yield return Layer(pluginId, "worncobblestone", "Worn Cobblestone", Stone);
+            yield return Layer(pluginId, "grasspath", "Grass Path", Dirt, new GrassSettings(density: 2f, height: 0.3f));
+            yield return Layer(pluginId, "stonymud", "Stony Mud", Wet);
         }
 
-        static GroundLayerRecord Layer(string pluginId, string name, string displayName, GrassSettings grass = null) =>
-            new GroundLayerRecord(GroundLayerRecord.IdFor(pluginId, name), displayName, GroundLayerRecord.NamePrefix + name, grass);
+        static GroundLayerRecord Layer(string pluginId, string name, string displayName, string surface, GrassSettings grass = null) =>
+            new GroundLayerRecord(GroundLayerRecord.IdFor(pluginId, name), displayName, GroundLayerRecord.NamePrefix + name, grass, surface);
     }
 }

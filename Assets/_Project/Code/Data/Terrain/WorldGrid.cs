@@ -35,6 +35,17 @@ namespace Forge.Data.Terrain
         public static ChunkCoord ChunkOf(float x, float z) =>
             new ChunkCoord((int)Math.Floor(x / ChunkSize), (int)Math.Floor(z / ChunkSize));
 
+        /// <summary>The ground paint texel (<see cref="PaintResolution"/> to a chunk edge) world position (x, z) lies in, within its chunk (<see cref="ChunkOf"/>).</summary>
+        public static (int X, int Z) PaintTexelOf(float x, float z)
+        {
+            var chunk = ChunkOf(x, z);
+            return (TexelOf(x - chunk.X * ChunkSize), TexelOf(z - chunk.Z * ChunkSize));
+        }
+
+        // The texel along one edge of a chunk `along` meters in, held inside it against rounding at its far edge.
+        static int TexelOf(float along) =>
+            Math.Min(PaintResolution - 1, Math.Max(0, (int)Math.Floor(along / (ChunkSize / PaintResolution))));
+
         public static bool IsValidHeightmapResolution(int resolution)
         {
             if (resolution < MinHeightmapResolution || resolution > MaxHeightmapResolution)

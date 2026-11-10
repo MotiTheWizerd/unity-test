@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 834fce98388de40498decb8e2cc9d2aa, type: 3}
+  m_Name: Sneak
+  m_EditorClassIdentifier: Forge.Play::Forge.Play.Sound.SoundCue
+  _takes:
+  - {fileID: 8300000, guid: b43841db50bfbee40b4ff728fa6b284d, type: 3}
+  - {fileID: 8300000, guid: 3713545a48d857a4a85d20128d8f6b58, type: 3}
+  - {fileID: 8300000, guid: 1d151e6295296624798c98e49eb06c82, type: 3}
+  - {fileID: 8300000, guid: a7d7ab00b82b62f469216c5377791865, type: 3}
+  _volume: 0.3
+  _volumeJitter: 0.1
+  _pitchJitter: 0.05
+  _bus: 3
+  _range: 25

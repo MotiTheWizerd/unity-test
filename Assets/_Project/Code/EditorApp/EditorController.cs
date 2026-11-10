@@ -6,6 +6,7 @@ using Forge.EditorApp.Gizmos;
 using Forge.EditorApp.Tools;
 using Forge.Editing.Placement;
 using Forge.Play;
+using Forge.Play.Sound;
 using Forge.World;
 using Forge.World.Assets;
 using UnityEngine;
@@ -60,7 +61,9 @@ namespace Forge.EditorApp
         /// <param name="agent">How the world-building agent runs; null leaves the editor without one.</param>
         /// <param name="water">The water on show, which the Water tool reads and previews through.</param>
         /// <param name="player">How the player is built and controlled; null plays with the editor camera.</param>
-        public void Initialize(EditorContext context, WorldFrame frame, WorldView view, WaterView water, IInputBlocker ui, IAssetCatalog assets, AgentSettings agent, PlayerProfile player)
+        /// <param name="sound">How the game sounds; null plays silent.</param>
+        public void Initialize(EditorContext context, WorldFrame frame, WorldView view, WaterView water, IInputBlocker ui, IAssetCatalog assets, AgentSettings agent, PlayerProfile player,
+            SoundSettings sound = null)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _frame = frame ?? throw new ArgumentNullException(nameof(frame));
@@ -95,7 +98,7 @@ namespace Forge.EditorApp
                 Agent = new AgentHost(context, seating, slots, new EditorBriefing(context, () => GroundInView(picker)),
                     new AgentEyes(_camera, frame, picker.TerrainHeightAt), agent);
             if (player != null)
-                PlayFromHere = new PlayFromHere(context, picker, frame, view, _camera, _flyCamera, player);
+                PlayFromHere = new PlayFromHere(context, picker, frame, view, _camera, _flyCamera, player, sound);
             else
                 Debug.LogWarning("[Forge] EditorApp has no player profile (EditorAppBootstrap._player); playing flies the editor camera.");
         }

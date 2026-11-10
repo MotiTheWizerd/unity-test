@@ -225,9 +225,12 @@ namespace Forge.Game.Combat
             {
                 var swing = _swings[i];
                 var wasStill = swing.IsHeldStill;
+                var wasOpen = swing.WindowOpen;
                 swing.Advance(deltaTime);
                 if (!wasStill && swing.IsHeldStill)
                     SwingHeld?.Invoke(swing);
+                if (!wasOpen && swing.WindowOpen)
+                    _events?.Publish(new MoveWindowOpened(Owner, swing.Slot, swing.Weapon.Item, swing.Move.Animation, swing.Measure));
                 if (swing.Move.Held && !swing.Holding && !swing.Loosed && swing.WindowOpen)
                     LetGo(swing);
                 if (!swing.IsOver || i >= _swings.Count || _swings[i] != swing)
@@ -369,7 +372,7 @@ namespace Forge.Game.Combat
                 return;
             var shot = new Shot(Owner, swing, used, power);
             Loosed?.Invoke(shot);
-            _events?.Publish(new ShotLoosed(Owner, swing.Weapon.Item, used.Id, power));
+            _events?.Publish(new ShotLoosed(Owner, swing.Weapon.Item, used.Id, power, swing.Move.Release ?? swing.Move.Animation));
         }
 
         /// <summary>Stops every swing at once (the actor is taken away, its weapons put away).</summary>

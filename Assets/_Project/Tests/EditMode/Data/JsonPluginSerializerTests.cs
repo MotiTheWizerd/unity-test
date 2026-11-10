@@ -347,6 +347,21 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void GroundLayers_KeepWhatTheyAreUnderfoot_AndNoneWritesNoSurfaceField()
+        {
+            var mud = new GroundLayerRecord(GroundLayerRecord.IdFor("core", "mud"), "Mud", "ground/mud", surface: "wet");
+            var plain = new GroundLayerRecord(GroundLayerRecord.IdFor("core", "plain"), "Plain", "ground/plain");
+
+            var json = Write(Plugin("core", mud, plain));
+            var layers = Read(json).Records.OfType<GroundLayerRecord>().ToDictionary(l => l.AssetKey);
+
+            Assert.That(layers["ground/mud"].Surface, Is.EqualTo("wet"));
+            Assert.That(layers["ground/plain"].Surface, Is.Null);
+            Assert.That(Regex.Matches(json, "\"surface\": ").Count, Is.EqualTo(1), "No surface is no field, not null.");
+            Assert.That(Write(Read(json)), Is.EqualTo(json));
+        }
+
+        [Test]
         public void Read_UnknownSpaceKind_IsRejected()
         {
             var json = Write(Plugin("core", new SpaceRecord(Space, "Tamriel", SpaceKind.Worldspace))).Replace("\"worldspace\"", "\"dungeon\"");

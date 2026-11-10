@@ -12,6 +12,7 @@ using Forge.Game.Events;
 using Forge.Game.Interaction;
 using Forge.Game.Items;
 using Forge.Game.Player;
+using Forge.Play.Sound;
 using Forge.World;
 using Forge.World.Assets;
 using UnityEngine;
@@ -49,10 +50,13 @@ namespace Forge.Play
         ShotView _shotView;
         ArrowFlights _arrows;
         ObjectCarry _carry;
+        FootstepView _footsteps;
         readonly IAssetCatalog _assets;
         readonly Combatants _combatants;
         readonly PlacedActors _placedActors;
         readonly ArrowFlights.Landing _landShot;
+        readonly SoundPlayer _sounds;
+        readonly GroundSurfaces _surfaces;
 
         /// <param name="camera">The camera the player sees through while spawned.</param>
         /// <param name="events">The game's stream, told what happens to the player.</param>
@@ -60,9 +64,13 @@ namespace Forge.Play
         /// <param name="combatants">Who can be struck in the game; the player is one while spawned.</param>
         /// <param name="placedActors">The world's placed actors, which the player's blows find.</param>
         /// <param name="landShot">Where what the player shoots goes once it lands, with its pose there and what it is in.</param>
+        /// <param name="sounds">What the player's sounds (its footsteps) play on; null: it makes none.</param>
+        /// <param name="surfaces">What is underfoot, which its steps sound of; null: nothing in particular.</param>
         public PlayerSession(PlayerProfile profile, Transform camera, GameEvents events, IAssetCatalog assets, Combatants combatants,
-            PlacedActors placedActors, ArrowFlights.Landing landShot)
+            PlacedActors placedActors, ArrowFlights.Landing landShot, SoundPlayer sounds = null, GroundSurfaces surfaces = null)
         {
+            _sounds = sounds;
+            _surfaces = surfaces;
             _landShot = landShot ?? throw new ArgumentNullException(nameof(landShot));
             _profile = profile != null ? profile : throw new ArgumentNullException(nameof(profile));
             Events = events ?? throw new ArgumentNullException(nameof(events));
@@ -196,6 +204,8 @@ namespace Forge.Play
                 _sweep = new BladeSweep(Combat, _avatar.Model, world, Identify);
                 _shotView = new ShotView(Combat, Equipment, _avatar.Model, _assets, () => _director.Pose);
                 _arrows = new ArrowFlights(Combat, _avatar.Model, _assets, () => _director.Pose, Identify, _landShot);
+                if (_sounds != null)
+                    _footsteps = new FootstepView(_avatar.Model, _sounds, _surfaces, Player.Locomotion.Settings);
             }
 
             _carry = new ObjectCarry(_motor.Collider, _profile.Carry());
@@ -262,6 +272,7 @@ namespace Forge.Play
             Player.Tick(commands, deltaTime);
             Frame(deltaTime);
             _sweep?.Tick();
+            _footsteps?.Tick(Player.Motion, deltaTime);
             Focus.Update(_director.Pose, Player.Eyes);
             if (commands.Activate)
                 Focus.Activate();
@@ -289,6 +300,7 @@ namespace Forge.Play
         {
             Player?.Shift(delta.ToNumerics());
             _arrows?.Shift(delta);
+            _footsteps?.Shift(delta);
         }
 
         // Records are immutable, so the same records (by reference) are the same attributes.
@@ -315,6 +327,7 @@ namespace Forge.Play
             _controls.Disable();
             _carry?.Dispose();
             _carry = null;
+            _footsteps = null;
             _equipmentView?.Dispose();
             _equipmentView = null;
             _readinessView?.Dispose();

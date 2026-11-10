@@ -17,6 +17,7 @@ using Forge.Editing;
 using Forge.Editing.Modes;
 using Forge.Editing.State;
 using Forge.Play;
+using Forge.Play.Sound;
 using Forge.Streaming;
 using Forge.World;
 using Forge.World.Assets;
@@ -94,6 +95,9 @@ namespace Forge.EditorApp
 
         [SerializeField, Tooltip("How the player is built and controlled (Settings/Player); without one, playing flies the editor camera.")]
         PlayerProfile _player;
+
+        [SerializeField, Tooltip("How the game sounds (Settings/Sound/SoundSettings); without one, playing is silent.")]
+        SoundSettings _sound;
 
         [SerializeField] EditorController _controller;
         [SerializeField] EditorPanel _panel;
@@ -187,7 +191,7 @@ namespace Forge.EditorApp
 
                 // Not under the world root: the root moves far from zero, and the pictures would jitter with it.
                 _thumbnails = new ThumbnailRenderer(assets, null);
-                _controller.Initialize(_context, _frame, _view, _waterView, _panel, assets, _agent, _player);
+                _controller.Initialize(_context, _frame, _view, _waterView, _panel, assets, _agent, _player, _sound);
                 _panel.Initialize(_context, _controller.Commands, diagnostics, _thumbnails, ground, materials, _controller.Agent?.Conversation, _controller.SnapshotView, _controller.PlayFromHere?.Game);
                 _panel.Restore(_state.Prefs, _state.World);
             }

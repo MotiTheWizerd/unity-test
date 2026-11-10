@@ -918,6 +918,42 @@ running game (the editor's play from here owns one today; the game app will own 
 - Lookups are an array read per event type (each type gets a small index once), listener lists are copied on change,
   queues keep their capacity: no allocation in steady play. Not thread-safe; it belongs to the game's loop.
 
+## Sound (Forge.Play.Sound)
+
+The rules never play a sound; they only say what happened, and the sound layer hears it. The same happenings will
+later reach the world's characters as noise (a crouched step is softer).
+
+- **Sounds are content by key**, like models and animations. A folder under `Content/Sounds` holding recordings is a
+  cue, keyed by its path in lowercase (`Footsteps/Walk` → `footsteps/walk`). *Forge → Sounds → Build Sounds*
+  (`SoundBuilder`) makes each folder's `SoundCue` (its takes, volume, loudness and pitch jitter, bus, range in meters,
+  0: heard alike everywhere) and lists it in `Content/SoundCatalog`. An optional `{Name}.json` sets those, and
+  `"split": true` cuts a recording of several sounds (a run of steps) into a take each (`RecordingSplitter`: onsets
+  against the recording's own quiet and loudest, at least `"gap"` seconds apart, scuffs under 0.08 s left out),
+  baked to `Content/Sounds/_Built` as mono WAVs, each evened out and faded so none clicks; it also trims a lone
+  sound's lead-in silence. `SoundImport` unpacks everything there on load, mono but Music and Ambience.
+- **Mix**: `Settings/Sound/Forge.mixer` has Master → Music, Ambience, Effects (Combat, Foley, Footsteps), UI. A cue's
+  bus (`SoundBus`) is its top folder when that names one, else Effects; `SoundSettings` routes each bus to the group of
+  its name (wired by Build Sounds) and sets the voice count. The bootstrap's `_sound` holds the settings; without them
+  play is silent.
+- **`SoundPlayer`** (one per `GameSession`) plays on a fixed pool of voices made once (the oldest gives way), each
+  play a different take than the last (`TakePicker`), straying a little in loudness and pitch.
+- **`SoundDirector`** subscribes to the stream and plays each happening's key where its actor is
+  (`GameSession.WhereIs`: the player's feet today): `ActorJumped` → `foley/jump`; a combat move coming to its
+  moment (`MoveWindowOpened`, published as its window opens: a blow's cut, a bow's draw with the arrow on, a
+  shield's raise) → `combat/<its animation>` (`combat/swordslash`, `combat/bowshot`); a shot (`ShotLoosed`, naming
+  its move's release) → `combat/<release>` (`combat/bowrelease`), cutting the draw's creak short
+  (`SoundPlayer.Stop`, by the `SoundHandle` a play returns). So a mod's new move is heard by a folder named for its
+  animation. A key the catalog lacks plays nothing, so a sound joins by dropping in its folder and building.
+- **Footsteps** (`FootstepView`, per character) are the one presentation-timed sound: a step lands when a foot that
+  swung (faster than 1.2× its body) slows to nearly standing (under 0.35×: a planted foot is still in the world,
+  `StepDetector`), so any clip, slope or crouch steps in time. The gait (`Gaits.Of`: still, sneak, walk, run, sprint,
+  from the body's motion and paces) and what is underfoot (`GroundSurfaces`: the land's dominant ground layer there,
+  its `GroundLayerRecord.Surface`; nothing yet on placed things) pick the sound, most particular first
+  (`FootstepKeys`: `footsteps/wet/run`, `footsteps/wet`, `footsteps/run`, gentler gaits standing in, louder or softer
+  by how hard each gait treads). A surface is a lowercase word (`Surfaces.IsValid`), so a mod's ground names its own.
+- Shortcuts: the listener is the camera's (behind the player in third person); the world's actors aren't located
+  yet, so only the player is heard.
+
 ## Interaction and items (Forge.Game.Interaction, .Items, .World)
 
 Skyrim's use key: look at something within reach, a prompt says what it is and what the key does, and the key does it.

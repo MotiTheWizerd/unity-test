@@ -1,4 +1,7 @@
+using System.Collections.Generic;
 using System.Numerics;
+using Forge.Game.Actors;
+using Forge.Game.Events;
 using Forge.Game.Player;
 using NUnit.Framework;
 
@@ -166,6 +169,23 @@ namespace Forge.Tests.Game
             player.Tick(Crouch, Frame);
             Run(player, PlayerCommands.None, 0.5f);
             Assert.That(player.Lowered, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void TakingOff_IsToldOnTheStream_OnceAJump()
+        {
+            var events = new GameEvents();
+            var jumped = new List<ActorJumped>();
+            events.Subscribe<ActorJumped>(jumped.Add);
+            var player = new PlayerCharacter(new CrouchingGround(), Settings, EyeHeight, events: events);
+            player.Tick(PlayerCommands.None, Frame);
+
+            player.Tick(Jump, Frame);
+            player.Tick(Jump, Frame);
+            events.Flush();
+
+            Assert.That(jumped.Count, Is.EqualTo(1), "In the air, a second press is no jump.");
+            Assert.That(jumped[0].Actor, Is.EqualTo(ActorId.Player));
         }
 
         [Test]

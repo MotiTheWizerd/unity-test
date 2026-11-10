@@ -99,6 +99,9 @@ namespace Forge.Play
 
         public Animator[] Animators { get; }
 
+        /// <summary>Its humanoid's <paramref name="bone"/> (a foot, the head), or null when it has no humanoid or no such bone.</summary>
+        public Transform Bone(HumanBodyBones bone) => _humanoid != null ? _humanoid.GetBoneTransform(bone) : null;
+
         /// <summary>
         /// Seen from inside its own head (first person): all of it draws but its head, which, with what hangs from it,
         /// casts only its shadow (<see cref="HeadlessBody"/>); what it holds draws as ever, and its shadow is whole.

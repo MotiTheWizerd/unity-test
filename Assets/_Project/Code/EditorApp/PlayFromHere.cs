@@ -4,6 +4,7 @@ using Forge.EditorApp.Tools;
 using Forge.Editing.Modes;
 using Forge.Game.Player;
 using Forge.Play;
+using Forge.Play.Sound;
 using Forge.World;
 using UnityEngine;
 // Not UnityEngine.Compass, the device's magnetometer.
@@ -32,7 +33,7 @@ namespace Forge.EditorApp
 
         /// <param name="view">The scene's world, which shows what playing changes in it.</param>
         public PlayFromHere(EditorContext context, ScenePicker picker, WorldFrame frame, WorldView view, Camera camera, FlyCamera flyCamera,
-            PlayerProfile profile)
+            PlayerProfile profile, SoundSettings sound = null)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _picker = picker ?? throw new ArgumentNullException(nameof(picker));
@@ -40,7 +41,7 @@ namespace Forge.EditorApp
             _camera = camera != null ? camera : throw new ArgumentNullException(nameof(camera));
             _flyCamera = flyCamera != null ? flyCamera : throw new ArgumentNullException(nameof(flyCamera));
             // A listener that fails is logged, and the others still hear.
-            Game = new GameSession(profile, camera.transform, view, frame, Debug.LogException);
+            Game = new GameSession(profile, camera.transform, view, frame, Debug.LogException, sound);
             _context.Modes.Changed += OnModeChanged;
         }
 

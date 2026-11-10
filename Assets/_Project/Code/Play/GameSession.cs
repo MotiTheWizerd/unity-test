@@ -9,6 +9,7 @@ using Forge.Game.Events;
 using Forge.Game.Interaction;
 using Forge.Game.Items;
 using Forge.Game.World;
+using Forge.Play.Sound;
 using Forge.World;
 using Forge.World.Assets;
 using UnityEngine;
@@ -43,12 +44,15 @@ namespace Forge.Play
         readonly WorldFrame _frame;
         readonly ItemDropper _dropper;
         readonly ShotLandings _landings;
+        readonly SoundDirector _director;
 
         /// <param name="camera">The camera the player sees through while playing.</param>
         /// <param name="view">The scene's world, which shows what playing changed.</param>
         /// <param name="frame">The world's frame in the scene, where the player's positions become the world's.</param>
         /// <param name="onError">Where a listener that fails is reported; the others still hear.</param>
-        public GameSession(PlayerProfile profile, Transform camera, WorldView view, WorldFrame frame, Action<Exception> onError)
+        /// <param name="sound">How the game sounds; null plays it silent.</param>
+        public GameSession(PlayerProfile profile, Transform camera, WorldView view, WorldFrame frame, Action<Exception> onError,
+            SoundSettings sound = null)
         {
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _frame = frame ?? throw new ArgumentNullException(nameof(frame));
@@ -56,7 +60,12 @@ namespace Forge.Play
             Changes = new WorldChanges();
             Combatants = new Combatants();
             PlacedActors = new PlacedActors(Combatants);
-            Player = new PlayerSession(profile, camera, Events, view.Assets, Combatants, PlacedActors, LandShot);
+            if (sound != null)
+                Sounds = new SoundPlayer(sound);
+            Player = new PlayerSession(profile, camera, Events, view.Assets, Combatants, PlacedActors, LandShot,
+                Sounds, new GroundSurfaces(view, frame, () => World));
+            if (Sounds != null)
+                _director = new SoundDirector(Events, Sounds, WhereIs);
             Interactions = new Interactions()
                 .Add(new TakeInteraction(Changes, InventoryOf, Events));
             _dropper = new ItemDropper(Changes, InventoryOf, Events);
@@ -69,6 +78,9 @@ namespace Forge.Play
 
         /// <summary>The game's stream; this session flushes it once a frame.</summary>
         public GameEvents Events { get; }
+
+        /// <summary>What the game's sounds play on; null when it plays silent.</summary>
+        public SoundPlayer Sounds { get; }
 
         /// <summary>What playing changed in the world, let go when playing ends.</summary>
         public WorldChanges Changes { get; }
@@ -225,9 +237,15 @@ namespace Forge.Play
             Changes.Removed -= OnRemoved;
             Changes.Cleared -= _view.ShowAsBuilt;
             Player.Dispose();
+            _director?.Dispose();
+            Sounds?.Dispose();
         }
 
         Inventory InventoryOf(ActorId actor) => actor == ActorId.Player ? Player.Inventory : null;
+
+        // Where an actor is in the scene: the player's feet while it is spawned; the world's actors don't say yet.
+        Vector3? WhereIs(ActorId actor) =>
+            actor == ActorId.Player && Player.Player != null ? Player.Player.Feet.ToUnity() : (Vector3?)null;
 
         // A loose thing came to rest somewhere new (scene space): playing keeps it there, in the world's own coordinates.
         void OnSettled(RecordId id, Vector3 position, Quaternion rotation)

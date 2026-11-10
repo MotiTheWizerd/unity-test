@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a0691695e888a84891837bec7212739, type: 3}
+  m_Name: SoundSettings
+  m_EditorClassIdentifier: Forge.Play::Forge.Play.Sound.SoundSettings
+  _catalog: {fileID: 11400000, guid: 676f5c8cfb44dba4586cc88ad753dc40, type: 2}
+  _routes:
+  - Bus: 0
+    Group: {fileID: -1733882041224652278, guid: c8a278436d80b31469e23a07cbfb5bd7, type: 2}
+  - Bus: 1
+    Group: {fileID: 6649830166165091962, guid: c8a278436d80b31469e23a07cbfb5bd7, type: 2}
+  - Bus: 2
+    Group: {fileID: 8374451756851499820, guid: c8a278436d80b31469e23a07cbfb5bd7, type: 2}
+  - Bus: 3
+    Group: {fileID: -8170101792173635432, guid: c8a278436d80b31469e23a07cbfb5bd7, type: 2}
+  - Bus: 4
+    Group: {fileID: -4582877574943092509, guid: c8a278436d80b31469e23a07cbfb5bd7, type: 2}
+  - Bus: 5
+    Group: {fileID: 7399432991586036968, guid: c8a278436d80b31469e23a07cbfb5bd7, type: 2}
+  - Bus: 6
+    Group: {fileID: 5879076133243209564, guid: c8a278436d80b31469e23a07cbfb5bd7, type: 2}
+  _voices: 24

@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 834fce98388de40498decb8e2cc9d2aa, type: 3}
+  m_Name: Wet
+  m_EditorClassIdentifier: Forge.Play::Forge.Play.Sound.SoundCue
+  _takes:
+  - {fileID: 8300000, guid: 85ae481979ff087439998889506800fe, type: 3}
+  - {fileID: 8300000, guid: e80d234f07a5a394b971658d286fd8d8, type: 3}
+  - {fileID: 8300000, guid: 6cfaaf3a4e744f34a8797caa6dbc82db, type: 3}
+  - {fileID: 8300000, guid: c5682a667cc578e49bd3bac4becd0343, type: 3}
+  - {fileID: 8300000, guid: 98bba849a7a19ba45a1ed76d87a2b8fe, type: 3}
+  _volume: 0.6
+  _volumeJitter: 0.1
+  _pitchJitter: 0.05
+  _bus: 3
+  _range: 25

@@ -30,6 +30,23 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void GroundLayer_SaysWhatItIsUnderfoot_AsALowercaseWord()
+        {
+            Assert.That(new GroundLayerRecord(Rock, "Rock", "ground/rock", surface: "stone").Surface, Is.EqualTo("stone"));
+            Assert.That(new GroundLayerRecord(Rock, "Rock", "ground/rock").Surface, Is.Null);
+            Assert.Throws<ArgumentException>(() => new GroundLayerRecord(Rock, "Rock", "ground/rock", surface: "Stone"));
+            Assert.Throws<ArgumentException>(() => new GroundLayerRecord(Rock, "Rock", "ground/rock", surface: "wet stone"));
+            Assert.Throws<ArgumentException>(() => new GroundLayerRecord(Rock, "Rock", "ground/rock", surface: ""));
+        }
+
+        [Test]
+        public void APaintTexel_IsTheMeterOfItsChunkAPointLiesIn()
+        {
+            Assert.That(WorldGrid.PaintTexelOf(0.5f, 63.9f), Is.EqualTo((0, 63)));
+            Assert.That(WorldGrid.PaintTexelOf(64f + 10.2f, -0.5f), Is.EqualTo((10, 63)), "Its own chunk's: the next one east, the one south.");
+        }
+
+        [Test]
         public void GroundLayer_GrowsGrassOnlyWhenGivenSome_WithinSaneBounds()
         {
             Assert.That(new GroundLayerRecord(Rock, "Rock", "ground/rock").Grass, Is.Null);

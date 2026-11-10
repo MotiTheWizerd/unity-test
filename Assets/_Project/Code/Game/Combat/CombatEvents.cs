@@ -28,15 +28,51 @@ namespace Forge.Game.Combat
         public override string ToString() => $"{Actor}: {Move} with {Weapon} ({Slot})";
     }
 
-    /// <summary><see cref="Actor"/>'s <see cref="Weapon"/> loosed one <see cref="Ammo"/> (a bow, an arrow), <see cref="Power"/> of a full draw's.</summary>
+    /// <summary>
+    /// An actor's combat move came to its moment (its window opened), as it is heard: a blow sweeping through its cut,
+    /// hit or miss; a bow's string pulled back, the arrow on it; a shield coming up. <see cref="Animation"/> names the
+    /// move (a combat style's "SwordSlash"), <see cref="Measure"/> says which of those it is.
+    /// </summary>
+    public readonly struct MoveWindowOpened : IGameEvent
+    {
+        public MoveWindowOpened(ActorId actor, RecordId slot, RecordId weapon, string animation, MoveMeasure measure)
+        {
+            Actor = actor;
+            Slot = slot;
+            Weapon = weapon;
+            Animation = animation;
+            Measure = measure;
+        }
+
+        public ActorId Actor { get; }
+
+        public RecordId Slot { get; }
+
+        /// <summary>The weapon: its base object.</summary>
+        public RecordId Weapon { get; }
+
+        /// <summary>The move's animation, which names it ("SwordSlash").</summary>
+        public string Animation { get; }
+
+        /// <summary>What its window is: a cut, a draw, a raise.</summary>
+        public MoveMeasure Measure { get; }
+
+        public override string ToString() => $"{Actor}: {Animation} with {Weapon} came to its {Measure} ({Slot})";
+    }
+
+    /// <summary>
+    /// <see cref="Actor"/>'s <see cref="Weapon"/> loosed one <see cref="Ammo"/> (a bow, an arrow), <see cref="Power"/> of a
+    /// full draw's; <see cref="Release"/> names how it let go (its move's release, "BowRelease", else the move's own).
+    /// </summary>
     public readonly struct ShotLoosed : IGameEvent
     {
-        public ShotLoosed(ActorId actor, RecordId weapon, RecordId ammo, float power)
+        public ShotLoosed(ActorId actor, RecordId weapon, RecordId ammo, float power, string release = null)
         {
             Actor = actor;
             Weapon = weapon;
             Ammo = ammo;
             Power = power;
+            Release = release;
         }
 
         public ActorId Actor { get; }
@@ -46,6 +82,9 @@ namespace Forge.Game.Combat
         public RecordId Ammo { get; }
 
         public float Power { get; }
+
+        /// <summary>The animation it let go by ("BowRelease"); null when it isn't known.</summary>
+        public string Release { get; }
 
         public override string ToString() => $"{Actor}: loosed {Ammo} from {Weapon} at {Power:P0}";
     }

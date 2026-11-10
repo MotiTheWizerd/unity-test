@@ -51,3 +51,8 @@ Assets/_Project/Content/Animations/**/*.fbx -filter -diff -merge binary
 Assets/_Project/Content/Models/**/*.fbx -filter -diff -merge binary
 Assets/_Project/Content/Models/**/*.png -filter -diff -merge binary
 Assets/_Project/Content/Models/**/*.jpg -filter -diff -merge binary
+
+# Sounds (recordings and the takes built from them) likewise: plain git objects, not LFS.
+Assets/_Project/Content/Sounds/**/*.wav -filter -diff -merge binary
+Assets/_Project/Content/Sounds/**/*.mp3 -filter -diff -merge binary
+Assets/_Project/Content/Sounds/**/*.ogg -filter -diff -merge binary

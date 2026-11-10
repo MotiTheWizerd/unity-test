@@ -940,13 +940,15 @@
       "type": "ground_layer",
       "id": "forge.core:ground/cobblestone",
       "displayName": "Cobblestone",
-      "assetKey": "ground/cobblestone"
+      "assetKey": "ground/cobblestone",
+      "surface": "stone"
     },
     {
       "type": "ground_layer",
       "id": "forge.core:ground/dirt",
       "displayName": "Dirt",
-      "assetKey": "ground/dirt"
+      "assetKey": "ground/dirt",
+      "surface": "dirt"
     },
     {
       "type": "ground_layer",
@@ -956,13 +958,15 @@
       "grass": {
         "density": 2.5,
         "height": 0.4
-      }
+      },
+      "surface": "grass"
     },
     {
       "type": "ground_layer",
       "id": "forge.core:ground/flagstone",
       "displayName": "Flagstone",
-      "assetKey": "ground/flagstone"
+      "assetKey": "ground/flagstone",
+      "surface": "stone"
     },
     {
       "type": "ground_layer",
@@ -972,7 +976,8 @@
       "grass": {
         "density": 0.6,
         "height": 0.3
-      }
+      },
+      "surface": "dirt"
     },
     {
       "type": "ground_layer",
@@ -982,7 +987,8 @@
       "grass": {
         "density": 5.0,
         "height": 0.5
-      }
+      },
+      "surface": "grass"
     },
     {
       "type": "ground_layer",
@@ -992,7 +998,8 @@
       "grass": {
         "density": 2.0,
         "height": 0.3
-      }
+      },
+      "surface": "dirt"
     },
     {
       "type": "ground_layer",
@@ -1002,67 +1009,78 @@
       "grass": {
         "density": 1.2,
         "height": 0.25
-      }
+      },
+      "surface": "stone"
     },
     {
       "type": "ground_layer",
       "id": "forge.core:ground/gravel",
       "displayName": "Gravel",
-      "assetKey": "ground/gravel"
+      "assetKey": "ground/gravel",
+      "surface": "gravel"
     },
     {
       "type": "ground_layer",
       "id": "forge.core:ground/moss",
       "displayName": "Moss",
-      "assetKey": "ground/moss"
+      "assetKey": "ground/moss",
+      "surface": "grass"
     },
     {
       "type": "ground_layer",
       "id": "forge.core:ground/mud",
       "displayName": "Mud",
-      "assetKey": "ground/mud"
+      "assetKey": "ground/mud",
+      "surface": "wet"
     },
     {
       "type": "ground_layer",
       "id": "forge.core:ground/packedearth",
       "displayName": "Packed Earth",
-      "assetKey": "ground/packedearth"
+      "assetKey": "ground/packedearth",
+      "surface": "dirt"
     },
     {
       "type": "ground_layer",
       "id": "forge.core:ground/rock",
       "displayName": "Rock",
-      "assetKey": "ground/rock"
+      "assetKey": "ground/rock",
+      "surface": "stone"
     },
     {
       "type": "ground_layer",
       "id": "forge.core:ground/sand",
       "displayName": "Sand",
-      "assetKey": "ground/sand"
+      "assetKey": "ground/sand",
+      "surface": "sand"
     },
     {
       "type": "ground_layer",
       "id": "forge.core:ground/snow",
       "displayName": "Snow",
-      "assetKey": "ground/snow"
+      "assetKey": "ground/snow",
+      "surface": "snow"
     },
     {
       "type": "ground_layer",
       "id": "forge.core:ground/stonymud",
       "displayName": "Stony Mud",
-      "assetKey": "ground/stonymud"
+      "assetKey": "ground/stonymud",
+      "surface": "wet"
     },
     {
       "type": "ground_layer",
       "id": "forge.core:ground/wetmud",
       "displayName": "Wet Mud",
-      "assetKey": "ground/wetmud"
+      "assetKey": "ground/wetmud",
+      "surface": "wet"
     },
     {
       "type": "ground_layer",
       "id": "forge.core:ground/worncobblestone",
       "displayName": "Worn Cobblestone",
-      "assetKey": "ground/worncobblestone"
+      "assetKey": "ground/worncobblestone",
+      "surface": "stone"
     },
     {
       "type": "base_object",

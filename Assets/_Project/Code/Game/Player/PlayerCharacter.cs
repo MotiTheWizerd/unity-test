@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Forge.Core.Geometry;
+using Forge.Game.Actors;
 using Forge.Game.Attributes;
 using Forge.Game.Events;
 using Forge.Game.Motion;
@@ -25,12 +26,13 @@ namespace Forge.Game.Player
         const float CrouchSeconds = 0.25f;
 
         readonly ICrouchingBody _crouching;
+        readonly GameEvents _events;
         MotorContact _contact;
 
         /// <param name="eyeHeight">Meters from the feet to the eyes, where a first-person camera sits.</param>
         /// <param name="attributes">The player's attributes, which moving costs (<see cref="MovementCosts"/>) are paid from
         /// and which tick with it; null for a player whose moves cost nothing.</param>
-        /// <param name="events">The game's stream, told what happens to the player (exhausted, fell); null to tell no one.</param>
+        /// <param name="events">The game's stream, told what happens to the player (jumped, exhausted, fell); null to tell no one.</param>
         public PlayerCharacter(IPlayerMotor motor, LocomotionSettings locomotion, float eyeHeight, ActorAttributes attributes = null, GameEvents events = null)
         {
             Motor = motor ?? throw new ArgumentNullException(nameof(motor));
@@ -39,6 +41,7 @@ namespace Forge.Game.Player
                 throw new ArgumentOutOfRangeException(nameof(eyeHeight), eyeHeight, "Must be a positive number.");
             EyeHeight = eyeHeight;
             Locomotion = new PlayerLocomotion(locomotion);
+            _events = events;
             if (attributes != null)
                 Costs = new MovementCosts(attributes, events);
         }
@@ -109,6 +112,8 @@ namespace Forge.Game.Player
             {
                 Motion = BodyMotion.Between(from, Motor.Position, deltaTime, _contact.Grounded, Crouched);
                 Costs?.Pay(Locomotion.Jumped, _contact.Grounded, Motor.Position.Y);
+                if (Locomotion.Jumped)
+                    _events?.Publish(new ActorJumped(Attributes?.Owner ?? ActorId.Player));
                 Attributes?.Tick(deltaTime);
                 LowerEyes(deltaTime);
             }

@@ -4,6 +4,16 @@ using Forge.Game.Events;
 
 namespace Forge.Game.Player
 {
+    /// <summary>An actor took off in a jump.</summary>
+    public readonly struct ActorJumped : IGameEvent
+    {
+        public ActorJumped(ActorId actor) => Actor = actor;
+
+        public ActorId Actor { get; }
+
+        public override string ToString() => $"{Actor}: jumped";
+    }
+
     /// <summary>An actor ran out of stamina mid-sprint and is winded: it walks until it gets its breath back.</summary>
     public readonly struct ActorExhausted : IGameEvent
     {

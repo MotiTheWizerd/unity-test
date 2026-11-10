@@ -521,6 +521,7 @@ MonoBehaviour:
   _sun: {fileID: 410087040}
   _agent: {fileID: 11400000, guid: faebb307bb913f44f8457abe26252145, type: 2}
   _player: {fileID: 11400000, guid: bb3afda5f2fca2c49ab29c7ea3b1d926, type: 2}
+  _sound: {fileID: 11400000, guid: ec20f02a8684f5945b83cd5b3537d9e8, type: 2}
   _controller: {fileID: 1624300795}
   _panel: {fileID: 1624300798}
 --- !u!4 &1624300797

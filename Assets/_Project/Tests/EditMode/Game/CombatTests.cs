@@ -168,6 +168,25 @@ namespace Forge.Tests.Game
         }
 
         [Test]
+        public void ABlow_IsToldAsItSwingsThroughItsCut_OnceASwing()
+        {
+            Hold(Sword);
+            Draw();
+            _combat.TryAttack(CoreEquipSlots.RightHand);
+
+            _combat.Tick(0.1f);
+            _events.Flush();
+            Assert.That(_told.OfType<MoveWindowOpened>(), Is.Empty, "Still winding up.");
+
+            _combat.Tick(0.4f);
+            _combat.Tick(0.1f);
+            _events.Flush();
+            var swung = _told.OfType<MoveWindowOpened>().Single();
+            Assert.That((swung.Actor, swung.Slot, swung.Weapon, swung.Measure), Is.EqualTo((ActorId.Player, CoreEquipSlots.RightHand, Sword.Id, MoveMeasure.Cut)));
+            Assert.That(swung.Animation, Is.EqualTo(_combat.Swings.Single().Move.Animation));
+        }
+
+        [Test]
         public void ASwing_PlaysOut_AndThatHandMaySwingAgain_ButNotBefore()
         {
             Hold(Sword);
@@ -393,6 +412,8 @@ namespace Forge.Tests.Game
             Assert.That(_dummy.Current(CoreAttributes.Health), Is.EqualTo(20f));
             var loosed = _told.OfType<ShotLoosed>().Single();
             Assert.That((loosed.Actor, loosed.Weapon, loosed.Ammo, loosed.Power), Is.EqualTo((ActorId.Player, Bow.Id, Arrow.Id, 1f)));
+            Assert.That(loosed.Release, Is.EqualTo("BowRelease"), "It let go by its move's release.");
+            Assert.That(_told.OfType<MoveWindowOpened>().Single().Measure, Is.EqualTo(MoveMeasure.Draw), "The arrow came on the string once.");
         }
 
         [Test]

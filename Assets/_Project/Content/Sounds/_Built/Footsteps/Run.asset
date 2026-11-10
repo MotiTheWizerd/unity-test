@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 834fce98388de40498decb8e2cc9d2aa, type: 3}
+  m_Name: Run
+  m_EditorClassIdentifier: Forge.Play::Forge.Play.Sound.SoundCue
+  _takes:
+  - {fileID: 8300000, guid: c09ec8e21052a2546b5047b7e3595953, type: 3}
+  - {fileID: 8300000, guid: ccb49b0c1dbf5df4b8184061670f69a1, type: 3}
+  - {fileID: 8300000, guid: f0e864c276edb10498f9618542a7c581, type: 3}
+  - {fileID: 8300000, guid: 9d402a7d529978e48951301c3a5e160b, type: 3}
+  - {fileID: 8300000, guid: 0c1d026c5b811d648943d5744f6b06f6, type: 3}
+  - {fileID: 8300000, guid: 14bcb13a2d4f03747bb814d6594ff935, type: 3}
+  - {fileID: 8300000, guid: 5be55f57b884ef34e9bdf10ab2dae7b2, type: 3}
+  - {fileID: 8300000, guid: aeb8ec09c1b62e44c933a2a675177b66, type: 3}
+  - {fileID: 8300000, guid: c33e76efb778c9e449a24359b0b722d6, type: 3}
+  - {fileID: 8300000, guid: 19257b0a24bb34b4eadc891c4db3b4f1, type: 3}
+  - {fileID: 8300000, guid: e27e9febfefa0144f869450d83958bb4, type: 3}
+  - {fileID: 8300000, guid: d4529d5a693056f40a35f9741a94fcd5, type: 3}
+  - {fileID: 8300000, guid: 17f99f4d1767c7248b92ff30da2832c0, type: 3}
+  - {fileID: 8300000, guid: 1f3b449f9e652334ca53827f2196bba4, type: 3}
+  - {fileID: 8300000, guid: 1506120497ef73a4fb0e99ec1113e932, type: 3}
+  - {fileID: 8300000, guid: b6eff45dfb8f3b14ca6b5fa6495111fb, type: 3}
+  - {fileID: 8300000, guid: 324c78de657032048a3c9cab84e5f1f0, type: 3}
+  - {fileID: 8300000, guid: 94308eb330d635b41b2a8cd78b4eb100, type: 3}
+  - {fileID: 8300000, guid: 708fa3c96ecd2944e91981c6953b9843, type: 3}
+  - {fileID: 8300000, guid: f4af0dce7fa3caf4d9800cfe1e566aaa, type: 3}
+  - {fileID: 8300000, guid: 1f021ff859f9b3543ac44ea39c45a806, type: 3}
+  - {fileID: 8300000, guid: 8b1ff6de7c1f26646928364d9abc9664, type: 3}
+  - {fileID: 8300000, guid: bf9a673cec97ba944b3b6f0b42ea57e7, type: 3}
+  _volume: 0.75
+  _volumeJitter: 0.1
+  _pitchJitter: 0.05
+  _bus: 3
+  _range: 25

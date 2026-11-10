@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8406e686ed02f5644a0ef66fb41d68ea, type: 3}
+  m_Name: SoundCatalog
+  m_EditorClassIdentifier: Forge.Play::Forge.Play.Sound.SoundCatalog
+  _entries:
+  - _key: combat/bowrelease
+    _asset: {fileID: 11400000, guid: ee60112caec7fcd44a9f77bb27546322, type: 2}
+  - _key: combat/bowshot
+    _asset: {fileID: 11400000, guid: cdb16c2ae823ef84d8165d3ae7bb87ff, type: 2}
+  - _key: combat/swordslash
+    _asset: {fileID: 11400000, guid: a501f74a6b02b4c4c9a6ec3e45ff91ad, type: 2}
+  - _key: foley/jump
+    _asset: {fileID: 11400000, guid: c00c44d54dd8592488b1d0408163e055, type: 2}
+  - _key: footsteps/run
+    _asset: {fileID: 11400000, guid: b297e749983be76409ccd5d93ce2bef3, type: 2}
+  - _key: footsteps/sneak
+    _asset: {fileID: 11400000, guid: 2cb332248db78f045a8ba6896052044a, type: 2}
+  - _key: footsteps/walk
+    _asset: {fileID: 11400000, guid: 9206e9d40e0e91348b3e8dd2efe24774, type: 2}
+  - _key: footsteps/wet
+    _asset: {fileID: 11400000, guid: da6ed1a02a7fb24498062c54cb97eeed, type: 2}
