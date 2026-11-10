@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Forge.Play;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
@@ -36,18 +37,33 @@ namespace Forge.UnityEditor.Content
             }
 
             var moveSets = HumanoidAnimatorBuilder.BuildAll();
-            var built = 0;
+            var built = new List<GameObject>();
             foreach (var folder in AssetDatabase.GetSubFolders(CharacterImport.CharactersFolder).OrderBy(f => f, System.StringComparer.Ordinal))
             {
                 var name = Path.GetFileName(folder);
                 if (HumanoidTPose.Straighten($"{folder}/{name}.fbx", out trued))
                     Debug.Log($"[Forge] {name}: T-pose trued ({trued}).");
-                if (BuildCharacter(folder, name, MoveSetOf(folder, name, moveSets)) != null)
-                    built++;
+                var prefab = BuildCharacter(folder, name, MoveSetOf(folder, name, moveSets));
+                if (prefab != null)
+                    built.Add(prefab);
             }
 
+            ListPlayerLooks(built);
             AssetDatabase.SaveAssets();
-            Debug.Log($"[Forge] Built {built} character(s) under {CharacterImport.CharactersFolder}.");
+            Debug.Log($"[Forge] Built {built.Count} character(s) under {CharacterImport.CharactersFolder}.");
+        }
+
+        // Dev, while animation and combat are tuned: the player can be any character (the next-look key, F8).
+        static void ListPlayerLooks(IReadOnlyCollection<GameObject> characters)
+        {
+            foreach (var guid in AssetDatabase.FindAssets($"t:{nameof(PlayerProfile)}"))
+            {
+                var profile = AssetDatabase.LoadAssetAtPath<PlayerProfile>(AssetDatabase.GUIDToAssetPath(guid));
+                if (profile == null)
+                    continue;
+                profile.SetLooks(characters);
+                EditorUtility.SetDirty(profile);
+            }
         }
 
         /// <summary>

@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Forge.Game.Cameras;
 using Forge.Game.Player;
 using UnityEngine;
@@ -33,6 +36,9 @@ namespace Forge.Play
 
         [SerializeField, Tooltip("What the player looks like: a prefab standing on its feet (the pivot), facing +Z. The placeholder mannequin until a real character replaces it.")]
         GameObject _model;
+
+        [SerializeField, Tooltip("Dev, while animation and combat are tuned: the characters the next-look key (F8) switches the player between, in order. Build Characters lists every character here.")]
+        GameObject[] _looks = Array.Empty<GameObject>();
 
         [Header("Moving")]
         [SerializeField, Min(0.1f), Tooltip("While walking is switched on (Caps Lock), meters per second. Matches the Walk clip's stride.")]
@@ -157,6 +163,13 @@ namespace Forge.Play
 
         /// <summary>The player's look; null leaves it unseen (first person works, third person shows nothing of it).</summary>
         public GameObject Model => _model;
+
+        /// <summary>The characters the next-look key switches the player between (a dev key for now); may be empty.</summary>
+        public IReadOnlyList<GameObject> Looks => _looks ?? Array.Empty<GameObject>();
+
+        /// <summary>Lists <paramref name="looks"/> as the characters to switch between (used by content tools).</summary>
+        public void SetLooks(IEnumerable<GameObject> looks) =>
+            _looks = (looks ?? throw new ArgumentNullException(nameof(looks))).Where(look => look != null).ToArray();
 
         public bool StartInThirdPerson => _startInThirdPerson;
 

@@ -19,6 +19,8 @@ MonoBehaviour:
   _stepHeight: 0.4
   _slopeLimit: 50
   _model: {fileID: 8301520851496015657, guid: a69373ee747a66a4496309ea698c2843, type: 3}
+  _looks:
+  - {fileID: 8301520851496015657, guid: a69373ee747a66a4496309ea698c2843, type: 3}
   _walkSpeed: 1.8
   _crouchSpeed: 1.2
   _runSpeed: 4.5

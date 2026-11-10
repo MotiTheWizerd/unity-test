@@ -148,9 +148,29 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "NextLook",
+                    "type": "Button",
+                    "id": "3f9d2c6a-8e41-4b7d-a5c2-1e6f7a8b9c04",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
+                {
+                    "name": "",
+                    "id": "4a0e3d7b-9f52-4c8e-b6d3-2f7a8b9c0d15",
+                    "path": "<Keyboard>/f8",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "NextLook",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
                 {
                     "name": "",
                     "id": "d8b2f3e4-7c4a-4f9b-ae26-3a8c9d0f1b24",

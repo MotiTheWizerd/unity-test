@@ -8,7 +8,7 @@ namespace Forge.Play
 {
     /// <summary>
     /// Reads the player's action map (the profile's: Move, Look, Sprint, Jump, ToggleWalk, Crouch, ToggleView, Zoom, Interact,
-    /// Lift, Inventory, ReadyWeapon, AttackRight, AttackLeft) into <see cref="PlayerCommands"/>, <see cref="ViewCommands"/> and the menu key, the rules' only input. Rebinding, a gamepad or
+    /// Lift, Inventory, ReadyWeapon, AttackRight, AttackLeft, NextLook) into <see cref="PlayerCommands"/>, <see cref="ViewCommands"/> and the menu key, the rules' only input. Rebinding, a gamepad or
     /// another layout is the actions asset's business; nothing here names a key (the wheel's binding scales its steps to
     /// notches). The map is on only while enabled (while playing).
     /// </summary>
@@ -29,6 +29,7 @@ namespace Forge.Play
         readonly InputAction _readyWeapon;
         readonly InputAction _attackRight;
         readonly InputAction _attackLeft;
+        readonly InputAction _nextLook;
         readonly float _lookSensitivity;
         readonly UseKey _use;
 
@@ -55,6 +56,7 @@ namespace Forge.Play
             _readyWeapon = _map.FindAction("ReadyWeapon", throwIfNotFound: true);
             _attackRight = _map.FindAction("AttackRight", throwIfNotFound: true);
             _attackLeft = _map.FindAction("AttackLeft", throwIfNotFound: true);
+            _nextLook = _map.FindAction("NextLook", throwIfNotFound: true);
             _lookSensitivity = profile.LookSensitivity;
             _use = new UseKey(profile.GrabHold);
 
@@ -91,6 +93,9 @@ namespace Forge.Play
 
         /// <summary>Whether the lift key was let go this frame (what it lifted drops); never while the map is off.</summary>
         public bool ReadLiftReleased() => _map.enabled && _lift.WasReleasedThisFrame();
+
+        /// <summary>Whether the next-look key was pressed this frame (F8, a dev key: the next character); never while the map is off.</summary>
+        public bool ReadNextLook() => _map.enabled && _nextLook.WasPressedThisFrame();
 
         /// <summary>
         /// What the use key did in the frame <see cref="Read"/> last read: a tap is the commands' activate (E: take); a hold

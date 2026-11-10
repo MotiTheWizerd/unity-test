@@ -760,7 +760,13 @@ from any camera, so both cameras read the same player.
   collider, on the body's layer, animated from a `BodyMotion`; the world's characters will use it too), plus the
   player's own extras: its eyes (`CharacterModel.Eyes(height)`: a point riding the head bone at the profile's eye height
   as it stands in its idle, at the front of its face, found by `HumanoidHead` from the mesh its head carries), which
-  the first-person camera rides, and its animator always animates. **Seen from within** (`CharacterModel.FirstPerson`):
+  the first-person camera rides, and its animator always animates. **Changing look** (`PlayerSession.ChangeLook`): the
+  look and everything shown on it (equipment, readiness, combat, blade sweep, shot, arrows, footsteps, the first-person
+  head) are built and taken down together (`ShowLook` / `HideLook`), so a spawned player can become another character
+  where it stands, keeping what it carries, has equipped and has drawn; the look chosen is kept between spawns. For now
+  a dev key drives it: `NextLook` (F8) steps through the profile's `_looks`, which *Build Characters* fills with every
+  character, until a character picker or character creation calls `ChangeLook` instead. Height and eye height are
+  still the profile's, the same for every look. **Seen from within** (`CharacterModel.FirstPerson`):
   `HeadlessBody` draws each skinned mesh the head moves a second time with the head's bones (`HumanoidHead.Bones`)
   folded into one point of no size at the head bone, so the neck closes over, while the whole mesh casts only its
   shadow; what hangs from the head casts only its shadow, what the hands hold draws as ever. **Holding**: `CharacterModel.Attach(look, grip, bone)` hangs a look

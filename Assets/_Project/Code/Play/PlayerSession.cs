@@ -39,6 +39,7 @@ namespace Forge.Play
         readonly DrawZoom _zoom;
         readonly PhysicsInteractionProbe _probe;
         CharacterControllerMotor _motor;
+        GameObject _look;
         PlayerAvatar _avatar;
         AttributeRecord[] _attributeRecords;
         IDisposable _attributeEvents;
@@ -78,6 +79,7 @@ namespace Forge.Play
             _combatants = combatants ?? throw new ArgumentNullException(nameof(combatants));
             _placedActors = placedActors ?? throw new ArgumentNullException(nameof(placedActors));
             _controls = new PlayerControls(profile);
+            _look = profile.Model;
             Views = new ViewSwitch(
                 new FirstPersonCamera(profile.FirstPerson()),
                 new ThirdPersonCamera(profile.ThirdPerson(), new PhysicsCameraObstacles()),
@@ -136,8 +138,8 @@ namespace Forge.Play
         /// <summary>Whether the inventory is open: the mouse is the screen's and the player waits.</summary>
         public bool InventoryOpen { get; private set; }
 
-        /// <summary>What the player looks like (the profile's character prefab); null when it has no look.</summary>
-        public GameObject Model => _profile.Model;
+        /// <summary>What the player looks like (a character prefab: the profile's until <see cref="ChangeLook"/>); null when it has no look.</summary>
+        public GameObject Model => _look;
 
         /// <summary>The use key as a prompt shows it ("E").</summary>
         public string InteractKey => _controls.InteractKey;
@@ -179,8 +181,6 @@ namespace Forge.Play
             Despawn();
             UpdateAttributes(world.OfType<AttributeRecord>());
             _motor = new CharacterControllerMotor(_profile);
-            if (_profile.Model != null)
-                _avatar = new PlayerAvatar(_motor.Body, _profile.Model, _motor.Hover, _profile.EyeHeight);
             Player = new PlayerCharacter(_motor, _profile.Locomotion(), _profile.EyeHeight, Attributes, Events);
             World = world;
             // A world made before carrying weighed anything (no carry weight) lets the player carry anything.
@@ -196,23 +196,12 @@ namespace Forge.Play
             Combat = new ActorCombat(Equipment, Readiness, world, Attributes, _combatants, Events) { Facing = BodyForward };
             if (Attributes != null)
                 _combatants.Add(ActorId.Player, Attributes, "You", Combat);
-            if (_avatar != null)
-            {
-                _equipmentView = new EquipmentView(Equipment, _avatar.Model, world, _assets);
-                _readinessView = new ReadinessView(Readiness, _avatar.Model);
-                _combatView = new CombatView(Combat, _avatar.Model);
-                _sweep = new BladeSweep(Combat, _avatar.Model, world, Identify);
-                _shotView = new ShotView(Combat, Equipment, _avatar.Model, _assets, () => _director.Pose);
-                _arrows = new ArrowFlights(Combat, _avatar.Model, _assets, () => _director.Pose, Identify, _landShot);
-                if (_sounds != null)
-                    _footsteps = new FootstepView(_avatar.Model, _sounds, _surfaces, Player.Locomotion.Settings);
-            }
+            ShowLook();
 
             _carry = new ObjectCarry(_motor.Collider, _profile.Carry());
             Player.PlaceAt(feet.ToNumerics(), heading);
             Focus = new InteractionFocus(ActorId.Player, world, interactions, _probe, _profile.Reach);
             Views.ThirdPerson.Begin();
-            Views.FirstPerson.Head = _avatar;
             Views.FirstPerson.Begin();
             Frame(0f);
 
@@ -242,6 +231,8 @@ namespace Forge.Play
             if (InventoryOpen)
                 return;
 
+            if (_controls.ReadNextLook())
+                NextLook();
             Views.Apply(_controls.ReadView());
             Player.Facing = Views.Current.Facing;
             var commands = _controls.Read(deltaTime);
@@ -327,6 +318,87 @@ namespace Forge.Play
             _controls.Disable();
             _carry?.Dispose();
             _carry = null;
+            HideLook();
+            Combat?.Dispose();
+            Combat = null;
+            _combatants.Remove(ActorId.Player);
+            _zoom.Reset();
+            _director.Release();
+            _motor.Dispose();
+            _motor = null;
+            Burden?.Dispose();
+            Burden = null;
+            _equipmentModifiers?.Dispose();
+            _equipmentModifiers = null;
+            Readiness?.Dispose();
+            Readiness = null;
+            Player = null;
+            World = null;
+            Focus = null;
+            CaptureMouse(false);
+        }
+
+        /// <summary>
+        /// The player looks like <paramref name="look"/> (a character prefab) from now on, kept between spawns. While spawned
+        /// it changes where it stands, keeping all it is: what it carries, has equipped and has drawn shows on the new look
+        /// (arrows still in flight are lost with the old one).
+        /// </summary>
+        public void ChangeLook(GameObject look)
+        {
+            if (look == null)
+                throw new ArgumentNullException(nameof(look));
+            if (look == _look)
+                return;
+            _look = look;
+            if (Player == null)
+                return;
+            HideLook();
+            ShowLook();
+            Views.FirstPerson.Begin();
+            Frame(0f);
+        }
+
+        /// <summary>
+        /// The next of the profile's looks (<see cref="PlayerProfile.Looks"/>, the first again after the last), for the
+        /// next-look key: a dev tool while animation and combat are tuned, until a character picker replaces it.
+        /// </summary>
+        public void NextLook()
+        {
+            var looks = _profile.Looks;
+            var next = 0;
+            for (var i = 0; i < looks.Count; i++)
+            {
+                if (looks[i] == _look)
+                    next = (i + 1) % looks.Count;
+            }
+
+            // None to switch to, or one gone from the project since the list was made.
+            if (next >= looks.Count || looks[next] == null || looks[next] == _look)
+                return;
+            ChangeLook(looks[next]);
+            Debug.Log($"[Forge] The player is {_look.name} now (F8: the next).");
+        }
+
+        // The look on the body and what shows on it: what is equipped hangs from it; the weapons' readiness, the swings,
+        // the shots and the steps play on it; the first-person camera rides its eyes.
+        void ShowLook()
+        {
+            if (_look == null)
+                return;
+            _avatar = new PlayerAvatar(_motor.Body, _look, _motor.Hover, _profile.EyeHeight);
+            _equipmentView = new EquipmentView(Equipment, _avatar.Model, World, _assets);
+            _readinessView = new ReadinessView(Readiness, _avatar.Model);
+            _combatView = new CombatView(Combat, _avatar.Model);
+            _sweep = new BladeSweep(Combat, _avatar.Model, World, Identify);
+            _shotView = new ShotView(Combat, Equipment, _avatar.Model, _assets, () => _director.Pose);
+            _arrows = new ArrowFlights(Combat, _avatar.Model, _assets, () => _director.Pose, Identify, _landShot);
+            if (_sounds != null)
+                _footsteps = new FootstepView(_avatar.Model, _sounds, _surfaces, Player.Locomotion.Settings);
+            Views.FirstPerson.Head = _avatar;
+        }
+
+        void HideLook()
+        {
             _footsteps = null;
             _equipmentView?.Dispose();
             _equipmentView = null;
@@ -340,26 +412,9 @@ namespace Forge.Play
             _arrows = null;
             _combatView?.Dispose();
             _combatView = null;
-            Combat?.Dispose();
-            Combat = null;
-            _combatants.Remove(ActorId.Player);
             Views.FirstPerson.Head = null;
-            _zoom.Reset();
-            _director.Release();
             _avatar?.Dispose();
             _avatar = null;
-            _motor.Dispose();
-            _motor = null;
-            Burden?.Dispose();
-            Burden = null;
-            _equipmentModifiers?.Dispose();
-            _equipmentModifiers = null;
-            Readiness?.Dispose();
-            Readiness = null;
-            Player = null;
-            World = null;
-            Focus = null;
-            CaptureMouse(false);
         }
 
         public void Dispose()
