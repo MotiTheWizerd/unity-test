@@ -12,11 +12,14 @@ namespace Forge.Play
     /// </summary>
     public static class GripFrame
     {
-        /// <summary>How far along the fingers the grip sits, in hand-to-knuckle lengths.</summary>
-        public const float Along = 1.2f;
+        /// <summary>How far along the fingers the grip sits, in hand-to-knuckle lengths: across the fingers' bases.</summary>
+        public const float Along = 1f;
 
-        /// <summary>How far into the palm the grip sits, in hand-to-knuckle lengths.</summary>
-        public const float Into = 0.45f;
+        /// <summary>
+        /// How far into the palm the grip sits, in hand-to-knuckle lengths: a handle's thickness off the palm, inside the
+        /// curled fingers (Mixamo's hands curl toward a fist, their fingertips about half a knuckle length off the palm).
+        /// </summary>
+        public const float Into = 0.25f;
 
         /// <summary>
         /// The grip of a hand (scene space): <paramref name="hand"/> the hand bone, <paramref name="knuckle"/> a finger's
