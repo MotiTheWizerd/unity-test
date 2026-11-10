@@ -55,6 +55,8 @@ namespace Forge.UnityEditor.Content
             foreach (var folder in AssetDatabase.GetSubFolders(AnimationImport.AnimationsFolder).OrderBy(f => f, System.StringComparer.Ordinal))
             {
                 var set = Path.GetFileName(folder);
+                if (!HumanoidMoves.IsSet(set))
+                    continue;
                 var controller = Build(set);
                 if (controller != null)
                     built[set] = controller;

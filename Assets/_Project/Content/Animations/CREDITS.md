@@ -11,10 +11,14 @@ Humanoid/
   Styles/<Style>/    a combat style's moves: its stance <Style>Idle, its draw and sheathe (on the arms), its blows
   <Other>/           more actions (Interact, Emotes, ...)
   _Built/            made by the builder: the controller and its masks; don't put clips here
+_Reference/
+  TPose.fbx          the skeleton every clip is read against: a Mixamo-rigged character downloaded from Mixamo
+                     standing in its T-pose (Characters → the character → Download, Pose "T-pose"); not a move
 ```
 
 `Humanoid/` is the base set, played by every character unless its `<Name>.json` names another;
-*Forge → Characters → Build Characters* builds each set's controller.
+*Forge → Characters → Build Characters* builds each set's controller. A folder beside the sets whose name starts
+with `_` is not a set.
 
 | Move | Source | Made by |
 |------|--------|---------|
@@ -39,6 +43,7 @@ Humanoid/
 | CrouchWalk | Mixamo "Crouched Walking" | Adobe Mixamo |
 | CrouchDown | Mixamo "Standing To Crouch" | Adobe Mixamo |
 | StandUp | Mixamo "Crouched To Standing" | Adobe Mixamo |
+| _Reference/TPose | VikingM1 as Mixamo rigged it, downloaded in Mixamo's T-pose with skin (the skeleton the clips are read against, not a move) | Moti and studio-raven's VikingM1, rigged and posed by Adobe Mixamo |
 
 Downloaded by Moti from mixamo.com as FBX for Unity, 30 fps, without skin, travel left in (not "in place"). Mixamo
 animations are free to use in games under Adobe's terms.

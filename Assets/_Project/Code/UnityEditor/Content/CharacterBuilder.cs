@@ -28,11 +28,20 @@ namespace Forge.UnityEditor.Content
         [MenuItem("Forge/Characters/Build Characters")]
         static void Build()
         {
+            // The clips' reference rig first: truing it reimports every clip, which the controllers are built from.
+            if (HumanoidTPose.Straighten(AnimationImport.ReferenceRig, out var trued))
+            {
+                Debug.Log($"[Forge] {AnimationImport.ReferenceRig}: T-pose trued ({trued}); the clips reimport against it.");
+                AssetDatabase.Refresh();
+            }
+
             var moveSets = HumanoidAnimatorBuilder.BuildAll();
             var built = 0;
             foreach (var folder in AssetDatabase.GetSubFolders(CharacterImport.CharactersFolder).OrderBy(f => f, System.StringComparer.Ordinal))
             {
                 var name = Path.GetFileName(folder);
+                if (HumanoidTPose.Straighten($"{folder}/{name}.fbx", out trued))
+                    Debug.Log($"[Forge] {name}: T-pose trued ({trued}).");
                 if (BuildCharacter(folder, name, MoveSetOf(folder, name, moveSets)) != null)
                     built++;
             }

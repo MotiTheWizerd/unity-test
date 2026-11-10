@@ -783,7 +783,12 @@ from any camera, so both cameras read the same player.
   its colour `<Name>_Color.png` and optionally `<Name>_Normal.png`. `CharacterImport` (an `AssetPostprocessor`) imports
   every model there as a **humanoid** with its own avatar, so a Mixamo skeleton maps to Unity's human rig and any
   humanoid animation plays on it, and with no materials, cameras or lights. *Forge → Characters → Build Characters*
-  (`CharacterBuilder`) makes each folder's URP Lit material (2048 px textures, matte) and prefab: a variant of the model
+  (`CharacterBuilder`) first trues each model's T-pose (`HumanoidTPose`): Unity straightens the arms and legs of a
+  model made standing otherwise but keeps its hands and feet as they came (an AI model hangs its hands palms-in or
+  thumbs-up, splays its feet), and Mecanim reads every pose relative to the T-pose, so a hand turned 60° there holds a
+  sword 60° wrong in every clip; each hand is turned fingers-on-along-the-arm, palm down, each foot toes forward, in the
+  import's human description, and the model reimported (the clips' reference rig gets the same, so all read one
+  T-pose). Then it makes each folder's URP Lit material (2048 px textures, matte) and prefab: a variant of the model
   (a re-exported model updates it) wearing the material, its skeleton put back in the bind pose (a Mixamo download
   stands in its animation's first frame), with an `Animator` on the avatar, no root motion (the body moves it) and
   culled transforms off screen. A new character is a folder dropped in and a rebuild. The models and textures are plain
@@ -794,9 +799,18 @@ from any camera, so both cameras read the same player.
   by speed, and their `Drawn…` versions), `Air/` Jump, Fall, Land, `Styles/<Style>/` a combat style's moves (its
   `{Style}Idle` its stance, the rest actions), any other folder (Interact, Emotes, later) actions; `_Built/` holds what
   the builder makes (the controller, its masks). A clip in no folder, a ground or air move out of its folder, or a
-  second move of one name is left out of the build with a warning. `AnimationImport` imports each as a humanoid clip read against one T-posed Mixamo
-  skeleton (`ReferenceRig`, the hero's today: a skinless file has no rest pose and Unity would take its first frame,
-  mid-stride, for one, turning the legs out), loops the repeating moves, bakes turning into the pose and keeps travel as
+  second move of one name is left out of the build with a warning. A folder beside the sets named with a leading `_` is
+  not a set (`HumanoidMoves.IsSet`): `_Reference/TPose.fbx` is the skeleton every clip is read against
+  (`AnimationImport.ReferenceRig`): a Mixamo-rigged character downloaded from Mixamo standing in its T-pose (VikingM1
+  today; only the T-pose's bone orientations matter, which Mixamo makes alike for every rig), so its own avatar
+  serves. A skinless clip has no rest pose of its own (Unity would take its first frame, mid-stride, for one), and a
+  muscle's value is relative to the reference's T-pose, so read against a character's own import every other
+  character inherits that character's stance (Unity's auto T-pose of the hero's A-posed rest splayed the Vikings'
+  legs); until the file is in place the clips fall back to the hero's rig with a warning. The import declares the
+  reference an artifact dependency, so a batch import (a fresh clone) imports it before the clips, and a change to it
+  or to the import rule (`GetVersion`) reimports every clip.
+  `AnimationImport` imports each clip as a humanoid clip read against that skeleton,
+  loops the repeating moves, bakes turning into the pose and keeps travel as
   root motion, which the body ignores but which gives each clip's own speed; a jump's rise is left out of its pose (the
   body's rise shows it). *Build Characters* first builds each **move set**'s `_Built/<Set>.controller` (`HumanoidAnimatorBuilder`):
   `Humanoid` is the base every character plays, and another set (a guard's, an elder's) holds only the moves it

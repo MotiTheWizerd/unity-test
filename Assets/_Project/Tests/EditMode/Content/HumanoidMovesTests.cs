@@ -22,8 +22,19 @@ namespace Forge.Tests.Content
         public void WhatIsBuilt_OrInNoFolder_IsNoMove()
         {
             Assert.That(HumanoidMoves.RoleOf("_Built/Humanoid.controller"), Is.Null);
+            Assert.That(HumanoidMoves.RoleOf("_Reference/TPose.fbx"), Is.Null, "The skeleton the clips are read against is no move.");
             Assert.That(HumanoidMoves.RoleOf("Run.fbx"), Is.Null, "Loose in the set: no folder says what it is.");
             Assert.That(HumanoidMoves.RoleOf(null), Is.Null);
+        }
+
+        [Test]
+        public void AFolderBesideTheSets_IsASet_UnlessItStartsWithAnUnderscore()
+        {
+            Assert.That(HumanoidMoves.IsSet("Humanoid"), Is.True);
+            Assert.That(HumanoidMoves.IsSet("Guard"), Is.True);
+            Assert.That(HumanoidMoves.IsSet(HumanoidMoves.ReferenceFolder), Is.False);
+            Assert.That(HumanoidMoves.IsSet("_Built"), Is.False);
+            Assert.That(HumanoidMoves.IsSet(""), Is.False);
         }
 
         [Test]

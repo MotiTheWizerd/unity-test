@@ -32,6 +32,9 @@ namespace Forge.UnityEditor.Content
     /// <item>Any other folder (Interact, Emotes, ...): actions.</item>
     /// <item><see cref="BuiltFolder"/>: what the builder makes (the controller, its masks), never moves.</item>
     /// </list>
+    /// Beside the sets, <see cref="ReferenceFolder"/> holds the skeleton the clips are read against
+    /// (<see cref="AnimationImport.ReferenceRig"/>); a folder named with a leading underscore is never a set
+    /// (<see cref="IsSet"/>).
     /// An action plays on the arms alone when it draws or sheathes, else on the upper body. A move's name is its own
     /// across the set's folders, since content names it so ("BowShot"). The import (<see cref="AnimationImport"/>) loops
     /// what repeats; the animator builder (<see cref="HumanoidAnimatorBuilder"/>) plays whichever of them are present.
@@ -42,6 +45,11 @@ namespace Forge.UnityEditor.Content
         public const string AirFolder = "Air";
         public const string StylesFolder = "Styles";
         public const string BuiltFolder = "_Built";
+        public const string ReferenceFolder = "_Reference";
+
+        /// <summary>Whether a folder beside the sets, named <paramref name="folderName"/>, is a move set: the aside folders start with '_'.</summary>
+        public static bool IsSet(string folderName) =>
+            !string.IsNullOrEmpty(folderName) && !folderName.StartsWith("_", StringComparison.Ordinal);
 
         public const string Idle = "Idle";
         public const string Walk = "Walk";
@@ -99,7 +107,8 @@ namespace Forge.UnityEditor.Content
             var move = MoveName(parts[parts.Length - 1]);
             switch (parts[0])
             {
-                case BuiltFolder: return null;
+                case BuiltFolder:
+                case ReferenceFolder: return null;
                 case LocomotionFolder: return MoveRole.Ground;
                 case AirFolder: return MoveRole.Air;
                 case StylesFolder when parts.Length > 2 && IsStanceName(move): return MoveRole.Stance;
