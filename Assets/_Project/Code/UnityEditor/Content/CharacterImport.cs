@@ -12,6 +12,9 @@ namespace Forge.UnityEditor.Content
     {
         public const string CharactersFolder = "Assets/_Project/Content/Characters";
 
+        /// <summary>Asset key of the character in the folder <paramref name="folderName"/>: "VikingF1" → "characters/viking_f1".</summary>
+        public static string KeyFor(string folderName) => "characters/" + ModelImport.SnakeCase(folderName);
+
         void OnPreprocessModel()
         {
             if (!assetPath.StartsWith(CharactersFolder + "/", System.StringComparison.Ordinal))

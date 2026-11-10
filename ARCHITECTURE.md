@@ -801,8 +801,12 @@ from any camera, so both cameras read the same player.
   T-pose). Then it makes each folder's URP Lit material (2048 px textures, matte) and prefab: a variant of the model
   (a re-exported model updates it) wearing the material, its skeleton put back in the bind pose (a Mixamo download
   stands in its animation's first frame), with an `Animator` on the avatar, no root motion (the body moves it) and
-  culled transforms off screen. A new character is a folder dropped in and a rebuild. The models and textures are plain
-  git objects (`.gitattributes`), as the ground's are.
+  culled transforms off screen. A new character is a folder dropped in and a rebuild. Its optional `<Name>.json` may
+  raise its textures' size (`{ "textureSize": 4096 }`: the player, seen closest). The characters `CoreModels.Npcs`
+  lists stand in the world as **NPCs**: *Build Characters* puts each in the prefab catalog under `characters/<name>`
+  (`CharacterImport.KeyFor`) and the core plugin places it as a base object in the browser's `Characters/NPCs`,
+  upright, at its own size, idling in its move set (`CharacterContentTests` guards them). The models and textures are
+  plain git objects (`.gitattributes`), as the ground's are.
 - **Animations** (`Content/Animations/<Set>/<Folder>/<Move>.fbx`): one Mixamo clip per move (FBX for Unity, 30 fps,
   without skin, travel left in), named after its move, a name of its own across the set, and sorted by what it is: the
   folder says (`HumanoidMoves.RoleOf` → `MoveRole`): `Locomotion/` the ground moves (Idle, Walk, Run, Sprint blended
@@ -1716,3 +1720,4 @@ and the condition for removing it, and is listed here.
 | `World/GrassView.cs` (`Grow`) | Grass patches grow on the main thread, ~10 ms for a 20k-tuft patch in the editor, so crossing into a new chunk can cost a frame | One patch a frame is a short hitch; simpler than threading while grass is new | Hitches show while flying → grow on a worker thread (`GrassScatter` is engine-free; only the buffer upload needs the main thread) |
 | `EditorApp/Agent/ImageClipboard.cs` (`ForThisPlatform`) | Pasting a picture into the agent's message works on Windows only; elsewhere the clipboard has no picture | Forge runs on Windows today, and Unity's clipboard carries text only | Forge ships on macOS or Linux → a clipboard reader for that platform |
 | `Agent/Memory/SemantixMemory.cs` (`Origin`) | The agent's Semantix memory is made with origin `user`, so Semantix Studio doesn't list it under Your Agents | The server knows no `forge` origin yet, and one memory for all of Forge needs no picker | Users make memories at will → a `forge` origin on the server and a Forge group in Your Agents |
+| `UnityEditor/Content/CoreModels.cs` (`Npcs`) | An NPC is a placed base object that idles: no collider (the player walks through her), no behaviour, no record type of its own | Seeing a character stand in the world comes before the world's characters | The world's characters come → an NPC record (look, move set, behaviour) with a body that collides |

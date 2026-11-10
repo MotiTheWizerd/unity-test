@@ -37,17 +37,25 @@ namespace Forge.UnityEditor.Content
             }
 
             var moveSets = HumanoidAnimatorBuilder.BuildAll();
+            var catalog = PlaceholderContentGenerator.LoadOrCreateCatalog();
+            var npcs = CoreModels.Npcs.Select(npc => npc.Folder).ToHashSet();
             var built = new List<GameObject>();
             foreach (var folder in AssetDatabase.GetSubFolders(CharacterImport.CharactersFolder).OrderBy(f => f, System.StringComparer.Ordinal))
             {
                 var name = Path.GetFileName(folder);
                 if (HumanoidTPose.Straighten($"{folder}/{name}.fbx", out trued))
                     Debug.Log($"[Forge] {name}: T-pose trued ({trued}).");
-                var prefab = BuildCharacter(folder, name, MoveSetOf(folder, name, moveSets));
-                if (prefab != null)
-                    built.Add(prefab);
+                var settings = SettingsOf(folder, name);
+                var prefab = BuildCharacter(folder, name, MoveSetOf(name, settings, moveSets), settings.textureSize > 0 ? settings.textureSize : TextureSize);
+                if (prefab == null)
+                    continue;
+                // An NPC is placed in the world from the catalog, as a model is.
+                if (npcs.Contains(name))
+                    catalog.Set(CharacterImport.KeyFor(name), prefab);
+                built.Add(prefab);
             }
 
+            EditorUtility.SetDirty(catalog);
             ListPlayerLooks(built);
             AssetDatabase.SaveAssets();
             Debug.Log($"[Forge] Built {built.Count} character(s) under {CharacterImport.CharactersFolder}.");
@@ -66,20 +74,21 @@ namespace Forge.UnityEditor.Content
             }
         }
 
-        /// <summary>
-        /// The controller of the move set the character plays: the one its optional {Name}.json names
-        /// (<c>{ "moves": "Guard" }</c>), else the base set's.
-        /// </summary>
-        static RuntimeAnimatorController MoveSetOf(string folder, string name, IReadOnlyDictionary<string, AnimatorController> moveSets)
+        // A character folder's optional {Name}.json: { "moves": "Guard", "textureSize": 4096 }.
+        static CharacterSettings SettingsOf(string folder, string name)
         {
-            var set = HumanoidAnimatorBuilder.BaseSet;
             var settingsPath = $"{folder}/{name}.json";
-            if (File.Exists(settingsPath))
-            {
-                var settings = JsonUtility.FromJson<CharacterSettings>(File.ReadAllText(settingsPath));
-                if (!string.IsNullOrWhiteSpace(settings?.moves))
-                    set = settings.moves.Trim();
-            }
+            return (File.Exists(settingsPath) ? JsonUtility.FromJson<CharacterSettings>(File.ReadAllText(settingsPath)) : null)
+                   ?? new CharacterSettings();
+        }
+
+        /// <summary>
+        /// The controller of the move set the character plays: the one its settings name (<c>"moves": "Guard"</c>), else
+        /// the base set's.
+        /// </summary>
+        static RuntimeAnimatorController MoveSetOf(string name, CharacterSettings settings, IReadOnlyDictionary<string, AnimatorController> moveSets)
+        {
+            var set = string.IsNullOrWhiteSpace(settings.moves) ? HumanoidAnimatorBuilder.BaseSet : settings.moves.Trim();
 
             if (moveSets.TryGetValue(set, out var controller))
                 return controller;
@@ -87,18 +96,20 @@ namespace Forge.UnityEditor.Content
             return moveSets.TryGetValue(HumanoidAnimatorBuilder.BaseSet, out var fallback) ? fallback : null;
         }
 
-        // A character folder's optional {Name}.json.
         [System.Serializable]
         sealed class CharacterSettings
         {
             public string moves;
+            // Its textures' largest size; 0: TextureSize. The player is seen closest, so it may wear more.
+            public int textureSize;
         }
 
         /// <summary>
         /// The prefab built for the character folder <paramref name="folder"/>, playing <paramref name="animations"/>
-        /// (none: it stands in its rest pose), or null when it isn't a character.
+        /// (none: it stands in its rest pose), its textures at most <paramref name="textureSize"/>, or null when it isn't
+        /// a character.
         /// </summary>
-        public static GameObject BuildCharacter(string folder, string name, RuntimeAnimatorController animations)
+        public static GameObject BuildCharacter(string folder, string name, RuntimeAnimatorController animations, int textureSize = TextureSize)
         {
             var modelPath = $"{folder}/{name}.fbx";
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
@@ -115,7 +126,7 @@ namespace Forge.UnityEditor.Content
                 return null;
             }
 
-            var material = BuildMaterial(folder, name);
+            var material = BuildMaterial(folder, name, textureSize);
             var scene = EditorSceneManager.NewPreviewScene();
             try
             {
@@ -168,16 +179,16 @@ namespace Forge.UnityEditor.Content
             return depth;
         }
 
-        static Material BuildMaterial(string folder, string name)
+        static Material BuildMaterial(string folder, string name, int textureSize)
         {
             var colorPath = $"{folder}/{name}_Color.png";
             var normalPath = $"{folder}/{name}_Normal.png";
             var hasColor = File.Exists(colorPath);
             var hasNormal = File.Exists(normalPath);
             if (hasColor)
-                TextureMaps.Configure(colorPath, TextureImporterType.Default, sRGB: true, TextureSize);
+                TextureMaps.Configure(colorPath, TextureImporterType.Default, sRGB: true, textureSize);
             if (hasNormal)
-                TextureMaps.Configure(normalPath, TextureImporterType.NormalMap, sRGB: false, TextureSize);
+                TextureMaps.Configure(normalPath, TextureImporterType.NormalMap, sRGB: false, textureSize);
 
             var path = $"{folder}/{name}.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);

@@ -785,6 +785,19 @@
       }
     },
     {
+      "type": "base_object",
+      "id": "forge.core:elf_woman",
+      "displayName": "Elf Woman",
+      "assetKey": "characters/elf_f1",
+      "category": "Characters/NPCs",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
       "type": "equip_slot",
       "id": "forge.core:equip_slot/ammo",
       "displayName": "Ammo",
@@ -1310,6 +1323,19 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:log_cabin",
+      "displayName": "Log Cabin",
+      "assetKey": "models/log_cabin",
+      "category": "Architecture/Buildings",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:log_campfire",
       "displayName": "Log Campfire",
       "assetKey": "models/campfire",
@@ -1541,6 +1567,19 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:perched_raven",
+      "displayName": "Perched Raven",
+      "assetKey": "models/raven2",
+      "category": "Creatures/Birds",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:pier_section_1",
       "displayName": "Pier Section, Rope Rail",
       "assetKey": "models/pier_section1",
@@ -1671,6 +1710,19 @@
         "kind": "misc",
         "weight": 2.0,
         "value": 20
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:raven",
+      "displayName": "Raven",
+      "assetKey": "models/raven1",
+      "category": "Creatures/Birds",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
       }
     },
     {
@@ -1818,6 +1870,19 @@
       "block": {
         "stops": 0.5,
         "effort": 0.5
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:rustic_wooden_shed",
+      "displayName": "Rustic Wooden Shed",
+      "assetKey": "models/rustic_wooden_shed",
+      "category": "Architecture/Buildings",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
       }
     },
     {
@@ -1987,6 +2052,19 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:thatched_hut",
+      "displayName": "Thatched Hut",
+      "assetKey": "models/thatched_hut",
+      "category": "Architecture/Buildings",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:timber_house",
       "displayName": "Timber-Framed House",
       "assetKey": "models/timber_house",
@@ -2080,6 +2158,19 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:viking_longhouse",
+      "displayName": "Viking Longhouse",
+      "assetKey": "models/viking_longhouse",
+      "category": "Architecture/Buildings",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:viking_sword",
       "displayName": "Viking Sword",
       "assetKey": "models/viking_sword",
@@ -2118,6 +2209,19 @@
             "amount": 12.0
           }
         ]
+      }
+    },
+    {
+      "type": "base_object",
+      "id": "forge.core:viking_woman",
+      "displayName": "Viking Woman",
+      "assetKey": "characters/viking_f1",
+      "category": "Characters/NPCs",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
       }
     },
     {

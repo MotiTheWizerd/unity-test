@@ -253,10 +253,33 @@ namespace Forge.UnityEditor.Content
                      {
                          ("Dragon", "dragon", "Dragon", "Creatures/Dragons"),
                          ("GrassHouse", "grass_roofed_longhouse", "Grass-Roofed Longhouse", "Architecture/Buildings"),
+                         ("VikingLonghouse", "viking_longhouse", "Viking Longhouse", "Architecture/Buildings"),
+                         ("RusticWoodenShed", "rustic_wooden_shed", "Rustic Wooden Shed", "Architecture/Buildings"),
+                         ("ThatchedHut", "thatched_hut", "Thatched Hut", "Architecture/Buildings"),
+                         ("LogCabin", "log_cabin", "Log Cabin", "Architecture/Buildings"),
+                         ("Raven1", "raven", "Raven", "Creatures/Birds"),
+                         ("Raven2", "perched_raven", "Perched Raven", "Creatures/Birds"),
                      })
                 yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder), category,
                     new PlacementRules(randomYaw: false, 1f, 1f, alignToSlope: false));
+
+            // Characters standing in the world, placed as aimed at their own size; they idle in their move set.
+            foreach (var (folder, id, name) in Npcs)
+                yield return new BaseObjectRecord(new RecordId(pluginId, id), name, CharacterImport.KeyFor(folder), "Characters/NPCs",
+                    new PlacementRules(randomYaw: false, 1f, 1f, alignToSlope: false));
         }
+
+        /// <summary>
+        /// The characters (folders under Content/Characters) that stand in the world as NPCs: (folder, record id, name).
+        /// *Build Characters* lists each in the prefab catalog under <see cref="CharacterImport.KeyFor"/>.
+        /// </summary>
+        // SHORTCUT: an NPC is a placed object that idles: no collider (the player walks through her), no behaviour. It
+        // comes with the world's characters.
+        public static readonly (string Folder, string Id, string Name)[] Npcs =
+        {
+            ("VikingF1", "viking_woman", "Viking Woman"),
+            ("ElfF1", "elf_woman", "Elf Woman"),
+        };
 
         // Laid on the ground as it falls: any heading, following the slope, at its own size.
         static PlacementRules LyingFlat() => new PlacementRules(randomYaw: true, 1f, 1f, alignToSlope: true);

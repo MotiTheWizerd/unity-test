@@ -82,7 +82,7 @@ namespace Forge.UnityEditor.Content
         }
 
         // "VikingSword" → "viking_sword"; a run of capitals stays one word ("LODTable" → "lod_table").
-        static string SnakeCase(string name)
+        internal static string SnakeCase(string name)
         {
             var snake = new StringBuilder();
             for (var i = 0; i < name.Length; i++)
