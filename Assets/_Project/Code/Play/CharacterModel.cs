@@ -523,14 +523,24 @@ namespace Forge.Play
 
         void AimHand(bool right)
         {
-            if (!_animation.TryGetHandAim(right, out var aim) || aim == Vector3.zero)
+            if (!_animation.TryGetHandAim(right, out var aim))
+                return;
+            // Eased, so the turn comes over a moment as the moves hand over (a draw ending) rather than in a frame.
+            ref var eased = ref (right ? ref _rightAim : ref _leftAim);
+            eased = Vector3.MoveTowards(eased, aim, Time.deltaTime / AimEase);
+            if (eased == Vector3.zero)
                 return;
             var id = right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand;
             if (!TryPoint(id, out var point))
                 return;
             var hand = _humanoid.GetBoneTransform(id);
-            hand.rotation = HandAim.Turn(point.up, Root.transform.TransformDirection(aim)) * hand.rotation;
+            hand.rotation = HandAim.Turn(point.up, Root.transform.TransformDirection(eased)) * hand.rotation;
         }
+
+        // Seconds a hand's aim takes to come all the way in or out.
+        const float AimEase = 0.35f;
+        Vector3 _rightAim;
+        Vector3 _leftAim;
 
         // What a hand holds with a side that faces its holder (a bow's string) turns about its length, on this frame's
         // pose, to face the chest: the stance holds the bow one way, a draw another, and the string faces the archer in both.
