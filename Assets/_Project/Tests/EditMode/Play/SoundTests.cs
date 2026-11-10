@@ -105,5 +105,30 @@ namespace Forge.Tests.Play
             Assert.That(sneak["footsteps/wet"], Is.LessThan(1f), "A walk's wet step, trod softly.");
             Assert.That(FootstepKeys.For(null, Gait.Sprint).First(k => k.Key == "footsteps/run").Gain, Is.GreaterThan(1f));
         }
+
+        [Test]
+        public void TheEars_HearFromThePlayersHead_TurnedAsTheCameraLooks_ElseFromTheCamera()
+        {
+            var camera = new UnityEngine.GameObject("Camera").transform;
+            var ears = new SoundListener(camera);
+            try
+            {
+                camera.SetPositionAndRotation(new UnityEngine.Vector3(0f, 3f, -4f), UnityEngine.Quaternion.Euler(20f, 90f, 0f));
+                Assert.That(ears.Position, Is.EqualTo(camera.position), "No one plays: at the camera.");
+
+                var head = new UnityEngine.Vector3(0f, 1.7f, 0f);
+                ears.HearFrom(head);
+                Assert.That(UnityEngine.Vector3.Distance(ears.Position, head), Is.LessThan(1e-4f), "Playing: at the head.");
+                Assert.That(UnityEngine.Quaternion.Angle(ears.Rotation, camera.rotation), Is.LessThan(0.01f), "...turned the camera's way.");
+
+                ears.HearFrom(null);
+                Assert.That(UnityEngine.Vector3.Distance(ears.Position, camera.position), Is.LessThan(1e-4f), "Done playing: back at the camera.");
+            }
+            finally
+            {
+                ears.Dispose();
+                UnityEngine.Object.DestroyImmediate(camera.gameObject);
+            }
+        }
     }
 }

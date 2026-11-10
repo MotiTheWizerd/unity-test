@@ -45,8 +45,9 @@ namespace Forge.Play
         readonly ItemDropper _dropper;
         readonly ShotLandings _landings;
         readonly SoundDirector _director;
+        readonly SoundListener _listener;
 
-        /// <param name="camera">The camera the player sees through while playing.</param>
+        /// <param name="camera">The camera the player sees through while playing, which the game's ears turn with (<see cref="SoundListener"/>).</param>
         /// <param name="view">The scene's world, which shows what playing changed.</param>
         /// <param name="frame">The world's frame in the scene, where the player's positions become the world's.</param>
         /// <param name="onError">Where a listener that fails is reported; the others still hear.</param>
@@ -60,6 +61,8 @@ namespace Forge.Play
             Changes = new WorldChanges();
             Combatants = new Combatants();
             PlacedActors = new PlacedActors(Combatants);
+            // Silent or not, the scene has its ears (Unity wants one listener), at the camera until the player plays.
+            _listener = new SoundListener(camera);
             if (sound != null)
                 Sounds = new SoundPlayer(sound);
             Player = new PlayerSession(profile, camera, Events, view.Assets, Combatants, PlacedActors, LandShot,
@@ -125,10 +128,11 @@ namespace Forge.Play
         /// <summary>The world's loose things as physical bodies while playing; else null.</summary>
         public WorldPhysics Bodies { get; private set; }
 
-        /// <summary>Plays one frame, then tells what happened in it.</summary>
+        /// <summary>Plays one frame, then tells what happened in it, heard from the player's head.</summary>
         public void Tick(float deltaTime)
         {
             Player.Tick(deltaTime);
+            _listener.HearFrom(Player.Player?.Eyes.ToUnity());
             Bodies?.Tick();
             Events.Flush();
         }
@@ -213,6 +217,7 @@ namespace Forge.Play
         public void End()
         {
             Player.Despawn();
+            _listener.HearFrom(null);
             Bodies?.Dispose();
             Bodies = null;
             Player.Inventory.Clear();
@@ -239,6 +244,7 @@ namespace Forge.Play
             Player.Dispose();
             _director?.Dispose();
             Sounds?.Dispose();
+            _listener.Dispose();
         }
 
         Inventory InventoryOf(ActorId actor) => actor == ActorId.Player ? Player.Inventory : null;

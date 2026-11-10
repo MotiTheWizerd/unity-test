@@ -951,8 +951,12 @@ later reach the world's characters as noise (a crouched step is softer).
   its `GroundLayerRecord.Surface`; nothing yet on placed things) pick the sound, most particular first
   (`FootstepKeys`: `footsteps/wet/run`, `footsteps/wet`, `footsteps/run`, gentler gaits standing in, louder or softer
   by how hard each gait treads). A surface is a lowercase word (`Surfaces.IsValid`), so a mod's ground names its own.
-- Shortcuts: the listener is the camera's (behind the player in third person); the world's actors aren't located
-  yet, so only the player is heard.
+- **Ears** (`SoundListener`, one per `GameSession`, made whether it is silent or not) are the scene's one
+  AudioListener, a child of the camera so they turn as it looks (the screen's left is heard on the left). While the
+  player plays, `GameSession.Tick` puts them at its eyes each frame, after the camera is posed and before the stream
+  is flushed, so a third-person camera hanging back doesn't hear the player's own steps from behind; otherwise
+  (editing, the game ended) they are at the camera. The scene's camera carries no listener of its own.
+- Shortcuts: the world's actors aren't located yet, so only the player is heard.
 
 ## Interaction and items (Forge.Game.Interaction, .Items, .World)
 
