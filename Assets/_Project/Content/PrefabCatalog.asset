@@ -87,6 +87,8 @@ MonoBehaviour:
     _asset: {fileID: 2967036921510501780, guid: 5c709fae0a226bf439c204ff3f1d48b5, type: 3}
   - _key: models/flowering_bush
     _asset: {fileID: 8893817114575300684, guid: 38b61b985b7fa23468d6867d0f8ecf48, type: 3}
+  - _key: models/grass_house
+    _asset: {fileID: 1745477642854566097, guid: 3fabff93884586649bf848a2747687b8, type: 3}
   - _key: models/greatsword
     _asset: {fileID: 4052799173345779104, guid: b5cdf48b20dd86140974a15b5dd0b4ab, type: 3}
   - _key: models/hay_bundle

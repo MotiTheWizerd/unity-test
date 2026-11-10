@@ -247,10 +247,15 @@ namespace Forge.UnityEditor.Content
                 yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder), category,
                     new PlacementRules(randomYaw: true, minScale, maxScale, alignToSlope));
 
-            // Creatures (Tripo AI from Moti's own picture, made game-ready by blender-tests/creatures): standing still,
-            // as Forge has no moving creatures yet; upright, placed as aimed, at their own size.
-            yield return new BaseObjectRecord(new RecordId(pluginId, "dragon"), "Dragon", ModelImport.KeyFor("Dragon"),
-                "Creatures/Dragons", new PlacementRules(randomYaw: false, 1f, 1f, alignToSlope: false));
+            // Tripo AI models on Moti's Pro plan, made game-ready by blender-tests/ai_models: upright, placed as aimed,
+            // at their own size. Creatures stand still, as Forge has no moving creatures yet.
+            foreach (var (folder, id, name, category) in new[]
+                     {
+                         ("Dragon", "dragon", "Dragon", "Creatures/Dragons"),
+                         ("GrassHouse", "grass_roofed_longhouse", "Grass-Roofed Longhouse", "Architecture/Buildings"),
+                     })
+                yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder), category,
+                    new PlacementRules(randomYaw: false, 1f, 1f, alignToSlope: false));
         }
 
         // Laid on the ground as it falls: any heading, following the slope, at its own size.

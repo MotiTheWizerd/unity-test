@@ -897,6 +897,19 @@
     },
     {
       "type": "base_object",
+      "id": "forge.core:grass_roofed_longhouse",
+      "displayName": "Grass-Roofed Longhouse",
+      "assetKey": "models/grass_house",
+      "category": "Architecture/Buildings",
+      "placement": {
+        "randomYaw": false,
+        "minScale": 1.0,
+        "maxScale": 1.0,
+        "alignToSlope": false
+      }
+    },
+    {
+      "type": "base_object",
       "id": "forge.core:greatsword",
       "displayName": "Greatsword",
       "assetKey": "models/greatsword",
