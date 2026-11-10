@@ -47,6 +47,13 @@ namespace Forge.Play
         public static string StanceGround(string stance) => stance + " Ground";
 
         /// <summary>
+        /// One axis (0 x, 1 y, 2 z) of where the right or left hand's held thing points in the body's frame ("Right Hand
+        /// Points Z"), driven by the clips' curves (the import writes them from each move's .json), so the animator blends
+        /// it as it blends the moves; the length of the three is how far (<see cref="TryGetHandAim"/>).
+        /// </summary>
+        public static string HandPoints(bool right, int axis) => (right ? "Right" : "Left") + " Hand Points " + "XYZ"[axis];
+
+        /// <summary>
         /// What <see cref="Stance"/> is set to for <paramref name="stance"/> ("BowIdle"): from its name, so the builder and
         /// the player agree without a list; never 0 (the set's own), and small enough for a transition's threshold to hold
         /// it exactly.
@@ -78,6 +85,8 @@ namespace Forge.Play
         readonly bool _stances;
         readonly List<ActionLayer> _actionLayers = new List<ActionLayer>();
         readonly Dictionary<string, AnimationClip> _clips = new Dictionary<string, AnimationClip>(StringComparer.Ordinal);
+        readonly int[] _rightHandPoints;
+        readonly int[] _leftHandPoints;
 
         HumanoidAnimation(Animator animator)
         {
@@ -90,6 +99,8 @@ namespace Forge.Play
                 _crouchedMoves |= parameter.nameHash == CrouchedId;
                 _stances |= parameter.nameHash == StanceId;
             }
+            _rightHandPoints = HandPointsIds(animator, true);
+            _leftHandPoints = HandPointsIds(animator, false);
             foreach (var name in new[] { ArmsLayer, UpperBodyLayer })
             {
                 var index = animator.GetLayerIndex(name);
@@ -125,6 +136,39 @@ namespace Forge.Play
             return animator != null && animator.runtimeAnimatorController != null && animator.isHuman
                 ? new HumanoidAnimation(animator)
                 : null;
+        }
+
+        /// <summary>
+        /// Where the moves playing now want what the right (or left) hand holds to point, in the body's frame (x right,
+        /// y up, z forward), its length how far they do (0 to 1: blended as the moves are, so a stance's aim fades as it
+        /// walks or strikes); false when the controller has no such curves to read. Read once the animator has posed
+        /// the frame (<see cref="HandAim"/> turns the hand to it).
+        /// </summary>
+        public bool TryGetHandAim(bool right, out Vector3 aim)
+        {
+            var ids = right ? _rightHandPoints : _leftHandPoints;
+            aim = default;
+            if (ids == null)
+                return false;
+            aim = new Vector3(_animator.GetFloat(ids[0]), _animator.GetFloat(ids[1]), _animator.GetFloat(ids[2]));
+            return true;
+        }
+
+        // The hand's three parameters; null when the controller lacks any (built before they were).
+        static int[] HandPointsIds(Animator animator, bool right)
+        {
+            var ids = new int[3];
+            for (var axis = 0; axis < 3; axis++)
+            {
+                ids[axis] = Animator.StringToHash(HandPoints(right, axis));
+                var found = false;
+                foreach (var parameter in animator.parameters)
+                    found |= parameter.nameHash == ids[axis];
+                if (!found)
+                    return null;
+            }
+
+            return ids;
         }
 
         /// <summary>Shows <paramref name="motion"/>, the body's last <paramref name="deltaTime"/> seconds.</summary>

@@ -87,6 +87,12 @@ namespace Forge.UnityEditor.Content
             controller.AddParameter(new AnimatorControllerParameter { name = HumanoidAnimation.TopSpeed, type = AnimatorControllerParameterType.Float, defaultFloat = topSpeed });
             controller.AddParameter(new AnimatorControllerParameter { name = HumanoidAnimation.Grounded, type = AnimatorControllerParameterType.Bool, defaultBool = true });
             controller.AddParameter(HumanoidAnimation.VerticalSpeed, AnimatorControllerParameterType.Float);
+            // Where each hand's held thing points, written by the clips' curves (MoveSettings) as they blend.
+            foreach (var right in new[] { true, false })
+            {
+                for (var axis = 0; axis < 3; axis++)
+                    controller.AddParameter(HumanoidAnimation.HandPoints(right, axis), AnimatorControllerParameterType.Float);
+            }
 
             var machine = controller.layers[0].stateMachine;
             var moving = GroundState(machine, "Ground", tree);

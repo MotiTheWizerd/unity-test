@@ -779,7 +779,8 @@ from any camera, so both cameras read the same player.
   rig: the hand, a knuckle (middle, else index) and the thumb give the fingers' way, the side the blade leaves the
   fist by (+Y), and the palm (+Z, mirrored for the left hand), the grip sitting in the palm past the knuckles. What is
   held is turned and moved so its grip (a model asset's inner model's pivot, else the look's root) lies on the point,
-  at its own size whatever the skeleton's scale, without colliders, on the model's layer. `HeldItems` shows equipped
+  at its own size whatever the skeleton's scale, without colliders, on the model's layer; where a move wants the
+  held thing to point, the hand is turned to it on the frame's pose (`AimHands`, see the animations). `HeldItems` shows equipped
   things on a model, by their own look or the one they are worn as (`EquippablePart.Worn`: arrows, equipped in the
   Ammo slot on the chest, are worn as the quiver, `"carried": "back"`, which no hand holds: always on the back, over
   the right shoulder that draws from it, crossing a bow there in an X and lying on it), at the first slot of their fit (a two-hander in the right hand; a slot with no bone shows
@@ -852,6 +853,17 @@ from any camera, so both cameras read the same player.
   (`DrawAnimation`) and times it by the look (`IReadyTimings`: `CharacterModel.TryReadyTime`, the clip's length and the
   moment the hand is at the hip sheath, `SheathFinder`, or at the back spot, `BackFinder.TryFindReach`), so a style's
   draw is a record and a clip (`ReadinessView` binds a `WeaponReadiness` to a `CharacterModel`). A new move is a file dropped in and a rebuild.
+  **How a move holds** (`MoveSettings`): a clip's optional `<Move>.json` beside it says where what each hand holds
+  points in it (`{ "rightHand": { "points": [0, 0, 1] } }`: the grip's +Y, a sword's blade, straight ahead in the
+  body's frame, x right, y up, z forward; `leftHand` too), since a Mixamo move is animated with nothing in the hand
+  and holds our sword as it may (Sword And Shield Idle held it across the body, behind the shield). The import writes
+  the six values into every clip as curves driving the controller's `Right/Left Hand Points X/Y/Z` parameters
+  (`HumanoidAnimation.HandPoints`; zero where a move says nothing; the builder adds the parameters), so the animator
+  blends them as it blends the moves: the aim fades out as the stance walks or strikes, is out while a draw plays on
+  the arms, and comes back as it ends. Each frame, once posed (`CharacterModel.AimHands`, on `Posed` before what the
+  hands hold is laid on them), the hand is turned the least that points its grip's +Y where the blended aim says, by
+  as much as its length (`HandAim.Turn`); the fingers, the grip and what hangs from it come along. A change to the
+  .json reimports the clip (a source-asset dependency); no clip is edited.
 - **How the body moved** (`BodyMotion`, `Forge.Game.Motion`, shared by anything with a body): `PlayerCharacter.Motion` each frame, from where the body actually went
   (ground speed, vertical speed, grounded), so a run into a wall shows standing. `StrideMatch` keeps the feet planted:
   the speed in the clips' own size (the avatar's `humanScale`) picks the blend, and past the fastest clip it plays

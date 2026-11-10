@@ -36,8 +36,8 @@ namespace Forge.UnityEditor.Content
         bool IsReference => assetPath == ReferenceRig;
 
         // Bumped when how clips import changes, so every clip reimports with the new rule (2: the T-pose reference,
-        // imported before the clips that read it).
-        public override uint GetVersion() => 2;
+        // imported before the clips that read it; 3: the hands' curves from the move's .json).
+        public override uint GetVersion() => 3;
 
         void OnPreprocessModel()
         {
@@ -97,6 +97,12 @@ namespace Forge.UnityEditor.Content
             var role = HumanoidMoves.RoleOf(InSet(assetPath));
             var loops = role.HasValue && HumanoidMoves.Loops(role.Value, name);
             var lifts = role.HasValue && HumanoidMoves.Lifts(role.Value, name);
+            // How the move holds (its .json beside it, there or not: a change to it reimports the clip), as curves the
+            // animator blends into its parameters; every clip carries them, so a move that says nothing says zero.
+            context.DependsOnSourceAsset(MoveSettings.PathFor(assetPath));
+            var curves = MoveSettings.Read(assetPath)
+                .Select(c => new ClipAnimationInfoCurve { name = c.Name, curve = AnimationCurve.Constant(0f, 1f, c.Value) })
+                .ToArray();
             importer.clipAnimations = importer.defaultClipAnimations.Take(1).Select(clip =>
             {
                 clip.name = name;
@@ -107,6 +113,7 @@ namespace Forge.UnityEditor.Content
                 clip.lockRootHeightY = !lifts;
                 clip.keepOriginalPositionY = true;
                 clip.lockRootPositionXZ = false;
+                clip.curves = curves;
                 return clip;
             }).ToArray();
         }

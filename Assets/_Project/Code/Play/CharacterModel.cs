@@ -69,6 +69,8 @@ namespace Forge.Play
             _sunk = hover + soles;
             Root.transform.localPosition = Vector3.down * _sunk;
             _afterAnimation = Root.AddComponent<AfterAnimation>();
+            // The hands first: what they hold is laid on them after.
+            _afterAnimation.Posed += AimHands;
             _afterAnimation.Posed += FaceHolders;
         }
 
@@ -505,6 +507,29 @@ namespace Forge.Play
             foreach (var axis in new[] { Vector3.right, Vector3.up, Vector3.forward })
                 middle += axis * ((ExtentOf(held, axis) - ExtentOf(held, -axis)) * 0.5f);
             return middle;
+        }
+
+        // Each hand turned, on this frame's pose, the least that points what it holds (its grip's +Y: the blade) where
+        // the moves playing want it, as far as they do (HumanoidAnimation.TryGetHandAim, from the moves' .json beside
+        // their clips): a Mixamo move is animated with nothing in the hand, and holds our sword as it may. The fingers,
+        // the grip and what hangs from it come along, so it turns an empty hand just the same.
+        void AimHands()
+        {
+            if (_animation == null)
+                return;
+            AimHand(true);
+            AimHand(false);
+        }
+
+        void AimHand(bool right)
+        {
+            if (!_animation.TryGetHandAim(right, out var aim) || aim == Vector3.zero)
+                return;
+            var id = right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand;
+            if (!TryPoint(id, out var point))
+                return;
+            var hand = _humanoid.GetBoneTransform(id);
+            hand.rotation = HandAim.Turn(point.up, Root.transform.TransformDirection(aim)) * hand.rotation;
         }
 
         // What a hand holds with a side that faces its holder (a bow's string) turns about its length, on this frame's

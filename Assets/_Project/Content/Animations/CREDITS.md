@@ -10,6 +10,9 @@ Humanoid/
   Air/               Jump Fall Land
   Styles/<Style>/    a combat style's moves: its stance <Style>Idle, its draw and sheathe (on the arms), its blows
   <Other>/           more actions (Interact, Emotes, ...)
+  <Move>.json        beside a clip, optional: how the move holds ({ "rightHand": { "points": [0, 0, 1] } }: what the
+                     right hand holds points straight ahead; x right, y up, z forward); the hand is turned the least
+                     that does it, on top of the clip, since Mixamo animates with nothing in the hand
   _Built/            made by the builder: the controller and its masks; don't put clips here
 _Reference/
   TPose.fbx          the skeleton every clip is read against: a Mixamo-rigged character downloaded from Mixamo
