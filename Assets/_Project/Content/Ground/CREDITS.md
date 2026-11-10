@@ -29,6 +29,10 @@ sets their repeat (`<Name>.json`, `tileSize` in meters), and their occlusion is 
 | WornCobblestone | [cobblestone_floor_08](https://polyhaven.com/a/cobblestone_floor_08) | Poly Haven | 2 m |
 | GrassPath | [grass_path_3](https://polyhaven.com/a/grass_path_3) | Poly Haven | 1 m |
 | StonyMud | [brown_mud_rocks_01](https://polyhaven.com/a/brown_mud_rocks_01) | Poly Haven | 1.3 m |
+| DirtRoad | [rocky_trail](https://polyhaven.com/a/rocky_trail) | Amal Kumar | 2 m (2K) |
+| ForestTrail | [forest_ground_04](https://polyhaven.com/a/forest_ground_04) | Rob Tuytel, Rico Cilliers | 3.15 m (2K) |
+| MountainRoad | [rocks_ground_01](https://polyhaven.com/a/rocks_ground_01) | Rob Tuytel | 2 m (2K) |
+| SnowyRoad | [snow_03](https://polyhaven.com/a/snow_03) | Rob Tuytel | 2 m (2K) |
 | StoneRoad | [grey_stone_path](https://polyhaven.com/a/grey_stone_path) | Poly Haven | 2.7 m, not its real 1.8 m: Skyrim-sized stones read as a road, real ones as pavement (2K maps, imported at 2K: `"textureSize": 2048`) |
 
 Each folder keeps the colour, OpenGL normal, roughness, ambient occlusion and displacement maps. The mask map

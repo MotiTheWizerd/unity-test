@@ -965,6 +965,13 @@
     },
     {
       "type": "ground_layer",
+      "id": "forge.core:ground/dirtroad",
+      "displayName": "Dirt Road",
+      "assetKey": "ground/dirtroad",
+      "surface": "dirt"
+    },
+    {
+      "type": "ground_layer",
       "id": "forge.core:ground/drygrass",
       "displayName": "Dry Grass",
       "assetKey": "ground/drygrass",
@@ -990,6 +997,13 @@
         "density": 0.6,
         "height": 0.3
       },
+      "surface": "dirt"
+    },
+    {
+      "type": "ground_layer",
+      "id": "forge.core:ground/foresttrail",
+      "displayName": "Forest Trail",
+      "assetKey": "ground/foresttrail",
       "surface": "dirt"
     },
     {
@@ -1041,6 +1055,13 @@
     },
     {
       "type": "ground_layer",
+      "id": "forge.core:ground/mountainroad",
+      "displayName": "Mountain Road",
+      "assetKey": "ground/mountainroad",
+      "surface": "gravel"
+    },
+    {
+      "type": "ground_layer",
       "id": "forge.core:ground/mud",
       "displayName": "Mud",
       "assetKey": "ground/mud",
@@ -1072,6 +1093,13 @@
       "id": "forge.core:ground/snow",
       "displayName": "Snow",
       "assetKey": "ground/snow",
+      "surface": "snow"
+    },
+    {
+      "type": "ground_layer",
+      "id": "forge.core:ground/snowyroad",
+      "displayName": "Snowy Road",
+      "assetKey": "ground/snowyroad",
       "surface": "snow"
     },
     {

@@ -49,6 +49,80 @@ namespace Forge.Editing.Geometry
             return new GroundShape(path, half, point => DistanceToPath(point, path) - half);
         }
 
+        /// <summary>
+        /// The path through <paramref name="points"/> moved <paramref name="offset"/> meters to its right as it is walked
+        /// (negative: to its left), staying that far from it along every stretch: at a bend the corner moves out along
+        /// the bend's middle (at most <see cref="MaxMiter"/> times the offset, so a hairpin doesn't spike). A path whose
+        /// last point is its first stays closed.
+        /// </summary>
+        public static IReadOnlyList<Vector2> OffsetPath(IReadOnlyList<Vector2> points, float offset)
+        {
+            if (points == null || points.Count == 0)
+                throw new ArgumentException("A path needs at least one point.", nameof(points));
+
+            var count = points.Count;
+            var closed = count > 2 && Vector2.DistanceSquared(points[0], points[count - 1]) < 1e-8f;
+            var moved = new Vector2[count];
+            for (var i = 0; i < count; i++)
+            {
+                var before = RightOf(points, i, -1, closed);
+                var after = RightOf(points, i, +1, closed);
+                var right = before ?? after;
+                if (right == null)
+                {
+                    moved[i] = points[i];
+                    continue;
+                }
+
+                if (before.HasValue && after.HasValue)
+                {
+                    var middle = before.Value + after.Value;
+                    // A path doubling straight back on itself has no middle; keep the stretch's own side.
+                    if (middle.LengthSquared() > 1e-8f)
+                    {
+                        middle = Vector2.Normalize(middle);
+                        var stretch = 1f / Math.Max(Vector2.Dot(middle, before.Value), 1f / MaxMiter);
+                        moved[i] = points[i] + middle * (offset * stretch);
+                        continue;
+                    }
+                }
+
+                moved[i] = points[i] + right.Value * offset;
+            }
+
+            return moved;
+        }
+
+        /// <summary>How many times the offset a bend's corner may move out (a 90° bend needs √2).</summary>
+        public const float MaxMiter = 3f;
+
+        // The right-hand side of the first stretch of some length from point i going backward (-1) or forward (+1),
+        // wrapping around a closed path; null when there is none.
+        static Vector2? RightOf(IReadOnlyList<Vector2> points, int i, int step, bool closed)
+        {
+            var count = points.Count;
+            // On a closed path the last point is the first, so it is skipped when wrapping.
+            var ring = closed ? count - 1 : count;
+            var here = points[i];
+            for (var n = 1; n < count; n++)
+            {
+                var j = i + step * n;
+                if (closed)
+                    j = ((j % ring) + ring) % ring;
+                else if (j < 0 || j >= count)
+                    return null;
+
+                var along = step > 0 ? points[j] - here : here - points[j];
+                if (along.LengthSquared() > 1e-8f)
+                {
+                    along = Vector2.Normalize(along);
+                    return new Vector2(along.Y, -along.X);
+                }
+            }
+
+            return null;
+        }
+
         /// <summary>The rectangle <paramref name="area"/>.</summary>
         public static GroundShape Rect(GroundRect area) => new GroundShape(area.Corners(), 0f, point => SignedDistance(area, point));
 

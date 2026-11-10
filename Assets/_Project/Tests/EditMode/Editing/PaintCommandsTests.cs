@@ -62,6 +62,34 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void PaintLine_WithAnOffset_PaintsBesideThePath_OnBothSides()
+        {
+            var world = NewWorld();
+            var line = new PaintLineCommand(world.Context);
+
+            // Two wheel ruts along a lane running east at z = 20.5: one 2 m to its right (south), one 2 m to its left.
+            var ruts = line.Execute(new PaintLineCommand.Arguments
+            {
+                Ground = "Dirt",
+                Points = new[] { Point(10f, 20.5f), Point(40f, 20.5f) }.ToList(),
+                Width = 1f,
+                Edge = 0f,
+                Offset = 2f,
+                BothSides = true,
+            });
+
+            Assert.That(ruts.Summary, Does.StartWith("Painted Dirt along 30 m, 1 m wide, 2 m to each side"));
+            Assert.That(Share(world, Dirt, 25f, 18f), Is.EqualTo(GroundPaint.Full), "The right-hand rut.");
+            Assert.That(Share(world, Dirt, 25f, 22f), Is.EqualTo(GroundPaint.Full), "The left-hand rut.");
+            Assert.That(Share(world, Dirt, 25f, 20f), Is.Zero, "The middle stays as it was.");
+            Assert.That(() => line.Execute(new PaintLineCommand.Arguments
+                {
+                    Ground = "Dirt", Points = new[] { Point(10f, 20f), Point(40f, 20f) }.ToList(), BothSides = true,
+                }),
+                Throws.TypeOf<CommandException>().With.Message.Contains("both_sides needs an offset"));
+        }
+
+        [Test]
         public void PaintArea_TakesARectangle_OrPoints()
         {
             var world = NewWorld();

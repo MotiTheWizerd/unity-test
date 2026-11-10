@@ -534,8 +534,9 @@ used let go first; the same `BudgetCache<T>` as `TerrainCache`).
     the editor feeds from `AssetSlots` (EditorApp: each asset key's `MaterialSlots` read once from a throwaway
     instance, the same source the selection options use, so loaded or not, every caller sees the same slots).
   - `list_grounds` (id, name, which one unpainted land shows; optional search), `paint_line` (a band `width` m wide
-    along points, rounded ends, `closed` to loop) and `paint_area` (a rectangle as `flatten_area` takes one, or a
-    polygon by its corners): ground paint through `GroundPainting` (Editing/Terrain), one undo step, in the draft.
+    along points, rounded ends, `closed` to loop; with an `offset` it runs beside the path, `both_sides` mirrored, the
+    path moved by `GroundShape.OffsetPath` with mitred bends: wheel ruts, a street's edge strips) and `paint_area`
+    (a rectangle as `flatten_area` takes one, or a polygon by its corners): ground paint through `GroundPainting` (Editing/Terrain), one undo step, in the draft.
     The ground is named by id or by name (any case). Unlike the brush's dabs, which build up, a shape paints each
     texel once by its signed distance to the outline: full inside, fading over a soft `edge` centered on the outline
     (so a 3 m path looks 3 m wide), times `strength` (under 1: worn ground). `GroundPainting` and `PaintStroke` paint

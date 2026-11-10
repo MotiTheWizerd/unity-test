@@ -17,12 +17,16 @@ MonoBehaviour:
     _asset: {fileID: 8574412962073106934, guid: 6efc0f49b62f0de49b66e09b11a7d4ac, type: 2}
   - _key: ground/dirt
     _asset: {fileID: 8574412962073106934, guid: cdbfbe0456126494695bc4a3cc27ccae, type: 2}
+  - _key: ground/dirtroad
+    _asset: {fileID: 8574412962073106934, guid: 1fee7121953cd384b82b3d58e3ba80cc, type: 2}
   - _key: ground/drygrass
     _asset: {fileID: 8574412962073106934, guid: 550f02f8fce0e1a4b9f0af5cc5aa9d1f, type: 2}
   - _key: ground/flagstone
     _asset: {fileID: 8574412962073106934, guid: 0547689cf6edc7d48aa197dda254726e, type: 2}
   - _key: ground/forestfloor
     _asset: {fileID: 8574412962073106934, guid: 57129e9a0fb9bd640a8c24f66ba7d73f, type: 2}
+  - _key: ground/foresttrail
+    _asset: {fileID: 8574412962073106934, guid: 59ec9ac6b862e0e4bacdee79eef6b725, type: 2}
   - _key: ground/grass
     _asset: {fileID: 8574412962073106934, guid: 4db6c6efbac1b574095cfc55312a3155, type: 2}
   - _key: ground/grasspath
@@ -33,6 +37,8 @@ MonoBehaviour:
     _asset: {fileID: 8574412962073106934, guid: 04eae05e53dd3f14781f9d238bced168, type: 2}
   - _key: ground/moss
     _asset: {fileID: 8574412962073106934, guid: d7ab830748ddf2a498f055e1629d6fa3, type: 2}
+  - _key: ground/mountainroad
+    _asset: {fileID: 8574412962073106934, guid: 43b282b0c54f46b4aa8247ffa08153a6, type: 2}
   - _key: ground/mud
     _asset: {fileID: 8574412962073106934, guid: 43412f738e9a4b6429a993e6b29d5f1d, type: 2}
   - _key: ground/packedearth
@@ -43,6 +49,8 @@ MonoBehaviour:
     _asset: {fileID: 8574412962073106934, guid: 856ebd7e557aded4b92aed4d9979727f, type: 2}
   - _key: ground/snow
     _asset: {fileID: 8574412962073106934, guid: 5de52635c06f2164ea648bd9da02945e, type: 2}
+  - _key: ground/snowyroad
+    _asset: {fileID: 8574412962073106934, guid: 48c746fb59765dd4fac9674e2f2dfd54, type: 2}
   - _key: ground/stoneroad
     _asset: {fileID: 8574412962073106934, guid: 23407f2312e87f640ab39da8c128d2bc, type: 2}
   - _key: ground/stonymud
@@ -57,12 +65,16 @@ MonoBehaviour:
     _color: {r: 0.19971141, g: 0.18606152, b: 0.1517351, a: 1}
   - _key: ground/dirt
     _color: {r: 0.0754457, g: 0.04503084, b: 0.033223875, a: 1}
+  - _key: ground/dirtroad
+    _color: {r: 0.2347637, g: 0.18007562, b: 0.13100271, a: 1}
   - _key: ground/drygrass
     _color: {r: 0.34487835, g: 0.32718667, b: 0.2848744, a: 1}
   - _key: ground/flagstone
     _color: {r: 0.13740033, g: 0.09477852, b: 0.065743975, a: 1}
   - _key: ground/forestfloor
     _color: {r: 0.15319906, g: 0.113693364, b: 0.07607276, a: 1}
+  - _key: ground/foresttrail
+    _color: {r: 0.15524635, g: 0.11092353, b: 0.06611478, a: 1}
   - _key: ground/grass
     _color: {r: 0.1268864, g: 0.16117324, b: 0.034309037, a: 1}
   - _key: ground/grasspath
@@ -73,6 +85,8 @@ MonoBehaviour:
     _color: {r: 0.13283308, g: 0.13247263, b: 0.11170653, a: 1}
   - _key: ground/moss
     _color: {r: 0.07424783, g: 0.13925773, b: 0.01115449, a: 1}
+  - _key: ground/mountainroad
+    _color: {r: 0.2710781, g: 0.23169157, b: 0.18166162, a: 1}
   - _key: ground/mud
     _color: {r: 0.18751265, g: 0.17146453, b: 0.16094561, a: 1}
   - _key: ground/packedearth
@@ -83,6 +97,8 @@ MonoBehaviour:
     _color: {r: 0.33308125, g: 0.2587604, b: 0.15623695, a: 1}
   - _key: ground/snow
     _color: {r: 0.73531383, g: 0.8597356, b: 0.97257465, a: 1}
+  - _key: ground/snowyroad
+    _color: {r: 0.3649598, g: 0.35677743, b: 0.3393602, a: 1}
   - _key: ground/stoneroad
     _color: {r: 0.117782384, g: 0.09912212, b: 0.07762199, a: 1}
   - _key: ground/stonymud

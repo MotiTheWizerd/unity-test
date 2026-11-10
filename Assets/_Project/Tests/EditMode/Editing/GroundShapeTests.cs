@@ -32,6 +32,41 @@ namespace Forge.Tests.Editing
         }
 
         [Test]
+        public void AnOffsetPath_RunsBesideIt_ToItsRightAsWalked()
+        {
+            var north = new[] { new Vector2(0f, 0f), new Vector2(0f, 10f) };
+
+            Assert.That(GroundShape.OffsetPath(north, 2f), Is.EqualTo(new[] { new Vector2(2f, 0f), new Vector2(2f, 10f) }), "Walking north, right is east.");
+            Assert.That(GroundShape.OffsetPath(north, -2f), Is.EqualTo(new[] { new Vector2(-2f, 0f), new Vector2(-2f, 10f) }));
+        }
+
+        [Test]
+        public void AnOffsetPath_KeepsItsDistance_RoundABend()
+        {
+            // North, then east: the outside of the bend is to the left (west, then north).
+            var bend = new[] { new Vector2(0f, 0f), new Vector2(0f, 10f), new Vector2(10f, 10f) };
+
+            var left = GroundShape.OffsetPath(bend, -1f);
+
+            Assert.That(left[0], Is.EqualTo(new Vector2(-1f, 0f)));
+            Assert.That(Vector2.Distance(left[1], new Vector2(-1f, 11f)), Is.LessThan(1e-5f), "The corner moves out along the bend's middle.");
+            Assert.That(Vector2.Distance(left[2], new Vector2(10f, 11f)), Is.LessThan(1e-5f));
+        }
+
+        [Test]
+        public void AnOffsetPath_DoesNotSpike_AtAHairpin_AndStaysClosed()
+        {
+            var hairpin = new[] { new Vector2(0f, 0f), new Vector2(0f, 10f), new Vector2(0.5f, 0f) };
+            var corner = GroundShape.OffsetPath(hairpin, 1f)[1];
+            Assert.That(Vector2.Distance(corner, hairpin[1]), Is.LessThanOrEqualTo(GroundShape.MaxMiter + 1e-4f));
+
+            var square = new[] { new Vector2(0f, 0f), new Vector2(0f, 10f), new Vector2(10f, 10f), new Vector2(10f, 0f), new Vector2(0f, 0f) };
+            var inside = GroundShape.OffsetPath(square, 1f);
+            Assert.That(inside[0], Is.EqualTo(inside[4]), "A ring stays closed.");
+            Assert.That(Vector2.Distance(inside[0], new Vector2(1f, 1f)), Is.LessThan(1e-5f), "Its first corner is mitred like the others.");
+        }
+
+        [Test]
         public void RectanglesAndPolygons_AreNegativeInside()
         {
             var rect = GroundShape.Rect(new GroundRect(new Vector2(10f, 10f), 10f, 4f));

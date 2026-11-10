@@ -39,6 +39,12 @@ namespace Forge.UnityEditor.Content
             // A road of flat stones laid in earth (Poly Haven, 2K: seen underfoot), the kind that runs between towns. Its
             // stones stand high in its height map, so at a road's soft edge they thin out into the ground beside it.
             yield return Layer(pluginId, "stoneroad", "Stone Road", Stone);
+            // The other roads (Poly Haven, 2K), each the worn middle of its kind of road (the roads guide lays them):
+            // packed earth and small stones, a trodden forest floor, loose mountain scree, snow trodden through to earth.
+            yield return Layer(pluginId, "dirtroad", "Dirt Road", Dirt);
+            yield return Layer(pluginId, "foresttrail", "Forest Trail", Dirt);
+            yield return Layer(pluginId, "mountainroad", "Mountain Road", Gravel);
+            yield return Layer(pluginId, "snowyroad", "Snowy Road", Snow);
         }
 
         static GroundLayerRecord Layer(string pluginId, string name, string displayName, string surface, GrassSettings grass = null) =>
