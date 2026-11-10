@@ -40,6 +40,9 @@ namespace Forge.Play
         [SerializeField, Tooltip("Dev, while animation and combat are tuned: the characters the next-look key (F8) switches the player between, in order. Build Characters lists every character here.")]
         GameObject[] _looks = Array.Empty<GameObject>();
 
+        [SerializeField, Tooltip("Dev, while animation and combat are tuned: the player draws its weapons as it spawns, instead of sheathed until R.")]
+        bool _startDrawn;
+
         [Header("Moving")]
         [SerializeField, Min(0.1f), Tooltip("While walking is switched on (Caps Lock), meters per second. Matches the Walk clip's stride.")]
         float _walkSpeed = 1.8f;
@@ -172,6 +175,9 @@ namespace Forge.Play
             _looks = (looks ?? throw new ArgumentNullException(nameof(looks))).Where(look => look != null).ToArray();
 
         public bool StartInThirdPerson => _startInThirdPerson;
+
+        /// <summary>Dev: whether the player draws its weapons as it spawns (else sheathed until the ready-weapon key).</summary>
+        public bool StartDrawn => _startDrawn;
 
         /// <summary>How far from the eyes the use key reaches, meters.</summary>
         public float Reach => _reach;

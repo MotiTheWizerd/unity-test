@@ -114,7 +114,7 @@ namespace Forge.Play
         /// </summary>
         public ActorEquipment Equipment { get; }
 
-        /// <summary>Whether the player's weapons are drawn (R), while spawned; else null. Every spawn starts sheathed.</summary>
+        /// <summary>Whether the player's weapons are drawn (R), while spawned; else null. Every spawn starts sheathed, unless the profile says it draws (<see cref="PlayerProfile.StartDrawn"/>).</summary>
         public WeaponReadiness Readiness { get; private set; }
 
         /// <summary>How the player fights (the attack keys swing each hand), while spawned; else null.</summary>
@@ -205,6 +205,9 @@ namespace Forge.Play
             Views.FirstPerson.Begin();
             Frame(0f);
 
+            // Dev: drawing as it spawns, the draw playing in the first second, saves a key while combat is tuned.
+            if (_profile.StartDrawn)
+                Readiness.Toggle();
             _controls.Enable();
             CaptureMouse(true);
         }
