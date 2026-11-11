@@ -737,7 +737,8 @@ from any camera, so both cameras read the same player.
   pace, eye height and look, named `ActorId.Player` and "You") plus what only the player has: the controls, the view
   and its `CameraDirector`, the first-person eyes (`PlayerEyes`), the bow's `DrawZoom`, what it has in sight (`Focus`,
   an `InteractionFocus`) and what it carries in its hands (`ObjectCarry`). `Spawn(feet, heading, stage, interactions)`
-  makes the actor, stands it, gives it the camera, switches the controls on and captures the mouse; `Tick` applies the
+  makes the actor (its pace in a fight ruled by `CombatPace`, see the character modes), stands it, gives it the
+  camera, switches the controls on and captures the mouse; `Tick` applies the
   view commands, sets the body's facing from the current view, turns the controls into the actor's `ActorCommands`
   (the attack keys throw a carried thing instead of attacking), ticks the actor, frames it (seen from within its head
   in first person) and last looks for what is in sight from where the camera now is (`CameraDirector.Pose`), so the
@@ -1033,7 +1034,11 @@ music are listeners to that fact, never the fact itself, so each joins or change
   (Moti's call: walking with a sword out is not a fight), and swinging at air starts nothing. A foe that sees you, a
   crime, a faction's grudge will be causes of their own.
 - **Listeners**: a character's mind reads its mode each frame (`Fighter`, Game.Minds: in `Fight` it faces its
-  opponent, draws and strikes; in `Normal` its day goes on). To come: the music crossfades on the player's
+  opponent, draws and strikes; in `Normal` its day goes on). The player's pace reads it too (`CombatPace`, Game.Player,
+  an `IMovementLimit` of the player's rules, added by `PlayerSession.Spawn`): in a fight the everyday run gives way to
+  a walk, and the run key (Shift) runs rather than sprints, so the player circles its foe instead of dashing past
+  (Moti: "in fight mode the character isn't running by default, only with the running key"); a walk forced already
+  (too laden) stays one, and a character's mind picks its own paces. To come: the music crossfades on the player's
   `ModeChanged`; Skyrim's slower regen in a fight is an `AttributeModifier` under a `ModifierSource` added and removed
   with it. Meanwhile `GameSession` logs each change to the console (dev, while fights are tuned).
 

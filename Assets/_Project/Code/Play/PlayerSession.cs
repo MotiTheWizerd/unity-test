@@ -162,6 +162,8 @@ namespace Forge.Play
             UpdateAttributes(stage.World.OfType<AttributeRecord>());
             _actor = new PlayedActor(stage, ActorId.Player, "Player", _profile.Body, _profile.Locomotion(), _profile.EyeHeight,
                 Attributes, Inventory, Equipment, "You") { Aim = () => _director.Pose };
+            // In a fight the player walks unless the run key is held (a character's mind picks its own paces).
+            _actor.Rules.Limits.Add(new CombatPace(stage.Modes, ActorId.Player));
             _actor.ChangeLook(_look);
             BindEyes();
             _carry = new ObjectCarry(_actor.Body.Collider, _profile.Carry());
