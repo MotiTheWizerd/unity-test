@@ -28,10 +28,10 @@ namespace Forge.Play
         {
             var start = from.ToUnity();
             var way = direction.ToUnity();
-            if (Physics.Raycast(start, way, out var hit, length, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            if (Physics.Raycast(start, way, out var hit, length, SceneLayers.World, QueryTriggerInteraction.Ignore))
                 Add(hit.collider, found);
             if (_aimRadius > 0f
-                && Physics.SphereCast(start, _aimRadius, way, out var graze, length, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                && Physics.SphereCast(start, _aimRadius, way, out var graze, length, SceneLayers.World, QueryTriggerInteraction.Ignore))
                 Add(graze.collider, found);
         }
 

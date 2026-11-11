@@ -22,5 +22,8 @@ namespace Forge.World.Assets
             _prefabs.TryGet(assetKey, out var prefab)
                 ? UnityEngine.Object.Instantiate(prefab, parent, false)
                 : _fallback.Instantiate(assetKey, parent);
+
+        public bool TryGetTemplate(string assetKey, out GameObject template) =>
+            _prefabs.TryGet(assetKey, out template) || _fallback.TryGetTemplate(assetKey, out template);
     }
 }

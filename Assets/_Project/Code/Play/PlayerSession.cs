@@ -21,7 +21,7 @@ namespace Forge.Play
 {
     /// <summary>
     /// The player while the world is played, all built from one <see cref="PlayerProfile"/>: its body
-    /// (<see cref="CharacterControllerMotor"/>), its look (<see cref="PlayerAvatar"/>), its controls, its rules
+    /// (<see cref="ActorBody"/>), its look (<see cref="PlayerAvatar"/>), its controls, its rules
     /// (<see cref="PlayerCharacter"/>), its camera (first or third person, <see cref="ViewSwitch"/>, put in place by the
     /// <see cref="CameraDirector"/>, closing in as a bow is drawn, <see cref="DrawZoom"/>), what it has in sight (<see cref="Focus"/>) and what it carries
     /// (<see cref="Inventory"/>, weighed against its carry weight by <see cref="Burden"/>). <see cref="Spawn"/> stands it
@@ -38,7 +38,7 @@ namespace Forge.Play
         readonly CameraDirector _director;
         readonly DrawZoom _zoom;
         readonly PhysicsInteractionProbe _probe;
-        CharacterControllerMotor _motor;
+        ActorBody _motor;
         GameObject _look;
         PlayerAvatar _avatar;
         AttributeRecord[] _attributeRecords;
@@ -183,7 +183,7 @@ namespace Forge.Play
 
             Despawn();
             UpdateAttributes(world.OfType<AttributeRecord>());
-            _motor = new CharacterControllerMotor(_profile);
+            _motor = new ActorBody("Player", _profile.Body);
             Player = new PlayerCharacter(_motor, _profile.Locomotion(), _profile.EyeHeight, Attributes, Events);
             World = world;
             // A world made before carrying weighed anything (no carry weight) lets the player carry anything.

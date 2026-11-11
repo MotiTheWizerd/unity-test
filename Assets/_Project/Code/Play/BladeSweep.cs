@@ -74,7 +74,7 @@ namespace Forge.Play
             var length = way.magnitude;
             if (length < 1e-4f)
                 return;
-            var count = Physics.RaycastNonAlloc(from, way / length, _hits, length, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            var count = Physics.RaycastNonAlloc(from, way / length, _hits, length, SceneLayers.World, QueryTriggerInteraction.Ignore);
             for (var i = 0; i < count; i++)
             {
                 var target = _identify(_hits[i].collider);

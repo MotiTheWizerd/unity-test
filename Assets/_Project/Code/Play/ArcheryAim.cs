@@ -38,7 +38,7 @@ namespace Forge.Play
         {
             var origin = view.Position.ToUnity();
             var forward = view.Forward.ToUnity();
-            var target = Physics.Raycast(origin, forward, out var hit, Reach, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+            var target = Physics.Raycast(origin, forward, out var hit, Reach, SceneLayers.World, QueryTriggerInteraction.Ignore)
                 ? hit.point
                 : origin + forward * Reach;
             return Vector3.Dot(target - from, forward) > 0f ? target : from + forward * Reach;

@@ -72,7 +72,7 @@ namespace Forge.Play
                 var from = arrow.Flight.Position.ToUnity();
                 var way = next.Position.ToUnity() - from;
                 var length = way.magnitude;
-                if (length > 1e-5f && Physics.Raycast(from, way / length, out var hit, length, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                if (length > 1e-5f && Physics.Raycast(from, way / length, out var hit, length, SceneLayers.World, QueryTriggerInteraction.Ignore))
                 {
                     _flying.RemoveAt(i);
                     Stick(arrow, hit, way / length, next.Velocity.ToUnity());

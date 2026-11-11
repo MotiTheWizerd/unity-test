@@ -35,6 +35,9 @@ namespace Forge.UnityEditor
         // Meters past the items' row the training dummy stands.
         const float DummyBeyond = 3f;
 
+        // Meters to the right of the items' row the village woman strolls about (WorldCharacters).
+        const float VillagerAside = 4f;
+
         // The bare earth around the start, so grass doesn't hide the items: dirt within the inner radius (m) of the
         // items' row, fading into the grass by the outer.
         const float ClearingInner = 3.5f;
@@ -88,6 +91,7 @@ namespace Forge.UnityEditor
             records.Add(ProceduralTerrain.Chunk(PluginId, MainSpace, MainChunk).WithPaint(StartClearing()));
             records.AddRange(ItemsAtTheStart(records.OfType<BaseObjectRecord>().Where(r => r.Item != null).ToList()));
             records.Add(DummyAtTheStart());
+            records.Add(VillagerAtTheStart());
 
             return new Plugin(new PluginManifest(PluginId, "0.1.0"), records);
         }
@@ -144,6 +148,17 @@ namespace Forge.UnityEditor
             var facing = Quaternion.CreateFromAxisAngle(Vector3.UnitY, (MainStart.Heading + 180f) * Compass.DegreesToRadians);
             return new PlacedObjectRecord(new RecordId(PluginId, "ref/start_training_dummy"), new RecordId(PluginId, "training_dummy"), MainSpace,
                 ItemsCentre() + new Vector3(ahead.X, 0f, ahead.Y), facing, 1f);
+        }
+
+        // The first of the world's characters (CoreModels.Npcs), VillagerAside to the right of the items, facing the start;
+        // she strolls about there while the game plays.
+        static PlacedObjectRecord VillagerAtTheStart()
+        {
+            var id = CoreModels.Npcs[0].Id;
+            var aside = Compass.Right(MainStart.Heading) * VillagerAside;
+            var facing = Quaternion.CreateFromAxisAngle(Vector3.UnitY, (MainStart.Heading + 180f) * Compass.DegreesToRadians);
+            return new PlacedObjectRecord(new RecordId(PluginId, "ref/start_" + id), new RecordId(PluginId, id), MainSpace,
+                ItemsCentre() + new Vector3(aside.X, 0f, aside.Y), facing, 1f);
         }
 
         static BaseObjectRecord BaseObject(string name, string displayName, string assetKey, string category, PlacementRules placement = null,

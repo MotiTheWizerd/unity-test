@@ -23,7 +23,7 @@ namespace Forge.Play.Sound
         readonly WorldView _view;
         readonly WorldFrame _frame;
         readonly Func<IRecordStore> _world;
-        readonly int _solid = Physics.DefaultRaycastLayers & ~ClutterLayer.Mask;
+        readonly int _solid = SceneLayers.Solid;
         TerrainChunkRecord _chunk;
         GroundPaint _paint;
 

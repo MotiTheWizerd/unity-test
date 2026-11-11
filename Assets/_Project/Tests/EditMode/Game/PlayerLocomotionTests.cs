@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Forge.Game.Motion;
 using Forge.Game.Player;
 using NUnit.Framework;
 
@@ -17,7 +18,7 @@ namespace Forge.Tests.Game
         static PlayerCommands Jump => new PlayerCommands(Vector2.Zero, Vector2.Zero, false, true);
 
         // A body on endless flat ground at height 0, with an optional ceiling.
-        sealed class FlatGround : IPlayerMotor
+        sealed class FlatGround : IMotor
         {
             readonly float? _ceiling;
 

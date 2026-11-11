@@ -1,7 +1,7 @@
-namespace Forge.Game.Player
+namespace Forge.Game.Motion
 {
     /// <summary>
-    /// A player's body that can crouch (<see cref="IPlayerMotor"/>s that can say so): shorter while crouched, so it
+    /// A body that can crouch (<see cref="IMotor"/>s that can say so): shorter while crouched, so it
     /// passes under what it couldn't standing, and it stands back up only where there is room overhead. A body that
     /// isn't one (a horse, a test's) never crouches.
     /// </summary>

@@ -144,7 +144,7 @@ namespace Forge.Play
         // ground, a house, a held weapon).
         bool TryReach(Vector3 start, Vector3 way, float length, out Rigidbody body, out Vector3 point)
         {
-            const int layers = Physics.DefaultRaycastLayers;
+            var layers = SceneLayers.World;
             if ((Physics.Raycast(start, way, out var hit, length, layers, QueryTriggerInteraction.Ignore) && IsFree(hit, out body)) ||
                 (_settings.AimRadius > 0f && Physics.SphereCast(start, _settings.AimRadius, way, out hit, length, layers, QueryTriggerInteraction.Ignore) && IsFree(hit, out body)))
             {

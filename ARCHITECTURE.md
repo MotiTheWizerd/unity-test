@@ -667,10 +667,16 @@ from any camera, so both cameras read the same player.
   downhill slopes; in the air gravity pulls and steering is weak; a head against a ceiling stops rising; one jump per
   landing, still allowed just after stepping off an edge. Diagonals are no faster. Headings turn into directions through
   `Forge.Core.Geometry.Compass` (also behind `PlacementMath`).
-- `CharacterControllerMotor` (Play) is the body: Unity's `CharacterController` sized from the profile (1.8 m tall,
-  0.3 m radius, 0.4 m steps, 50° slopes; crouched, 1 m (the crouch idle's head is at 0.75 m), the feet kept, standing back up only when a capsule check
-  finds the room above clear of all but clutter), its own scene object on the Ignore Raycast layer, so the editor's picks and the
-  camera's probes look through it. It collides with the terrain and the placed objects' colliders.
+- `ActorBody` (Play) is the body, every actor's (the player's, the world's characters'), behind `IMotor` (Game.Motion,
+  with `MotorContact` and `ICrouchingBody`): Unity's `CharacterController` of a `BodyShape` (Game.Motion: height, radius,
+  crouch height, step, slope, kept sound; the player's from the profile, `PlayerProfile.Body`: 1.85 m tall, 0.3 m
+  radius, 0.4 m steps, 50° slopes; crouched, 1 m (the crouch idle's head is at 0.75 m), the feet kept, standing back up
+  only when a capsule check finds the room above clear of the world's solid things), its own scene object on the
+  **ForgeActors** layer (`ActorLayer`, layer 11). It collides with the terrain, the placed objects' colliders and other
+  actors' bodies (the player can't walk through a character, nor it through the player). Every look into the scene
+  takes its layers from **`SceneLayers`**: `World` (the default layers but actors) for picks, blows, arrows, the aim,
+  the use key, carrying and dropping; `Solid` (that, but clutter) for the camera's obstacles, the footsteps' ground and
+  the room to stand. So no look meets its own body, and no blow reaches a character until the fight step asks for actors.
 - `PlayerControls` (Play) read the profile's action map (`Settings/InputSystem_Actions`, map Player: Move, Look, Sprint,
   Jump, ToggleWalk, Crouch, ToggleView, Zoom; WASD and arrows, mouse, Shift, Space, Caps Lock, Left Ctrl, F, the wheel, and the gamepad) into `PlayerCommands` and
   `ViewCommands`; the look is pointer pixels × the profile's sensitivity (0.1° per pixel), and the wheel's binding scales
@@ -987,6 +993,35 @@ music are listeners to that fact, never the fact itself, so each joins or change
   mode (`Fight`: face the opponent, draw, strike; `Normal`: its day); Skyrim's slower regen in a fight is an
   `AttributeModifier` under a `ModifierSource` added and removed with it. Until one exists, `GameSession` logs each
   change to the console.
+
+## The world's characters (Forge.Game.Minds, Forge.Play)
+
+A character placed in the world (an NPC from the catalog's Characters/NPCs) goes about while it plays, on a body as
+the player's. The mind decides, engine-free; the body and its rules carry it out. The base world (Generate Core
+Plugin) stands the first of `CoreModels.Npcs` 4 m right of the items at the start.
+
+- **`Wander`** (Game.Minds): the first mind. It stands a while (`WanderSettings.MinPause`..`MaxPause`), walks at
+  `Speed` to a spot within `Radius` of its home, a third of the radius away at least, stands again; `Step(position,
+  dt)` gives its ground velocity; when its body gets less than a quarter of the way it was sent for `StuckSeconds`
+  (0.5 s: the player, a wall in the way) it gives the walk up, stands, and goes elsewhere after the pause, as
+  `Blocked()` does. Its own `System.Random`,
+  seeded from its placed id, so it strolls the same way each game. `WanderSettings.Stroll`: 6 m, 2 to 6 s, walking at
+  the character's own Walk pace (`HumanoidAnimation.GroundSpeedOf`: the clip's speed at its size, ~1.6 m/s for
+  VikingF1; slower, the walk blends with the idle and the feet slide; 1.8 m/s without a Walk clip).
+- **`WorldCharacters`** (Play), `GameSession.Characters`, bound like `WorldPhysics` for one game: every placed object
+  the view shows whose look has humanoid animations is taken over by a character made as the player is: an
+  `ActorBody` of the profile's `BodyShape` at its own height (`BodyShape.ForEyes`, its eyes read off its idle), its
+  look on it (`CharacterModel`, from the prefab `IAssetCatalog.TryGetTemplate` gives for its base object's key), and
+  the player's rules moving it (`PlayerCharacter`, facing its movement): gravity, slopes, steps and collisions come
+  with them. Its `Wander` is homed where it was placed and works in the world root's space (a rebase moves nothing of
+  it); each frame it turns the rules' look the way it walks and sends them walking ahead (`PlayerCommands`, walk).
+  The placed object hides meanwhile; the game ending (or the character streaming out) takes body and look away and
+  shows it again where its record has it.
+- **Shortcuts, for now:** a character's body takes the player's profile's shape (a race's record will give its own);
+  no blow or arrow reaches it (`SceneLayers`); it forgets where it walked when it streams out. `PlayerCharacter`,
+  `PlayerLocomotion` and `PlayerCommands` move characters too, so their names now say less than they do: a rename to
+  `Character`, `Locomotion` and `MoveCommands` is a commit of its own. The fighting NPC brings a mind that branches on
+  its `Mode`.
 
 ## Sound (Forge.Play.Sound)
 

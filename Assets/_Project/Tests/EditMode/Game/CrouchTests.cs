@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Forge.Game.Actors;
 using Forge.Game.Events;
+using Forge.Game.Motion;
 using Forge.Game.Player;
 using NUnit.Framework;
 
@@ -15,7 +16,7 @@ namespace Forge.Tests.Game
         static readonly LocomotionSettings Settings = LocomotionSettings.Default;
 
         // A body on endless flat ground at height 0 that crouches 0.6 m lower, under a low roof or not.
-        sealed class CrouchingGround : IPlayerMotor, ICrouchingBody
+        sealed class CrouchingGround : IMotor, ICrouchingBody
         {
             public bool LowRoof;
 
@@ -43,7 +44,7 @@ namespace Forge.Tests.Game
         }
 
         // A body that can't crouch.
-        sealed class FlatGround : IPlayerMotor
+        sealed class FlatGround : IMotor
         {
             public Vector3 Position { get; private set; }
 
@@ -64,7 +65,7 @@ namespace Forge.Tests.Game
 
         static PlayerCommands Jump => new PlayerCommands(Vector2.Zero, Vector2.Zero, false, true);
 
-        static PlayerCharacter Standing(IPlayerMotor body)
+        static PlayerCharacter Standing(IMotor body)
         {
             var player = new PlayerCharacter(body, Settings, EyeHeight);
             player.Tick(PlayerCommands.None, Frame);

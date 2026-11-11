@@ -1,46 +1,39 @@
 using System;
-using Forge.Game.Player;
+using Forge.Game.Motion;
 using Forge.World;
 using UnityEngine;
 
 namespace Forge.Play
 {
     /// <summary>
-    /// The player's body as Unity's <see cref="CharacterController"/>: a capsule that collides with the terrain and the
-    /// placed objects, walks up steps and slopes up to the profile's limits, and slides along walls. Clutter it walks
-    /// through, kicking it aside (<see cref="ClutterKicker"/>). Crouched, the capsule is the profile's crouch height, its
-    /// feet where they were, and it stands back up only when the room above it is clear (<see cref="ICrouchingBody"/>).
-    /// Its own scene object, on the Ignore Raycast layer so the editor's picks and the camera's depth probes look through
-    /// it. Positions are the feet, in scene coordinates.
+    /// An actor's body, the player's or a character's of the world, as Unity's <see cref="CharacterController"/>: a
+    /// capsule of its <see cref="BodyShape"/> that collides with the terrain, the placed objects and other actors' bodies,
+    /// walks up steps and slopes up to its limits, and slides along walls. Clutter it walks through, kicking it aside
+    /// (<see cref="ClutterKicker"/>). Crouched, the capsule is its crouch height, its feet where they were, and it stands
+    /// back up only when the room above it is clear (<see cref="ICrouchingBody"/>). Its own scene object, on the
+    /// <see cref="ActorLayer"/>, which looks into the scene leave out (<see cref="SceneLayers"/>). Positions are the feet,
+    /// in scene coordinates.
     /// </summary>
-    public sealed class CharacterControllerMotor : IPlayerMotor, ICrouchingBody, IDisposable
+    public sealed class ActorBody : IMotor, ICrouchingBody, IDisposable
     {
-        // A built-in layer, left out of Physics.DefaultRaycastLayers, which every pick in the editor uses.
-        const string IgnoreRaycastLayer = "Ignore Raycast";
-
         readonly GameObject _body;
         readonly CharacterController _controller;
         readonly ClutterKicker _kicker;
         readonly float _standingHeight;
         readonly float _crouchedHeight;
-        // What blocks standing up: anything solid, but the body itself and the clutter it walks through.
-        readonly int _overhead;
 
-        public CharacterControllerMotor(PlayerProfile profile)
+        /// <param name="name">Its scene object's name ("Player", the character's).</param>
+        public ActorBody(string name, BodyShape shape)
         {
-            if (profile == null)
-                throw new ArgumentNullException(nameof(profile));
-
-            _body = new GameObject("Player") { layer = LayerMask.NameToLayer(IgnoreRaycastLayer) };
+            _body = new GameObject(name) { layer = ActorLayer.Index };
             _controller = _body.AddComponent<CharacterController>();
-            _standingHeight = profile.Height;
-            _crouchedHeight = profile.CrouchHeight;
-            _overhead = Physics.DefaultRaycastLayers & ~ClutterLayer.Mask;
-            _controller.radius = profile.Radius;
+            _standingHeight = shape.Height;
+            _crouchedHeight = shape.CrouchHeight;
+            _controller.radius = shape.Radius;
             Stand(_standingHeight);
-            _controller.stepOffset = profile.StepHeight;
-            _controller.slopeLimit = profile.SlopeLimit;
-            _controller.skinWidth = Mathf.Max(0.01f, profile.Radius * 0.1f);
+            _controller.stepOffset = shape.StepHeight;
+            _controller.slopeLimit = shape.SlopeLimit;
+            _controller.skinWidth = Mathf.Max(0.01f, shape.Radius * 0.1f);
             _controller.minMoveDistance = 0f;
             // Clutter is never stood on or walked into: it is kicked aside.
             _controller.excludeLayers = ClutterLayer.Mask;
@@ -80,7 +73,7 @@ namespace Forge.Play
         public float CrouchDepth => _standingHeight - _crouchedHeight;
 
         // The room the standing capsule would take above the crouched one, a skin narrower so a wall it leans on
-        // doesn't count.
+        // doesn't count; the world's solid things only, so neither its own body nor another's keeps it down.
         public bool CanStand
         {
             get
@@ -92,7 +85,7 @@ namespace Forge.Play
                 return !Physics.CheckCapsule(
                     feet + Vector3.up * (_crouchedHeight - _controller.radius),
                     feet + Vector3.up * (_standingHeight - _controller.radius),
-                    radius, _overhead, QueryTriggerInteraction.Ignore);
+                    radius, SceneLayers.Solid, QueryTriggerInteraction.Ignore);
             }
         }
 

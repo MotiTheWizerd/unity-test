@@ -11,7 +11,7 @@ namespace Forge.Tests.Game
         const float Frame = 1f / 60f;
 
         // Flat ground at y = 0; with a wall, it moves nowhere over the ground.
-        sealed class Ground : IPlayerMotor
+        sealed class Ground : IMotor
         {
             readonly bool _walled;
 
@@ -32,7 +32,7 @@ namespace Forge.Tests.Game
             public void Teleport(Vector3 feet) => Position = feet;
         }
 
-        static PlayerCharacter Standing(IPlayerMotor motor)
+        static PlayerCharacter Standing(IMotor motor)
         {
             var player = new PlayerCharacter(motor, LocomotionSettings.Default, 1.65f);
             player.PlaceAt(Vector3.Zero, 0f);

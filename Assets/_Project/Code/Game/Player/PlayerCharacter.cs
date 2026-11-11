@@ -11,7 +11,7 @@ namespace Forge.Game.Player
 {
     /// <summary>
     /// The player in the world: where it looks (<see cref="PlayerLook"/>), how it moves (<see cref="PlayerLocomotion"/>),
-    /// its body (<see cref="IPlayerMotor"/>) and which way that body faces (<see cref="BodyHeading"/>, by
+    /// its body (<see cref="IMotor"/>) and which way that body faces (<see cref="BodyHeading"/>, by
     /// <see cref="Facing"/>). Each frame it turns the look, works out the move, has the body make it, keeping what the
     /// body touched for the next frame, and turns the body. A body that can crouch (<see cref="ICrouchingBody"/>) crouches
     /// as the moves say, and stays down where there is no room to stand; the eyes come down with it. Engine-free;
@@ -34,7 +34,7 @@ namespace Forge.Game.Player
         /// <param name="attributes">The player's attributes, which moving costs (<see cref="MovementCosts"/>) are paid from
         /// and which tick with it; null for a player whose moves cost nothing.</param>
         /// <param name="events">The game's stream, told what happens to the player (jumped, exhausted, fell); null to tell no one.</param>
-        public PlayerCharacter(IPlayerMotor motor, LocomotionSettings locomotion, float eyeHeight, ActorAttributes attributes = null, GameEvents events = null)
+        public PlayerCharacter(IMotor motor, LocomotionSettings locomotion, float eyeHeight, ActorAttributes attributes = null, GameEvents events = null)
         {
             Motor = motor ?? throw new ArgumentNullException(nameof(motor));
             _crouching = motor as ICrouchingBody;
@@ -54,7 +54,7 @@ namespace Forge.Game.Player
         /// <summary>The player's attributes; null when it has none.</summary>
         public ActorAttributes Attributes => Costs?.Attributes;
 
-        public IPlayerMotor Motor { get; }
+        public IMotor Motor { get; }
 
         public PlayerLook Look { get; } = new PlayerLook();
 

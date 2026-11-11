@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Forge.Game.Cameras;
+using Forge.Game.Motion;
 using Forge.Game.Player;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -151,18 +152,10 @@ namespace Forge.Play
         [SerializeField, Min(0.001f), Tooltip("Degrees the view turns per pixel the mouse moves.")]
         float _lookSensitivity = 0.1f;
 
-        public float Height => _height;
-
-        public float Radius => Mathf.Min(_radius, _height * 0.5f);
+        /// <summary>The player's body (<see cref="ActorBody"/>), kept sound (<see cref="BodyShape"/>); the world's characters are built on it too, at their own height.</summary>
+        public BodyShape Body => new BodyShape(_height, _radius, _crouchHeight, _stepHeight, _slopeLimit);
 
         public float EyeHeight => Mathf.Min(_eyeHeight, _height);
-
-        /// <summary>How tall the body is crouched: never above standing, nor shorter than its width.</summary>
-        public float CrouchHeight => Mathf.Clamp(_crouchHeight, 2f * Radius, _height);
-
-        public float StepHeight => Mathf.Min(_stepHeight, _height - 2f * Radius);
-
-        public float SlopeLimit => _slopeLimit;
 
         /// <summary>The player's look; null leaves it unseen (first person works, third person shows nothing of it).</summary>
         public GameObject Model => _model;

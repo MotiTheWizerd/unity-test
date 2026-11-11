@@ -11,6 +11,7 @@ using Forge.Game.Attributes;
 using Forge.Game.Events;
 using Forge.Game.Interaction;
 using Forge.Game.Items;
+using Forge.Game.Motion;
 using Forge.Game.Player;
 using Forge.Game.World;
 using NUnit.Framework;
@@ -416,7 +417,7 @@ namespace Forge.Tests.Game
             AttributeSet.From(new[] { new AttributeRecord(CoreAttributes.CarryWeight, "Carry Weight", AttributeKind.Stat, carryWeight) }),
             ActorId.Player);
 
-        sealed class FlatGround : IPlayerMotor
+        sealed class FlatGround : IMotor
         {
             public Vector3 Position { get; private set; }
 

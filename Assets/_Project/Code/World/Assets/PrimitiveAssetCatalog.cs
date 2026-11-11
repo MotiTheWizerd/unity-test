@@ -40,6 +40,13 @@ namespace Forge.World.Assets
             return instance;
         }
 
+        // A primitive is made, not copied from an original.
+        public bool TryGetTemplate(string assetKey, out GameObject template)
+        {
+            template = null;
+            return false;
+        }
+
         Material MissingMaterial()
         {
             if (_missingMaterial == null)

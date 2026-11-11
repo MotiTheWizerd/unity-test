@@ -1,4 +1,5 @@
 using System.Numerics;
+using Forge.Game.Motion;
 using Forge.Game.Player;
 using NUnit.Framework;
 
@@ -8,7 +9,7 @@ namespace Forge.Tests.Game
     {
         const float Frame = 1f / 60f;
 
-        sealed class FlatGround : IPlayerMotor
+        sealed class FlatGround : IMotor
         {
             public Vector3 Position { get; private set; }
 

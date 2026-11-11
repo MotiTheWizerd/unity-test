@@ -19,7 +19,7 @@ namespace Forge.Play
             if (length < 1e-5f)
                 return 0f;
 
-            var layers = Physics.DefaultRaycastLayers & ~ClutterLayer.Mask;
+            var layers = SceneLayers.Solid;
             // A ball that starts inside something can't move at all.
             if (Physics.CheckSphere(start, radius, layers, QueryTriggerInteraction.Ignore))
                 return 0f;

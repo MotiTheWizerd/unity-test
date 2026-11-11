@@ -468,8 +468,7 @@ namespace Forge.UnityEditor.Content
             return transition;
         }
 
-        // How fast the clip walks: its root motion over the ground, in the clips' own size.
-        static float ClipSpeed(AnimationClip clip) => new Vector2(clip.averageSpeed.x, clip.averageSpeed.z).magnitude;
+        static float ClipSpeed(AnimationClip clip) => HumanoidAnimation.ClipSpeed(clip);
 
         // The moves of the set in `role` (its stances, its arm actions): its own clips and the base set's, by name, each once.
         static IEnumerable<string> Moves(string set, MoveRole role)

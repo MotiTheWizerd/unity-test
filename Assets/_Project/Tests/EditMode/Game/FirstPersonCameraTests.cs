@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Forge.Core.Geometry;
 using Forge.Game.Cameras;
+using Forge.Game.Motion;
 using Forge.Game.Player;
 using NUnit.Framework;
 
@@ -9,7 +10,7 @@ namespace Forge.Tests.Game
 {
     public class FirstPersonCameraTests
     {
-        sealed class StandingStill : IPlayerMotor
+        sealed class StandingStill : IMotor
         {
             public Vector3 Position { get; private set; }
 

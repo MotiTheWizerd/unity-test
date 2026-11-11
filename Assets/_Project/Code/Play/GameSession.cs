@@ -8,6 +8,7 @@ using Forge.Game.Equipment;
 using Forge.Game.Events;
 using Forge.Game.Interaction;
 using Forge.Game.Items;
+using Forge.Game.Minds;
 using Forge.Game.World;
 using Forge.Play.Sound;
 using Forge.World;
@@ -40,6 +41,7 @@ namespace Forge.Play
         const float DropToss = 0.5f;
         const float DropSpin = 3f;
 
+        readonly PlayerProfile _profile;
         readonly WorldView _view;
         readonly WorldFrame _frame;
         readonly ItemDropper _dropper;
@@ -57,6 +59,7 @@ namespace Forge.Play
         public GameSession(PlayerProfile profile, Transform camera, WorldView view, WorldFrame frame, Action<Exception> onError,
             SoundSettings sound = null)
         {
+            _profile = profile != null ? profile : throw new ArgumentNullException(nameof(profile));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _frame = frame ?? throw new ArgumentNullException(nameof(frame));
             Events = new GameEvents(onError);
@@ -128,6 +131,8 @@ namespace Forge.Play
 
             World = new PlayedWorld(world, Changes);
             Bodies = new WorldPhysics(_view, World, OnSettled);
+            // The world's characters stand on the player's body, each at its own height, until races give their own.
+            Characters = new WorldCharacters(_view, World, _profile.Body, WanderSettings.Stroll);
             if (World.TryGet(CoreActors.Player, out var record) && record is ActorRecord player)
                 StartingItems.Give(player, World, Player.Inventory, Player.Equipment);
             Player.Spawn(feet, heading, World, Interactions);
@@ -137,6 +142,9 @@ namespace Forge.Play
         /// <summary>The world's loose things as physical bodies while playing; else null.</summary>
         public WorldPhysics Bodies { get; private set; }
 
+        /// <summary>The world's characters going about while playing; else null.</summary>
+        public WorldCharacters Characters { get; private set; }
+
         /// <summary>Plays one frame, then tells what happened in it, heard from the player's head.</summary>
         public void Tick(float deltaTime)
         {
@@ -144,6 +152,7 @@ namespace Forge.Play
             Modes.Tick(deltaTime);
             _listener.HearFrom(Player.Player?.Eyes.ToUnity());
             Bodies?.Tick();
+            Characters?.Tick(deltaTime);
             Events.Flush();
         }
 
@@ -175,7 +184,7 @@ namespace Forge.Play
             var ahead = Compass.Forward(heading);
             var way = new Vector3(ahead.X, 0f, ahead.Y);
             var hands = player.Eyes.ToUnity() + Vector3.down * DropBelowEyes;
-            var reach = Physics.SphereCast(hands, DropClearance, way, out var wall, DropReach, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+            var reach = Physics.SphereCast(hands, DropClearance, way, out var wall, DropReach, SceneLayers.World, QueryTriggerInteraction.Ignore)
                 ? wall.distance
                 : DropReach;
             var position = _frame.ToWorld(hands + way * reach).ToNumerics();
@@ -230,6 +239,8 @@ namespace Forge.Play
             _listener.HearFrom(null);
             Bodies?.Dispose();
             Bodies = null;
+            Characters?.Dispose();
+            Characters = null;
             Player.Inventory.Clear();
             Modes.Clear();
             Combatants.Clear();
@@ -244,6 +255,7 @@ namespace Forge.Play
         {
             Player.Shift(delta);
             Bodies?.Shift(delta);
+            Characters?.Shift(delta);
         }
 
         public void Dispose()

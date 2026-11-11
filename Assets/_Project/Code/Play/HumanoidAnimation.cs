@@ -33,6 +33,8 @@ namespace Forge.Play
         public const string Stance = "Stance";
         /// <summary>The move it stands still in, which every set has.</summary>
         public const string IdleMove = "Idle";
+        /// <summary>The move it walks in, at its own pace (<see cref="GroundSpeedOf"/>).</summary>
+        public const string WalkMove = "Walk";
         /// <summary>The move it stands ready in with its weapons out, when its set has one.</summary>
         public const string DrawnIdleMove = Drawn + IdleMove;
         public const string DrawTrigger = "Draw";
@@ -359,6 +361,19 @@ namespace Forge.Play
             }
 
             return clip;
+        }
+
+        /// <summary>How fast a clip walks: its root motion over the ground, in the clips' own size (the ground moves blend by it).</summary>
+        public static float ClipSpeed(AnimationClip clip) => new Vector2(clip.averageSpeed.x, clip.averageSpeed.z).magnitude;
+
+        /// <summary>
+        /// How fast this body goes over the ground when its ground move <paramref name="move"/> plays at its own pace, its
+        /// feet planted: the clip's speed at the body's size, meters per second; 0 without the move.
+        /// </summary>
+        public float GroundSpeedOf(string move)
+        {
+            var clip = Clip(move);
+            return clip != null ? ClipSpeed(clip) * _animator.humanScale : 0f;
         }
 
         // Each action layer comes in as its action starts and is out as it ends, so the layer's own state can go back

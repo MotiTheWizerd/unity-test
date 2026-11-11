@@ -1,6 +1,6 @@
-namespace Forge.Game.Player
+namespace Forge.Game.Motion
 {
-    /// <summary>What the body touched during its last move, which the next step of <see cref="PlayerLocomotion"/> reacts to.</summary>
+    /// <summary>What the body touched during its last move, which the next step of <see cref="Player.PlayerLocomotion"/> reacts to.</summary>
     public readonly struct MotorContact
     {
         public MotorContact(bool grounded, bool hitCeiling)

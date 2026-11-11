@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Forge.Core.Geometry;
+using Forge.Game.Motion;
 
 namespace Forge.Game.Player
 {
@@ -9,7 +10,7 @@ namespace Forge.Game.Player
     /// move this frame. On the ground the pace eases toward the wanted one quickly and the body is held down so it stays
     /// on downhill slopes; in the air gravity pulls and steering is weak. A jump needs the ground, or a moment after
     /// leaving it (coyote time), and only one per landing. The crouch key crouches, at a crouch's pace, until pressed
-    /// again; a sprint or a jump stands it up first, as Skyrim's sneak. Engine-free: the motor (<see cref="IPlayerMotor"/>)
+    /// again; a sprint or a jump stands it up first, as Skyrim's sneak. Engine-free: the motor (<see cref="IMotor"/>)
     /// carries the move out, and whoever plays it (<see cref="PlayerCharacter"/>) lowers the body.
     /// </summary>
     public sealed class PlayerLocomotion

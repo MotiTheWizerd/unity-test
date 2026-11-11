@@ -52,7 +52,7 @@ namespace Forge.UnityEditor.Content
             !string.IsNullOrEmpty(folderName) && !folderName.StartsWith("_", StringComparison.Ordinal);
 
         public const string Idle = "Idle";
-        public const string Walk = "Walk";
+        public const string Walk = Forge.Play.HumanoidAnimation.WalkMove;
         public const string Run = "Run";
         public const string Sprint = "Sprint";
         public const string Jump = "Jump";

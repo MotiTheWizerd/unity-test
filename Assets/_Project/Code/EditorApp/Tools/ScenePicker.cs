@@ -3,6 +3,7 @@ using Forge.Data;
 using Forge.Data.Plugins;
 using Forge.Data.Records;
 using Forge.EditorApp.Gizmos;
+using Forge.Play;
 using Forge.World;
 using UnityEngine;
 
@@ -34,7 +35,7 @@ namespace Forge.EditorApp.Tools
 
             _maxDistance = maxDistance;
             _gizmoMask = GizmoLayer >= 0 ? 1 << GizmoLayer : 0;
-            _worldMask = Physics.DefaultRaycastLayers & ~_gizmoMask;
+            _worldMask = SceneLayers.World & ~_gizmoMask;
         }
 
         public int GizmoLayer { get; }

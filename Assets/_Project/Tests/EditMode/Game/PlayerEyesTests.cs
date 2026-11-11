@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Forge.Game.Motion;
 using Forge.Game.Player;
 using NUnit.Framework;
 
@@ -10,7 +11,7 @@ namespace Forge.Tests.Game
         const float ManEyes = 1.72f;
 
         // A body standing on flat ground at height 0.
-        sealed class Standing : IPlayerMotor
+        sealed class Standing : IMotor
         {
             public Vector3 Position { get; private set; }
 

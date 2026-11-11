@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Forge.Game.Cameras;
+using Forge.Game.Motion;
 using Forge.Game.Player;
 using NUnit.Framework;
 
@@ -13,7 +14,7 @@ namespace Forge.Tests.Game
         // Centred behind the player, so the expected spots are easy to read.
         static readonly ThirdPersonSettings Centred = new ThirdPersonSettings(distance: 4f, minDistance: 1f, maxDistance: 8f, zoomStep: 1f, pivotHeight: 1.5f, shoulderOffset: 0f, returnSpeed: 10f);
 
-        sealed class StandingStill : IPlayerMotor
+        sealed class StandingStill : IMotor
         {
             public Vector3 Position { get; private set; }
 
