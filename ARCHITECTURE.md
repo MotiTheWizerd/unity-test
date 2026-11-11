@@ -703,17 +703,39 @@ from any camera, so both cameras read the same player.
   (Zoom) moves it, one notch nearer than its closest is first person, one notch out of first person is third at its
   closest. `CameraDirector` (Play) puts the engine's camera where the current mode says, as near-sighted as it asks, and
   `Release` gives the camera back as it was set.
-- **The player while playing** (`PlayerSession`, Play): the body, the model, the controls, the rules, the view, what it
-  has in sight (`Focus`, an `InteractionFocus`) and what it carries (`Inventory`), all built from the profile.
-  `Spawn(feet, heading, world, interactions)` makes the body and model, stands the player, gives it the camera, switches
-  the controls on and captures the mouse; `Tick` applies the view commands, sets the body's facing from the current
-  view, steps the player, then frames it and turns the model, seen from within its head in first person, and last looks for what is in
-  sight from where the camera now is (`CameraDirector.Pose`), so the prompt and the use key go by what the frame shows,
-  and uses it if the key was pressed; `Despawn` takes it away. One per app, so the view chosen and the attributes carry
-  over to the next spawn; what it carries is emptied when play ends (`GameSession.End`) and given afresh from its
-  `ActorRecord` when the next begins, since the world is put back as
-  built too, so an item is never both in the pack and on the ground. While spawned in a world with a carry weight it has a `Burden`
-  (`Encumbrance`, one of the player's `Limits`) and keeps the `World` (as played) its items are read from.
+- **An actor in play** (`PlayedActor`, Play): one actor standing in a played world, the player or a character of the
+  world, made of the same parts whoever minds it: its `ActorBody` of a `BodyShape`, the rules moving it
+  (`PlayerCharacter`), its `ActorAttributes` (null for an actor without any), what it carries and has equipped
+  (`Inventory`, `ActorEquipment`, lent by whoever keeps them; `EquipmentModifiers` apply what is worn to its attributes
+  while it stands, and in a world with a carry weight its `Burden`, an `Encumbrance`, is one of its rules' `Limits`),
+  its `WeaponReadiness`, its `ActorCombat` (one of the game's `Combatants` while it has attributes, its guard covering
+  the way its body faces) and its look (a `CharacterModel`; `ChangeLook(prefab)` builds it and everything shown on it
+  together and takes them down together: `EquipmentView`, `ReadinessView`, `CombatView`, `BladeSweep`, `ShotView`,
+  `ArrowFlights`, `FootstepView`, so a standing actor becomes another character where it stands, keeping what it
+  carries, has equipped and has drawn; its eyes are read off the look's head, `CharacterModel.TryGetEyeHeight`, else
+  the height it was given). What it does each frame is an **`ActorCommands`** (Game.Actors): how to move
+  (`PlayerCommands`), the ready-weapon key, each hand used (its attack pressed: a swing, or a shield raised) or let go
+  of (a drawn bow loosed, a block lowered); `Tick(commands, dt)` carries them out in order (the weapons, the hands, the
+  swings and shots, then the move, squaring up to the aim while a bow is drawn) and shows it all on the look (the body
+  turned, the stride, the blade's sweep, the steps). Where it aims from and which way (`Aim`, a `ViewPose`: what its
+  shots fly at, what its draw turns to) is its own eyes along its look until set (the player's camera). Only who tells
+  it differs: the player's controls (`PlayerSession`), a mind (`WorldCharacters`).
+- **The game's stage** (`GameStage`, Play, `GameSession.Stage`): what one game gives every actor standing in it: the
+  world as played, the stream, the looks of the world's things, who can be struck (`Combatants`, `PlacedActors`), where
+  a shot that lands goes, what sounds play on and what is underfoot; and whom a collider in the scene belongs to
+  (`Identify`: a placed actor by its `RecordLink`). Made with each game begun, gone when it ends.
+- **The player while playing** (`PlayerSession`, Play): a `PlayedActor` (`Actor`, built from the profile: its body,
+  pace, eye height and look, named `ActorId.Player` and "You") plus what only the player has: the controls, the view
+  and its `CameraDirector`, the first-person eyes (`PlayerEyes`), the bow's `DrawZoom`, what it has in sight (`Focus`,
+  an `InteractionFocus`) and what it carries in its hands (`ObjectCarry`). `Spawn(feet, heading, stage, interactions)`
+  makes the actor, stands it, gives it the camera, switches the controls on and captures the mouse; `Tick` applies the
+  view commands, sets the body's facing from the current view, turns the controls into the actor's `ActorCommands`
+  (the attack keys throw a carried thing instead of attacking), ticks the actor, frames it (seen from within its head
+  in first person) and last looks for what is in sight from where the camera now is (`CameraDirector.Pose`), so the
+  prompt and the use key go by what the frame shows, and uses it if the key was pressed; `Despawn` takes it away. One
+  per app, so the view chosen, the look, the attributes, the pack and the equipment carry over to the next spawn; what
+  it carries is emptied when play ends (`GameSession.End`) and given afresh from its `ActorRecord` when the next
+  begins, since the world is put back as built too, so an item is never both in the pack and on the ground.
 - **The inventory in play**: the Player map's `Inventory` (I or Tab, the gamepad's select) opens and closes it
   (`PlayerSession.InventoryOpen`; `PlayerControls.InventoryKey` names it). While it is open the mouse is freed for the
   screen and `Tick` steps nothing (no move, no look, no regen), as Skyrim pauses for its menus; `GameSession.Back` (Esc)
@@ -753,29 +775,28 @@ from any camera, so both cameras read the same player.
   object known by its `RecordLink`. The profile's `Reach` is 2.5 m from the eyes.
 - **The game while playing** (`GameSession`, Play): one running game: the stream (`GameEvents`), what playing changed in
   the world (`WorldChanges`) and the world as played (`World`, a `PlayedWorld` the player's focus and inventory read),
-  what the use key can do (`Interactions`: take) and the player (`PlayerSession`). `Begin(feet, heading, world)` spawns
-  the player, `Tick` plays a frame and then flushes the stream, `End` takes the player away and lets the world's
-  changes go. A placed object taken out of the world leaves the scene (`WorldView.Hide`, which also keeps it out when its
+  what it gives every actor standing in it (`Stage`, a `GameStage`), what the use key can do (`Interactions`: take) and
+  the player (`PlayerSession`). `Begin(feet, heading, world)` makes the stage and spawns the player, `Tick` plays a
+  frame and then flushes the stream, `End` takes the player away and lets the world's changes go. A placed object taken out of the world leaves the scene (`WorldView.Hide`, which also keeps it out when its
   chunk streams in again) and the focus looks again; one dropped joins it (`WorldView.ShowAdded`: streamed with its
   chunk like the world's own); when the changes are let go, `WorldView.ShowAsBuilt` puts the world back as built.
   `Drop(item)` lets one go from the player's hands, as Skyrim's drops are: 0.6 m ahead of the eyes the way the body
   faces and 0.5 m below them (nearer when a wall is), turned that way, going on as the player walks, tossed a little
   ahead and spinning (`WorldPhysics.Release`), so it falls, tumbles and stays wherever it comes to rest. The editor's
   play from here runs one; the game app will run one as it is.
-- **The model** (`PlayerAvatar`, Play): the profile's `_model` as a `CharacterModel` (any character's look on any body:
-  the prefab riding on the body's object, turned to the body's heading, its colliders removed since the body is the
-  collider, on the body's layer, animated from a `BodyMotion`; the world's characters will use it too), plus the
-  player's own extras: its eyes (`CharacterModel.Eyes(height)`: a point riding the head bone at the character's own
-  eye height as it stands in its idle, at the front of its face, found by `HumanoidHead` from the mesh its head
-  carries), which the first-person camera rides, and its animator always animates. The eye height is read off the
-  head too (`HumanoidHead.TryFindEyeLevel`: halfway from the head joint to the head's top, which matched the faces of
-  all four Mixamo-rigged characters within 1 cm), so a woman sees from lower than a man; it sets the rules' eyes
-  (`PlayerCharacter.EyeHeight`: reach, carrying, the ears), and the profile's `_eyeHeight` serves only a look without
-  a head. **Changing look** (`PlayerSession.ChangeLook`): the
-  look and everything shown on it (equipment, readiness, combat, blade sweep, shot, arrows, footsteps, the first-person
-  head) are built and taken down together (`ShowLook` / `HideLook`), so a spawned player can become another character
-  where it stands, keeping what it carries, has equipped and has drawn; the look chosen is kept between spawns. For now
-  a dev key drives it: `NextLook` (F8) steps through the profile's `_looks`, which *Build Characters* fills with every
+- **The model** (`CharacterModel`, Play): any character's look on any body: the prefab riding on the body's object,
+  turned to the body's heading, its colliders removed since the body is the collider, on the body's layer, animated
+  from a `BodyMotion`; every `PlayedActor`'s. The player's own extras are `PlayerEyes`: its eyes
+  (`CharacterModel.Eyes(height)`: a point riding the head bone at the character's own eye height as it stands in its
+  idle, at the front of its face, found by `HumanoidHead` from the mesh its head carries), which the first-person
+  camera rides, and its animators always animating. The eye height is read off the head (`HumanoidHead.TryFindEyeLevel`:
+  halfway from the head joint to the head's top, which matched the faces of all four Mixamo-rigged characters within
+  1 cm), so a woman sees from lower than a man; it sets the rules' eyes (`PlayerCharacter.EyeHeight`: reach, carrying,
+  the ears), and the profile's `_eyeHeight` serves only a look without a head. **Changing look**
+  (`PlayedActor.ChangeLook`; for the player `PlayerSession.ChangeLook`, which also binds the new eyes): the look and
+  everything shown on it are built and taken down together, so a spawned player can become another character where it
+  stands, keeping what it carries, has equipped and has drawn; the look chosen is kept between spawns. For now a dev
+  key drives it: `NextLook` (F8) steps through the profile's `_looks`, which *Build Characters* fills with every
   character, until a character picker or character creation calls `ChangeLook` instead. The body's height (the
   capsule) and the third-person camera's pivot are still the profile's, the same for every look. **Seen from within** (`CharacterModel.FirstPerson`):
   `HeadlessBody` draws each skinned mesh the head moves a second time with the head's bones (`HumanoidHead.Bones`)
@@ -880,8 +901,8 @@ from any camera, so both cameras read the same player.
   (ground speed, vertical speed, grounded), so a run into a wall shows standing. `StrideMatch` keeps the feet planted:
   the speed in the clips' own size (the avatar's `humanScale`) picks the blend, and past the fastest clip it plays
   faster. `HumanoidAnimation` (Play) is the one thing feeding an `Animator` (Speed damped 0.1 s, Pace, Grounded,
-  VerticalSpeed; TopSpeed is the builder's default); `PlayerAvatar.Animate` drives it, and the player's animator always
-  animates, so its body is seen walking from its own eyes too.
+  VerticalSpeed; TopSpeed is the builder's default); `PlayedActor` drives it each frame through `CharacterModel.Animate`,
+  and the player's animators always animate (`PlayerEyes`), so its body is seen walking from its own eyes too.
 - **Play from here** (`PlayFromHere`, EditorApp, built by the controller when the bootstrap has a `_player` profile):
   when the app starts playing, it begins its game (`GameSession`) with the player on whatever the middle of the view
   shows (else the ground under the camera), facing the camera's heading; with neither (the view is off the land) at the
@@ -1009,16 +1030,18 @@ Plugin) stands the first of `CoreModels.Npcs` 4 m right of the items at the star
   the character's own Walk pace (`HumanoidAnimation.GroundSpeedOf`: the clip's speed at its size, ~1.6 m/s for
   VikingF1; slower, the walk blends with the idle and the feet slide; 1.8 m/s without a Walk clip).
 - **`WorldCharacters`** (Play), `GameSession.Characters`, bound like `WorldPhysics` for one game: every placed object
-  the view shows whose look has humanoid animations is taken over by a character made as the player is: an
-  `ActorBody` of the profile's `BodyShape` at its own height (`BodyShape.ForEyes`, its eyes read off its idle), its
-  look on it (`CharacterModel`, from the prefab `IAssetCatalog.TryGetTemplate` gives for its base object's key), and
-  the player's rules moving it (`PlayerCharacter`, facing its movement): gravity, slopes, steps and collisions come
-  with them. Its `Wander` is homed where it was placed and works in the world root's space (a rebase moves nothing of
-  it); each frame it turns the rules' look the way it walks and sends them walking ahead (`PlayerCommands`, walk).
-  The placed object hides meanwhile; the game ending (or the character streaming out) takes body and look away and
-  shows it again where its record has it.
+  the view shows whose look has humanoid animations is taken over by a `PlayedActor` made as the player is, named
+  `PlacedActors.IdOf` its placed object: an `ActorBody` of the profile's `BodyShape` at its own height
+  (`BodyShape.ForEyes`, its eyes read off its idle), its look on it (from the prefab `IAssetCatalog.TryGetTemplate`
+  gives for its base object's key), the player's rules moving it (facing its movement): gravity, slopes, steps and
+  collisions come with them, its footsteps sound, and it has its own pack, hands and weapons (empty until its record
+  gives it something). Its `Wander` is homed where it was placed and works in the world root's space (a rebase moves
+  nothing of it); each frame it turns the rules' look the way it walks and sends the actor walking ahead
+  (`ActorCommands.Moving`). The placed object hides meanwhile; the game ending (or the character streaming out) takes
+  body and look away and shows it again where its record has it.
 - **Shortcuts, for now:** a character's body takes the player's profile's shape (a race's record will give its own);
-  no blow or arrow reaches it (`SceneLayers`); it forgets where it walked when it streams out. `PlayerCharacter`,
+  it has no attributes and nothing in its pack until an actor record gives them (the fighting character), so no blow
+  or arrow reaches it (`SceneLayers`); it forgets where it walked when it streams out. `PlayerCharacter`,
   `PlayerLocomotion` and `PlayerCommands` move characters too, so their names now say less than they do: a rename to
   `Character`, `Locomotion` and `MoveCommands` is a commit of its own. The fighting NPC brings a mind that branches on
   its `Mode`.

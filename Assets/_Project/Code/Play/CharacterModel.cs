@@ -12,8 +12,9 @@ namespace Forge.Play
     /// A character's look riding on its body: the character prefab (Content/Characters) standing on the body's feet (its
     /// soles on the ground: sunk by the body's hover and by how high its idle carries them, <see cref="SoleFinder"/>),
     /// turned to the body's heading and animated as the body moves (<see cref="HumanoidAnimation"/>). The body is the
-    /// collider, so the model's own colliders go, and the model shares the body's layer. Whoever has a body uses it: the
-    /// player (<see cref="PlayerAvatar"/>), and characters of the world later. A model without animations just rides along.
+    /// collider, so the model's own colliders go, and the model shares the body's layer. Whoever has a body uses it
+    /// (<see cref="PlayedActor"/>): the player, whose eyes it also carries (<see cref="PlayerEyes"/>), and the characters
+    /// of the world. A model without animations just rides along.
     /// <para>
     /// Things it holds or wears hang from its humanoid bones (<see cref="Attach"/>): a hand holds by its grip
     /// (<see cref="GripFrame"/>), worked out from the hand's bones once, so they move with the hand as it animates; any

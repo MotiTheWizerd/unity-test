@@ -22,8 +22,9 @@ namespace Forge.Play
     /// <summary>
     /// One running game beside the world it plays: its stream (<see cref="Events"/>), what playing changed in the world
     /// (<see cref="Changes"/>, shown over the scene: what was taken leaves it, what was dropped joins it), the world as
-    /// played (<see cref="World"/>), what actors can do with the use key (<see cref="Interactions"/>: take items) and the
-    /// player (<see cref="Player"/>). <see cref="Begin"/> gives the player its starting items and stands it in the world, <see cref="Tick"/> plays a frame
+    /// played (<see cref="World"/>), what it gives every actor standing in it (<see cref="Stage"/>), what actors can do
+    /// with the use key (<see cref="Interactions"/>: take items) and the player (<see cref="Player"/>). <see cref="Begin"/>
+    /// gives the player its starting items and stands it in the world, <see cref="Tick"/> plays a frame
     /// and then tells what happened in it, <see cref="End"/> takes the player away and puts the world back as built, with
     /// what the player took from it, and the hurt it did forgotten. Whatever plays the world runs one: the editor's play from
     /// here today, the game itself later.
@@ -46,6 +47,7 @@ namespace Forge.Play
         readonly WorldFrame _frame;
         readonly ItemDropper _dropper;
         readonly ShotLandings _landings;
+        readonly GroundSurfaces _surfaces;
         readonly SoundDirector _director;
         readonly SoundListener _listener;
         readonly IDisposable _fightCauses;
@@ -74,8 +76,8 @@ namespace Forge.Play
             _listener = new SoundListener(camera);
             if (sound != null)
                 Sounds = new SoundPlayer(sound);
-            Player = new PlayerSession(profile, camera, Events, view.Assets, Combatants, PlacedActors, LandShot,
-                Sounds, new GroundSurfaces(view, frame, () => World));
+            _surfaces = new GroundSurfaces(view, frame, () => World);
+            Player = new PlayerSession(profile, camera, Events);
             if (Sounds != null)
                 _director = new SoundDirector(Events, Sounds, WhereIs, VoiceOf);
             Interactions = new Interactions()
@@ -99,6 +101,9 @@ namespace Forge.Play
 
         /// <summary>The world as played (as built, with <see cref="Changes"/> on top) while playing; else null.</summary>
         public IRecordStore World { get; private set; }
+
+        /// <summary>What this game gives every actor standing in it (the player, the world's characters) while playing; else null.</summary>
+        public GameStage Stage { get; private set; }
 
         /// <summary>The looks of the world's things, by asset key, for whatever shows them apart from the world (the inventory's preview).</summary>
         public IAssetCatalog Assets => _view.Assets;
@@ -130,12 +135,13 @@ namespace Forge.Play
                 End();
 
             World = new PlayedWorld(world, Changes);
+            Stage = new GameStage(World, Events, _view.Assets, Combatants, PlacedActors, LandShot, Sounds, _surfaces);
             Bodies = new WorldPhysics(_view, World, OnSettled);
             // The world's characters stand on the player's body, each at its own height, until races give their own.
-            Characters = new WorldCharacters(_view, World, _profile.Body, WanderSettings.Stroll);
+            Characters = new WorldCharacters(_view, Stage, _profile.Body, WanderSettings.Stroll);
             if (World.TryGet(CoreActors.Player, out var record) && record is ActorRecord player)
                 StartingItems.Give(player, World, Player.Inventory, Player.Equipment);
-            Player.Spawn(feet, heading, World, Interactions);
+            Player.Spawn(feet, heading, Stage, Interactions);
             Events.Flush();
         }
 
@@ -246,6 +252,7 @@ namespace Forge.Play
             Combatants.Clear();
             PlacedActors.Clear();
             Changes.Clear();
+            Stage = null;
             World = null;
             Events.Flush();
         }
