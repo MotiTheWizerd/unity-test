@@ -68,7 +68,8 @@ namespace Forge.UnityEditor.Content
         public static AnimatorController Build(string set)
         {
             Indexes.Clear();
-            var ground = HumanoidMoves.Ground.Select(move => (move, clip: Clip(set, move))).Where(m => m.clip != null).ToArray();
+            var ground = HumanoidMoves.Ground.Select(move => (move, clip: Clip(set, move))).Where(m => m.clip != null)
+                .Select(m => GroundMove.Of(m.move, m.clip)).ToArray();
             if (ground.Length == 0)
             {
                 Debug.LogWarning($"[Forge] Move set {set} has no ground moves ({string.Join(", ", HumanoidMoves.Ground)}), nor has {BaseSet}; no animator built.");
@@ -112,16 +113,15 @@ namespace Forge.UnityEditor.Content
             return controller;
         }
 
-        // Weapons drawn: the drawn ground moves, each falling back to its plain one, when the set has any of them; and
-        // each stance (MoveRole.Stance), the same moves standing in it instead, entered while drawn and the Stance
-        // parameter holds its key (HumanoidAnimation.StanceKey), else the set's own drawn moves (Stance 0). With a
-        // sidestep (DrawnStrafe, else Strafe) the drawn states blend by the way the body goes (DirectionalTree): a
-        // fighter facing its foe circles it and backs away.
+        // Weapons drawn: the drawn ground moves (DrawnMoves) when the set has any of them; and each stance
+        // (MoveRole.Stance), the same moves standing in it instead, entered while drawn and the Stance parameter holds
+        // its key (HumanoidAnimation.StanceKey), else the set's own drawn moves (Stance 0). With a sidestep (DrawnStrafe,
+        // else Strafe) the drawn states blend by the way the body goes (DirectionalTree): a fighter facing its foe
+        // circles it and backs away.
         static void BuildDrawn(string set, AnimatorController controller, AnimatorStateMachine machine, AnimatorState moving,
             List<AnimatorState> grounds)
         {
-            var drawn = HumanoidMoves.Ground.Select((move, i) => (move, clip: Clip(set, HumanoidMoves.DrawnGround[i]) ?? Clip(set, move)))
-                .Where(m => m.clip != null).ToArray();
+            var drawn = DrawnMoves(set);
             var strafe = Clip(set, HumanoidMoves.DrawnStrafe) ?? Clip(set, HumanoidMoves.Strafe);
             var stances = Moves(set, MoveRole.Stance).Select(move => Clip(set, move)).Where(clip => clip != null).ToArray();
             var ownDrawn = HumanoidMoves.DrawnGround.Concat(new[] { HumanoidMoves.DrawnStrafe }).Any(move => Clip(set, move) != null);
@@ -151,16 +151,54 @@ namespace Forge.UnityEditor.Content
                 }
 
                 keys.Add(key, stance.name);
-                var moves = drawn.Select(m => m.move == HumanoidMoves.Idle ? (m.move, stance) : m);
+                var moves = drawn.Select(m => m.Move == HumanoidMoves.Idle ? GroundMove.Of(m.Move, stance) : m);
                 DrawnGround(controller, machine, moving, grounds, HumanoidAnimation.StanceGround(stance.name), moves, key, strafe);
             }
+        }
+
+        // The ground moves with weapons drawn, each the set's drawn clip of it (DrawnWalk); one it lacks is the plain
+        // clip (an idle, a walk), unless it is faster than the fastest drawn clip: then that clip sped up to its pace (a
+        // sprint shown as the drawn run, faster), as a body past its fastest clip plays it faster (StrideMatch), so the
+        // weapons stay up rather than dropping into the plain run's arms.
+        static GroundMove[] DrawnMoves(string set)
+        {
+            var own = HumanoidMoves.Ground.Select((move, i) => (move, clip: Clip(set, HumanoidMoves.DrawnGround[i]))).ToArray();
+            GroundMove? fastest = null;
+            foreach (var (move, clip) in own)
+            {
+                if (clip == null)
+                    continue;
+                var candidate = GroundMove.Of(move, clip);
+                if (candidate.Speed > 0f && (fastest == null || candidate.Speed > fastest.Value.Speed))
+                    fastest = candidate;
+            }
+
+            var moves = new List<GroundMove>();
+            foreach (var (move, clip) in own)
+            {
+                if (clip != null)
+                {
+                    moves.Add(GroundMove.Of(move, clip));
+                    continue;
+                }
+
+                var plain = Clip(set, move);
+                if (plain == null)
+                    continue;
+                var standIn = GroundMove.Of(move, plain);
+                moves.Add(fastest is GroundMove top && standIn.Speed > top.Speed
+                    ? new GroundMove(move, top.Clip, standIn.Speed, standIn.Speed / top.Speed)
+                    : standIn);
+            }
+
+            return moves.ToArray();
         }
 
         // One drawn ground state of `moves` (blended by the way the body goes when there is a `strafe`, else by speed),
         // entered from the plain ground while drawn in the stance keyed `key` (when the set has stances), and left back
         // to it when either changes.
         static void DrawnGround(AnimatorController controller, AnimatorStateMachine machine, AnimatorState moving, List<AnimatorState> grounds,
-            string name, IEnumerable<(string move, AnimationClip clip)> moves, int key, AnimationClip strafe)
+            string name, IEnumerable<GroundMove> moves, int key, AnimationClip strafe)
         {
             var tree = strafe != null ? DirectionalTree(controller, name, moves, strafe) : GroundTree(controller, name, moves, out _);
             var state = GroundState(machine, name, tree);
@@ -187,7 +225,7 @@ namespace Forge.UnityEditor.Content
             List<AnimatorState> grounds)
         {
             var moves = HumanoidMoves.Ground.Select((move, i) => (move, clip: Clip(set, HumanoidMoves.CrouchedGround[i])))
-                .Where(m => m.clip != null);
+                .Where(m => m.clip != null).Select(m => GroundMove.Of(m.move, m.clip));
             const string name = "Crouch Ground";
             var crouched = GroundState(machine, name, GroundTree(controller, name, moves, out _));
             var down = State(set, machine, HumanoidMoves.CrouchDown);
@@ -240,7 +278,7 @@ namespace Forge.UnityEditor.Content
 
             var moves = HumanoidMoves.Ground.Select((move, i) =>
                     (move, clip: Clip(set, HumanoidMoves.DrawnCrouchedGround[i]) ?? Clip(set, HumanoidMoves.CrouchedGround[i])))
-                .Where(m => m.clip != null);
+                .Where(m => m.clip != null).Select(m => GroundMove.Of(m.move, m.clip));
             const string name = "Drawn Crouch Ground";
             var drawn = GroundState(machine, name, GroundTree(controller, name, moves, out _));
             When(crouched, drawn, new AnimatorCondition { mode = AnimatorConditionMode.If, parameter = HumanoidAnimation.Drawn });
@@ -266,8 +304,30 @@ namespace Forge.UnityEditor.Content
 
         static AnimatorCondition Moving() => new AnimatorCondition { mode = AnimatorConditionMode.Greater, parameter = HumanoidAnimation.Speed, threshold = MovingOn };
 
-        // The ground moves blended by speed, each clip at the speed it walks (an idle at rest).
-        static BlendTree GroundTree(AnimatorController controller, string name, IEnumerable<(string move, AnimationClip clip)> moves, out float topSpeed)
+        // A ground move as a blend tree plays it: its clip, at the speed it shows (its own, an idle's 0; a stand-in's the
+        // move's), and how much faster than made the clip plays there (1: as made).
+        readonly struct GroundMove
+        {
+            public GroundMove(string move, AnimationClip clip, float speed, float timeScale = 1f)
+            {
+                Move = move;
+                Clip = clip;
+                Speed = speed;
+                TimeScale = timeScale;
+            }
+
+            public string Move { get; }
+            public AnimationClip Clip { get; }
+            public float Speed { get; }
+            public float TimeScale { get; }
+
+            // The move as its clip plays it: at the speed the clip walks (an idle at rest).
+            public static GroundMove Of(string move, AnimationClip clip) =>
+                new GroundMove(move, clip, move == HumanoidMoves.Idle ? 0f : ClipSpeed(clip));
+        }
+
+        // The ground moves blended by speed, each at the speed it shows (an idle at rest).
+        static BlendTree GroundTree(AnimatorController controller, string name, IEnumerable<GroundMove> moves, out float topSpeed)
         {
             var tree = new BlendTree
             {
@@ -279,13 +339,14 @@ namespace Forge.UnityEditor.Content
             };
             AssetDatabase.AddObjectToAsset(tree, controller);
             topSpeed = 0f;
-            foreach (var (move, clip) in moves)
+            var children = new List<ChildMotion>();
+            foreach (var move in moves)
             {
-                var speed = move == HumanoidMoves.Idle ? 0f : ClipSpeed(clip);
-                tree.AddChild(clip, speed);
-                topSpeed = Mathf.Max(topSpeed, speed);
+                children.Add(new ChildMotion { motion = move.Clip, threshold = move.Speed, timeScale = move.TimeScale });
+                topSpeed = Mathf.Max(topSpeed, move.Speed);
             }
 
+            tree.children = children.ToArray();
             return tree;
         }
 
@@ -293,7 +354,7 @@ namespace Forge.UnityEditor.Content
         // each forward clip ahead at the speed it walks and, played backward, as far behind; the strafe to the right at
         // its own speed and mirrored to the left, and sped up to each faster forward pace, so a sidestep keeps up with a
         // run; the idle at rest. Between them the blend is by direction, so a diagonal mixes a step ahead and aside.
-        static BlendTree DirectionalTree(AnimatorController controller, string name, IEnumerable<(string move, AnimationClip clip)> moves, AnimationClip strafe)
+        static BlendTree DirectionalTree(AnimatorController controller, string name, IEnumerable<GroundMove> moves, AnimationClip strafe)
         {
             var tree = new BlendTree
             {
@@ -306,14 +367,13 @@ namespace Forge.UnityEditor.Content
             AssetDatabase.AddObjectToAsset(tree, controller);
             var children = new List<ChildMotion>();
             var paces = new List<float>();
-            foreach (var (move, clip) in moves)
+            foreach (var move in moves)
             {
-                var speed = move == HumanoidMoves.Idle ? 0f : ClipSpeed(clip);
-                children.Add(Child(clip, 0f, speed));
-                if (speed <= 0f)
+                children.Add(Child(move.Clip, 0f, move.Speed, timeScale: move.TimeScale));
+                if (move.Speed <= 0f)
                     continue;
-                children.Add(Child(clip, 0f, -speed, timeScale: -1f));
-                paces.Add(speed);
+                children.Add(Child(move.Clip, 0f, -move.Speed, timeScale: -move.TimeScale));
+                paces.Add(move.Speed);
             }
 
             var sidestep = ClipSpeed(strafe);

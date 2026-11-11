@@ -36,6 +36,7 @@ with `_` is not a set.
 | Jump | Mixamo "Running Jump" | Adobe Mixamo |
 | Draw | Mixamo "Withdrawing Sword" | Adobe Mixamo |
 | Sheathe | Mixamo "Sheathing Sword" | Adobe Mixamo |
+| DrawnWalk | Mixamo "Sword And Shield Walk" | Adobe Mixamo |
 | DrawnRun | Mixamo "Sword And Shield Run" | Adobe Mixamo |
 | DrawnJump | Mixamo "Sword And Shield Jump" | Adobe Mixamo |
 | DrawnIdle | Mixamo "Sword And Shield Idle" | Adobe Mixamo |
