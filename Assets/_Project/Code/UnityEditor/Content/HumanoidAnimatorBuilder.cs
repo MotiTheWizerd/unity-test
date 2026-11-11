@@ -114,22 +114,31 @@ namespace Forge.UnityEditor.Content
 
         // Weapons drawn: the drawn ground moves, each falling back to its plain one, when the set has any of them; and
         // each stance (MoveRole.Stance), the same moves standing in it instead, entered while drawn and the Stance
-        // parameter holds its key (HumanoidAnimation.StanceKey), else the set's own drawn moves (Stance 0).
+        // parameter holds its key (HumanoidAnimation.StanceKey), else the set's own drawn moves (Stance 0). With a
+        // sidestep (DrawnStrafe, else Strafe) the drawn states blend by the way the body goes (DirectionalTree): a
+        // fighter facing its foe circles it and backs away.
         static void BuildDrawn(string set, AnimatorController controller, AnimatorStateMachine machine, AnimatorState moving,
             List<AnimatorState> grounds)
         {
             var drawn = HumanoidMoves.Ground.Select((move, i) => (move, clip: Clip(set, HumanoidMoves.DrawnGround[i]) ?? Clip(set, move)))
                 .Where(m => m.clip != null).ToArray();
+            var strafe = Clip(set, HumanoidMoves.DrawnStrafe) ?? Clip(set, HumanoidMoves.Strafe);
             var stances = Moves(set, MoveRole.Stance).Select(move => Clip(set, move)).Where(clip => clip != null).ToArray();
-            var ownDrawn = HumanoidMoves.DrawnGround.Any(move => Clip(set, move) != null);
+            var ownDrawn = HumanoidMoves.DrawnGround.Concat(new[] { HumanoidMoves.DrawnStrafe }).Any(move => Clip(set, move) != null);
             if (!ownDrawn && stances.Length == 0)
                 return;
 
             controller.AddParameter(HumanoidAnimation.Drawn, AnimatorControllerParameterType.Bool);
             if (stances.Length > 0)
                 controller.AddParameter(HumanoidAnimation.Stance, AnimatorControllerParameterType.Int);
+            if (strafe != null)
+            {
+                controller.AddParameter(HumanoidAnimation.SideSpeed, AnimatorControllerParameterType.Float);
+                controller.AddParameter(HumanoidAnimation.AheadSpeed, AnimatorControllerParameterType.Float);
+            }
+
             if (ownDrawn)
-                DrawnGround(controller, machine, moving, grounds, "Drawn Ground", drawn, 0);
+                DrawnGround(controller, machine, moving, grounds, "Drawn Ground", drawn, 0, strafe);
 
             var keys = new Dictionary<int, string>();
             foreach (var stance in stances)
@@ -143,16 +152,18 @@ namespace Forge.UnityEditor.Content
 
                 keys.Add(key, stance.name);
                 var moves = drawn.Select(m => m.move == HumanoidMoves.Idle ? (m.move, stance) : m);
-                DrawnGround(controller, machine, moving, grounds, HumanoidAnimation.StanceGround(stance.name), moves, key);
+                DrawnGround(controller, machine, moving, grounds, HumanoidAnimation.StanceGround(stance.name), moves, key, strafe);
             }
         }
 
-        // One drawn ground state of `moves`, entered from the plain ground while drawn in the stance keyed `key` (when the
-        // set has stances), and left back to it when either changes.
+        // One drawn ground state of `moves` (blended by the way the body goes when there is a `strafe`, else by speed),
+        // entered from the plain ground while drawn in the stance keyed `key` (when the set has stances), and left back
+        // to it when either changes.
         static void DrawnGround(AnimatorController controller, AnimatorStateMachine machine, AnimatorState moving, List<AnimatorState> grounds,
-            string name, IEnumerable<(string move, AnimationClip clip)> moves, int key)
+            string name, IEnumerable<(string move, AnimationClip clip)> moves, int key, AnimationClip strafe)
         {
-            var state = GroundState(machine, name, GroundTree(controller, name, moves, out _));
+            var tree = strafe != null ? DirectionalTree(controller, name, moves, strafe) : GroundTree(controller, name, moves, out _);
+            var state = GroundState(machine, name, tree);
             // Entered only standing, when the set crouches: crouched, the crouch's moves play whatever is drawn.
             var enter = new List<AnimatorCondition> { new AnimatorCondition { mode = AnimatorConditionMode.If, parameter = HumanoidAnimation.Drawn } };
             if (HasParameter(controller, HumanoidAnimation.Crouched))
@@ -277,6 +288,52 @@ namespace Forge.UnityEditor.Content
 
             return tree;
         }
+
+        // The ground moves blended by the way the body goes (SideSpeed to its right, AheadSpeed ahead, in the clips' size):
+        // each forward clip ahead at the speed it walks and, played backward, as far behind; the strafe to the right at
+        // its own speed and mirrored to the left, and sped up to each faster forward pace, so a sidestep keeps up with a
+        // run; the idle at rest. Between them the blend is by direction, so a diagonal mixes a step ahead and aside.
+        static BlendTree DirectionalTree(AnimatorController controller, string name, IEnumerable<(string move, AnimationClip clip)> moves, AnimationClip strafe)
+        {
+            var tree = new BlendTree
+            {
+                name = name,
+                blendType = BlendTreeType.FreeformDirectional2D,
+                blendParameter = HumanoidAnimation.SideSpeed,
+                blendParameterY = HumanoidAnimation.AheadSpeed,
+                hideFlags = HideFlags.HideInHierarchy,
+            };
+            AssetDatabase.AddObjectToAsset(tree, controller);
+            var children = new List<ChildMotion>();
+            var paces = new List<float>();
+            foreach (var (move, clip) in moves)
+            {
+                var speed = move == HumanoidMoves.Idle ? 0f : ClipSpeed(clip);
+                children.Add(Child(clip, 0f, speed));
+                if (speed <= 0f)
+                    continue;
+                children.Add(Child(clip, 0f, -speed, timeScale: -1f));
+                paces.Add(speed);
+            }
+
+            var sidestep = ClipSpeed(strafe);
+            if (sidestep > 0f)
+            {
+                var sideways = new List<float> { sidestep };
+                sideways.AddRange(paces.Where(pace => pace > sidestep));
+                foreach (var pace in sideways.Distinct())
+                {
+                    children.Add(Child(strafe, pace, 0f, timeScale: pace / sidestep));
+                    children.Add(Child(strafe, -pace, 0f, timeScale: pace / sidestep, mirror: true));
+                }
+            }
+
+            tree.children = children.ToArray();
+            return tree;
+        }
+
+        static ChildMotion Child(AnimationClip clip, float side, float ahead, float timeScale = 1f, bool mirror = false) =>
+            new ChildMotion { motion = clip, position = new Vector2(side, ahead), timeScale = timeScale, mirror = mirror };
 
         static AnimatorState GroundState(AnimatorStateMachine machine, string name, BlendTree tree)
         {

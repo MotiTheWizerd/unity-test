@@ -62,6 +62,16 @@ namespace Forge.Tests.Content
         }
 
         [Test]
+        public void TheSidestep_IsAGroundMove_WalkedOnLoop_DrawnOrNot()
+        {
+            Assert.That(HumanoidMoves.DrawnStrafe, Is.EqualTo("DrawnStrafe"));
+            Assert.That(HumanoidMoves.RoleOf("Locomotion/DrawnStrafe.fbx"), Is.EqualTo(MoveRole.Ground));
+            Assert.That(HumanoidMoves.Loops(MoveRole.Ground, HumanoidMoves.Strafe), Is.True);
+            Assert.That(HumanoidMoves.Misplaced(HumanoidMoves.Strafe, MoveRole.UpperBodyAction), Is.EqualTo(HumanoidMoves.LocomotionFolder));
+            Assert.That(HumanoidMoves.Misplaced(HumanoidMoves.DrawnStrafe, MoveRole.Air), Is.EqualTo(HumanoidMoves.LocomotionFolder));
+        }
+
+        [Test]
         public void TheDrawnJump_IsAnAirMove_ThatLiftsAndPlaysOnce()
         {
             Assert.That(HumanoidMoves.DrawnJump, Is.EqualTo("DrawnJump"));

@@ -38,6 +38,7 @@ namespace Forge.Play
         readonly Dictionary<bool, Transform> _backs = new Dictionary<bool, Transform>();
         bool _firstPerson;
         bool _inHand;
+        float _heading;
 
         /// <param name="body">The body object the model rides on.</param>
         /// <param name="hover">How far the body's feet stay above what they stand on (a character controller's skin), meters.</param>
@@ -159,11 +160,18 @@ namespace Forge.Play
         /// <summary>The clip it stands ready in, holding its weapons out: its drawn idle, else its idle; null without animations.</summary>
         public AnimationClip StanceClip => _animation?.Clip(HumanoidAnimation.DrawnIdleMove) ?? IdleClip;
 
-        /// <summary>Turns the model to <paramref name="heading"/> (compass degrees).</summary>
-        public void Face(float heading) => Root.transform.localRotation = Quaternion.Euler(0f, heading, 0f);
+        /// <summary>Turns the model to <paramref name="heading"/> (compass degrees), which its moves then go by (<see cref="Animate"/>).</summary>
+        public void Face(float heading)
+        {
+            _heading = heading;
+            Root.transform.localRotation = Quaternion.Euler(0f, heading, 0f);
+        }
 
-        /// <summary>Shows how the body moved over the last <paramref name="deltaTime"/> seconds (standing, walking, a jump).</summary>
-        public void Animate(BodyMotion motion, float deltaTime) => _animation?.Show(motion, deltaTime);
+        /// <summary>
+        /// Shows how the body moved over the last <paramref name="deltaTime"/> seconds (standing, walking, a jump), as the
+        /// model faces (<see cref="Face"/>): going aside or back, it sidesteps or backs away when its set can.
+        /// </summary>
+        public void Animate(BodyMotion motion, float deltaTime) => _animation?.Show(motion, _heading, deltaTime);
 
         /// <summary>
         /// Shows its weapons becoming <paramref name="readiness"/> (a draw or a sheathe playing, or done); a draw or a

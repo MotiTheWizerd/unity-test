@@ -5,7 +5,7 @@ namespace Forge.UnityEditor.Content
     /// <summary>What a move is to the animator, from where it sits in its move set (<see cref="HumanoidMoves.RoleOf"/>).</summary>
     enum MoveRole
     {
-        /// <summary>Walked on the ground, blended by speed (Locomotion/: Idle, Run, DrawnRun).</summary>
+        /// <summary>Walked on the ground, blended by speed, or by the way the body goes when the set sidesteps (Locomotion/: Idle, Run, DrawnRun, DrawnStrafe).</summary>
         Ground,
 
         /// <summary>Played in the air (Air/: Jump, Fall, Land, DrawnJump).</summary>
@@ -84,6 +84,18 @@ namespace Forge.UnityEditor.Content
         /// <summary>The crouched ground moves with weapons drawn ("DrawnCrouchIdle"), in the same order; each falls back to its plain crouched move.</summary>
         public static readonly string[] DrawnCrouchedGround = { Drawn(Crouched(Idle)), Drawn(Crouched(Walk)), Drawn(Crouched(Run)), Drawn(Crouched(Sprint)) };
 
+        /// <summary>
+        /// Sidestepping to the right at a walk's pace (Locomotion/). The builder mirrors it for the left and speeds it up
+        /// for the faster paces, and a ground state that has one blends by the way the body goes, not its speed alone.
+        /// </summary>
+        public const string Strafe = "Strafe";
+
+        /// <summary>The sidestep with weapons drawn ("DrawnStrafe"): a fighter circling its foe; falls back to the plain one.</summary>
+        public static readonly string DrawnStrafe = Drawn(Strafe);
+
+        /// <summary>The sideways ground moves.</summary>
+        public static readonly string[] Sideways = { Strafe, DrawnStrafe };
+
         /// <summary>Getting down into a crouch while standing still, played once (Locomotion/).</summary>
         public const string CrouchDown = "CrouchDown";
 
@@ -154,7 +166,7 @@ namespace Forge.UnityEditor.Content
         {
             if (role != MoveRole.Ground && (Array.IndexOf(Ground, move) >= 0 || Array.IndexOf(DrawnGround, move) >= 0 ||
                     Array.IndexOf(CrouchedGround, move) >= 0 || Array.IndexOf(DrawnCrouchedGround, move) >= 0 ||
-                    Array.IndexOf(PostureChanges, move) >= 0))
+                    Array.IndexOf(Sideways, move) >= 0 || Array.IndexOf(PostureChanges, move) >= 0))
                 return LocomotionFolder;
             if (role != MoveRole.Air && Array.IndexOf(Air, move) >= 0)
                 return AirFolder;

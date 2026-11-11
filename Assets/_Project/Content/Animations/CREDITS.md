@@ -7,7 +7,9 @@ folder that says what it is:
 Humanoid/
   Locomotion/        Idle Walk Run Sprint, and with weapons drawn DrawnIdle DrawnWalk DrawnRun DrawnSprint,
                      crouched CrouchIdle CrouchWalk CrouchRun CrouchSprint, crouched with weapons drawn
-                     DrawnCrouchIdle DrawnCrouchWalk ..., and CrouchDown StandUp between
+                     DrawnCrouchIdle DrawnCrouchWalk ..., CrouchDown StandUp between, and a sidestep to the right
+                     Strafe / DrawnStrafe (mirrored for the left, sped up for the run; with one, the drawn moves
+                     blend by the way the body goes: a fighter facing its foe circles it and backs away)
   Air/               Jump Fall Land, and with weapons drawn DrawnJump
   Styles/<Style>/    a combat style's moves: its stance <Style>Idle, its draw and sheathe (on the arms), its blows,
                      its deaths (a name with Death in it: the whole body, stayed at its end)
@@ -37,6 +39,7 @@ with `_` is not a set.
 | DrawnRun | Mixamo "Sword And Shield Run" | Adobe Mixamo |
 | DrawnJump | Mixamo "Sword And Shield Jump" | Adobe Mixamo |
 | DrawnIdle | Mixamo "Sword And Shield Idle" | Adobe Mixamo |
+| DrawnStrafe | Mixamo "Sword And Shield Strafe" (steps right; the left is its mirror) | Adobe Mixamo |
 | SwordSlash | Mixamo "Sword And Shield Slash" | Adobe Mixamo |
 | BowDraw | Mixamo "Standing Equip Bow" | Adobe Mixamo |
 | BowSheathe | Mixamo "Standing Disarm Bow" | Adobe Mixamo |

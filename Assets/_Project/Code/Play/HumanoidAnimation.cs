@@ -9,9 +9,10 @@ namespace Forge.Play
     /// <summary>
     /// Plays a humanoid's animations from how its body moves (<see cref="BodyMotion"/>) and where its weapons are
     /// (<see cref="Readiness"/>): the one thing that talks to its Animator. The animator controller (Forge → Characters →
-    /// Build Characters) blends the ground moves by <see cref="Speed"/>, plays <see cref="Pace"/> faster past its fastest
-    /// clip, and turns to the air moves by <see cref="Grounded"/> and <see cref="VerticalSpeed"/>; <see cref="TopSpeed"/>
-    /// is the fastest clip's speed, which the builder leaves as that parameter's default. With weapons drawn it walks
+    /// Build Characters) blends the ground moves by <see cref="Speed"/> (a set that sidesteps blends its drawn moves by
+    /// the way the body goes, <see cref="SideSpeed"/> and <see cref="AheadSpeed"/>), plays <see cref="Pace"/> faster past
+    /// its fastest clip, and turns to the air moves by <see cref="Grounded"/> and <see cref="VerticalSpeed"/>;
+    /// <see cref="TopSpeed"/> is the fastest clip's speed, which the builder leaves as that parameter's default. With weapons drawn it walks
     /// the crouched ground moves while crouched (<see cref="Crouched"/>, when the set has them), and
     /// the drawn ground moves (<see cref="Drawn"/>), standing in the drawn weapon's style's stance when the set has it
     /// (<see cref="Stance"/>: a bow held low rather than a sword up), and actions (a draw, a sheathe, a slash: <see cref="Play"/>, each
@@ -23,6 +24,10 @@ namespace Forge.Play
     public sealed class HumanoidAnimation
     {
         public const string Speed = "Speed";
+        /// <summary>Speed to the body's right (negative: left), in the clips' size, for a ground state that blends by the way the body goes.</summary>
+        public const string SideSpeed = "SideSpeed";
+        /// <summary>Speed ahead of the body (negative: backward), in the clips' size, with <see cref="SideSpeed"/>.</summary>
+        public const string AheadSpeed = "AheadSpeed";
         public const string Pace = "Pace";
         public const string TopSpeed = "TopSpeed";
         public const string Grounded = "Grounded";
@@ -81,6 +86,8 @@ namespace Forge.Play
         const float ReactBlend = 0.1f;
 
         static readonly int SpeedId = Animator.StringToHash(Speed);
+        static readonly int SideSpeedId = Animator.StringToHash(SideSpeed);
+        static readonly int AheadSpeedId = Animator.StringToHash(AheadSpeed);
         static readonly int PaceId = Animator.StringToHash(Pace);
         static readonly int TopSpeedId = Animator.StringToHash(TopSpeed);
         static readonly int GroundedId = Animator.StringToHash(Grounded);
@@ -95,6 +102,7 @@ namespace Forge.Play
         readonly float _topSpeed;
         readonly bool _crouchedMoves;
         readonly bool _drawnMoves;
+        readonly bool _directional;
         readonly bool _stances;
         readonly List<ActionLayer> _actionLayers = new List<ActionLayer>();
         readonly Dictionary<string, AnimationClip> _clips = new Dictionary<string, AnimationClip>(StringComparer.Ordinal);
@@ -106,12 +114,18 @@ namespace Forge.Play
             _animator = animator;
             _animator.applyRootMotion = false;
             _topSpeed = animator.GetFloat(TopSpeedId);
+            var side = false;
+            var ahead = false;
             foreach (var parameter in animator.parameters)
             {
                 _drawnMoves |= parameter.nameHash == DrawnId;
                 _crouchedMoves |= parameter.nameHash == CrouchedId;
                 _stances |= parameter.nameHash == StanceId;
+                side |= parameter.nameHash == SideSpeedId;
+                ahead |= parameter.nameHash == AheadSpeedId;
             }
+
+            _directional = side && ahead;
             _rightHandPoints = HandPointsIds(animator, true);
             _leftHandPoints = HandPointsIds(animator, false);
             foreach (var name in new[] { ArmsLayer, UpperBodyLayer, FullBodyLayer })
@@ -204,11 +218,25 @@ namespace Forge.Play
             }
         }
 
-        /// <summary>Shows <paramref name="motion"/>, the body's last <paramref name="deltaTime"/> seconds.</summary>
-        public void Show(BodyMotion motion, float deltaTime)
+        /// <summary>
+        /// Shows <paramref name="motion"/>, the body's last <paramref name="deltaTime"/> seconds, the body facing
+        /// <paramref name="bodyHeading"/> (compass degrees): a ground state that blends by the way the body goes
+        /// (<see cref="SideSpeed"/>, <see cref="AheadSpeed"/>) sidesteps and backs away as the body does.
+        /// </summary>
+        public void Show(BodyMotion motion, float bodyHeading, float deltaTime)
         {
             var stride = StrideMatch.For(motion.GroundSpeed, _animator.humanScale, _topSpeed);
             _animator.SetFloat(SpeedId, stride.BlendSpeed, SpeedDamping, deltaTime);
+            if (_directional)
+            {
+                // The way it goes as the body has it, at the blend's speed (the clips' size, never past the fastest).
+                var way = motion.GroundSpeed > 1e-4f
+                    ? motion.Relative(bodyHeading) * (stride.BlendSpeed / motion.GroundSpeed)
+                    : System.Numerics.Vector2.Zero;
+                _animator.SetFloat(SideSpeedId, way.X, SpeedDamping, deltaTime);
+                _animator.SetFloat(AheadSpeedId, way.Y, SpeedDamping, deltaTime);
+            }
+
             _animator.SetFloat(PaceId, stride.Pace);
             _animator.SetBool(GroundedId, motion.Grounded);
             _animator.SetFloat(VerticalSpeedId, motion.VerticalSpeed);

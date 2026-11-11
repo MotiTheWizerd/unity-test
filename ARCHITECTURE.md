@@ -875,7 +875,15 @@ from any camera, so both cameras read the same player.
   from the moves present: the ground moves blended at their clips' speeds; a jump when the body leaves the ground going
   up, a fall when it drops past 3 m/s, a landing when it touches down, each optional. With any drawn ground move
   (`DrawnIdle`, `DrawnWalk`, `DrawnRun`, `DrawnSprint`) a second ground state plays while `Drawn`, each missing drawn
-  move falling back to its plain one. With a `CrouchIdle` (and whichever of `CrouchWalk`, `CrouchRun`, `CrouchSprint`
+  move falling back to its plain one. With a **sidestep** (`DrawnStrafe`, else `Strafe`: Mixamo's Sword And Shield
+  Strafe, a step to the right at a walk's pace) the drawn states blend by the way the body goes rather than its speed
+  alone (`HumanoidAnimatorBuilder.DirectionalTree`, a freeform directional 2D tree on `SideSpeed` and `AheadSpeed`):
+  each forward clip ahead at its speed and, played backward, as far behind; the strafe right at its speed, mirrored
+  left, and sped up to each faster pace so a sidestep keeps up with a run. `BodyMotion` keeps which way the body went
+  (`Ground`, world axes) and gives it as the body has it (`Relative(heading)`: right, ahead), which `CharacterModel`
+  feeds the animator as it was last turned (`Face`); so a body facing its foe (`BodyFacing.Target`) circles it and
+  backs away in the fighting clips. A proper combat walk (`DrawnWalk`) and walk-back clip would replace the plain walk
+  and its reverse. With a `CrouchIdle` (and whichever of `CrouchWalk`, `CrouchRun`, `CrouchSprint`
   it has) a crouched ground state plays while `Crouched`, whatever is drawn (the drawn states are entered only
   standing); standing still, `CrouchDown` and `StandUp` (played once, `HumanoidMoves.PostureChanges`) go down and up
   when the set has them, moving it just crossfades. A combat style can name a **stance** (`CombatMoveKind.Stance`; Archery's

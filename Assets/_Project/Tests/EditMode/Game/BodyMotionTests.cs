@@ -65,6 +65,35 @@ namespace Forge.Tests.Game
             Assert.Throws<ArgumentOutOfRangeException>(() => BodyMotion.Between(Vector3.Zero, Vector3.One, 0f, true));
 
         [Test]
+        public void Between_KeepsWhichWayItWent_AsTheBodyHasIt()
+        {
+            // East at 2 m/s: facing north that is a sidestep to the right, facing east straight ahead, facing south a
+            // sidestep to the left, facing west a step back.
+            var motion = BodyMotion.Between(Vector3.Zero, new Vector3(1f, 0f, 0f), 0.5f, grounded: true);
+
+            Assert.That(motion.Ground, Is.EqualTo(new Vector2(2f, 0f)));
+            Assert.That(motion.GroundSpeed, Is.EqualTo(2f).Within(1e-4f));
+            AssertNear(motion.Relative(0f), new Vector2(2f, 0f));
+            AssertNear(motion.Relative(90f), new Vector2(0f, 2f));
+            AssertNear(motion.Relative(180f), new Vector2(-2f, 0f));
+            AssertNear(motion.Relative(270f), new Vector2(0f, -2f));
+        }
+
+        [Test]
+        public void ASpeedAlone_GoesNorth_AndStillGoesNowhere()
+        {
+            AssertNear(new BodyMotion(3f, 0f, true).Relative(0f), new Vector2(0f, 3f));
+            Assert.That(BodyMotion.Still.Ground, Is.EqualTo(Vector2.Zero));
+            Assert.That(BodyMotion.Still.Relative(45f), Is.EqualTo(Vector2.Zero));
+        }
+
+        static void AssertNear(Vector2 actual, Vector2 expected)
+        {
+            Assert.That(actual.X, Is.EqualTo(expected.X).Within(1e-4f), $"{actual} is not {expected}");
+            Assert.That(actual.Y, Is.EqualTo(expected.Y).Within(1e-4f), $"{actual} is not {expected}");
+        }
+
+        [Test]
         public void Standing_IsStill()
         {
             var player = Standing(new Ground());
