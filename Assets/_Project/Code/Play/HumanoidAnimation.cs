@@ -100,6 +100,7 @@ namespace Forge.Play
         readonly Animator _animator;
         readonly System.Random _dice = new System.Random();
         readonly float _topSpeed;
+        float _frozen;
         readonly bool _crouchedMoves;
         readonly bool _drawnMoves;
         readonly bool _directional;
@@ -225,6 +226,16 @@ namespace Forge.Play
         /// </summary>
         public void Show(BodyMotion motion, float bodyHeading, float deltaTime)
         {
+            // Frozen (a blow's impact), nothing comes on, nor does any action's time run out, until the freeze is over.
+            if (_frozen > 0f)
+            {
+                _frozen -= Mathf.Max(0f, deltaTime);
+                if (_frozen > 0f)
+                    return;
+                _frozen = 0f;
+                _animator.speed = 1f;
+            }
+
             var stride = StrideMatch.For(motion.GroundSpeed, _animator.humanScale, _topSpeed);
             _animator.SetFloat(SpeedId, stride.BlendSpeed, SpeedDamping, deltaTime);
             if (_directional)
@@ -272,7 +283,7 @@ namespace Forge.Play
                 return false;
             _animator.SetTrigger(move);
             SetPace(layer, 1f);
-            layer.Held = layer.Thawing = false;
+            layer.Held = layer.Thawing = layer.Rebounding = false;
             layer.Reacting = layer.Returning = 0f;
             layer.Left = clip.length;
             return true;
@@ -290,7 +301,7 @@ namespace Forge.Play
             _animator.SetTrigger(move);
             SetPace(layer, 1f);
             layer.Held = true;
-            layer.Thawing = false;
+            layer.Thawing = layer.Rebounding = false;
             layer.Reacting = layer.Returning = 0f;
             layer.HeldState = Animator.StringToHash(move);
             layer.HeldAt = HeldShortOfEnd;
@@ -312,11 +323,40 @@ namespace Forge.Play
             _animator.Play(Animator.StringToHash(move), layer.Index, held);
             SetPace(layer, 0f);
             layer.Held = true;
-            layer.Thawing = false;
+            layer.Thawing = layer.Rebounding = false;
             layer.Reacting = layer.Returning = 0f;
             layer.HeldState = Animator.StringToHash(move);
             layer.HeldAt = held;
             layer.HeldLength = clip.length;
+            return true;
+        }
+
+        /// <summary>
+        /// Freezes it where it is for <paramref name="seconds"/> (a blow's impact, hit-stop): every layer stops, and the
+        /// actions' times with them; a second freeze meanwhile lasts as long as the longer.
+        /// </summary>
+        public void Freeze(float seconds)
+        {
+            if (!(seconds > 0f) || float.IsInfinity(seconds))
+                return;
+            _frozen = Mathf.Max(_frozen, seconds);
+            _animator.speed = 0f;
+        }
+
+        /// <summary>
+        /// Plays the action <paramref name="move"/> back from where it is (a blade bouncing off what it met) for
+        /// <paramref name="seconds"/>, fading out by their end, after which its layer rests; false when it isn't an action
+        /// whose pace can be turned (no pace parameter on its layer).
+        /// </summary>
+        public bool Rebound(string move, float seconds)
+        {
+            if (!TryAction(move, out var layer, out _) || layer.Pace == null)
+                return false;
+            SetPace(layer, -1f);
+            layer.Held = layer.Thawing = layer.Rebounding = false;
+            layer.Reacting = layer.Returning = 0f;
+            layer.Left = Mathf.Max(0f, seconds);
+            layer.Rebounding = true;
             return true;
         }
 
@@ -371,7 +411,7 @@ namespace Forge.Play
             if (!TryAction(held, out var layer, out _) || !layer.Held || !TryAction(release, out var releaseLayer, out var clip) ||
                 releaseLayer != layer)
                 return false;
-            layer.Held = layer.Thawing = false;
+            layer.Held = layer.Thawing = layer.Rebounding = false;
             layer.Reacting = layer.Returning = 0f;
             var start = Mathf.Clamp01(from) * clip.length;
             _animator.CrossFadeInFixedTime(Animator.StringToHash(release), Mathf.Max(0f, blend), layer.Index, start);
@@ -473,13 +513,14 @@ namespace Forge.Play
                     _animator.SetLayerWeight(layer.Index, layer.Weight);
                 }
 
-                if (layer.Thawing && layer.Weight <= 0f)
+                if ((layer.Thawing || layer.Rebounding) && layer.Weight <= 0f)
                 {
-                    layer.Thawing = false;
-                    SetPace(layer, 1f);
-                    // A layer that stays never leaves its action by itself: rested here, unseen, so the next can start.
-                    if (layer.Stays)
+                    // A layer that stays never leaves its action by itself, nor does one played back (it runs back to its
+                    // start, not on to its end): rested here, unseen, so the next can start.
+                    if (layer.Stays || layer.Rebounding)
                         _animator.Play(RestId, layer.Index);
+                    layer.Thawing = layer.Rebounding = false;
+                    SetPace(layer, 1f);
                 }
             }
         }
@@ -523,6 +564,9 @@ namespace Forge.Play
             public float Left;
             public bool Held;
             public bool Thawing;
+
+            // Played back (a blade bouncing off), to be rested once faded out.
+            public bool Rebounding;
 
             // While held: the state held, how far into it (normalized) and its length; and a reaction over it: how long it
             // has left to play, then to blend back.

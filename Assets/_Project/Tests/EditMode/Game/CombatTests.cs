@@ -263,7 +263,8 @@ namespace Forge.Tests.Game
                 _combat.TryAttack(CoreEquipSlots.RightHand);
                 _combat.Tick(0.5f);
                 _combat.Strike(_combat.Swings.Single(), Dummy);
-                _combat.Tick(0.5f);
+                // The rest of the swing, and the moment the blow stopped it.
+                _combat.Tick(0.5f + ActorCombat.ImpactSeconds);
             }
 
             _events.Flush();
@@ -658,6 +659,80 @@ namespace Forge.Tests.Game
             Assert.That(_combat.Block(Dummy, Sword.Id, 12f, FromTheFront), Is.Zero, "Still coming up.");
             _combat.Tick(1f);
             Assert.That(_combat.Block(Dummy, Sword.Id, 12f, null), Is.EqualTo(0.6f), "Up: from wherever, without a facing.");
+        }
+
+        [Test]
+        public void WhereTheBlowMet_Decides_TheShieldItselfStopsIt_TheBodyPastItDoesNot()
+        {
+            Hold(Shield);
+            Draw();
+            _combat.Facing = () => System.Numerics.Vector3.UnitZ;
+            _combat.TryUse(CoreEquipSlots.LeftHand);
+            _combat.Tick(1f);
+
+            Assert.That(_combat.Block(Dummy, Sword.Id, 12f, FromBehind, BlowMet.Guard), Is.EqualTo(0.6f), "On the shield itself, whichever way it came.");
+            Assert.That(_combat.Block(Dummy, Sword.Id, 12f, FromTheFront, BlowMet.Body), Is.Zero, "On the body past it, even from the front.");
+            Assert.That(_combat.Block(Dummy, Sword.Id, 12f, FromBehind), Is.Zero, "Unseen: the arc decides.");
+        }
+
+        [Test]
+        public void ABlowThatLands_StopsTheSwingAMoment_ThenItCutsOn()
+        {
+            Hold(Sword);
+            Draw();
+            var stalls = new List<float>();
+            _combat.Stalled += stalls.Add;
+            _combat.TryAttack(CoreEquipSlots.RightHand);
+            var swing = _combat.Swings.Single();
+            _combat.Tick(0.5f);
+
+            Assert.That(_combat.Strike(swing, Dummy), Is.True);
+            Assert.That((swing.Stalled, swing.Recoiling), Is.EqualTo((true, false)), "Through the one it strikes it stops a moment, and cuts on.");
+            Assert.That(stalls.Single(), Is.EqualTo(ActorCombat.ImpactSeconds));
+            _combat.Tick(ActorCombat.ImpactSeconds * 0.5f);
+            Assert.That(swing.Elapsed, Is.EqualTo(0.5f).Within(1e-5f), "Time passes; it doesn't come on.");
+            _combat.Tick(ActorCombat.ImpactSeconds);
+            Assert.That(swing.Stalled, Is.False);
+            Assert.That(swing.Elapsed, Is.EqualTo(0.5f + ActorCombat.ImpactSeconds * 0.5f).Within(1e-5f), "Then on again.");
+        }
+
+        [Test]
+        public void ABladeTheShieldStops_JoltsTheOneBehindIt_AndComesBack_ItsBlowSpent()
+        {
+            var foe = RaiseShieldAgainstAFoe();
+            var swing = foe.Swings.Single();
+            var recoiled = new List<Swing>();
+            foe.Recoiled += recoiled.Add;
+            var jolted = new List<float>();
+            _combat.Stalled += jolted.Add;
+
+            Assert.That(foe.Strike(swing, ActorId.Player, FromTheFront), Is.True);
+
+            Assert.That(recoiled.Single(), Is.SameAs(swing));
+            Assert.That((swing.Recoiling, swing.IsStriking), Is.EqualTo((true, false)), "Its window closed: it strikes no one else.");
+            Assert.That(jolted.Single(), Is.EqualTo(ActorCombat.ImpactSeconds), "The one behind the shield feels it too.");
+            foe.Tick(ActorCombat.ImpactSeconds + ActorCombat.RecoilSeconds - 0.01f);
+            Assert.That(foe.Swings, Has.Count.EqualTo(1), "Still coming back...");
+            foe.Tick(0.02f);
+            Assert.That(foe.Swings, Is.Empty, "...then over, sooner than the swing would have played out.");
+        }
+
+        [Test]
+        public void ABladeMeetingAWall_StopsThere_AndComesBack_OnlyInItsWindow_Once()
+        {
+            Hold(Sword);
+            Draw();
+            var recoiled = new List<Swing>();
+            _combat.Recoiled += recoiled.Add;
+            _combat.TryAttack(CoreEquipSlots.RightHand);
+            var swing = _combat.Swings.Single();
+
+            Assert.That(_combat.Bounce(swing), Is.False, "Still winding up: it meets nothing yet.");
+            _combat.Tick(0.5f);
+            Assert.That(_combat.Bounce(swing), Is.True);
+            Assert.That((swing.Stalled, swing.Recoiling, recoiled.Single()), Is.EqualTo((true, true, swing)));
+            Assert.That(_combat.Strike(swing, Dummy), Is.False, "Its blow is spent on the wall.");
+            Assert.That(_combat.Bounce(swing), Is.False, "Once.");
         }
 
         [Test]

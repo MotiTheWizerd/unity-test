@@ -56,9 +56,18 @@ namespace Forge.Game.Combat
     /// (<see cref="CombatMoveKind.Block"/>, held like a draw). It is the actor's guard (<see cref="IGuard"/>): a blow
     /// coming at it from within <see cref="GuardArc"/> of where it faces (<see cref="Facing"/>) while the block is up is
     /// stopped as much as the shield's <see cref="BlockPart"/> says, for stamina; too little stamina breaks the guard.
+    /// Whoever sees where a blow met says so (<see cref="BlowMet"/>): on the raised shield itself it is blocked whichever
+    /// way it came, on the body past it it isn't, and unseen the arc decides.
+    /// </para>
+    /// <para>
+    /// A blow that lands is felt (<see cref="ImpactSeconds"/>, hit-stop): the swing that struck and everything the struck
+    /// one does stop a moment (<see cref="Stall"/>, <see cref="IGuard.Jolt"/>, <see cref="Stalled"/> for the looks to
+    /// freeze); a blade a guard stopped, or that met a wall (<see cref="Bounce"/>), comes back over
+    /// <see cref="RecoilSeconds"/>, its blow spent (<see cref="Recoiled"/>).
     /// </para>
     /// Told as it happens (<see cref="SwingStarted"/>, <see cref="SwingHeld"/>, <see cref="SwingLetGo"/>,
-    /// <see cref="Loosed"/>, <see cref="Blocked"/>, <see cref="SwingEnded"/>) for the look, and on the stream
+    /// <see cref="Loosed"/>, <see cref="Blocked"/>, <see cref="Stalled"/>, <see cref="Recoiled"/>, <see cref="SwingEnded"/>)
+    /// for the look, and on the stream
     /// (<see cref="AttackStarted"/>, <see cref="ShotLoosed"/>, <see cref="HitLanded"/>, <see cref="HitBlocked"/>,
     /// <see cref="GuardBroken"/>, <see cref="ActorKilled"/>) for the rest. Engine-free; the game ticks it.
     /// </summary>
@@ -69,6 +78,12 @@ namespace Forge.Game.Combat
 
         /// <summary>Degrees either side of where it faces that a raised guard covers.</summary>
         public const float GuardArc = 60f;
+
+        /// <summary>Seconds a blow that meets someone stops the one who struck and the one struck (hit-stop): its weight.</summary>
+        public const float ImpactSeconds = 0.08f;
+
+        /// <summary>Seconds a blade that met what it can't cut through (a raised guard, a wall) takes to come back before its swing is over.</summary>
+        public const float RecoilSeconds = 0.3f;
 
         readonly ActorEquipment _equipment;
         readonly WeaponReadiness _readiness;
@@ -156,6 +171,12 @@ namespace Forge.Game.Combat
         /// <see cref="CombatMoveKind.Blocked"/> move (null when the style has none).
         /// </summary>
         public event Action<Swing, CombatMove> Blocked;
+
+        /// <summary>A blow's impact stopped it for so many seconds (it struck, or was struck), for the look to freeze as long.</summary>
+        public event Action<float> Stalled;
+
+        /// <summary>A swing's blade met what it can't cut through and comes back (<see cref="RecoilSeconds"/>), for the look to play it back.</summary>
+        public event Action<Swing> Recoiled;
 
         /// <summary>
         /// Which way the actor faces (scene space; only its level part counts), which its guard covers; until set, its
@@ -261,11 +282,13 @@ namespace Forge.Game.Combat
 
         /// <summary>
         /// <paramref name="swing"/>'s weapon passed through <paramref name="target"/>, travelling
-        /// <paramref name="direction"/> (scene space; null: from wherever): its blow lands, met first by the target's guard,
-        /// if the swing is in its hit window, its weapon strikes with itself (not a bow: what it shoots strikes; not a
-        /// block), the target can be struck and isn't the swinger, and this swing hasn't struck it yet. Whether it landed.
+        /// <paramref name="direction"/> (scene space; null: from wherever), meeting it where <paramref name="met"/> says:
+        /// its blow lands, met first by the target's guard, if the swing is in its hit window, its weapon strikes with
+        /// itself (not a bow: what it shoots strikes; not a block), the target can be struck and isn't the swinger, and
+        /// this swing hasn't struck it yet. Landed, both feel it a moment; a guard that stopped it bounces it back.
+        /// Whether it landed.
         /// </summary>
-        public bool Strike(Swing swing, ActorId target, Vector3? direction = null)
+        public bool Strike(Swing swing, ActorId target, Vector3? direction = null, BlowMet met = BlowMet.Anywhere)
         {
             if (swing == null)
                 throw new ArgumentNullException(nameof(swing));
@@ -274,16 +297,17 @@ namespace Forge.Game.Combat
             if (!_combatants.TryGet(target, out var attributes) || IsDead(attributes) || !swing.MarkStruck(target))
                 return false;
 
-            Land(swing.Weapon.Record, 1f, target, attributes, direction);
+            Land(swing.Weapon.Record, 1f, target, attributes, direction, met, swing);
             return true;
         }
 
         /// <summary>
         /// What this actor shot reached <paramref name="target"/>, flying <paramref name="direction"/> (scene space; null:
-        /// from wherever): the weapon's blow lands, times the shot's power, met first by the target's guard, if the target
-        /// can be struck and isn't the shooter, and the shot hasn't struck anyone yet. Whether it landed.
+        /// from wherever), meeting it where <paramref name="met"/> says: the weapon's blow lands, times the shot's power,
+        /// met first by the target's guard, if the target can be struck and isn't the shooter, and the shot hasn't struck
+        /// anyone yet. Whether it landed.
         /// </summary>
-        public bool Strike(Shot shot, ActorId target, Vector3? direction = null)
+        public bool Strike(Shot shot, ActorId target, Vector3? direction = null, BlowMet met = BlowMet.Anywhere)
         {
             if (shot == null)
                 throw new ArgumentNullException(nameof(shot));
@@ -293,16 +317,46 @@ namespace Forge.Game.Combat
                 return false;
 
             shot.Landed = true;
-            Land(shot.Weapon, shot.Power, target, attributes, direction);
+            Land(shot.Weapon, shot.Power, target, attributes, direction, met, null);
             return true;
         }
 
+        /// <summary>
+        /// <paramref name="swing"/>'s blade met what it can't cut through and no one's (a wall, a rock): it stops a moment
+        /// there and comes back, its blow spent. Whether it did (only in its hit window, a blade's swing).
+        /// </summary>
+        public bool Bounce(Swing swing)
+        {
+            if (swing == null)
+                throw new ArgumentNullException(nameof(swing));
+            if (!_swings.Contains(swing) || !swing.IsStriking || swing.Shoots || swing.Guards)
+                return false;
+            Impact(swing, bounces: true);
+            return true;
+        }
+
+        /// <summary>
+        /// Whatever it is doing stops for <paramref name="seconds"/> (a blow's impact: it struck, or was struck): every
+        /// swing of its holds where it is meanwhile, and the look freezes as long (<see cref="Stalled"/>).
+        /// </summary>
+        public void Stall(float seconds)
+        {
+            if (!(seconds > 0f) || float.IsInfinity(seconds))
+                return;
+            foreach (var swing in _swings)
+                swing.Stall(seconds);
+            Stalled?.Invoke(seconds);
+        }
+
         /// <inheritdoc/>
-        public float Block(ActorId attacker, RecordId weapon, float damage, Vector3? direction)
+        public void Jolt(float seconds) => Stall(seconds);
+
+        /// <inheritdoc/>
+        public float Block(ActorId attacker, RecordId weapon, float damage, Vector3? direction, BlowMet met = BlowMet.Anywhere)
         {
             var guard = Guard;
             var block = guard?.Weapon.Record.Block;
-            if (block == null || !Covers(direction))
+            if (block == null || !Covers(direction, met))
                 return 0f;
 
             var stopped = Math.Max(0f, damage) * block.Stops;
@@ -329,9 +383,12 @@ namespace Forge.Game.Combat
                 : null;
         }
 
-        // Whether a blow travelling `direction` comes at where it faces, within the guard's arc (level only).
-        bool Covers(Vector3? direction)
+        // Whether the guard takes a blow that met it where `met` says: on itself, always; on the body past it, never; unseen,
+        // when it travels `direction` at where it faces, within the guard's arc (level only).
+        bool Covers(Vector3? direction, BlowMet met)
         {
+            if (met != BlowMet.Anywhere)
+                return met == BlowMet.Guard;
             if (direction == null || Facing == null)
                 return true;
             var facing = Facing();
@@ -343,12 +400,16 @@ namespace Forge.Game.Combat
         }
 
         // The weapon's blow, `power` times as strong, on the target, less what its guard stops of the harm to its health;
-        // told on the stream.
-        void Land(BaseObjectRecord weapon, float power, ActorId target, ActorAttributes attributes, Vector3? direction)
+        // the target jolted by it, and the swing that dealt it (none for a shot) stopped a moment in it, bouncing off a
+        // guard that stopped it; told on the stream.
+        void Land(BaseObjectRecord weapon, float power, ActorId target, ActorAttributes attributes, Vector3? direction, BlowMet met, Swing swing)
         {
-            var stops = _combatants.TryGetGuard(target, out var guard)
-                ? guard.Block(Owner, weapon.Id, HealthDamage(weapon, power), direction)
-                : 0f;
+            var guarded = _combatants.TryGetGuard(target, out var guard);
+            var stops = guarded ? guard.Block(Owner, weapon.Id, HealthDamage(weapon, power), direction, met) : 0f;
+            if (guarded)
+                guard.Jolt(ImpactSeconds);
+            if (swing != null)
+                Impact(swing, bounces: stops > 0f);
             var health = 0f;
             foreach (var effect in weapon.Weapon.Hit)
             {
@@ -364,6 +425,17 @@ namespace Forge.Game.Combat
             _events?.Publish(new HitLanded(Owner, target, weapon.Id, health));
             if (IsDead(attributes))
                 _events?.Publish(new ActorKilled(target, Owner));
+        }
+
+        // A blade's impact: it stops a moment where it met (and so does all it does), and, bouncing, comes back over
+        // RecoilSeconds, its window closed.
+        void Impact(Swing swing, bool bounces)
+        {
+            Stall(ImpactSeconds);
+            if (!bounces || swing.Recoiling)
+                return;
+            swing.Recoil(RecoilSeconds);
+            Recoiled?.Invoke(swing);
         }
 
         // What `weapon`'s blow, `power` times as strong, would take from health.

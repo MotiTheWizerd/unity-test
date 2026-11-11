@@ -1301,6 +1301,22 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
     `HitBlocked`; the look jolts the shield by the style's `Blocked` move (`ShieldImpact`) and holds it up again
     (`HumanoidAnimation.React`: blended back at pace and pinned, since a state at pace 0 can't be blended into).
     Shields: Round 0.5, Kite 0.6, Iron Kite 0.75 stopped, 0.5 stamina a point, a 3-damage bash for later.
+    A raised guard has a **face** (`GuardFace`, `GuardView`): while `ActorCombat.Guard` is up, the shield in that hand
+    carries a trigger box over its meshes (a kinematic body, on the actor's layer, so it stops no body and no loose
+    thing). Whoever sees where a blow met says so (`BlowMet`): on the face, the guard takes it whichever way it came; on
+    the body past it, nothing stops it; unseen (a test, a game without looks), the `GuardArc` decides.
+  - **Impact** (game feel): a blow that lands is felt by both (`ActorCombat.ImpactSeconds`, 0.08 s, hit-stop): the
+    swing that struck stalls (`Swing.Stalled`: time passes, it doesn't come on; every swing of the striker's, as long
+    as the longer stall) and the struck one is jolted (`IGuard.Jolt`, the same stall); `Stalled` freezes each look as
+    long (`HumanoidAnimation.Freeze`: the animator's speed 0, the actions' times paused). A blade a guard stopped, or that
+    met something of the world's it can't cut through (`ActorCombat.Bounce`), recoils (`Swing.Recoiling`: its window
+    closed, over `RecoilSeconds`, 0.3 s, after the stall), and the look plays its move back the way it came
+    (`Recoiled` → `HumanoidAnimation.Rebound`: the layer's pace -1, faded out, then rested). `BladeSweep` reads each line
+    nearest first (`QueryTriggerInteraction.Collide`, other triggers passed): past the swinger's own body and guard, it
+    stops at a raised guard's face (the blow is the guard's, and spares the body behind it) or at something solid
+    (`SceneLayers.Solid`, a placed thing by its `RecordLink`, not moving: a wall, a rock, a tree), and cuts through the
+    bodies before; the ground (a `TerrainCollider`, though its chunks carry `RecordLink`s too) and loose things it
+    passes. An arrow meets a face first too (`ArrowFlights`).
 - **Physics** (loose things): every item, and anything with a `PhysicsPart`, is a physical body while the world plays
   (`PhysicalObjects.TryGetMass`: an item weighs its weight read as Skyrim's pounds, a part its mass). `WorldPhysics`
   (Play, one per game) gives each such object the view shows (`WorldView.PlacedShown` / `PlacedRemoving`) a rigid body,

@@ -24,11 +24,19 @@ namespace Forge.Game.Combat
     /// as long as that plays (<see cref="ReleaseSeconds"/>). A swing of a weapon that <see cref="Shoots"/> lands nothing
     /// itself: what it looses does (<see cref="Shot"/>).
     /// </para>
+    /// <para>
+    /// Its blow meeting something stalls it a moment (<see cref="Stalled"/>: time passes, it doesn't come on), and one
+    /// that meets what it can't cut through (a raised guard, a wall) recoils (<see cref="Recoiling"/>): its window is
+    /// closed, and it is over once the recoil has played.
+    /// </para>
     /// </summary>
     public sealed class Swing
     {
         readonly HashSet<ActorId> _struck = new HashSet<ActorId>();
         float _loosedAt;
+        float _stall;
+        float _recoilAt;
+        float _recoilFor;
 
         internal Swing(RecordId slot, EquippedItem weapon, CombatMove move, MoveTiming timing, float? releaseSeconds = null)
         {
@@ -56,14 +64,24 @@ namespace Forge.Game.Combat
         /// </summary>
         public float? ReleaseSeconds { get; }
 
-        /// <summary>Seconds since it began, less any it was held still.</summary>
+        /// <summary>Seconds since it began, less any it was held still or stalled.</summary>
         public float Elapsed { get; private set; }
 
         /// <summary>How far it has come, 0 to 1.</summary>
         public float Progress => Elapsed >= Timing.Seconds ? 1f : Elapsed / Timing.Seconds;
 
+        /// <summary>Recoiling, it is recovering whatever its progress: its window is closed.</summary>
         public SwingPhase Phase =>
-            Progress < Timing.HitFrom ? SwingPhase.WindUp : Progress <= Timing.HitTo ? SwingPhase.Striking : SwingPhase.Recovery;
+            Recoiling ? SwingPhase.Recovery
+            : Progress < Timing.HitFrom ? SwingPhase.WindUp
+            : Progress <= Timing.HitTo ? SwingPhase.Striking
+            : SwingPhase.Recovery;
+
+        /// <summary>Whether it is stopped a moment where its blow met something (its impact): time passes, it doesn't come on.</summary>
+        public bool Stalled => _stall > 0f;
+
+        /// <summary>Whether its blow met what it can't cut through and it comes back (a blade off a shield, a wall).</summary>
+        public bool Recoiling { get; private set; }
 
         /// <summary>Whether its blow can land now.</summary>
         public bool IsStriking => Phase == SwingPhase.Striking;
@@ -95,17 +113,30 @@ namespace Forge.Game.Combat
             Timing.HitTo > Timing.HitFrom ? Clamp01((Progress - Timing.HitFrom) / (Timing.HitTo - Timing.HitFrom)) : 1f;
 
         // A held move held still is not over, even at the move's end (a clip that ends at full draw); let go with a
-        // release, it is over once that has played.
-        public bool IsOver => !Holding && (Loosed && ReleaseSeconds.HasValue ? Elapsed - _loosedAt >= ReleaseSeconds.Value : Elapsed >= Timing.Seconds);
+        // release, it is over once that has played; recoiling, once the recoil has.
+        public bool IsOver =>
+            !Holding && (Recoiling ? Elapsed - _recoilAt >= _recoilFor
+                : Loosed && ReleaseSeconds.HasValue ? Elapsed - _loosedAt >= ReleaseSeconds.Value
+                : Elapsed >= Timing.Seconds);
 
         /// <summary>Whom it has struck.</summary>
         public IReadOnlyCollection<ActorId> Struck => _struck;
 
         float HoldAt => Timing.HitTo * Timing.Seconds;
 
-        // Held, it stops at full draw; let go before its window opened, it stops where it opens, to be let go from there.
+        // Stalled, the time goes to the stall first. Held, it stops at full draw; let go before its window opened, it
+        // stops where it opens, to be let go from there.
         internal void Advance(float seconds)
         {
+            if (_stall > 0f)
+            {
+                var still = seconds < _stall ? seconds : _stall;
+                _stall -= still;
+                seconds -= still;
+                if (!(seconds > 0f))
+                    return;
+            }
+
             Elapsed += seconds;
             if (Holding && Elapsed > HoldAt)
                 Elapsed = HoldAt;
@@ -130,6 +161,23 @@ namespace Forge.Game.Combat
         }
 
         internal bool MarkStruck(ActorId target) => _struck.Add(target);
+
+        // Stopped `seconds` where it is (the longer of two stalls, not both).
+        internal void Stall(float seconds)
+        {
+            if (seconds > _stall)
+                _stall = seconds;
+        }
+
+        // Comes back from where it is, over `seconds` (after any stall), and is over then; once.
+        internal void Recoil(float seconds)
+        {
+            if (Recoiling)
+                return;
+            Recoiling = true;
+            _recoilAt = Elapsed;
+            _recoilFor = seconds;
+        }
 
         static float Clamp01(float value) => value < 0f ? 0f : value > 1f ? 1f : value;
     }

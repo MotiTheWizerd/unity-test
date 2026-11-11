@@ -252,6 +252,12 @@ namespace Forge.Play
         /// <summary>Holds its action <paramref name="move"/> still <paramref name="at"/> (a fraction of it: a bow at full draw).</summary>
         public bool Hold(string move, float at) => _animation != null && _animation.Hold(move, at);
 
+        /// <summary>Freezes it where it is for <paramref name="seconds"/>, every move of it (a blow's impact: hit-stop).</summary>
+        public void Freeze(float seconds) => _animation?.Freeze(seconds);
+
+        /// <summary>Plays its action <paramref name="move"/> back from where it is for <paramref name="seconds"/>, fading out (a blade bouncing off).</summary>
+        public bool Rebound(string move, float seconds) => _animation != null && _animation.Rebound(move, seconds);
+
         /// <summary>Lets its held action <paramref name="move"/> play on <paramref name="from"/> (a fraction of it).</summary>
         public void Resume(string move, float from) => _animation?.Resume(move, from);
 

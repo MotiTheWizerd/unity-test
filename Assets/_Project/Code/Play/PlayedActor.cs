@@ -38,6 +38,7 @@ namespace Forge.Play
         EquipmentView _equipmentView;
         ReadinessView _readinessView;
         CombatView _combatView;
+        GuardView _guardView;
         BladeSweep _sweep;
         ShotView _shotView;
         ArrowFlights _arrows;
@@ -183,6 +184,7 @@ namespace Forge.Play
             _equipmentView = new EquipmentView(Equipment, _model, Stage.World, Stage.Assets);
             _readinessView = new ReadinessView(Readiness, _model);
             _combatView = new CombatView(Combat, _model);
+            _guardView = new GuardView(Combat, _model, Stage.World);
             _sweep = new BladeSweep(Combat, _model, Stage.World, Stage.Identify);
             _shotView = new ShotView(Combat, Equipment, _model, Stage.Assets, AimPose);
             _arrows = new ArrowFlights(Combat, _model, Stage.Assets, AimPose, Stage.Identify, Stage.LandShot);
@@ -204,7 +206,8 @@ namespace Forge.Play
         {
             if (Fallen)
             {
-                // Down: whatever it is told, it lies still; its shots fly on.
+                // Down: whatever it is told, it lies still (its guard's face away with its guard); its shots fly on.
+                _guardView?.Tick();
                 _arrows?.Tick(deltaTime);
                 _model?.Animate(BodyMotion.Still, deltaTime);
                 return;
@@ -222,6 +225,7 @@ namespace Forge.Play
             if (commands.ReleaseLeft)
                 Combat.Release(CoreEquipSlots.LeftHand);
             Combat.Tick(deltaTime);
+            _guardView?.Tick();
             _arrows?.Tick(deltaTime);
             Rules.Aiming = Combat.Aiming;
             Rules.Tick(commands.Move, deltaTime);
@@ -275,6 +279,7 @@ namespace Forge.Play
             _arrows = null;
             _combatView?.Dispose();
             _combatView = null;
+            _guardView = null;
             _model?.Dispose();
             _model = null;
             Look = null;

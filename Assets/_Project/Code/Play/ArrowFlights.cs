@@ -127,17 +127,19 @@ namespace Forge.Play
             Pose(arrow, point, arrow.Flight.Heading.ToUnity());
         }
 
-        // The nearest thing on the arrow's way: the world's, or an actor's body but the shooter's own, which the arrow
-        // leaves from beside and must never stick in.
+        // The nearest thing on the arrow's way: the world's, an actor's body, or a raised guard's face before it
+        // (<see cref="GuardFace"/>); never the shooter's own, which the arrow leaves from beside and must never stick in,
+        // nor any other trigger.
         bool TryMeet(Shot shot, Vector3 from, Vector3 direction, float length, out RaycastHit nearest)
         {
             nearest = default;
             var found = false;
-            var count = Physics.RaycastNonAlloc(from, direction, _hits, length, SceneLayers.Targets, QueryTriggerInteraction.Ignore);
+            var count = Physics.RaycastNonAlloc(from, direction, _hits, length, SceneLayers.Targets, QueryTriggerInteraction.Collide);
             for (var i = 0; i < count; i++)
             {
                 var hit = _hits[i];
-                if ((found && hit.distance >= nearest.distance) || _identify(hit.collider) == shot.Shooter)
+                if ((found && hit.distance >= nearest.distance) || (hit.collider.isTrigger && !IsGuard(hit.collider)) ||
+                    _identify(hit.collider) == shot.Shooter)
                     continue;
                 nearest = hit;
                 found = true;
@@ -146,11 +148,13 @@ namespace Forge.Play
             return found;
         }
 
+        static bool IsGuard(Collider collider) => collider.GetComponent<GuardFace>() != null;
+
         void Stick(Flying arrow, RaycastHit hit, Vector3 heading, Vector3 velocity)
         {
             var target = _identify(hit.collider);
             if (target.HasValue)
-                _combat.Strike(arrow.Shot, target.Value, heading.ToNumerics());
+                _combat.Strike(arrow.Shot, target.Value, heading.ToNumerics(), IsGuard(hit.collider) ? BlowMet.Guard : BlowMet.Body);
             // It stops in what it strikes, so all it carried goes into it (Skyrim knocks a cup off a shelf so).
             var struck = hit.rigidbody != null && !hit.rigidbody.isKinematic ? hit.rigidbody : null;
             if (struck != null && PhysicalObjects.TryGetMass(arrow.Shot.Ammo, out var mass))
