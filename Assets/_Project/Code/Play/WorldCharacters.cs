@@ -205,7 +205,9 @@ namespace Forge.Play
                 // It faces as the mind says (squaring up to a foe, at the turn rate), else the way it goes.
                 if (decision.Facing is float facing)
                 {
-                    rules.Look.Set(SceneHeading(facing), 0f);
+                    var heading = SceneHeading(facing);
+                    rules.Look.Set(heading, 0f);
+                    rules.TargetHeading = heading;
                     rules.Facing = BodyFacing.Target;
                 }
                 else
@@ -248,22 +250,8 @@ namespace Forge.Play
                 var feet = Actor.Rules.Feet.ToUnity();
                 var mode = stage.Modes.ModeOf(Actor.Id);
                 System.Numerics.Vector2? opponent = null;
-                if (mode == Mode.Fight)
-                {
-                    var nearest = float.MaxValue;
-                    foreach (var foe in stage.Modes.OpponentsOf(Actor.Id))
-                    {
-                        if (!stage.Actors.TryGet(foe, out var standing))
-                            continue;
-                        var at = standing.Rules.Feet.ToUnity();
-                        var apart = (at - feet).sqrMagnitude;
-                        if (apart < nearest)
-                        {
-                            nearest = apart;
-                            opponent = Ground(at);
-                        }
-                    }
-                }
+                if (Opponents.TryNearest(stage.Modes, Actor.Id, Actor.Rules.Feet, stage.Actors, out _, out var at))
+                    opponent = Ground(at.ToUnity());
 
                 var rightBusy = false;
                 var guardUp = false;

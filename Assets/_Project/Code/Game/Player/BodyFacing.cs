@@ -2,8 +2,8 @@ namespace Forge.Game.Player
 {
     /// <summary>
     /// Which way an actor's body turns: with the look (the player in first person), toward where it goes (the player
-    /// in third person, a character about its day), or onto the look wherever it goes (a fighter squaring up to its
-    /// foe).
+    /// in third person, a character about its day), or onto a heading it is given wherever it goes (a fighter squaring
+    /// up to its foe).
     /// </summary>
     public enum BodyFacing
     {
@@ -14,8 +14,9 @@ namespace Forge.Game.Player
         Movement,
 
         /// <summary>
-        /// The body turns toward the look's heading at the turn rate, moving or standing, as it does aiming a bow: a
-        /// character's mind looks at its opponent and the body squares up to it (later the player's lock-on).
+        /// The body turns toward <see cref="PlayerCharacter.TargetHeading"/> at the turn rate, moving or standing, as it
+        /// does aiming a bow: a character's mind squares up to its opponent, the player's lock-on to its foe
+        /// (<see cref="SoftLockOn"/>), while the look goes where it will.
         /// </summary>
         Target,
     }

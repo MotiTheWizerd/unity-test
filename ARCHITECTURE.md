@@ -690,10 +690,18 @@ from any camera, so both cameras read the same player.
 - **Body facing** (`BodyFacing`, `PlayerCharacter.BodyHeading`): the body's own heading, which its model is turned to.
   Facing the `Look` (first person) it is the look's heading; facing its `Movement` (third person) it turns toward the
   ground velocity at `LocomotionSettings.TurnRate` (720°/s) the short way round, and keeps its heading while standing,
-  so the look orbits freely, as in Skyrim; facing a `Target` it turns toward the look's heading at the turn rate
-  whether it moves or stands, as it does aiming a bow (`Aiming`): a character's mind looks at its foe and the body
-  squares up to it (later the player's lock-on). Movement is always relative to the look, so stepping right in third
-  person runs right and the body turns to it.
+  so the look orbits freely, as in Skyrim; facing a `Target` it turns toward `TargetHeading` at the turn rate whether
+  it moves or stands, wherever the look goes: a character's mind squares up to its foe, the player's lock-on to its
+  own. Aiming a bow (`Aiming`) turns it to the look's heading instead, whatever it faces otherwise. Movement is always
+  relative to the look, so stepping right in third person runs right and the body turns to it.
+- **The soft lock-on** (`SoftLockOn`, Game.Player, asked by `PlayerSession.Tick` before the player moves): in a fight,
+  weapons out or coming out (the drawn moves play from the draw on), framed in third person, the player's body faces
+  the nearest opponent standing within `Range` (8 m) as a `Target`, so it closes in, sidesteps (the drawn strafe) and
+  backs away facing its foe. Soft: the camera stays the mouse's and the move stays relative to it, so turning the
+  camera aside and stepping ahead is a sidestep, and turning away and running gets away; out of range, cooling off,
+  weapons away or in first person, the body faces as the view says. Which opponent: `Opponents.TryNearest`
+  (Game.Actors), shared with a character's mind, over an `IStandingActors` (the game's `ActorRoster`: where an actor's
+  feet are while it stands, none once fallen).
 - **Cameras**: an `ICameraMode` (Game, engine-free) says where the camera goes each frame (a `ViewPose`), how the body
   faces meanwhile, whether it is inside the player's head (`InsideHead`) and how near it sees (`NearClip`, null: as the
   camera is set). `FirstPersonCamera` (`FirstPersonSettings`: head ease 0.1 s, near clip 0.05 m): a true first person,
@@ -739,7 +747,7 @@ from any camera, so both cameras read the same player.
   an `InteractionFocus`) and what it carries in its hands (`ObjectCarry`). `Spawn(feet, heading, stage, interactions)`
   makes the actor (its pace in a fight ruled by `CombatPace`, see the character modes), stands it, gives it the
   camera, switches the controls on and captures the mouse; `Tick` applies the
-  view commands, sets the body's facing from the current view, turns the controls into the actor's `ActorCommands`
+  view commands, sets the body's facing from the current view or onto its foe (`SoftLockOn`), turns the controls into the actor's `ActorCommands`
   (the attack keys throw a carried thing instead of attacking), ticks the actor, frames it (seen from within its head
   in first person) and last looks for what is in sight from where the camera now is (`CameraDirector.Pose`), so the
   prompt and the use key go by what the frame shows, and uses it if the key was pressed; `Despawn` takes it away. One
@@ -1048,7 +1056,8 @@ music are listeners to that fact, never the fact itself, so each joins or change
   an `IMovementLimit` of the player's rules, added by `PlayerSession.Spawn`): in a fight the everyday run gives way to
   a walk, and the run key (Shift) runs rather than sprints, so the player circles its foe instead of dashing past
   (Moti: "in fight mode the character isn't running by default, only with the running key"); a walk forced already
-  (too laden) stays one, and a character's mind picks its own paces. To come: the music crossfades on the player's
+  (too laden) stays one, and a character's mind picks its own paces. The player's facing reads it too (`SoftLockOn`,
+  see body facing): weapons out, its body faces its nearest foe within 8 m. To come: the music crossfades on the player's
   `ModeChanged`; Skyrim's slower regen in a fight is an `AttributeModifier` under a `ModifierSource` added and removed
   with it. Meanwhile `GameSession` logs each change to the console (dev, while fights are tuned).
 
@@ -1092,9 +1101,9 @@ Plugin) stands the first of `CoreModels.Npcs` 4 m right of the items at the star
   placed for its look alone (no actor) is no one: nothing hurts it, it holds nothing. Its mind (a `Fighter` over a
   `Wander` homed where it was placed; a `Wander` alone for a character that is no one) works in the world root's
   space (a rebase moves nothing of it): each frame the character shows it what it sees (`MindSight`: its feet, its
-  `Mode` from the stage's `ActorModes`, the nearest of its `OpponentsOf` that stands on the roster, its
+  `Mode` from the stage's `ActorModes`, the nearest of its `OpponentsOf` that stands (`Opponents.TryNearest`), its
   `WeaponReadiness.State`, its right hand's swing and its guard) and carries out the decision: the look turned the way
-  the mind faces (`BodyFacing.Target`) or the way it goes (`Movement`), the velocity put into the look's frame as a
+  the mind faces (`BodyFacing.Target`, its `TargetHeading`) or the way it goes (`Movement`), the velocity put into the look's frame as a
   walk or a run (`PlayerCommands`), the hands into `ActorCommands`. The placed object hides meanwhile; the game ending
   (or the character streaming out) takes body and look away and shows it again where its record has it.
 - **Falling** (`PlayedActor.Fall`, which `GameSession` calls on `ActorKilled`): a character whose health ran out stops

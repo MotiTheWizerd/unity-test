@@ -97,20 +97,47 @@ namespace Forge.Tests.Game
         }
 
         [Test]
-        public void FacingTarget_TheBodyTurnsToWhereItLooks_AtTheTurnRate_StandingOrMoving()
+        public void FacingTarget_TheBodyTurnsToItsTargetHeading_AtTheTurnRate_StandingOrMoving_WhereverItLooks()
         {
             var player = Standing(BodyFacing.Target);
+            player.TargetHeading = 150f;
 
-            player.Tick(Turn(150f), Frame);
+            player.Tick(Turn(40f), Frame);
             var firstStep = player.BodyHeading;
             Run(player, PlayerCommands.None, 1f);
             var standing = player.BodyHeading;
-            // Stepping left while looking at 150: the body keeps facing the look, not the way it goes.
+            // Stepping left while looking at 40: the body keeps facing its target, not the look nor the way it goes.
             Run(player, Walk(-1f, 0f), 0.5f);
 
             Assert.That(firstStep, Is.EqualTo(LocomotionSettings.Default.TurnRate * Frame).Within(1e-3f), "Turns, not snaps.");
             Assert.That(standing, Is.EqualTo(150f).Within(1e-3f));
             Assert.That(player.BodyHeading, Is.EqualTo(150f).Within(1e-3f));
+            Assert.That(player.Look.Heading, Is.EqualTo(40f).Within(1e-3f), "The look goes its own way.");
+        }
+
+        [Test]
+        public void FacingTarget_ADrawnBowSquaresUpToTheLookInstead()
+        {
+            var player = Standing(BodyFacing.Target);
+            player.TargetHeading = 150f;
+            player.Tick(Turn(60f), Frame);
+
+            player.Aiming = true;
+            Run(player, PlayerCommands.None, 1f);
+
+            Assert.That(player.BodyHeading, Is.EqualTo(60f).Within(1e-3f));
+        }
+
+        [Test]
+        public void Placed_ItsTargetIsTheWayItFaces()
+        {
+            var player = Standing(BodyFacing.Target);
+
+            player.PlaceAt(Vector3.Zero, 200f);
+            Run(player, PlayerCommands.None, 0.5f);
+
+            Assert.That(player.TargetHeading, Is.EqualTo(200f).Within(1e-3f));
+            Assert.That(player.BodyHeading, Is.EqualTo(200f).Within(1e-3f), "No turn back to wherever its last target was.");
         }
 
         [Test]

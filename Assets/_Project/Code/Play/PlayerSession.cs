@@ -41,6 +41,7 @@ namespace Forge.Play
         GameObject _look;
         GameStage _stage;
         PlayedActor _actor;
+        SoftLockOn _lockOn;
         ObjectCarry _carry;
         AttributeRecord[] _attributeRecords;
         IDisposable _attributeEvents;
@@ -164,6 +165,7 @@ namespace Forge.Play
                 Attributes, Inventory, Equipment, "You") { Aim = () => _director.Pose };
             // In a fight the player walks unless the run key is held (a character's mind picks its own paces).
             _actor.Rules.Limits.Add(new CombatPace(stage.Modes, ActorId.Player));
+            _lockOn = new SoftLockOn(stage.Modes, ActorId.Player);
             _actor.ChangeLook(_look);
             BindEyes();
             _carry = new ObjectCarry(_actor.Body.Collider, _profile.Carry());
@@ -207,7 +209,8 @@ namespace Forge.Play
             if (_controls.ReadNextLook())
                 NextLook();
             Views.Apply(_controls.ReadView());
-            _actor.Rules.Facing = Views.Current.Facing;
+            // The body faces as the view says, or its foe while locked on.
+            _lockOn.Face(_actor.Rules, Views.Current.Facing, _actor.Readiness.State, _stage.Actors);
             var move = _controls.Read(deltaTime);
             var attackRight = _controls.ReadAttack(right: true);
             var attackLeft = _controls.ReadAttack(right: false);
@@ -275,6 +278,7 @@ namespace Forge.Play
             Views.FirstPerson.Head = null;
             _actor.Dispose();
             _actor = null;
+            _lockOn = null;
             _zoom.Reset();
             _director.Release();
             Focus = null;
@@ -346,7 +350,6 @@ namespace Forge.Play
         void Frame(float deltaTime)
         {
             var view = Views.Current;
-            _actor.Rules.Facing = view.Facing;
             _director.Mode = view;
             _director.Tick(_actor.Rules, deltaTime);
             if (_actor.Model != null)

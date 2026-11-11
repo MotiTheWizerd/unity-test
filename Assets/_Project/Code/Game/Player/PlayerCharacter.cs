@@ -29,6 +29,7 @@ namespace Forge.Game.Player
         readonly GameEvents _events;
         MotorContact _contact;
         float _eyeHeight;
+        float _targetHeading;
 
         /// <param name="eyeHeight">Meters from the feet to the eyes, where a first-person camera sits.</param>
         /// <param name="attributes">The player's attributes, which moving costs (<see cref="MovementCosts"/>) are paid from
@@ -83,6 +84,21 @@ namespace Forge.Game.Player
         /// not, as Skyrim's archer squares up to the shot; the game sets it each frame.
         /// </summary>
         public bool Aiming { get; set; }
+
+        /// <summary>
+        /// Compass degrees the body squares up to while it faces a <see cref="BodyFacing.Target"/> (its foe's way): a
+        /// character's mind or the player's lock-on sets it each frame.
+        /// </summary>
+        public float TargetHeading
+        {
+            get => _targetHeading;
+            set
+            {
+                if (float.IsNaN(value) || float.IsInfinity(value))
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "A heading is degrees.");
+                _targetHeading = Compass.Normalize(value);
+            }
+        }
 
         /// <summary>Compass degrees the body faces, which its look (model, animations) is turned to.</summary>
         public float BodyHeading { get; private set; }
@@ -146,6 +162,7 @@ namespace Forge.Game.Player
             Motor.Teleport(feet);
             Look.Set(heading, 0f);
             BodyHeading = Look.Heading;
+            TargetHeading = BodyHeading;
             Locomotion.Stop();
             _contact = default;
             Motion = BodyMotion.Still;
@@ -183,10 +200,11 @@ namespace Forge.Game.Player
                 return;
             }
 
+            // A drawn bow squares up to the shot, whatever else the body faces.
             if (Aiming || Facing == BodyFacing.Target)
             {
                 if (deltaTime > 0f)
-                    BodyHeading = TurnToward(BodyHeading, Look.Heading, Locomotion.Settings.TurnRate * deltaTime);
+                    BodyHeading = TurnToward(BodyHeading, Aiming ? Look.Heading : TargetHeading, Locomotion.Settings.TurnRate * deltaTime);
                 return;
             }
 
