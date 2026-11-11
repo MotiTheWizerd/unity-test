@@ -7,8 +7,8 @@ using Forge.Game.Equipment;
 namespace Forge.Game.Minds
 {
     /// <summary>
-    /// How a character fights (<see cref="Fighter"/>): how near it comes to strike, how fast it closes in, how long it
-    /// pauses between blows, and how often it raises its shield instead.
+    /// How a character fights (<see cref="Fighter"/>): how near it comes to strike, how near it lets its opponent come,
+    /// how fast it closes in, how long it pauses between blows, and how often it raises its shield instead.
     /// </summary>
     public readonly struct FighterSettings
     {
@@ -20,8 +20,10 @@ namespace Forge.Game.Minds
         /// <param name="maxPause">The longest it waits.</param>
         /// <param name="blockChance">The share of its moves, 0 to 1, that raise the shield rather than strike.</param>
         /// <param name="blockSeconds">How long it holds the shield up, seconds.</param>
+        /// <param name="standOff">Meters from its opponent closer than which it steps back, facing it, to fighting distance
+        /// (<see cref="SpacedAt"/>); 0: it never gives ground.</param>
         public FighterSettings(float reach, float walkSpeed, float runSpeed, float runBeyond, float minPause, float maxPause, float blockChance,
-            float blockSeconds)
+            float blockSeconds, float standOff = 0f)
         {
             if (!(reach > 0f) || float.IsInfinity(reach))
                 throw new ArgumentOutOfRangeException(nameof(reach), reach, "Must be a positive number.");
@@ -35,7 +37,10 @@ namespace Forge.Game.Minds
                 throw new ArgumentOutOfRangeException(nameof(blockChance), blockChance, "A share, 0 to 1.");
             if (!(blockSeconds > 0f) || float.IsInfinity(blockSeconds))
                 throw new ArgumentOutOfRangeException(nameof(blockSeconds), blockSeconds, "Must be a positive number.");
+            if (!(standOff >= 0f) || !(standOff < reach))
+                throw new ArgumentOutOfRangeException(nameof(standOff), standOff, "It gives ground short of its reach, or never (0).");
             Reach = reach;
+            StandOff = standOff;
             WalkSpeed = walkSpeed;
             RunSpeed = runSpeed;
             RunBeyond = runBeyond;
@@ -48,12 +53,18 @@ namespace Forge.Game.Minds
         /// <summary>
         /// A sword-and-board fighter closing in at <paramref name="walkSpeed"/>, running at <paramref name="runSpeed"/>
         /// from beyond 5 m, striking within 1.4 m with 0.8 to 2 s between moves, a third of them the shield raised for
-        /// 1.2 s.
+        /// 1.2 s, and stepping back to 1.25 m when its opponent comes within 1.1 m (two guards apart, and a little).
         /// </summary>
         public static FighterSettings SwordAndBoard(float walkSpeed, float runSpeed) =>
-            new FighterSettings(1.4f, walkSpeed, Math.Max(walkSpeed, runSpeed), 5f, 0.8f, 2f, 0.35f, 1.2f);
+            new FighterSettings(1.4f, walkSpeed, Math.Max(walkSpeed, runSpeed), 5f, 0.8f, 2f, 0.35f, 1.2f, standOff: 1.1f);
 
         public float Reach { get; }
+
+        /// <summary>Meters from its opponent closer than which it steps back; 0: it never gives ground.</summary>
+        public float StandOff { get; }
+
+        /// <summary>Where a step back ends: halfway between its stand-off and its reach, so it doesn't sway at one line.</summary>
+        public float SpacedAt => (StandOff + Reach) * 0.5f;
 
         public float WalkSpeed { get; }
 
@@ -74,9 +85,10 @@ namespace Forge.Game.Minds
     /// A mind that fights back. At ease (<see cref="Mode.Normal"/>) it is another mind (its day: <see cref="Wander"/>),
     /// its weapons away. In a fight (<see cref="Mode.Fight"/>) it draws first, faces its nearest opponent, closes in
     /// (walking, running from afar) and in reach stands and strikes with its right hand, pausing between blows, now and
-    /// then raising its shield for a while instead; its opponent gone, it stands ready. The fight over, it puts its
-    /// weapons away and goes back to its day. What strikes it decides on its own dice (<see cref="Random"/>), so no two
-    /// fighters keep the same time. Engine-free.
+    /// then raising its shield for a while instead; crowded (within <see cref="FighterSettings.StandOff"/>) it steps back
+    /// to fighting distance, facing its foe, its guard as it was, never mid-swing; its opponent gone, it stands ready.
+    /// The fight over, it puts its weapons away and goes back to its day. What strikes it decides on its own dice
+    /// (<see cref="Random"/>), so no two fighters keep the same time. Engine-free.
     /// </summary>
     public sealed class Fighter : IMind
     {
@@ -84,9 +96,11 @@ namespace Forge.Game.Minds
         readonly FighterSettings _settings;
         readonly Random _random;
 
-        // Seconds until its next move in reach, and seconds its shield stays up (0: it is down).
+        // Seconds until its next move in reach, and seconds its shield stays up (0: it is down); whether it is stepping
+        // back to fighting distance.
         float _pause;
         float _blocking;
+        bool _givingGround;
 
         /// <param name="atEase">The mind it is while not fighting (its day).</param>
         /// <param name="random">Its own dice.</param>
@@ -148,30 +162,45 @@ namespace Forge.Game.Minds
             if (distance > _settings.Reach)
             {
                 _blocking = 0f;
+                _givingGround = false;
                 var speed = distance > _settings.RunBeyond ? _settings.RunSpeed : _settings.WalkSpeed;
                 return new MindDecision(way / distance * speed, facing, releaseLeft: sight.GuardUp);
             }
 
+            var step = GiveGround(way, distance, sight.RightHandBusy);
             if (_blocking > 0f)
             {
                 _blocking -= deltaTime;
-                return new MindDecision(Vector2.Zero, facing, releaseLeft: _blocking <= 0f);
+                return new MindDecision(step, facing, releaseLeft: _blocking <= 0f);
             }
 
             if (sight.RightHandBusy || sight.GuardUp)
-                return new MindDecision(Vector2.Zero, facing);
+                return new MindDecision(step, facing);
             _pause -= deltaTime;
             if (_pause > 0f)
-                return new MindDecision(Vector2.Zero, facing);
+                return new MindDecision(step, facing);
 
             NextPause();
             if (_random.NextDouble() < _settings.BlockChance)
             {
                 _blocking = _settings.BlockSeconds;
-                return new MindDecision(Vector2.Zero, facing, useLeft: true);
+                return new MindDecision(step, facing, useLeft: true);
             }
 
-            return new MindDecision(Vector2.Zero, facing, useRight: true);
+            return new MindDecision(step, facing, useRight: true);
+        }
+
+        // Crowded, it steps straight back from its foe at a walk until it is at fighting distance again, its moves going
+        // on as they would standing; never mid-swing (the blow plays out where it began). Zero when it holds its ground.
+        Vector2 GiveGround(Vector2 way, float distance, bool swinging)
+        {
+            if (!(_settings.StandOff > 0f) || distance < 1e-4f)
+                return Vector2.Zero;
+            if (distance < _settings.StandOff)
+                _givingGround = true;
+            else if (distance >= _settings.SpacedAt)
+                _givingGround = false;
+            return _givingGround && !swinging ? -way / distance * _settings.WalkSpeed : Vector2.Zero;
         }
 
         void NextPause() => _pause = _settings.MinPause + (float)_random.NextDouble() * (_settings.MaxPause - _settings.MinPause);

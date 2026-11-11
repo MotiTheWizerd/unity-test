@@ -23,6 +23,9 @@ namespace Forge.Play
         [SerializeField, Min(0.1f), Tooltip("Meters from the body's middle to its side.")]
         float _radius = 0.3f;
 
+        [SerializeField, Min(0.1f), Tooltip("Meters from the body's middle that others keep clear of while its weapons are in hand: the shield held before it, so two guards meet rather than sink into each other. The world's characters take it too.")]
+        float _guardRadius = 0.45f;
+
         [SerializeField, Min(0.1f), Tooltip("Meters from the feet to the eyes, for a look without a head; a character's own eyes are found on its head.")]
         float _eyeHeight = 1.65f;
 
@@ -153,7 +156,7 @@ namespace Forge.Play
         float _lookSensitivity = 0.1f;
 
         /// <summary>The player's body (<see cref="ActorBody"/>), kept sound (<see cref="BodyShape"/>); the world's characters are built on it too, at their own height.</summary>
-        public BodyShape Body => new BodyShape(_height, _radius, _crouchHeight, _stepHeight, _slopeLimit);
+        public BodyShape Body => new BodyShape(_height, _radius, _crouchHeight, _stepHeight, _slopeLimit, _guardRadius);
 
         public float EyeHeight => Mathf.Min(_eyeHeight, _height);
 

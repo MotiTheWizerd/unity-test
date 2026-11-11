@@ -141,6 +141,48 @@ namespace Forge.Tests.Game
         }
 
         [Test]
+        public void Crowded_ItStepsBack_FacingItsFoe_ToFightingDistance_ThenHoldsItsGround()
+        {
+            var spaced = new FighterSettings(1.4f, 1.5f, 4f, 5f, 0.8f, 2f, 0f, 1.2f, standOff: 1f);
+            Assert.That(spaced.SpacedAt, Is.EqualTo(1.2f).Within(1e-5f));
+            var fighter = Make(spaced);
+            var north = new Vector2(0f, 1f);
+
+            // Its foe 0.8 m north: it walks south, still facing north.
+            var crowded = fighter.Decide(Fighting(Here + north * 0.8f), Frame);
+            Assert.That(crowded.Velocity, Is.EqualTo(-north * spaced.WalkSpeed));
+            Assert.That(crowded.Facing, Is.EqualTo(0f).Within(1e-3f));
+
+            // Past its stand-off but short of fighting distance, it keeps stepping back...
+            Assert.That(fighter.Decide(Fighting(Here + north * 1.1f), Frame).Velocity, Is.EqualTo(-north * spaced.WalkSpeed));
+
+            // ...and at fighting distance it stands; nearer again but past its stand-off, it holds its ground.
+            Assert.That(fighter.Decide(Fighting(Here + north * 1.2f), Frame).Velocity, Is.EqualTo(Vector2.Zero));
+            Assert.That(fighter.Decide(Fighting(Here + north * 1.1f), Frame).Velocity, Is.EqualTo(Vector2.Zero));
+        }
+
+        [Test]
+        public void Crowded_MidSwing_TheBlowPlaysOutWhereItBegan_AndAGuardUpBacksAway()
+        {
+            var spaced = new FighterSettings(1.4f, 1.5f, 4f, 5f, 0.8f, 2f, 0f, 1.2f, standOff: 1f);
+            var fighter = Make(spaced);
+            var foe = Here + new Vector2(0.7f, 0f);
+
+            Assert.That(fighter.Decide(Fighting(foe, rightBusy: true), Frame).Velocity, Is.EqualTo(Vector2.Zero));
+            var guarded = fighter.Decide(Fighting(foe, guardUp: true), Frame);
+            Assert.That(guarded.Velocity, Is.EqualTo(new Vector2(-spaced.WalkSpeed, 0f)), "Its shield up, it backs away behind it.");
+            Assert.That(guarded.ReleaseLeft, Is.False);
+        }
+
+        [Test]
+        public void WithNoStandOff_ItNeverGivesGround()
+        {
+            var fighter = Make();
+
+            Assert.That(fighter.Decide(Fighting(Here + new Vector2(0f, 0.3f)), Frame).Velocity, Is.EqualTo(Vector2.Zero));
+        }
+
+        [Test]
         public void ItsFoeGone_ItStandsReady_TheShieldDown()
         {
             var fighter = Make();
@@ -181,6 +223,8 @@ namespace Forge.Tests.Game
             Assert.Throws<ArgumentOutOfRangeException>(() => new FighterSettings(1f, 1f, 2f, 5f, 3f, 2f, 0.5f, 1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => new FighterSettings(1f, 1f, 2f, 5f, 1f, 2f, 1.5f, 1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => new FighterSettings(1f, 1f, 2f, 5f, 1f, 2f, 0.5f, 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new FighterSettings(1f, 1f, 2f, 5f, 1f, 2f, 0.5f, 1f, standOff: 1f), "Short of its reach.");
+            Assert.Throws<ArgumentOutOfRangeException>(() => new FighterSettings(1f, 1f, 2f, 5f, 1f, 2f, 0.5f, 1f, standOff: -0.1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => Make().Decide(MindSight.AtEase(Here), 0f));
         }
     }

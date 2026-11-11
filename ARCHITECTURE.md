@@ -679,8 +679,11 @@ from any camera, so both cameras read the same player.
   `Solid` (that, but clutter) for the camera's obstacles, the footsteps' ground and the room to stand; `Targets` (the
   world and the actors) for blows and arrows, which find whose body they met (`GameStage.Identify`) and pass over the
   striker's own. So no look meets its own body, a camera passes through people, and a blow reaches whoever stands in
-  its way. Fallen, a body lies (`Lie`): its capsule is switched off where the feet are, so a corpse is walked over and
-  struck by nothing, until it stands again.
+  its way. With its weapons in hand (`WeaponReadiness.InHandChanged`) a body holds its guard (`Guard`): the capsule is
+  `BodyShape.GuardRadius` wide (the profile's 0.45 m, the shield held before it; never narrower than the body, and
+  fitting its crouch), so two fighters' guards meet rather than sink into each other and the player can't push into a
+  character's shield. Fallen, a body lies (`Lie`): its capsule is switched off where the feet are, so a corpse is
+  walked over and struck by nothing, until it stands again.
 - `PlayerControls` (Play) read the profile's action map (`Settings/InputSystem_Actions`, map Player: Move, Look, Sprint,
   Jump, ToggleWalk, Crouch, ToggleView, Zoom; WASD and arrows, mouse, Shift, Space, Caps Lock, Left Ctrl, F, the wheel, and the gamepad) into `PlayerCommands` and
   `ViewCommands`; the look is pointer pixels × the profile's sensitivity (0.1° per pixel), and the wheel's binding scales
@@ -1086,7 +1089,9 @@ Plugin) stands the first of `CoreModels.Npcs` 4 m right of the items at the star
   its nearest opponent, closes in (walking, running from beyond `FighterSettings.RunBeyond`, 5 m, at the character's
   own Walk and Run paces), and within `Reach` (1.4 m) stands and strikes with its right hand, waiting `MinPause` to
   `MaxPause` (0.8 to 2 s) between moves, never mid-swing, a `BlockChance` (a third) of them raising the shield for
-  `BlockSeconds` (1.2) instead; its opponent gone (fallen, despawned) it stands ready, the shield down. The fight over
+  `BlockSeconds` (1.2) instead; crowded (its opponent within `StandOff`, 1.1 m) it steps straight back at a walk,
+  still facing it and its guard as it was, to fighting distance (`SpacedAt`, halfway to its reach: 1.25 m), never
+  mid-swing; its opponent gone (fallen, despawned) it stands ready, the shield down. The fight over
   (the 5 s cool-off), it puts its weapons away and goes back to its day. Its own dice. Every character fights back for
   now (Moti's call: "basic, fight"); a per-character confidence (fights or flees) is a field of its actor record to come.
 - **`WorldCharacters`** (Play), `GameSession.Characters`, bound like `WorldPhysics` for one game: every placed object

@@ -74,6 +74,9 @@ namespace Forge.Play
             if (attributes != null)
                 _equipmentModifiers = new EquipmentModifiers(equipment, attributes);
             Readiness = new WeaponReadiness(equipment, stage.World, stage.Events);
+            // Weapons in hand, it holds its guard: others keep clear of the shield before it.
+            Readiness.InHandChanged += Body.Guard;
+            Body.Guard(Readiness.InHand);
             Combat = new ActorCombat(equipment, Readiness, stage.World, attributes, stage.Combatants, stage.Events) { Facing = BodyForward };
             if (attributes != null)
                 stage.Combatants.Add(id, attributes, displayName, Combat);
@@ -244,6 +247,7 @@ namespace Forge.Play
             Body.Dispose();
             Burden?.Dispose();
             _equipmentModifiers?.Dispose();
+            Readiness.InHandChanged -= Body.Guard;
             Readiness.Dispose();
         }
 

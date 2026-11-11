@@ -13,9 +13,10 @@ namespace Forge.Play
     /// (<see cref="ClutterKicker"/>). Crouched, the capsule is its crouch height, its feet where they were, and it stands
     /// back up only when the room above it is clear (<see cref="ICrouchingBody"/>). Its own scene object, on the
     /// <see cref="ActorLayer"/>, which looks into the scene leave out unless they ask for actors (<see cref="SceneLayers"/>:
-    /// a blow, an arrow), tagged with whose it is (<see cref="ActorLink"/>). Lying (<see cref="Lie"/>: fallen), the capsule
-    /// is switched off where the feet are, so nothing bumps into it and no blow finds it, until it stands again.
-    /// Positions are the feet, in scene coordinates.
+    /// a blow, an arrow), tagged with whose it is (<see cref="ActorLink"/>). Guarding (<see cref="Guard"/>: its weapons in
+    /// hand) the capsule is its shape's guard wide, so two fighters' guards meet rather than sink into each other. Lying
+    /// (<see cref="Lie"/>: fallen), the capsule is switched off where the feet are, so nothing bumps into it and no blow
+    /// finds it, until it stands again. Positions are the feet, in scene coordinates.
     /// </summary>
     public sealed class ActorBody : IMotor, ICrouchingBody, IDisposable
     {
@@ -24,6 +25,8 @@ namespace Forge.Play
         readonly ClutterKicker _kicker;
         readonly float _standingHeight;
         readonly float _crouchedHeight;
+        readonly float _radius;
+        readonly float _guardRadius;
 
         /// <param name="name">Its scene object's name ("Player", the character's).</param>
         /// <param name="actor">Whose body it is, for whatever meets it.</param>
@@ -34,6 +37,8 @@ namespace Forge.Play
             _controller = _body.AddComponent<CharacterController>();
             _standingHeight = shape.Height;
             _crouchedHeight = shape.CrouchHeight;
+            _radius = shape.Radius;
+            _guardRadius = shape.GuardRadius;
             _controller.radius = shape.Radius;
             Stand(_standingHeight);
             _controller.stepOffset = shape.StepHeight;
@@ -75,6 +80,20 @@ namespace Forge.Play
             _controller.enabled = false;
             _body.transform.position = feet.ToUnity();
             _controller.enabled = !Lying;
+        }
+
+        /// <summary>Whether it holds its guard (its weapons in hand): as wide as its shape's guard.</summary>
+        public bool Guarding { get; private set; }
+
+        /// <summary>
+        /// Holds its guard (<paramref name="up"/>: its weapons in hand), the capsule as wide as its shape's guard
+        /// (<see cref="BodyShape.GuardRadius"/>), so others keep clear of the shield before it; or lowers it, as wide as
+        /// itself again.
+        /// </summary>
+        public void Guard(bool up)
+        {
+            Guarding = up;
+            _controller.radius = up ? _guardRadius : _radius;
         }
 
         /// <summary>Whether it lies (fallen): no obstacle to anyone, and struck by nothing, until it stands again.</summary>

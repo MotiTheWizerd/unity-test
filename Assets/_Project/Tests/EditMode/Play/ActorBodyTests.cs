@@ -8,7 +8,7 @@ namespace Forge.Tests.Play
 {
     public class ActorBodyTests
     {
-        static readonly BodyShape Shape = new BodyShape(height: 1.8f, radius: 0.3f, crouchHeight: 1f, stepHeight: 0.4f, slopeLimit: 50f);
+        static readonly BodyShape Shape = new BodyShape(height: 1.8f, radius: 0.3f, crouchHeight: 1f, stepHeight: 0.4f, slopeLimit: 50f, guardRadius: 0.45f);
         static readonly ActorId Someone = new ActorId("someone");
 
         ActorBody _body;
@@ -27,6 +27,25 @@ namespace Forge.Tests.Play
             Assert.That(_body.Body.GetComponent<ActorLink>().Actor, Is.EqualTo(Someone));
             Assert.That(_body.Lying, Is.False);
             Assert.That(_body.Collider.enabled, Is.True);
+        }
+
+        [Test]
+        public void Guarding_ItIsAsWideAsItsGuard_ThenAsItselfAgain()
+        {
+            var capsule = (CharacterController)_body.Collider;
+            Assert.That(_body.Guarding, Is.False);
+            Assert.That(capsule.radius, Is.EqualTo(0.3f).Within(1e-5f));
+
+            _body.Guard(true);
+            Assert.That(_body.Guarding, Is.True);
+            Assert.That(capsule.radius, Is.EqualTo(0.45f).Within(1e-5f), "Others keep clear of the shield before it.");
+
+            _body.Crouch(true);
+            Assert.That(capsule.radius, Is.EqualTo(0.45f).Within(1e-5f), "Crouched, it guards as wide.");
+            Assert.That(capsule.height, Is.EqualTo(1f).Within(1e-5f));
+
+            _body.Guard(false);
+            Assert.That(capsule.radius, Is.EqualTo(0.3f).Within(1e-5f));
         }
 
         [Test]
