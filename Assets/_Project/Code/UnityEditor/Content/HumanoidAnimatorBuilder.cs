@@ -17,12 +17,12 @@ namespace Forge.UnityEditor.Content
     /// <list type="bullet">
     /// <item>Ground: the ground moves blended by speed. Each clip sits at the speed it walks (its root motion), so the feet
     /// keep pace; past the fastest clip it plays faster (<see cref="HumanoidAnimation.Pace"/>).</item>
-    /// <item>Air: a jump when the body leaves the ground going up, a fall when it drops, a landing when it touches down.
-    /// Each is optional; without it the body goes straight on to the next.</item>
+    /// <item>Air: a jump when the body leaves the ground going up (the drawn jump while drawn, when there is one), a fall
+    /// when it drops, a landing when it touches down. Each is optional; without it the body goes straight on to the next.</item>
     /// <item>Drawn: the drawn ground moves while weapons are out, and a ground state per combat style's stance
     /// ({Style}Idle: the same moves standing in it), picked by <see cref="HumanoidAnimation.Stance"/>.</item>
-    /// <item>Crouched: the crouched ground moves while <see cref="HumanoidAnimation.Crouched"/>, whatever is drawn, gone
-    /// down into and stood up from by CrouchDown and StandUp when standing still.</item>
+    /// <item>Crouched: the crouched ground moves while <see cref="HumanoidAnimation.Crouched"/> (their drawn versions while
+    /// drawn, when there are any), gone down into and stood up from by CrouchDown and StandUp when standing still.</item>
     /// <item>Actions: draws, sheathes and blows on masked layers, each started by a trigger of its name.</item>
     /// </list>
     /// A set is a whole controller rather than an override of the base's, because its clips walk at their own speeds and
@@ -106,7 +106,7 @@ namespace Forge.UnityEditor.Content
             BuildDrawn(set, controller, machine, moving, grounds);
             if (crouches)
                 BuildCrouch(set, controller, machine, moving, grounds);
-            BuildAir(set, machine, moving, grounds);
+            BuildAir(set, controller, machine, moving, grounds);
             BuildActions(set, controller);
             EditorUtility.SetDirty(controller);
             return controller;
@@ -214,6 +214,35 @@ namespace Forge.UnityEditor.Content
                 When(crouched, moving, CrouchOff());
 
             grounds.Add(crouched);
+            BuildDrawnCrouch(set, controller, machine, moving, crouched, up, grounds);
+        }
+
+        // Crouched with weapons drawn: the drawn crouched moves (Drawn{Crouch Move}), each falling back to its plain
+        // crouched one, when the set has any of them and drawn moves to tell it by. Entered from the plain crouch while
+        // drawn and left back to it when not, as the drawn ground is from the plain one; standing up leaves it as the
+        // plain crouch is left.
+        static void BuildDrawnCrouch(string set, AnimatorController controller, AnimatorStateMachine machine, AnimatorState moving,
+            AnimatorState crouched, AnimatorState up, List<AnimatorState> grounds)
+        {
+            if (!HasParameter(controller, HumanoidAnimation.Drawn) || !HumanoidMoves.DrawnCrouchedGround.Any(move => Clip(set, move) != null))
+                return;
+
+            var moves = HumanoidMoves.Ground.Select((move, i) =>
+                    (move, clip: Clip(set, HumanoidMoves.DrawnCrouchedGround[i]) ?? Clip(set, HumanoidMoves.CrouchedGround[i])))
+                .Where(m => m.clip != null);
+            const string name = "Drawn Crouch Ground";
+            var drawn = GroundState(machine, name, GroundTree(controller, name, moves, out _));
+            When(crouched, drawn, new AnimatorCondition { mode = AnimatorConditionMode.If, parameter = HumanoidAnimation.Drawn });
+            When(drawn, crouched, new AnimatorCondition { mode = AnimatorConditionMode.IfNot, parameter = HumanoidAnimation.Drawn });
+            if (up != null)
+            {
+                When(drawn, up, CrouchOff(), Still());
+                When(drawn, moving, CrouchOff(), Moving());
+            }
+            else
+                When(drawn, moving, CrouchOff());
+
+            grounds.Add(drawn);
         }
 
         static bool HasParameter(AnimatorController controller, string name) => controller.parameters.Any(p => p.name == name);
@@ -355,21 +384,31 @@ namespace Forge.UnityEditor.Content
         }
 
         // From any ground state into the air; back down onto the plain ground, which goes on to the drawn one if drawn.
-        static void BuildAir(string set, AnimatorStateMachine machine, AnimatorState moving, IReadOnlyList<AnimatorState> grounds)
+        // Drawn, the jump is the drawn jump when the set has one (and drawn moves to tell it by); the fall and the
+        // landing are the same either way.
+        static void BuildAir(string set, AnimatorController controller, AnimatorStateMachine machine, AnimatorState moving,
+            IReadOnlyList<AnimatorState> grounds)
         {
             var jump = State(set, machine, HumanoidMoves.Jump);
+            var drawnJump = HasParameter(controller, HumanoidAnimation.Drawn) ? State(set, machine, HumanoidMoves.DrawnJump) : null;
             var fall = State(set, machine, HumanoidMoves.Fall);
             var land = State(set, machine, HumanoidMoves.Land);
             // Touching down goes through the landing when there is one.
             var touchDown = land ?? moving;
 
-            if (jump != null)
+            foreach (var (takeOff, whenDrawn) in new[] { (jump, false), (drawnJump, true) })
             {
+                if (takeOff == null)
+                    continue;
+                // Told apart by Drawn only when both are there: either alone jumps whatever is drawn.
+                var takesOff = new List<AnimatorCondition> { Airborne(), Rising() };
+                if (jump != null && drawnJump != null)
+                    takesOff.Add(new AnimatorCondition { mode = whenDrawn ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot, parameter = HumanoidAnimation.Drawn });
                 foreach (var ground in grounds)
-                    When(ground, jump, Airborne(), Rising());
+                    When(ground, takeOff, takesOff.ToArray());
                 if (fall != null)
-                    AtEnd(jump, fall);
-                When(jump, touchDown, OnGround());
+                    AtEnd(takeOff, fall);
+                When(takeOff, touchDown, OnGround());
             }
 
             if (fall != null)

@@ -12,7 +12,8 @@ namespace Forge.UnityEditor.Content
     /// hangs its hands palms-in or thumbs-up and splays its feet. Mecanim reads every pose relative to the T-pose, so a
     /// hand turned 60° there holds a sword 60° wrong in every clip, and two characters turned differently hold it
     /// differently. Here each hand is turned so its fingers run on along the arm and its palm faces down (the hand as
-    /// <see cref="GripFrame"/> reads it), and each foot so its toes point forward; fingers and toes ride along. Done to
+    /// <see cref="GripFrame"/> reads it), its roll from how it was made shared with the forearm so the wrist isn't wrung,
+    /// and each foot so its toes point forward; fingers and toes ride along. Done to
     /// the characters and to the clips' reference rig alike (<see cref="CharacterBuilder"/>), so all read one T-pose.
     /// The turns (<see cref="HandTurn"/>, <see cref="FootTurn"/>) are pure math over positions, so testable.
     /// </summary>
@@ -49,6 +50,9 @@ namespace Forge.UnityEditor.Content
                     var turn = HandTurn(pose.Position(hand), pose.Position(knuckle), pose.Position(thumb), right);
                     if (pose.Turn(hand, turn, Tolerance))
                         moved.Add($"{side.ToLowerInvariant()} hand {Quaternion.Angle(Quaternion.identity, turn):F0}°");
+                    if (human.TryGetValue(side + "UpperArm", out var upper) && human.TryGetValue(side + "LowerArm", out var lower) &&
+                        pose.Has(upper) && pose.Has(lower) && ShareRoll(pose, model.transform, upper, lower, hand, out var shared))
+                        moved.Add($"{side.ToLowerInvariant()} forearm rolls {shared:F0}°");
                 }
 
                 if (human.TryGetValue(side + "Foot", out var foot) && human.TryGetValue(side + "Toes", out var toes) && pose.Has(foot) && pose.Has(toes))
@@ -79,6 +83,45 @@ namespace Forge.UnityEditor.Content
             var has = Quaternion.LookRotation(grip.rotation * Vector3.forward, (knuckle - hand).normalized);
             var wants = Quaternion.LookRotation(Vector3.down, right ? Vector3.right : Vector3.left);
             return wants * Quaternion.Inverse(has);
+        }
+
+        // The hand's roll against the model as it was made (how it was skinned), shared between the wrist and the elbow
+        // as an arm rolls (HandAim.ForearmShare): truing turns the hand alone, and a mesh without twist bones shows a roll
+        // where it is put, so a hand turned 75° from thumbs-up to palm-down wrings its wrist 75° in every clip. The
+        // forearm takes its share about its length and the hand turns back by as much, so the hand ends where it was
+        // trued. From the made model each time, so a second run moves nothing. True when the forearm turned.
+        static bool ShareRoll(SkeletonPose pose, Transform model, string upper, string lower, string hand, out float shared)
+        {
+            shared = 0f;
+            var made = model.GetComponentsInChildren<Transform>(true).ToLookup(t => t.name);
+            var madeUpper = made[upper].FirstOrDefault();
+            var madeLower = made[lower].FirstOrDefault();
+            var madeHand = made[hand].FirstOrDefault();
+            if (madeUpper == null || madeLower == null || madeHand == null)
+                return false;
+
+            var along = pose.Position(hand) - pose.Position(lower);
+            var elbow = Roll(Quaternion.Inverse(pose.Rotation(upper)) * pose.Rotation(lower),
+                Quaternion.Inverse(madeUpper.rotation) * madeLower.rotation, Quaternion.Inverse(pose.Rotation(upper)) * along);
+            var wrist = Roll(Quaternion.Inverse(pose.Rotation(lower)) * pose.Rotation(hand),
+                Quaternion.Inverse(madeLower.rotation) * madeHand.rotation, Quaternion.Inverse(pose.Rotation(lower)) * along);
+            shared = Mathf.DeltaAngle(0f, HandAim.ForearmShare * (elbow + wrist) - elbow);
+            var roll = Quaternion.AngleAxis(shared, along);
+            if (!pose.Turn(lower, roll, Tolerance))
+                return false;
+            pose.Turn(hand, Quaternion.Inverse(roll), 0f);
+            return true;
+        }
+
+        /// <summary>
+        /// Degrees <paramref name="now"/> rolls past <paramref name="made"/> (a bone's turn against its parent, now and as
+        /// made) about <paramref name="axis"/> (in the parent's frame), signed by the axis: −180 to 180.
+        /// </summary>
+        public static float Roll(Quaternion now, Quaternion made, Vector3 axis)
+        {
+            var twist = HandAim.TwistAbout(now * Quaternion.Inverse(made), axis);
+            var along = Vector3.Dot(new Vector3(twist.x, twist.y, twist.z), axis.normalized);
+            return Mathf.DeltaAngle(0f, 2f * Mathf.Atan2(along, twist.w) * Mathf.Rad2Deg);
         }
 
         /// <summary>The turn about the up axis that points the toes of a foot at <paramref name="foot"/>, toes at <paramref name="toes"/>, forward.</summary>

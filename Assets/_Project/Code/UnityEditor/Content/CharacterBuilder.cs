@@ -45,6 +45,8 @@ namespace Forge.UnityEditor.Content
                 var name = Path.GetFileName(folder);
                 if (HumanoidTPose.Straighten($"{folder}/{name}.fbx", out trued))
                     Debug.Log($"[Forge] {name}: T-pose trued ({trued}).");
+                if (HumanoidTwist.Apply($"{folder}/{name}.fbx"))
+                    Debug.Log($"[Forge] {name}: the forearm takes its whole roll.");
                 var settings = SettingsOf(folder, name);
                 var prefab = BuildCharacter(folder, name, MoveSetOf(name, settings, moveSets), settings.textureSize > 0 ? settings.textureSize : TextureSize,
                     settings.voice);

@@ -12,6 +12,17 @@ namespace Forge.Tests.Content
         static readonly Vector3 Thumb = Hand + new Vector3(0.03f, 0f, 0.04f);
 
         [Test]
+        public void Roll_IsTheTurnAboutTheAxisPastHowItWasMade_Signed()
+        {
+            var made = Quaternion.Euler(10f, 20f, 0f);
+
+            Assert.That(HumanoidTPose.Roll(Quaternion.AngleAxis(75f, Vector3.right) * made, made, Vector3.right), Is.EqualTo(75f).Within(0.1f));
+            Assert.That(HumanoidTPose.Roll(Quaternion.AngleAxis(-40f, Vector3.right) * made, made, Vector3.right), Is.EqualTo(-40f).Within(0.1f));
+            Assert.That(HumanoidTPose.Roll(Quaternion.AngleAxis(30f, Vector3.up) * made, made, Vector3.right), Is.EqualTo(0f).Within(0.1f),
+                "A bend across the axis is no roll about it");
+        }
+
+        [Test]
         public void AHandAlreadyInTheTPose_IsLeftAlone()
         {
             var turn = HumanoidTPose.HandTurn(Hand, Knuckle, Thumb, right: true);

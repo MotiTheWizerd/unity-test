@@ -50,6 +50,25 @@ namespace Forge.Tests.Content
         }
 
         [Test]
+        public void TheDrawnCrouchedMoves_AreGroundMoves_NamedDrawnCrouch()
+        {
+            Assert.That(HumanoidMoves.DrawnCrouchedGround[0], Is.EqualTo("DrawnCrouchIdle"));
+            Assert.That(HumanoidMoves.RoleOf("Locomotion/DrawnCrouchIdle.fbx"), Is.EqualTo(MoveRole.Ground));
+            Assert.That(HumanoidMoves.Loops(MoveRole.Ground, "DrawnCrouchIdle"), Is.True);
+            Assert.That(HumanoidMoves.Misplaced("DrawnCrouchIdle", MoveRole.Air), Is.EqualTo(HumanoidMoves.LocomotionFolder));
+        }
+
+        [Test]
+        public void TheDrawnJump_IsAnAirMove_ThatLiftsAndPlaysOnce()
+        {
+            Assert.That(HumanoidMoves.DrawnJump, Is.EqualTo("DrawnJump"));
+            Assert.That(HumanoidMoves.RoleOf("Air/DrawnJump.fbx"), Is.EqualTo(MoveRole.Air));
+            Assert.That(HumanoidMoves.Lifts(MoveRole.Air, HumanoidMoves.DrawnJump), Is.True);
+            Assert.That(HumanoidMoves.Loops(MoveRole.Air, HumanoidMoves.DrawnJump), Is.False);
+            Assert.That(HumanoidMoves.Misplaced(HumanoidMoves.DrawnJump, MoveRole.Ground), Is.EqualTo(HumanoidMoves.AirFolder));
+        }
+
+        [Test]
         public void AKnownGroundOrAirMove_OutOfItsFolder_IsSaidToBelongThere()
         {
             Assert.That(HumanoidMoves.Misplaced("Run", MoveRole.UpperBodyAction), Is.EqualTo(HumanoidMoves.LocomotionFolder));

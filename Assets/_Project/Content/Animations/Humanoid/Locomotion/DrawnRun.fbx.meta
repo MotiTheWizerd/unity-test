@@ -36,7 +36,7 @@ ModelImporter:
       takeName: mixamo.com
       internalID: -203655887218126122
       firstFrame: 0
-      lastFrame: 24
+      lastFrame: 21
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
@@ -778,12 +778,12 @@ ModelImporter:
     - name: mixamorig:RightForeArm
       parentName: mixamorig:RightArm
       position: {x: 6.349005e-11, y: 0.25766268, z: -8.993163e-10}
-      rotation: {x: 0.028990008, y: 0.0072042327, z: -0.037180793, w: -0.99886197}
+      rotation: {x: 0.023751762, y: 0.14085469, z: -0.040726952, w: -0.98890716}
       scale: {x: 1.0000002, y: 1.0000001, z: 1.0000002}
     - name: mixamorig:RightHand
       parentName: mixamorig:RightForeArm
       position: {x: -0.0000000013666359, y: 0.2295609, z: -0.000000008162683}
-      rotation: {x: 0.02925349, y: -0.2641755, z: -0.076201156, w: 0.9610147}
+      rotation: {x: 0.018789308, y: -0.13314901, z: -0.079431355, w: 0.9877297}
       scale: {x: 1, y: 1.0000002, z: 1}
     - name: mixamorig:RightHandMiddle1
       parentName: mixamorig:RightHand
@@ -913,12 +913,12 @@ ModelImporter:
     - name: mixamorig:LeftForeArm
       parentName: mixamorig:LeftArm
       position: {x: 9.172679e-11, y: 0.25757885, z: 0.0000000059828484}
-      rotation: {x: -0.029771786, y: 0.008150327, z: -0.036087602, w: 0.99887186}
+      rotation: {x: -0.024208518, y: 0.1532942, z: -0.040032778, w: 0.98707277}
       scale: {x: 1, y: 1.0000004, z: 1}
     - name: mixamorig:LeftHand
       parentName: mixamorig:LeftForeArm
       position: {x: 0.0000000036641268, y: 0.22965385, z: -0.000000006180814}
-      rotation: {x: 0.035881013, y: 0.3091167, z: 0.08237329, w: 0.94677067}
+      rotation: {x: 0.023523115, y: 0.16817679, z: 0.086714886, w: 0.98165447}
       scale: {x: 1.0000002, y: 1.0000004, z: 1}
     - name: mixamorig:LeftHandThumb1
       parentName: mixamorig:LeftHand

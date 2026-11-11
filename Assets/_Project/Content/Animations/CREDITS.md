@@ -6,8 +6,9 @@ folder that says what it is:
 ```
 Humanoid/
   Locomotion/        Idle Walk Run Sprint, and with weapons drawn DrawnIdle DrawnWalk DrawnRun DrawnSprint,
-                     crouched CrouchIdle CrouchWalk CrouchRun CrouchSprint, and CrouchDown StandUp between
-  Air/               Jump Fall Land
+                     crouched CrouchIdle CrouchWalk CrouchRun CrouchSprint, crouched with weapons drawn
+                     DrawnCrouchIdle DrawnCrouchWalk ..., and CrouchDown StandUp between
+  Air/               Jump Fall Land, and with weapons drawn DrawnJump
   Styles/<Style>/    a combat style's moves: its stance <Style>Idle, its draw and sheathe (on the arms), its blows
   <Other>/           more actions (Interact, Emotes, ...)
   <Move>.json        beside a clip, optional: how the move holds ({ "rightHand": { "points": [0, 0, 1] } }: what the
@@ -32,7 +33,8 @@ with `_` is not a set.
 | Jump | Mixamo "Running Jump" | Adobe Mixamo |
 | Draw | Mixamo "Withdrawing Sword" | Adobe Mixamo |
 | Sheathe | Mixamo "Sheathing Sword" | Adobe Mixamo |
-| DrawnRun | Mixamo "Run With Sword" | Adobe Mixamo |
+| DrawnRun | Mixamo "Sword And Shield Run" | Adobe Mixamo |
+| DrawnJump | Mixamo "Sword And Shield Jump" | Adobe Mixamo |
 | DrawnIdle | Mixamo "Sword And Shield Idle" | Adobe Mixamo |
 | SwordSlash | Mixamo "Sword And Shield Slash" | Adobe Mixamo |
 | BowDraw | Mixamo "Standing Equip Bow" | Adobe Mixamo |
@@ -44,6 +46,7 @@ with `_` is not a set.
 | ShieldImpact | Mixamo "Sword And Shield Impact" | Adobe Mixamo |
 | CrouchIdle | Mixamo "Crouching Idle" | Adobe Mixamo |
 | CrouchWalk | Mixamo "Crouched Walking" | Adobe Mixamo |
+| DrawnCrouchIdle | Mixamo "Sword And Shield Crouch Idle" | Adobe Mixamo |
 | CrouchDown | Mixamo "Standing To Crouch" | Adobe Mixamo |
 | StandUp | Mixamo "Crouched To Standing" | Adobe Mixamo |
 | _Reference/TPose | VikingM1 as Mixamo rigged it, downloaded in Mixamo's T-pose with skin (the skeleton the clips are read against, not a move) | Moti and studio-raven's VikingM1, rigged and posed by Adobe Mixamo |

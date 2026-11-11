@@ -8,7 +8,7 @@ namespace Forge.UnityEditor.Content
         /// <summary>Walked on the ground, blended by speed (Locomotion/: Idle, Run, DrawnRun).</summary>
         Ground,
 
-        /// <summary>Played in the air (Air/: Jump, Fall, Land).</summary>
+        /// <summary>Played in the air (Air/: Jump, Fall, Land, DrawnJump).</summary>
         Air,
 
         /// <summary>A combat style's drawn idle, its drawn ground moves standing in it (Styles/Archery/BowIdle).</summary>
@@ -74,6 +74,9 @@ namespace Forge.UnityEditor.Content
         /// <summary>The ground moves crouched, in the same order; a set crouches when it has the crouched idle, with whichever others it has.</summary>
         public static readonly string[] CrouchedGround = { Crouched(Idle), Crouched(Walk), Crouched(Run), Crouched(Sprint) };
 
+        /// <summary>The crouched ground moves with weapons drawn ("DrawnCrouchIdle"), in the same order; each falls back to its plain crouched move.</summary>
+        public static readonly string[] DrawnCrouchedGround = { Drawn(Crouched(Idle)), Drawn(Crouched(Walk)), Drawn(Crouched(Run)), Drawn(Crouched(Sprint)) };
+
         /// <summary>Getting down into a crouch while standing still, played once (Locomotion/).</summary>
         public const string CrouchDown = "CrouchDown";
 
@@ -83,8 +86,11 @@ namespace Forge.UnityEditor.Content
         /// <summary>The ground moves played once, from one way of standing to another, rather than walked.</summary>
         public static readonly string[] PostureChanges = { CrouchDown, StandUp };
 
+        /// <summary>The jump with weapons drawn (Air/); without it the plain jump plays drawn too. The fall and the landing are shared.</summary>
+        public static readonly string DrawnJump = Drawn(Jump);
+
         /// <summary>The air moves.</summary>
-        public static readonly string[] Air = { Jump, Fall, Land };
+        public static readonly string[] Air = { Jump, Fall, Land, DrawnJump };
 
         /// <summary>A ground move's drawn version ("DrawnRun").</summary>
         public static string Drawn(string move) => "Drawn" + move;
@@ -128,7 +134,7 @@ namespace Forge.UnityEditor.Content
         /// Whether a move of <paramref name="role"/> named <paramref name="move"/> lifts the body off the ground (a jump).
         /// The body's own rise already does that, so the clip's rise is left out of its pose; other moves keep theirs.
         /// </summary>
-        public static bool Lifts(MoveRole role, string move) => role == MoveRole.Air && move == Jump;
+        public static bool Lifts(MoveRole role, string move) => role == MoveRole.Air && (move == Jump || move == DrawnJump);
 
         /// <summary>
         /// Where a move named <paramref name="move"/> of <paramref name="role"/> ought to be, when the builder only looks
@@ -137,7 +143,8 @@ namespace Forge.UnityEditor.Content
         public static string Misplaced(string move, MoveRole role)
         {
             if (role != MoveRole.Ground && (Array.IndexOf(Ground, move) >= 0 || Array.IndexOf(DrawnGround, move) >= 0 ||
-                    Array.IndexOf(CrouchedGround, move) >= 0 || Array.IndexOf(PostureChanges, move) >= 0))
+                    Array.IndexOf(CrouchedGround, move) >= 0 || Array.IndexOf(DrawnCrouchedGround, move) >= 0 ||
+                    Array.IndexOf(PostureChanges, move) >= 0))
                 return LocomotionFolder;
             if (role != MoveRole.Air && Array.IndexOf(Air, move) >= 0)
                 return AirFolder;

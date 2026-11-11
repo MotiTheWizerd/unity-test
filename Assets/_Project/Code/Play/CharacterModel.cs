@@ -576,7 +576,17 @@ namespace Forge.Play
             if (!TryPoint(id, out var point))
                 return;
             var hand = _humanoid.GetBoneTransform(id);
-            hand.rotation = HandAim.Turn(point.up, Root.transform.TransformDirection(aim)) * hand.rotation;
+            var turn = HandAim.Turn(point.up, Root.transform.TransformDirection(aim));
+            // The forearm rolls its share about its length (the wrist stays put); the hand turns the rest.
+            var forearm = _humanoid.GetBoneTransform(right ? HumanBodyBones.RightLowerArm : HumanBodyBones.LeftLowerArm);
+            if (forearm != null)
+            {
+                var share = HandAim.ForearmPart(turn, hand.position - forearm.position);
+                forearm.rotation = share * forearm.rotation;
+                turn *= Quaternion.Inverse(share);
+            }
+
+            hand.rotation = turn * hand.rotation;
         }
 
         // Seconds a hand's aim takes to come all the way in or out.
