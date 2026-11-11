@@ -24,18 +24,20 @@ namespace Forge.UnityEditor.Content
         const string ProfilePath = "Assets/_Project/Settings/Player/PlayerProfile.asset";
         const string CatalogPath = "Assets/_Project/Content/PrefabCatalog.asset";
         const string DefaultMove = HumanoidAnimation.DrawnIdleMove;
-        const string DefaultHeld = "models/viking_sword";
         static readonly string[] Hands = { "RightHand", "LeftHand" };
+        // What each hand holds by default: the player's starting sword and shield.
+        static readonly string[] DefaultHeld = { "models/viking_sword", "models/round_shield_painted" };
 
         int _look;
         int _move = -1;
         int _hand;
-        string _heldKey = DefaultHeld;
+        readonly string[] _heldKeys = (string[])DefaultHeld.Clone();
 
         GameObject _stage;
         CharacterModel _character;
-        GameObject _held;
-        Quaternion _heldAsPlaced;
+        // Per hand (Hands' order): the thing it holds, and its turn as the hand carries it.
+        readonly GameObject[] _held = new GameObject[Hands.Length];
+        readonly Quaternion[] _heldAsPlaced = new Quaternion[Hands.Length];
         float _leanForward;
         float _leanRight;
         AnimationClip _clip;
@@ -73,9 +75,15 @@ namespace Forge.UnityEditor.Content
                 _move = Math.Max(0, Array.FindIndex(moves, m => m.name == DefaultMove));
             _move = Mathf.Clamp(_move, 0, Math.Max(0, moves.Length - 1));
             _move = EditorGUILayout.Popup("Move", _move, moves.Select(m => m.name).ToArray());
-            _hand = EditorGUILayout.Popup("Hand", _hand, new[] { "Right hand", "Left hand" });
-            _heldKey = EditorGUILayout.TextField("Holds (asset key)", _heldKey);
+            _heldKeys[0] = EditorGUILayout.TextField("Right hand holds", _heldKeys[0]);
+            _heldKeys[1] = EditorGUILayout.TextField("Left hand holds", _heldKeys[1]);
             var changed = EditorGUI.EndChangeCheck();
+
+            // Which hand's thing the sliders lean and Save writes; switching puts both back as the move holds them.
+            EditorGUI.BeginChangeCheck();
+            _hand = EditorGUILayout.Popup("Tune", _hand, new[] { "Right hand", "Left hand" });
+            if (EditorGUI.EndChangeCheck() && _stage != null)
+                Pose();
 
             EditorGUILayout.Space();
             if (_stage == null)
@@ -93,9 +101,9 @@ namespace Forge.UnityEditor.Content
 
             var jsonPath = _clip != null ? MoveSettings.PathFor(AssetDatabase.GetAssetPath(_clip)) : null;
             // Where the held thing itself points (its own grip's +Y), which the sliders and the gizmo turn; the hand's point stays.
-            if (_held == null || !_character.TryGetHeld(Hands[_hand], out _, out var grip))
+            if (_held[_hand] == null || !_character.TryGetHeld(Hands[_hand], out _, out var grip))
             {
-                EditorGUILayout.HelpBox($"Nothing in the {Hands[_hand]}: no prefab '{_heldKey}' in {CatalogPath}, or the character lacks the hand.", MessageType.Warning);
+                EditorGUILayout.HelpBox($"Nothing in the {Hands[_hand]}: no prefab '{_heldKeys[_hand]}' in {CatalogPath}, or the character lacks the hand.", MessageType.Warning);
             }
             else
             {
@@ -110,7 +118,7 @@ namespace Forge.UnityEditor.Content
                 EditorGUILayout.LabelField("Writes to", jsonPath ?? "(no clip)");
                 if (GUILayout.Button("Select it in the Scene view"))
                 {
-                    Selection.activeGameObject = _held;
+                    Selection.activeGameObject = _held[_hand];
                     Tools.current = Tool.Rotate;
                     SceneView.lastActiveSceneView?.Frame(new Bounds(grip.position, Vector3.one * 1.2f), false);
                 }
@@ -138,7 +146,7 @@ namespace Forge.UnityEditor.Content
             return controller != null ? controller.animationClips.OrderBy(c => c.name, StringComparer.Ordinal).ToArray() : Array.Empty<AnimationClip>();
         }
 
-        // The character on a stage at the Scene view's pivot, posed in the move, the thing in its hand.
+        // The character on a stage at the Scene view's pivot, posed in the move, a thing in each hand.
         void Stand(GameObject look, AnimationClip clip)
         {
             Clear();
@@ -160,14 +168,16 @@ namespace Forge.UnityEditor.Content
 
             Pose();
             var catalog = AssetDatabase.LoadAssetAtPath<PrefabCatalog>(CatalogPath);
-            if (catalog != null && catalog.TryGet(_heldKey, out var prefab))
+            for (var hand = 0; hand < Hands.Length; hand++)
             {
-                _held = Object.Instantiate(prefab);
-                _held.name = prefab.name;
-                if (!_character.Attach(_held, ModelGrip.Of(_held), Hands[_hand], false, _held.GetComponent<HeldLook>()))
-                    _held = null;
-                else
-                    _heldAsPlaced = _held.transform.localRotation;
+                if (catalog == null || string.IsNullOrWhiteSpace(_heldKeys[hand]) || !catalog.TryGet(_heldKeys[hand], out var prefab))
+                    continue;
+                var held = Object.Instantiate(prefab);
+                held.name = prefab.name;
+                if (!_character.Attach(held, ModelGrip.Of(held), Hands[hand], false, held.GetComponent<HeldLook>()))
+                    continue;
+                _held[hand] = held;
+                _heldAsPlaced[hand] = held.transform.localRotation;
             }
 
             Pose();
@@ -193,8 +203,12 @@ namespace Forge.UnityEditor.Content
                 _character.AimHand(false, new Vector3(curves[3].Value, curves[4].Value, curves[5].Value));
             }
 
-            if (_held != null)
-                _held.transform.localRotation = _heldAsPlaced;
+            for (var hand = 0; hand < Hands.Length; hand++)
+            {
+                if (_held[hand] != null)
+                    _held[hand].transform.localRotation = _heldAsPlaced[hand];
+            }
+
             _leanForward = _leanRight = 0f;
             SceneView.RepaintAll();
         }
@@ -203,11 +217,12 @@ namespace Forge.UnityEditor.Content
         // right about its forward axis (degrees), as a thing held upright leans.
         void Lean()
         {
-            if (_held == null)
+            var held = _held[_hand];
+            if (held == null)
                 return;
             var body = _character.Root.transform.rotation;
-            var placed = _held.transform.parent.rotation * _heldAsPlaced;
-            _held.transform.rotation = body * Quaternion.Euler(_leanForward, 0f, -_leanRight) * Quaternion.Inverse(body) * placed;
+            var placed = held.transform.parent.rotation * _heldAsPlaced[_hand];
+            held.transform.rotation = body * Quaternion.Euler(_leanForward, 0f, -_leanRight) * Quaternion.Inverse(body) * placed;
             SceneView.RepaintAll();
         }
 
@@ -231,7 +246,7 @@ namespace Forge.UnityEditor.Content
                 _graph.Destroy();
             _character?.Dispose();
             _character = null;
-            _held = null;
+            Array.Clear(_held, 0, _held.Length);
             _clip = null;
             if (_stage != null)
                 DestroyImmediate(_stage);
