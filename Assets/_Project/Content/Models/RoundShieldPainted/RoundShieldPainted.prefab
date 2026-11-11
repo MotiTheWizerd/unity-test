@@ -48,6 +48,8 @@ MonoBehaviour:
   _facesHolder: {x: 0, y: 0, z: -1}
   _alongArm: {x: 1, y: 0, z: 0}
   _carried: 1
+  _inHandOffset: {x: -0.06, y: 0.05, z: 0.05}
+  _inHandTurn: {x: -25, y: -6, z: 0}
 --- !u!1001 &408666422007356226
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -378,6 +378,7 @@ namespace Forge.Play
                 Renderers = look.GetComponentsInChildren<Renderer>(true),
                 FacesHolder = how != null ? how.FacesHolder : null,
                 InHandTurn = Quaternion.identity,
+                InHand = how != null ? how.InHand : Pose.identity,
             };
             if (how != null && how.AlongArm.HasValue && how.FacesHolder.HasValue && IsHand(id))
             {
@@ -478,6 +479,7 @@ namespace Forge.Play
         {
             var point = _points[held.Bone];
             var turn = held.InHandTurn;
+            var seat = held.InHand;
             var hand = IsHand(held.Bone);
             held.OnBack = false;
             if ((held.Sheathes && !_inHand) || (!hand && held.Carried == CarriedAt.Back))
@@ -490,12 +492,14 @@ namespace Forge.Play
                     turn = held.Strapped ? HoldFinder.Against(held.FacesHolder.Value, back.InverseTransformDirection(Vector3.up))
                         : held.FacesHolder.HasValue ? HoldFinder.Facing(held.FacesHolder.Value, back.InverseTransformDirection(Vector3.down))
                         : Quaternion.identity;
+                    seat = Pose.identity;
                     held.OnBack = true;
                 }
                 else if (TrySheath(held.Bone, out var sheath))
                 {
                     point = sheath;
                     turn = Quaternion.identity;
+                    seat = Pose.identity;
                 }
             }
 
@@ -507,7 +511,7 @@ namespace Forge.Play
             var boneScale = point.lossyScale.x;
             look.localScale = boneScale > 0f ? held.Size / boneScale : held.Size;
             var gripTurn = Quaternion.Inverse(look.rotation) * held.Grip.rotation;
-            look.rotation = point.rotation * turn * Quaternion.Inverse(gripTurn);
+            look.rotation = point.rotation * turn * seat.rotation * Quaternion.Inverse(gripTurn);
             var scale = held.Grip.lossyScale.z;
             held.Thickness = held.OnBack
                 ? (ExtentOf(held, Quaternion.Inverse(turn) * Vector3.back) + ExtentOf(held, Quaternion.Inverse(turn) * Vector3.forward)) * scale
@@ -518,8 +522,13 @@ namespace Forge.Play
             var hangsBy = held.Grip.position;
             if (held.OnBack && held.Strapped)
                 hangsBy += Vector3.ProjectOnPlane(held.Grip.TransformVector(MiddleOf(held)), point.forward);
-            look.position += point.position + point.forward * standOff - hangsBy;
+            look.position += point.position + point.forward * standOff + SeatOffset(held, point, turn, seat) - hangsBy;
         }
+
+        // How far a held thing's grip sits off the point it is held at, seated as its look says (HeldLook.InHand): its
+        // offset in the grip's frame as the point turns it, at the grip's scale.
+        static Vector3 SeatOffset(Held held, Transform point, Quaternion turn, Pose seat) =>
+            point.rotation * turn * (seat.position * held.Grip.lossyScale.x);
 
         // The middle of what a held thing draws, from its grip, in the grip's own frame: halfway between its farthest
         // reaches each way along each axis.
@@ -591,8 +600,8 @@ namespace Forge.Play
                 held.InHandTurn = HoldFinder.Facing(held.FacesHolder.Value, toward);
                 var look = held.Look.transform;
                 var gripTurn = Quaternion.Inverse(look.rotation) * held.Grip.rotation;
-                look.rotation = point.rotation * held.InHandTurn * Quaternion.Inverse(gripTurn);
-                look.position += point.position - held.Grip.position;
+                look.rotation = point.rotation * held.InHandTurn * held.InHand.rotation * Quaternion.Inverse(gripTurn);
+                look.position += point.position + SeatOffset(held, point, held.InHandTurn, held.InHand) - held.Grip.position;
             }
         }
 
@@ -716,6 +725,9 @@ namespace Forge.Play
             public Vector3? FacesHolder;
             public bool Strapped;
             public Quaternion InHandTurn;
+
+            // How the model sits on the grip in the hand, after that turn (HeldLook.InHand).
+            public Pose InHand;
 
             // Whether it is on the back now, and how thick it lies there (meters).
             public bool OnBack;

@@ -24,7 +24,8 @@ namespace Forge.UnityEditor.Content
     /// front), with its lowest point on the prefab's pivot and its footprint centred on it, as every asset's pivot is. The
     /// model inside keeps its own pivot (a weapon's grip) for whatever holds it later, and, when the json has a
     /// "facesHolder" (<c>[-1, 0, 0]</c>: a bow, whose string must face the archer), an "alongArm" (<c>[1, 0, 0]</c>: a
-    /// shield, strapped to the forearm) or a "carried" (<c>"back"</c>), a <see cref="HeldLook"/> saying so. The prefab is listed in the prefab
+    /// shield, strapped to the forearm), a "carried" (<c>"back"</c>) or an "inHandOffset" / "inHandTurn", a
+    /// <see cref="HeldLook"/> saying so. The prefab is listed in the prefab
     /// catalog under <see cref="ModelImport.KeyFor"/>. Existing assets are updated in place, so their GUIDs, and every
     /// reference to them, survive a rebuild.
     /// </summary>
@@ -72,8 +73,10 @@ namespace Forge.UnityEditor.Content
                 var instance = (GameObject)PrefabUtility.InstantiatePrefab(model, scene);
                 instance.transform.SetParent(root.transform, false);
                 instance.transform.localRotation = Quaternion.Euler(settings.Resting);
-                if (settings.FacesHolder.HasValue || settings.AlongArm.HasValue || settings.Carried != CarriedAt.Hip)
-                    root.AddComponent<HeldLook>().Configure(settings.FacesHolder, settings.Carried, settings.AlongArm);
+                if (settings.FacesHolder.HasValue || settings.AlongArm.HasValue || settings.Carried != CarriedAt.Hip ||
+                    settings.InHandOffset != Vector3.zero || settings.InHandTurn != Vector3.zero)
+                    root.AddComponent<HeldLook>().Configure(settings.FacesHolder, settings.Carried, settings.AlongArm, settings.InHandOffset,
+                        settings.InHandTurn);
 
                 foreach (var renderer in instance.GetComponentsInChildren<Renderer>(true))
                 {
@@ -97,7 +100,9 @@ namespace Forge.UnityEditor.Content
         }
 
         // A model folder's optional {Name}.json: how the model rests in the world ("rest", degrees in Unity order: Z, then
-        // X, then Y); the side of it that faces whoever holds it ("facesHolder", a direction in the model's own frame: a
+        // X, then Y); how it sits on the grip in the hand, as tuned by eye on the Hold Stage ("inHandOffset", meters, and
+        // "inHandTurn", degrees as a Transform's rotation, in the model's own frame: a sword 3 cm deeper in the fist,
+        // [-0.03, 0, 0]); the side of it that faces whoever holds it ("facesHolder", a direction in the model's own frame: a
         // bow's string, [-1, 0, 0]), none when any side may; the way from its grip up the forearm it is strapped to
         // ("alongArm", in the model's own frame: a shield's middle, its back the side facing its holder), none when the
         // hand alone holds it; where it is carried while put away ("carried": "hip", the default, or "back": a bow)
@@ -108,14 +113,16 @@ namespace Forge.UnityEditor.Content
         {
             var path = $"{folder}/{name}.json";
             if (!File.Exists(path))
-                return new Settings(Vector3.zero, null, null, CarriedAt.Hip, false, new string[0], new string[0]);
+                return new Settings(Vector3.zero, Vector3.zero, Vector3.zero, null, null, CarriedAt.Hip, false, new string[0], new string[0]);
 
             var settings = JsonUtility.FromJson<ModelSettings>(File.ReadAllText(path));
             var facesHolder = Triple(path, "facesHolder", settings?.facesHolder);
             var alongArm = Triple(path, "alongArm", settings?.alongArm);
             if (alongArm.HasValue && !facesHolder.HasValue)
                 throw new System.InvalidOperationException($"{path}: \"alongArm\" needs a \"facesHolder\", the side strapped to the hand.");
-            return new Settings(Triple(path, "rest", settings?.rest) ?? Vector3.zero, facesHolder, alongArm,
+            return new Settings(Triple(path, "rest", settings?.rest) ?? Vector3.zero,
+                Triple(path, "inHandOffset", settings?.inHandOffset) ?? Vector3.zero, Triple(path, "inHandTurn", settings?.inHandTurn) ?? Vector3.zero,
+                facesHolder, alongArm,
                 Carried(path, settings?.carried), settings?.cutout ?? false, settings?.cutoutParts ?? new string[0],
                 settings?.transparentParts ?? new string[0]);
         }
@@ -123,6 +130,8 @@ namespace Forge.UnityEditor.Content
         sealed class Settings
         {
             public readonly Vector3 Resting;
+            public readonly Vector3 InHandOffset;
+            public readonly Vector3 InHandTurn;
             public readonly Vector3? FacesHolder;
             public readonly Vector3? AlongArm;
             public readonly CarriedAt Carried;
@@ -130,10 +139,12 @@ namespace Forge.UnityEditor.Content
             readonly string[] _cutoutParts;
             readonly string[] _transparentParts;
 
-            public Settings(Vector3 resting, Vector3? facesHolder, Vector3? alongArm, CarriedAt carried, bool cutout, string[] cutoutParts,
-                string[] transparentParts)
+            public Settings(Vector3 resting, Vector3 inHandOffset, Vector3 inHandTurn, Vector3? facesHolder, Vector3? alongArm,
+                CarriedAt carried, bool cutout, string[] cutoutParts, string[] transparentParts)
             {
                 Resting = resting;
+                InHandOffset = inHandOffset;
+                InHandTurn = inHandTurn;
                 FacesHolder = facesHolder;
                 AlongArm = alongArm;
                 Carried = carried;
@@ -193,6 +204,8 @@ namespace Forge.UnityEditor.Content
         sealed class ModelSettings
         {
             public float[] rest;
+            public float[] inHandOffset;
+            public float[] inHandTurn;
             public float[] facesHolder;
             public float[] alongArm;
             public string carried;

@@ -67,6 +67,21 @@ namespace Forge.Tests.Play
         }
 
         [Test]
+        public void HeldLook_SaysHowItSitsOnTheGripInTheHand()
+        {
+            _look = new GameObject("Shield");
+            var how = _look.AddComponent<HeldLook>();
+
+            Assert.That(how.InHand.position, Is.EqualTo(Vector3.zero), "Unset, it sits on the grip as modelled...");
+            Assert.That(how.InHand.rotation, Is.EqualTo(Quaternion.identity), "...unturned.");
+
+            how.Configure(Vector3.back, CarriedAt.Back, Vector3.right, new Vector3(-0.06f, 0.05f, 0.05f), new Vector3(-25f, -6f, 0f));
+
+            AssertNear(how.InHand.position, new Vector3(-0.06f, 0.05f, 0.05f));
+            Assert.That(Quaternion.Angle(how.InHand.rotation, Quaternion.Euler(-25f, -6f, 0f)), Is.LessThan(0.01f));
+        }
+
+        [Test]
         public void Strapped_InTheLeftHand_LaysTheShieldUpTheArm_ItsBackToTheHand()
         {
             // A shield's face on +Z, its middle on +X from the handle. The left grip's +X runs back up the arm, its +Z
