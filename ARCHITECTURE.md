@@ -679,7 +679,8 @@ from any camera, so both cameras read the same player.
   `Solid` (that, but clutter) for the camera's obstacles, the footsteps' ground and the room to stand; `Targets` (the
   world and the actors) for blows and arrows, which find whose body they met (`GameStage.Identify`) and pass over the
   striker's own. So no look meets its own body, a camera passes through people, and a blow reaches whoever stands in
-  its way.
+  its way. Fallen, a body lies (`Lie`): its capsule is switched off where the feet are, so a corpse is walked over and
+  struck by nothing, until it stands again.
 - `PlayerControls` (Play) read the profile's action map (`Settings/InputSystem_Actions`, map Player: Move, Look, Sprint,
   Jump, ToggleWalk, Crouch, ToggleView, Zoom; WASD and arrows, mouse, Shift, Space, Caps Lock, Left Ctrl, F, the wheel, and the gamepad) into `PlayerCommands` and
   `ViewCommands`; the look is pointer pixels × the profile's sensitivity (0.1° per pixel), and the wheel's binding scales
@@ -887,6 +888,12 @@ from any camera, so both cameras read the same player.
   whose states have no way out, so played through (`HumanoidAnimation.PlayThrough`, `CharacterModel.PlayThrough`) the
   clip stays at its last frame and the layer stays weighed in until `Resume` at 1 lets it fade, and the layer is
   rested unseen; anything else on an **Upper Body** layer (`MoveRole.UpperBodyAction`; `<Set> Upper Body.mask`: also
+  the body and head, so the torso turns into a cut). A move's **variants** are clips named after it with a number
+  from 2 on (`SwordDeath2`, `HumanoidAnimation.Variant`), and `Vary` picks the move or one of them by chance (a
+  death isn't the same every time); the rest of the chain names the one picked. `HumanoidAnimation.Play` finds the layer holding the action and
+  weighs it in for as long as the clip lasts: in as it starts, out by its end.
+  The layer's own states change at once (no crossfade into its empty rest state, which would pull the limbs toward the
+  rig's neutral pose).
   the body and head, so the torso turns into a cut). `HumanoidAnimation.Play` finds the layer holding the action and
   weighs it in for as long as the clip lasts: in as it starts, out by its end.
   The layer's own states change at once (no crossfade into its empty rest state, which would pull the limbs toward the
@@ -1078,10 +1085,11 @@ Plugin) stands the first of `CoreModels.Npcs` 4 m right of the items at the star
 - **Falling** (`PlayedActor.Fall`, which `GameSession` calls on `ActorKilled`): a character whose health ran out stops
   its swings and lies down in its weapon's style's death (`CombatMoveKind.Death`, `ActorCombat.DeathAnimation`: the
   first thing it holds whose style has one, `SwordDeath` with a sword, `BowDeath` with a bow; else the set's own
-  `Death`, none yet), played through on the whole body and stayed at its end. Fallen, its mind has nothing to say,
-  nothing moves it and nothing costs it (no regen), its shots fly on, a new look lies as the old one did, and
-  `FightCauses` has settled its fight; `Rise` would get it up again. Its body still stands in the way (a capsule over
-  a corpse: a rough edge until bodies lie down). The player instead wakes up whole (see the shortcuts).
+  `Death`, none yet; one of the death's variants by chance, `CharacterModel.Vary`: `SwordDeath` or `SwordDeath2`),
+  played through on the whole body and stayed at its end, its body lying with it (`ActorBody.Lie`: no obstacle, struck
+  by nothing). Fallen, its mind has nothing to say, nothing moves it and nothing costs it (no regen), its shots fly on,
+  a new look lies as the old one did, and `FightCauses` has settled its fight; `Rise` would get it up again, body and
+  look. The player instead wakes up whole (see the shortcuts).
 - **Shortcuts, for now:** a character's body takes the player's profile's shape (a race's record will give its own);
   it forgets where it walked, and how hurt it was, when it streams out, and comes back whole where it was placed.
   `PlayerCharacter`,

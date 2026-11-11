@@ -126,9 +126,10 @@ namespace Forge.Play
         public bool Fallen { get; private set; }
 
         /// <summary>
-        /// It falls (its health ran out): its swings stop, it lies down in its weapon's style's death
-        /// (<see cref="ActorCombat.DeathAnimation"/>, else the look's own) and stays so; nothing moves it, nothing costs
-        /// it, and its look stays down, until it rises.
+        /// It falls (its health ran out): its swings stop, its body lies down (<see cref="ActorBody.Lie"/>: no obstacle,
+        /// struck by nothing) and its look dies in its weapon's style's death (<see cref="ActorCombat.DeathAnimation"/>,
+        /// else the look's own; one of the death's variants by chance, <see cref="CharacterModel.Vary"/>) and stays so;
+        /// nothing moves it, nothing costs it, and its look stays down, until it rises.
         /// </summary>
         public void Fall()
         {
@@ -136,16 +137,19 @@ namespace Forge.Play
                 return;
             Fallen = true;
             Combat.Stop();
-            _deathMove = Combat.DeathAnimation ?? HumanoidAnimation.DeathMove;
+            Body.Lie(true);
+            var death = Combat.DeathAnimation ?? HumanoidAnimation.DeathMove;
+            _deathMove = _model != null ? _model.Vary(death) : death;
             _model?.PlayThrough(_deathMove);
         }
 
-        /// <summary>It gets up again (revived): its look rises out of its death, and it is itself again.</summary>
+        /// <summary>It gets up again (revived): its body stands where it lay, its look rises out of its death, and it is itself again.</summary>
         public void Rise()
         {
             if (!Fallen)
                 return;
             Fallen = false;
+            Body.Lie(false);
             if (_deathMove != null)
                 _model?.Resume(_deathMove, 1f);
             _deathMove = null;

@@ -91,6 +91,7 @@ namespace Forge.Play
         static readonly int RestId = Animator.StringToHash(RestState);
 
         readonly Animator _animator;
+        readonly System.Random _dice = new System.Random();
         readonly float _topSpeed;
         readonly bool _crouchedMoves;
         readonly bool _drawnMoves;
@@ -378,6 +379,25 @@ namespace Forge.Play
         {
             if (layer.Pace.HasValue)
                 _animator.SetFloat(layer.Pace.Value, pace);
+        }
+
+        /// <summary>The name of the <paramref name="number"/>th variant of <paramref name="move"/> ("SwordDeath2"), numbered from 2.</summary>
+        public static string Variant(string move, int number) => move + number;
+
+        /// <summary>
+        /// The move <paramref name="move"/> or one of its variants, by chance: the set's clips named after it with a number
+        /// from 2 on (<see cref="Variant"/>: SwordDeath, SwordDeath2, ...), so a death isn't the same one every time; the
+        /// move itself when the set has no variants of it (or not the move).
+        /// </summary>
+        public string Vary(string move)
+        {
+            if (Clip(move) == null)
+                return move;
+            var count = 1;
+            while (Clip(Variant(move, count + 1)) != null)
+                count++;
+            var pick = _dice.Next(count);
+            return pick == 0 ? move : Variant(move, pick + 1);
         }
 
         /// <summary>The clip of <paramref name="move"/> in its controller, or null.</summary>

@@ -211,6 +211,12 @@ namespace Forge.Play
         public bool PlayThrough(string move) => _animation != null && _animation.PlayThrough(move);
 
         /// <summary>
+        /// The move <paramref name="move"/> or one of its variants in this look's set (SwordDeath, SwordDeath2, ...), by
+        /// chance; the move itself without variants, or without animations.
+        /// </summary>
+        public string Vary(string move) => _animation != null ? _animation.Vary(move) : move;
+
+        /// <summary>
         /// How its move <paramref name="move"/> plays, measured from the clip as <paramref name="measure"/> says: a bow's
         /// draw by the string's pull (<see cref="ShotFinder"/>), a block by the shield coming up (<see cref="RaiseFinder"/>),
         /// else by the blade's cut (<see cref="SwingFinder"/>); false when it has none.

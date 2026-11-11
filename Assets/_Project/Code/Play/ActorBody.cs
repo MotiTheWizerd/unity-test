@@ -13,7 +13,9 @@ namespace Forge.Play
     /// (<see cref="ClutterKicker"/>). Crouched, the capsule is its crouch height, its feet where they were, and it stands
     /// back up only when the room above it is clear (<see cref="ICrouchingBody"/>). Its own scene object, on the
     /// <see cref="ActorLayer"/>, which looks into the scene leave out unless they ask for actors (<see cref="SceneLayers"/>:
-    /// a blow, an arrow), tagged with whose it is (<see cref="ActorLink"/>). Positions are the feet, in scene coordinates.
+    /// a blow, an arrow), tagged with whose it is (<see cref="ActorLink"/>). Lying (<see cref="Lie"/>: fallen), the capsule
+    /// is switched off where the feet are, so nothing bumps into it and no blow finds it, until it stands again.
+    /// Positions are the feet, in scene coordinates.
     /// </summary>
     public sealed class ActorBody : IMotor, ICrouchingBody, IDisposable
     {
@@ -56,6 +58,9 @@ namespace Forge.Play
 
         public MotorContact Move(System.Numerics.Vector3 displacement)
         {
+            // Lying, it goes nowhere: the capsule is off (a controller moved while off only complains).
+            if (Lying)
+                return new MotorContact(grounded: true, hitCeiling: false);
             var flags = _controller.Move(displacement.ToUnity());
             _kicker.Kick(_controller.velocity, Time.deltaTime);
             return new MotorContact(
@@ -63,12 +68,26 @@ namespace Forge.Play
                 hitCeiling: (flags & CollisionFlags.Above) != 0);
         }
 
-        // A character controller keeps its own idea of where it is; moved by hand, it must be switched off meanwhile.
+        // A character controller keeps its own idea of where it is; moved by hand, it must be switched off meanwhile
+        // (and stays off while it lies).
         public void Teleport(System.Numerics.Vector3 feet)
         {
             _controller.enabled = false;
             _body.transform.position = feet.ToUnity();
-            _controller.enabled = true;
+            _controller.enabled = !Lying;
+        }
+
+        /// <summary>Whether it lies (fallen): no obstacle to anyone, and struck by nothing, until it stands again.</summary>
+        public bool Lying { get; private set; }
+
+        /// <summary>
+        /// Lies down where it is (<paramref name="lying"/>: the capsule switched off, so a corpse is walked over and a blow
+        /// passes through it), or stands back up (on again, where the feet are).
+        /// </summary>
+        public void Lie(bool lying)
+        {
+            Lying = lying;
+            _controller.enabled = !lying;
         }
 
         public bool Crouched { get; private set; }
