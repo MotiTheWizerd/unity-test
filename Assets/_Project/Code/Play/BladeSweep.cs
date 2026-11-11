@@ -14,8 +14,9 @@ namespace Forge.Play
     /// Finds what an actor's blade passes through while a swing is in its hit window, through the engine's physics: each
     /// frame, lines from where points along the blade were the frame before to where they are now, and the blade itself,
     /// so a fast swing misses nothing between frames, whatever the weapon's length (<see cref="CharacterModel.TryGetBlade"/>).
-    /// Whom each collider belongs to is <paramref name="identify"/>'s to say; the rules decide the rest
-    /// (<see cref="ActorCombat.Strike"/>: once per swing and target, never the swinger), the blow coming from the swinger
+    /// The world's things and the actors' bodies alike are met (<see cref="SceneLayers.Targets"/>); whom each collider
+    /// belongs to is <paramref name="identify"/>'s to say, and the rules decide the rest (<see cref="ActorCombat.Strike"/>:
+    /// once per swing and target, never the swinger, whose own body the blade passes), the blow coming from the swinger
     /// toward where it struck, for the target's guard. A block's swing sweeps nothing. Bound while the look exists.
     /// </summary>
     public sealed class BladeSweep : IDisposable
@@ -74,7 +75,7 @@ namespace Forge.Play
             var length = way.magnitude;
             if (length < 1e-4f)
                 return;
-            var count = Physics.RaycastNonAlloc(from, way / length, _hits, length, SceneLayers.World, QueryTriggerInteraction.Ignore);
+            var count = Physics.RaycastNonAlloc(from, way / length, _hits, length, SceneLayers.Targets, QueryTriggerInteraction.Ignore);
             for (var i = 0; i < count; i++)
             {
                 var target = _identify(_hits[i].collider);

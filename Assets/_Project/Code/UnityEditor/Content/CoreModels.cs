@@ -263,18 +263,18 @@ namespace Forge.UnityEditor.Content
                 yield return new BaseObjectRecord(new RecordId(pluginId, id), name, ModelImport.KeyFor(folder), category,
                     new PlacementRules(randomYaw: false, 1f, 1f, alignToSlope: false));
 
-            // Characters standing in the world, placed as aimed at their own size; they idle in their move set.
+            // Characters standing in the world, placed as aimed at their own size: while the world plays each is the
+            // actor its record says (CoreActorSet), going about on a body of its own.
             foreach (var (folder, id, name) in Npcs)
                 yield return new BaseObjectRecord(new RecordId(pluginId, id), name, CharacterImport.KeyFor(folder), "Characters/NPCs",
-                    new PlacementRules(randomYaw: false, 1f, 1f, alignToSlope: false));
+                    new PlacementRules(randomYaw: false, 1f, 1f, alignToSlope: false), actor: CoreActorSet.Npc(pluginId, id));
         }
 
         /// <summary>
         /// The characters (folders under Content/Characters) that stand in the world as NPCs: (folder, record id, name).
-        /// *Build Characters* lists each in the prefab catalog under <see cref="CharacterImport.KeyFor"/>.
+        /// *Build Characters* lists each in the prefab catalog under <see cref="CharacterImport.KeyFor"/>; each is an actor
+        /// of the base game (<see cref="CoreActorSet"/>) by the same id.
         /// </summary>
-        // SHORTCUT: an NPC is a placed object that idles: no collider (the player walks through her), no behaviour. It
-        // comes with the world's characters.
         public static readonly (string Folder, string Id, string Name)[] Npcs =
         {
             ("VikingF1", "viking_woman", "Viking Woman"),

@@ -163,6 +163,25 @@ namespace Forge.Game.Combat
         /// </summary>
         public Func<Vector3> Facing { get; set; }
 
+        /// <summary>
+        /// The move its death plays: its weapon's style's (<see cref="CombatMoveKind.Death"/>: a sword's, a bow's), of
+        /// the first thing it holds whose style has one; null: the look's own.
+        /// </summary>
+        public string DeathAnimation
+        {
+            get
+            {
+                foreach (var equipped in _equipment.All)
+                {
+                    var move = StyleMove(equipped, CombatMoveKind.Death);
+                    if (move != null)
+                        return move.Animation;
+                }
+
+                return null;
+            }
+        }
+
         /// <summary>The block raised now, its guard up (a shield in its window); null when none is.</summary>
         public Swing Guard
         {

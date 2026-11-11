@@ -71,7 +71,11 @@ namespace Forge.Tests.Game
                     new EquipSlotRecord(CoreEquipSlots.RightHand, "Right Hand", "RightHand", sheathes: true),
                     new EquipSlotRecord(CoreEquipSlots.LeftHand, "Left Hand", "LeftHand", sheathes: true),
                     new EquipSlotRecord(CoreEquipSlots.Ammo, "Ammo", "Chest"),
-                    new CombatStyleRecord(Archery, "Archery", new[] { new CombatMove(CombatMoveKind.Attack, "BowShot", held: true, release: "BowRelease") }),
+                    new CombatStyleRecord(Archery, "Archery", new[]
+                    {
+                        new CombatMove(CombatMoveKind.Attack, "BowShot", held: true, release: "BowRelease"),
+                        new CombatMove(CombatMoveKind.Death, "BowDeath"),
+                    }),
                     Bow,
                     Arrow,
                     new AttributeRecord(CoreAttributes.Health, "Health", AttributeKind.Resource, 30f),
@@ -124,6 +128,22 @@ namespace Forge.Tests.Game
         {
             _readiness.Toggle();
             _readiness.Tick(0f);
+        }
+
+        [Test]
+        public void ItsDeath_IsItsWeaponsStyles_WhenTheStyleHasOne()
+        {
+            Assert.That(_combat.DeathAnimation, Is.Null, "Nothing in hand: the look's own.");
+            Hold(Sword);
+            Assert.That(_combat.DeathAnimation, Is.Null, "The sword's style has no death here: the look's own.");
+        }
+
+        [Test]
+        public void ItsDeath_IsTheBows_WithABowInHand()
+        {
+            Hold(Bow);
+
+            Assert.That(_combat.DeathAnimation, Is.EqualTo("BowDeath"));
         }
 
         [Test]

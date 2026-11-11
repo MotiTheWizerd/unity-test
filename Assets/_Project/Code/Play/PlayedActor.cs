@@ -20,17 +20,20 @@ namespace Forge.Play
     /// has equipped (<see cref="Inventory"/>, <see cref="Equipment"/>: lent by whoever keeps them, the player's from one
     /// spawn to the next; what is worn modifies its attributes while it stands, and its load weighs on it,
     /// <see cref="Burden"/>), whether its weapons are drawn (<see cref="Readiness"/>), how it fights
-    /// (<see cref="Combat"/>: one who can be struck among the game's combatants, its guard covering the way its body
-    /// faces), and its look (<see cref="Model"/>, changed at will: <see cref="ChangeLook"/>) with everything shown on it:
+    /// (<see cref="Combat"/>: one who can be struck among the game's combatants, its body found by blows and arrows
+    /// through its <see cref="ActorLink"/>, its guard covering the way its body faces), and its look (<see cref="Model"/>,
+    /// changed at will: <see cref="ChangeLook"/>) with everything shown on it:
     /// what it holds, its draws and sheathes, its swings, the blade's sweep through the scene, its shots and their
     /// flight, its footsteps. Each frame it does what it is told (<see cref="Tick"/>, <see cref="ActorCommands"/>) and
     /// shows it. Only who tells it differs: the player's controls (<see cref="PlayerSession"/>), a mind
-    /// (<see cref="WorldCharacters"/>). Disposed, body and look go, and it can be struck no more.
+    /// (<see cref="WorldCharacters"/>). It stands on the game's roster (<see cref="ActorRoster"/>) from the moment it is
+    /// made; disposed, it leaves, body and look go, and it can be struck no more.
     /// </summary>
     public sealed class PlayedActor : IDisposable
     {
         readonly float _eyeHeight;
         readonly EquipmentModifiers _equipmentModifiers;
+        string _deathMove;
         CharacterModel _model;
         EquipmentView _equipmentView;
         ReadinessView _readinessView;
@@ -59,7 +62,7 @@ namespace Forge.Play
             Attributes = attributes;
             _eyeHeight = eyeHeight;
 
-            Body = new ActorBody(name, shape);
+            Body = new ActorBody(name, shape, id);
             Rules = new PlayerCharacter(Body, locomotion, eyeHeight, attributes, stage.Events);
             // A world made before carrying weighed anything (no carry weight) lets it carry anything.
             if (attributes != null && attributes.Set.Contains(CoreAttributes.CarryWeight))
@@ -74,6 +77,7 @@ namespace Forge.Play
             Combat = new ActorCombat(equipment, Readiness, stage.World, attributes, stage.Combatants, stage.Events) { Facing = BodyForward };
             if (attributes != null)
                 stage.Combatants.Add(id, attributes, displayName, Combat);
+            stage.Actors.Add(this);
         }
 
         /// <summary>The game it stands in.</summary>
@@ -118,6 +122,35 @@ namespace Forge.Play
         /// </summary>
         public Func<ViewPose> Aim { get; set; }
 
+        /// <summary>Whether it has fallen (<see cref="Fall"/>): it lies where it fell and does nothing until it <see cref="Rise"/>s.</summary>
+        public bool Fallen { get; private set; }
+
+        /// <summary>
+        /// It falls (its health ran out): its swings stop, it lies down in its weapon's style's death
+        /// (<see cref="ActorCombat.DeathAnimation"/>, else the look's own) and stays so; nothing moves it, nothing costs
+        /// it, and its look stays down, until it rises.
+        /// </summary>
+        public void Fall()
+        {
+            if (Fallen)
+                return;
+            Fallen = true;
+            Combat.Stop();
+            _deathMove = Combat.DeathAnimation ?? HumanoidAnimation.DeathMove;
+            _model?.PlayThrough(_deathMove);
+        }
+
+        /// <summary>It gets up again (revived): its look rises out of its death, and it is itself again.</summary>
+        public void Rise()
+        {
+            if (!Fallen)
+                return;
+            Fallen = false;
+            if (_deathMove != null)
+                _model?.Resume(_deathMove, 1f);
+            _deathMove = null;
+        }
+
         /// <summary>Stands it at <paramref name="feet"/> (scene coordinates), body and look facing <paramref name="heading"/>, at rest.</summary>
         public void PlaceAt(Vector3 feet, float heading)
         {
@@ -149,16 +182,27 @@ namespace Forge.Play
             if (Stage.Sounds != null)
                 _footsteps = new FootstepView(_model, Stage.Sounds, Stage.Surfaces, Rules.Locomotion.Settings);
             Show(0f);
+            // Fallen, the new look lies as the old one did: at the end of its death.
+            if (Fallen && _deathMove != null)
+                _model.Hold(_deathMove, 1f);
         }
 
         /// <summary>
         /// Does what it is told for one frame of <paramref name="deltaTime"/> seconds, in order: the weapons drawn or put
         /// away, each hand used or let go of, the swings and shots carried on, then the move made (squaring up to the
         /// aim while a bow is drawn), and all of it shown on the look: the body turned, the stride, the blade's sweep,
-        /// the steps.
+        /// the steps. Fallen, it lies still whatever it is told.
         /// </summary>
         public void Tick(ActorCommands commands, float deltaTime)
         {
+            if (Fallen)
+            {
+                // Down: whatever it is told, it lies still; its shots fly on.
+                _arrows?.Tick(deltaTime);
+                _model?.Animate(BodyMotion.Still, deltaTime);
+                return;
+            }
+
             if (commands.ReadyWeapon)
                 Readiness.Toggle();
             Readiness.Tick(deltaTime);
@@ -189,6 +233,7 @@ namespace Forge.Play
 
         public void Dispose()
         {
+            Stage.Actors.Remove(this);
             HideLook();
             Combat.Dispose();
             Stage.Combatants.Remove(Id);

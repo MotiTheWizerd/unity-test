@@ -25,6 +25,9 @@ namespace Forge.Data.Records
 
         /// <summary>What plays when a block takes a blow (the shield jolted).</summary>
         Blocked,
+
+        /// <summary>What plays when the actor dies with this style's weapon in hand, and stays: it falls, and lies as it fell.</summary>
+        Death,
     }
 
     /// <summary>

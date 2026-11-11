@@ -14,9 +14,11 @@ namespace Forge.Play
     /// What an actor's bow looses, flown through the engine's world: each shot leaves the string where the arrow lay
     /// (<see cref="ArcheryAim.TryDrawLine"/>), towards what the aim's line meets (<see cref="ArcheryAim.Target"/>),
     /// at its speed (<see cref="Shot.Speed"/>), and falls as it flies (<see cref="Flight"/>). Every frame the way from
-    /// where its point was to where it is is tested through the physics, so a fast arrow misses nothing between frames;
-    /// what it meets, it sticks in, and whoever that is takes its blow (<see cref="ActorCombat.Strike(Shot, ActorId)"/>;
-    /// whom a collider belongs to is <c>identify</c>'s to say); a loose thing it meets is pushed by it, its whole momentum
+    /// where its point was to where it is is tested through the physics (the world's things and the actors' bodies,
+    /// <see cref="SceneLayers.Targets"/>, but the archer's own, which it leaves from beside), so a fast arrow misses
+    /// nothing between frames; what it meets, it sticks in, and whoever that is takes its blow
+    /// (<see cref="ActorCombat.Strike(Shot, ActorId)"/>; whom a collider belongs to is <c>identify</c>'s to say); a
+    /// loose thing it meets is pushed by it, its whole momentum
     /// given at the point struck. Stuck, it is handed to <c>landed</c> with its pose there and the loose thing it is in, if
     /// any (the game keeps it as the item it is, or it breaks: <see cref="ShotLandings"/>), and its flying look goes.
     /// Scene coordinates; bound while the look exists.
@@ -42,6 +44,7 @@ namespace Forge.Play
         readonly Func<Collider, ActorId?> _identify;
         readonly Landing _landed;
         readonly List<Flying> _flying = new List<Flying>();
+        readonly RaycastHit[] _hits = new RaycastHit[8];
 
         /// <param name="aim">Where the archer looks from and which way (the camera): what that line meets is aimed at.</param>
         /// <param name="identify">Whom a collider belongs to, or null for no one who can be struck.</param>
@@ -72,7 +75,7 @@ namespace Forge.Play
                 var from = arrow.Flight.Position.ToUnity();
                 var way = next.Position.ToUnity() - from;
                 var length = way.magnitude;
-                if (length > 1e-5f && Physics.Raycast(from, way / length, out var hit, length, SceneLayers.World, QueryTriggerInteraction.Ignore))
+                if (length > 1e-5f && TryMeet(arrow.Shot, from, way / length, length, out var hit))
                 {
                     _flying.RemoveAt(i);
                     Stick(arrow, hit, way / length, next.Velocity.ToUnity());
@@ -122,6 +125,25 @@ namespace Forge.Play
             arrow.Flight = Flight.Toward(point.ToNumerics(), ArcheryAim.Target(_aim(), point).ToNumerics(), shot.Speed);
             _flying.Add(arrow);
             Pose(arrow, point, arrow.Flight.Heading.ToUnity());
+        }
+
+        // The nearest thing on the arrow's way: the world's, or an actor's body but the shooter's own, which the arrow
+        // leaves from beside and must never stick in.
+        bool TryMeet(Shot shot, Vector3 from, Vector3 direction, float length, out RaycastHit nearest)
+        {
+            nearest = default;
+            var found = false;
+            var count = Physics.RaycastNonAlloc(from, direction, _hits, length, SceneLayers.Targets, QueryTriggerInteraction.Ignore);
+            for (var i = 0; i < count; i++)
+            {
+                var hit = _hits[i];
+                if ((found && hit.distance >= nearest.distance) || _identify(hit.collider) == shot.Shooter)
+                    continue;
+                nearest = hit;
+                found = true;
+            }
+
+            return found;
         }
 
         void Stick(Flying arrow, RaycastHit hit, Vector3 heading, Vector3 velocity)

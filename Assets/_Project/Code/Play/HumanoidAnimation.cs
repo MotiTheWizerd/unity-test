@@ -35,12 +35,21 @@ namespace Forge.Play
         public const string IdleMove = "Idle";
         /// <summary>The move it walks in, at its own pace (<see cref="GroundSpeedOf"/>).</summary>
         public const string WalkMove = "Walk";
+
+        /// <summary>The everyday pace's move, whose clip says how fast a character runs.</summary>
+        public const string RunMove = "Run";
         /// <summary>The move it stands ready in with its weapons out, when its set has one.</summary>
         public const string DrawnIdleMove = Drawn + IdleMove;
+        /// <summary>The move it dies in when its weapon's style has none of its own (<see cref="PlayThrough"/>), when its set has one.</summary>
+        public const string DeathMove = "Death";
         public const string DrawTrigger = "Draw";
         public const string SheatheTrigger = "Sheathe";
         public const string ArmsLayer = "Arms";
         public const string UpperBodyLayer = "Upper Body";
+        /// <summary>The action layer of the whole body, whose actions stay at their end once played (a death).</summary>
+        public const string FullBodyLayer = "Full Body";
+        /// <summary>An action layer's state while no action plays.</summary>
+        public const string RestState = "Rest";
 
         /// <summary>The pace an action layer's actions play at ("Arms Pace"), 1 as they are, 0 held still (a bow at full draw).</summary>
         public static string ActionPace(string layer) => layer + " Pace";
@@ -79,6 +88,7 @@ namespace Forge.Play
         static readonly int DrawnId = Animator.StringToHash(Drawn);
         static readonly int StanceId = Animator.StringToHash(Stance);
         static readonly int CrouchedId = Animator.StringToHash(Crouched);
+        static readonly int RestId = Animator.StringToHash(RestState);
 
         readonly Animator _animator;
         readonly float _topSpeed;
@@ -103,7 +113,7 @@ namespace Forge.Play
             }
             _rightHandPoints = HandPointsIds(animator, true);
             _leftHandPoints = HandPointsIds(animator, false);
-            foreach (var name in new[] { ArmsLayer, UpperBodyLayer })
+            foreach (var name in new[] { ArmsLayer, UpperBodyLayer, FullBodyLayer })
             {
                 var index = animator.GetLayerIndex(name);
                 if (index < 0)
@@ -112,7 +122,7 @@ namespace Forge.Play
                 var hasPace = false;
                 foreach (var parameter in animator.parameters)
                     hasPace |= parameter.nameHash == pace;
-                _actionLayers.Add(new ActionLayer { Index = index, Pace = hasPace ? pace : (int?)null });
+                _actionLayers.Add(new ActionLayer { Index = index, Pace = hasPace ? pace : (int?)null, Stays = name == FullBodyLayer });
             }
 
             DrawClip = Clip(DrawTrigger);
@@ -235,6 +245,27 @@ namespace Forge.Play
             SetPace(layer, 1f);
             layer.Held = layer.Thawing = false;
             layer.Reacting = layer.Returning = 0f;
+            layer.Left = clip.length;
+            return true;
+        }
+
+        /// <summary>
+        /// Plays the action <paramref name="move"/> through on the whole body and stays at its end (a death: it falls,
+        /// and lies as it fell), its layer weighed in, until <see cref="Resume"/> lets it go (at 1: it fades out where it
+        /// lies); false when the set has no such action, or it isn't one that stays (a slash plays out).
+        /// </summary>
+        public bool PlayThrough(string move)
+        {
+            if (!TryAction(move, out var layer, out var clip) || !layer.Stays)
+                return false;
+            _animator.SetTrigger(move);
+            SetPace(layer, 1f);
+            layer.Held = true;
+            layer.Thawing = false;
+            layer.Reacting = layer.Returning = 0f;
+            layer.HeldState = Animator.StringToHash(move);
+            layer.HeldAt = HeldShortOfEnd;
+            layer.HeldLength = clip.length;
             layer.Left = clip.length;
             return true;
         }
@@ -398,6 +429,9 @@ namespace Forge.Play
                 {
                     layer.Thawing = false;
                     SetPace(layer, 1f);
+                    // A layer that stays never leaves its action by itself: rested here, unseen, so the next can start.
+                    if (layer.Stays)
+                        _animator.Play(RestId, layer.Index);
                 }
             }
         }
@@ -430,12 +464,13 @@ namespace Forge.Play
         // How near its end a held action stays (a fraction of it): not at its very end, which it would leave by.
         const float HeldShortOfEnd = 0.995f;
 
-        // An action layer of the controller, how much of it shows, and whether its action is held still (by its pace
-        // parameter, when the controller has one).
+        // An action layer of the controller, how much of it shows, whether its action is held still (by its pace
+        // parameter, when the controller has one), and whether its actions stay at their end once played (the whole body's).
         sealed class ActionLayer
         {
             public int Index;
             public int? Pace;
+            public bool Stays;
             public float Weight;
             public float Left;
             public bool Held;

@@ -47,12 +47,12 @@ namespace Forge.Game.Minds
 
     /// <summary>
     /// The simplest mind a character of the world has: it stands a while, walks to a spot near its home, stands again,
-    /// and so on, as Skyrim's townsfolk mill about. It only says how to walk (<see cref="Step"/>); when its body gets
-    /// nowhere (someone, a wall in the way) it gives the walk up, stands, and goes elsewhere, as it does when told the
-    /// way is blocked (<see cref="Blocked"/>). On the ground plane (x, z), in whatever space its home is given in.
-    /// Engine-free.
+    /// and so on, as Skyrim's townsfolk mill about. It only says how to walk (<see cref="Step"/>, which is all it
+    /// decides: <see cref="Decide"/>); when its body gets nowhere (someone, a wall in the way) it gives the walk up,
+    /// stands, and goes elsewhere, as it does when told the way is blocked (<see cref="Blocked"/>). On the ground plane
+    /// (x, z), in whatever space its home is given in. Engine-free.
     /// </summary>
-    public sealed class Wander
+    public sealed class Wander : IMind
     {
         // How many spots it tries for one far enough from where it stands to be worth the walk.
         const int Tries = 8;
@@ -85,6 +85,9 @@ namespace Forge.Game.Minds
 
         /// <summary>Where it is walking to; null while it stands.</summary>
         public Vector2? Target { get; private set; }
+
+        /// <summary>Walks (<see cref="Step"/>) from where it sees itself, facing the way it goes, the hands idle.</summary>
+        public MindDecision Decide(MindSight sight, float deltaTime) => MindDecision.Walk(Step(sight.Position, deltaTime));
 
         /// <summary>
         /// How it walks from <paramref name="position"/> over the next <paramref name="deltaTime"/> seconds: its velocity

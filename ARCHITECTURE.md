@@ -673,10 +673,13 @@ from any camera, so both cameras read the same player.
   radius, 0.4 m steps, 50° slopes; crouched, 1 m (the crouch idle's head is at 0.75 m), the feet kept, standing back up
   only when a capsule check finds the room above clear of the world's solid things), its own scene object on the
   **ForgeActors** layer (`ActorLayer`, layer 11). It collides with the terrain, the placed objects' colliders and other
-  actors' bodies (the player can't walk through a character, nor it through the player). Every look into the scene
-  takes its layers from **`SceneLayers`**: `World` (the default layers but actors) for picks, blows, arrows, the aim,
-  the use key, carrying and dropping; `Solid` (that, but clutter) for the camera's obstacles, the footsteps' ground and
-  the room to stand. So no look meets its own body, and no blow reaches a character until the fight step asks for actors.
+  actors' bodies (the player can't walk through a character, nor it through the player), and carries whose it is
+  (`ActorLink`, as `RecordLink` names a placed object). Every look into the scene takes its layers from
+  **`SceneLayers`**: `World` (the default layers but actors) for picks, the aim, the use key, carrying and dropping;
+  `Solid` (that, but clutter) for the camera's obstacles, the footsteps' ground and the room to stand; `Targets` (the
+  world and the actors) for blows and arrows, which find whose body they met (`GameStage.Identify`) and pass over the
+  striker's own. So no look meets its own body, a camera passes through people, and a blow reaches whoever stands in
+  its way.
 - `PlayerControls` (Play) read the profile's action map (`Settings/InputSystem_Actions`, map Player: Move, Look, Sprint,
   Jump, ToggleWalk, Crouch, ToggleView, Zoom; WASD and arrows, mouse, Shift, Space, Caps Lock, Left Ctrl, F, the wheel, and the gamepad) into `PlayerCommands` and
   `ViewCommands`; the look is pointer pixels × the profile's sensitivity (0.1° per pixel), and the wheel's binding scales
@@ -686,7 +689,9 @@ from any camera, so both cameras read the same player.
 - **Body facing** (`BodyFacing`, `PlayerCharacter.BodyHeading`): the body's own heading, which its model is turned to.
   Facing the `Look` (first person) it is the look's heading; facing its `Movement` (third person) it turns toward the
   ground velocity at `LocomotionSettings.TurnRate` (720°/s) the short way round, and keeps its heading while standing,
-  so the look orbits freely, as in Skyrim. Movement is always relative to the look, so stepping right in third
+  so the look orbits freely, as in Skyrim; facing a `Target` it turns toward the look's heading at the turn rate
+  whether it moves or stands, as it does aiming a bow (`Aiming`): a character's mind looks at its foe and the body
+  squares up to it (later the player's lock-on). Movement is always relative to the look, so stepping right in third
   person runs right and the body turns to it.
 - **Cameras**: an `ICameraMode` (Game, engine-free) says where the camera goes each frame (a `ViewPose`), how the body
   faces meanwhile, whether it is inside the player's head (`InsideHead`) and how near it sees (`NearClip`, null: as the
@@ -721,9 +726,12 @@ from any camera, so both cameras read the same player.
   shots fly at, what its draw turns to) is its own eyes along its look until set (the player's camera). Only who tells
   it differs: the player's controls (`PlayerSession`), a mind (`WorldCharacters`).
 - **The game's stage** (`GameStage`, Play, `GameSession.Stage`): what one game gives every actor standing in it: the
-  world as played, the stream, the looks of the world's things, who can be struck (`Combatants`, `PlacedActors`), where
-  a shot that lands goes, what sounds play on and what is underfoot; and whom a collider in the scene belongs to
-  (`Identify`: a placed actor by its `RecordLink`). Made with each game begun, gone when it ends.
+  world as played and its `AttributeSet` resolved once, the stream, the looks of the world's things, who can be struck
+  (`Combatants`, `PlacedActors`), where a shot that lands goes, what sounds play on and what is underfoot; whom a
+  collider in the scene belongs to (`Identify`: an actor's body by its `ActorLink`, a placed actor by its
+  `RecordLink`); and the roster of who stands in the game (`ActorRoster`, `Actors`), which each `PlayedActor` joins as
+  it is made and leaves as it is disposed, so an id finds its actor (`GameSession.ActorOf`: where it is for the
+  sounds, its pack for the use key, its look for its voice). Made with each game begun, gone when it ends.
 - **The player while playing** (`PlayerSession`, Play): a `PlayedActor` (`Actor`, built from the profile: its body,
   pace, eye height and look, named `ActorId.Player` and "You") plus what only the player has: the controls, the view
   and its `CameraDirector`, the first-person eyes (`PlayerEyes`), the bow's `DrawZoom`, what it has in sight (`Focus`,
@@ -775,9 +783,10 @@ from any camera, so both cameras read the same player.
   object known by its `RecordLink`. The profile's `Reach` is 2.5 m from the eyes.
 - **The game while playing** (`GameSession`, Play): one running game: the stream (`GameEvents`), what playing changed in
   the world (`WorldChanges`) and the world as played (`World`, a `PlayedWorld` the player's focus and inventory read),
-  what it gives every actor standing in it (`Stage`, a `GameStage`), what the use key can do (`Interactions`: take) and
-  the player (`PlayerSession`). `Begin(feet, heading, world)` makes the stage and spawns the player, `Tick` plays a
-  frame and then flushes the stream, `End` takes the player away and lets the world's changes go. A placed object taken out of the world leaves the scene (`WorldView.Hide`, which also keeps it out when its
+  what it gives every actor standing in it (`Stage`, a `GameStage`; `ActorOf(id)` is any of them), what the use key
+  can do (`Interactions`: take) and the player (`PlayerSession`). `Begin(feet, heading, world)` makes the stage and
+  spawns the player, `Tick` plays a frame and then flushes the stream, `End` takes the player away and lets the
+  world's changes go. A placed object taken out of the world leaves the scene (`WorldView.Hide`, which also keeps it out when its
   chunk streams in again) and the focus looks again; one dropped joins it (`WorldView.ShowAdded`: streamed with its
   chunk like the world's own); when the changes are let go, `WorldView.ShowAsBuilt` puts the world back as built.
   `Drop(item)` lets one go from the player's hands, as Skyrim's drops are: 0.6 m ahead of the eyes the way the body
@@ -834,8 +843,10 @@ from any camera, so both cameras read the same player.
   raise its textures' size (`{ "textureSize": 4096 }`: the player, seen closest). The characters `CoreModels.Npcs`
   lists stand in the world as **NPCs**: *Build Characters* puts each in the prefab catalog under `characters/<name>`
   (`CharacterImport.KeyFor`) and the core plugin places it as a base object in the browser's `Characters/NPCs`,
-  upright, at its own size, idling in its move set (`CharacterContentTests` guards them). The models and textures are
-  plain git objects (`.gitattributes`), as the ground's are.
+  upright, at its own size, idling in its move set, and names it the actor of the same id (`CoreActorSet`: a
+  sword-and-board fighter, the Viking Sword and the Painted Round Shield put away), so that placed, it lives
+  (`WorldCharacters`); `CharacterContentTests` guards both. The models and textures are plain git objects
+  (`.gitattributes`), as the ground's are.
 - **Animations** (`Content/Animations/<Set>/<Folder>/<Move>.fbx`): one Mixamo clip per move (FBX for Unity, 30 fps,
   without skin, travel left in), named after its move, a name of its own across the set, and sorted by what it is: the
   folder says (`HumanoidMoves.RoleOf` → `MoveRole`): `Locomotion/` the ground moves (Idle, Walk, Run, Sprint blended
@@ -871,9 +882,13 @@ from any camera, so both cameras read the same player.
   the int `Stance` holds its key (`HumanoidAnimation.StanceKey`, from its name, so builder and player agree; 0: the
   set's own drawn moves); `WeaponReadiness.StanceAnimation` names it. Every other clip is an **action** (`Draw`, `Sheathe`,
   a combat style's `SwordSlash`), played on a trigger named after it over whatever the legs do: a draw or a sheathe
-  on an **Arms** layer (`MoveRole.ArmsAction`, by its name's ending; `<Set> Arms.mask`: arms and fingers), anything
-  else on an **Upper Body** layer (`MoveRole.UpperBodyAction`; `<Set> Upper Body.mask`: also the body and head, so the torso turns into a cut). `HumanoidAnimation.Play`
-  finds the layer holding the action and weighs it in for as long as the clip lasts: in as it starts, out by its end.
+  on an **Arms** layer (`MoveRole.ArmsAction`, by its name's ending; `<Set> Arms.mask`: arms and fingers), a death (a
+  name with `Death` in it: `SwordDeath`, `BowDeath2`; `MoveRole.FullBodyAction`) on a **Full Body** layer with no mask
+  whose states have no way out, so played through (`HumanoidAnimation.PlayThrough`, `CharacterModel.PlayThrough`) the
+  clip stays at its last frame and the layer stays weighed in until `Resume` at 1 lets it fade, and the layer is
+  rested unseen; anything else on an **Upper Body** layer (`MoveRole.UpperBodyAction`; `<Set> Upper Body.mask`: also
+  the body and head, so the torso turns into a cut). `HumanoidAnimation.Play` finds the layer holding the action and
+  weighs it in for as long as the clip lasts: in as it starts, out by its end.
   The layer's own states change at once (no crossfade into its empty rest state, which would pull the limbs toward the
   rig's neutral pose). A draw and a put-away are moves of the weapon's combat style (`CombatMoveKind.Draw`/`Sheathe`:
   One-Handed's `Draw`/`Sheathe` from the hip, Archery's `BowDraw`/`BowSheathe` from the back; any move ending in Draw or
@@ -1010,10 +1025,10 @@ music are listeners to that fact, never the fact itself, so each joins or change
   (`ActorKilled`) settle everyone with the fallen. **Hitting someone starts a fight; drawing a weapon never does**
   (Moti's call: walking with a sword out is not a fight), and swinging at air starts nothing. A foe that sees you, a
   crime, a faction's grudge will be causes of their own.
-- **Listeners** (to come): the music crossfades on the player's `ModeChanged`; a character's mind branches on its
-  mode (`Fight`: face the opponent, draw, strike; `Normal`: its day); Skyrim's slower regen in a fight is an
-  `AttributeModifier` under a `ModifierSource` added and removed with it. Until one exists, `GameSession` logs each
-  change to the console.
+- **Listeners**: a character's mind reads its mode each frame (`Fighter`, Game.Minds: in `Fight` it faces its
+  opponent, draws and strikes; in `Normal` its day goes on). To come: the music crossfades on the player's
+  `ModeChanged`; Skyrim's slower regen in a fight is an `AttributeModifier` under a `ModifierSource` added and removed
+  with it. Meanwhile `GameSession` logs each change to the console (dev, while fights are tuned).
 
 ## The world's characters (Forge.Game.Minds, Forge.Play)
 
@@ -1021,30 +1036,57 @@ A character placed in the world (an NPC from the catalog's Characters/NPCs) goes
 the player's. The mind decides, engine-free; the body and its rules carry it out. The base world (Generate Core
 Plugin) stands the first of `CoreModels.Npcs` 4 m right of the items at the start.
 
-- **`Wander`** (Game.Minds): the first mind. It stands a while (`WanderSettings.MinPause`..`MaxPause`), walks at
+- **Minds** (`IMind`, Game.Minds): each frame a mind sees its situation (`MindSight`: where it stands on the ground
+  plane in the space its home is given in, its `Mode`, where its nearest opponent stands if it fights one, whether
+  its weapons are out, whether its right hand swings and its guard is up) and decides (`MindDecision`: its ground
+  velocity, zero to stand; the heading it faces, null for the way it goes; and what its hands do: the ready-weapon
+  key, the right hand used, the left hand used or let go of, as `ActorCommands` has them). Plain values, so a mind is
+  tested without a body, and whoever carries the decision out never knows which mind decided.
+- **`Wander`** (Game.Minds): the first mind, a character's day. It stands a while (`WanderSettings.MinPause`..`MaxPause`), walks at
   `Speed` to a spot within `Radius` of its home, a third of the radius away at least, stands again; `Step(position,
-  dt)` gives its ground velocity; when its body gets less than a quarter of the way it was sent for `StuckSeconds`
+  dt)` gives its ground velocity (all it decides); when its body gets less than a quarter of the way it was sent for `StuckSeconds`
   (0.5 s: the player, a wall in the way) it gives the walk up, stands, and goes elsewhere after the pause, as
   `Blocked()` does. Its own `System.Random`,
   seeded from its placed id, so it strolls the same way each game. `WanderSettings.Stroll`: 6 m, 2 to 6 s, walking at
   the character's own Walk pace (`HumanoidAnimation.GroundSpeedOf`: the clip's speed at its size, ~1.6 m/s for
   VikingF1; slower, the walk blends with the idle and the feet slide; 1.8 m/s without a Walk clip).
+- **`Fighter`** (Game.Minds): a mind that fights back, over another mind for its day (`Wander`). At ease (`Normal`)
+  its day goes on, weapons away. In a fight (`Fight`, which a blow on it starts, `FightCauses`) it draws first, faces
+  its nearest opponent, closes in (walking, running from beyond `FighterSettings.RunBeyond`, 5 m, at the character's
+  own Walk and Run paces), and within `Reach` (1.4 m) stands and strikes with its right hand, waiting `MinPause` to
+  `MaxPause` (0.8 to 2 s) between moves, never mid-swing, a `BlockChance` (a third) of them raising the shield for
+  `BlockSeconds` (1.2) instead; its opponent gone (fallen, despawned) it stands ready, the shield down. The fight over
+  (the 5 s cool-off), it puts its weapons away and goes back to its day. Its own dice. Every character fights back for
+  now (Moti's call: "basic, fight"); a per-character confidence (fights or flees) is a field of its actor record to come.
 - **`WorldCharacters`** (Play), `GameSession.Characters`, bound like `WorldPhysics` for one game: every placed object
   the view shows whose look has humanoid animations is taken over by a `PlayedActor` made as the player is, named
   `PlacedActors.IdOf` its placed object: an `ActorBody` of the profile's `BodyShape` at its own height
   (`BodyShape.ForEyes`, its eyes read off its idle), its look on it (from the prefab `IAssetCatalog.TryGetTemplate`
   gives for its base object's key), the player's rules moving it (facing its movement): gravity, slopes, steps and
-  collisions come with them, its footsteps sound, and it has its own pack, hands and weapons (empty until its record
-  gives it something). Its `Wander` is homed where it was placed and works in the world root's space (a rebase moves
-  nothing of it); each frame it turns the rules' look the way it walks and sends the actor walking ahead
-  (`ActorCommands.Moving`). The placed object hides meanwhile; the game ending (or the character streaming out) takes
-  body and look away and shows it again where its record has it.
+  collisions come with them, and its footsteps sound. It is who its base object says (`BaseObjectRecord.Actor`, an
+  `ActorRecord`, as the training dummy is): its name, the world's attributes as its own numbers (one of the
+  `Combatants` from the start, so a blow hurts it and its health shows at the top of the HUD), and what it starts out
+  carrying and holding (`StartingItems`: the base game's characters hold a sword and a shield, put away); a character
+  placed for its look alone (no actor) is no one: nothing hurts it, it holds nothing. Its mind (a `Fighter` over a
+  `Wander` homed where it was placed; a `Wander` alone for a character that is no one) works in the world root's
+  space (a rebase moves nothing of it): each frame the character shows it what it sees (`MindSight`: its feet, its
+  `Mode` from the stage's `ActorModes`, the nearest of its `OpponentsOf` that stands on the roster, its
+  `WeaponReadiness.State`, its right hand's swing and its guard) and carries out the decision: the look turned the way
+  the mind faces (`BodyFacing.Target`) or the way it goes (`Movement`), the velocity put into the look's frame as a
+  walk or a run (`PlayerCommands`), the hands into `ActorCommands`. The placed object hides meanwhile; the game ending
+  (or the character streaming out) takes body and look away and shows it again where its record has it.
+- **Falling** (`PlayedActor.Fall`, which `GameSession` calls on `ActorKilled`): a character whose health ran out stops
+  its swings and lies down in its weapon's style's death (`CombatMoveKind.Death`, `ActorCombat.DeathAnimation`: the
+  first thing it holds whose style has one, `SwordDeath` with a sword, `BowDeath` with a bow; else the set's own
+  `Death`, none yet), played through on the whole body and stayed at its end. Fallen, its mind has nothing to say,
+  nothing moves it and nothing costs it (no regen), its shots fly on, a new look lies as the old one did, and
+  `FightCauses` has settled its fight; `Rise` would get it up again. Its body still stands in the way (a capsule over
+  a corpse: a rough edge until bodies lie down). The player instead wakes up whole (see the shortcuts).
 - **Shortcuts, for now:** a character's body takes the player's profile's shape (a race's record will give its own);
-  it has no attributes and nothing in its pack until an actor record gives them (the fighting character), so no blow
-  or arrow reaches it (`SceneLayers`); it forgets where it walked when it streams out. `PlayerCharacter`,
+  it forgets where it walked, and how hurt it was, when it streams out, and comes back whole where it was placed.
+  `PlayerCharacter`,
   `PlayerLocomotion` and `PlayerCommands` move characters too, so their names now say less than they do: a rename to
-  `Character`, `Locomotion` and `MoveCommands` is a commit of its own. The fighting NPC brings a mind that branches on
-  its `Mode`.
+  `Character`, `Locomotion` and `MoveCommands` is a commit of its own.
 
 ## Sound (Forge.Play.Sound)
 
@@ -1165,8 +1207,9 @@ Engine-free and tested with a fake probe; the doing is the same for the player a
   (sword, two-hander, shield, staff, magic) one system:
   - *A style is data.* A weapon is an equippable item with a `WeaponPart`: its `Style` (a `CombatStyleRecord`,
     `combat_style/…`: its `CombatMove`s, one of each `CombatMoveKind`, each naming the move-set animation that plays
-    it and its stamina cost) and its `Hit`. forge.core ships `One-Handed` (attack: `SwordSlash`); the Viking Sword
-    hits for 12 health. A new style is a record and its clips.
+    it and its stamina cost: an attack, a draw and a sheathe, a stance, a block and what a blocked blow plays, a
+    death) and its `Hit`. forge.core ships `One-Handed` (attack: `SwordSlash`, death: `SwordDeath`), `Archery` and
+    `Shield`; the Viking Sword hits for 12 health. A new style is a record and its clips.
   - *A blow applies effects.* `Hit` is a list of `Effect`s (damage or restore an attribute by an amount), applied by
     `AttributeEffects.Apply`, the one place a blow, and later a spell or a potion, changes an actor.
   - *Each hand swings on its own.* `ActorCombat.TryAttack(slot)` starts the move the held weapon's style has, only once
@@ -1823,4 +1866,4 @@ and the condition for removing it, and is listed here.
 | `World/GrassView.cs` (`Grow`) | Grass patches grow on the main thread, ~10 ms for a 20k-tuft patch in the editor, so crossing into a new chunk can cost a frame | One patch a frame is a short hitch; simpler than threading while grass is new | Hitches show while flying → grow on a worker thread (`GrassScatter` is engine-free; only the buffer upload needs the main thread) |
 | `EditorApp/Agent/ImageClipboard.cs` (`ForThisPlatform`) | Pasting a picture into the agent's message works on Windows only; elsewhere the clipboard has no picture | Forge runs on Windows today, and Unity's clipboard carries text only | Forge ships on macOS or Linux → a clipboard reader for that platform |
 | `Agent/Memory/SemantixMemory.cs` (`Origin`) | The agent's Semantix memory is made with origin `user`, so Semantix Studio doesn't list it under Your Agents | The server knows no `forge` origin yet, and one memory for all of Forge needs no picker | Users make memories at will → a `forge` origin on the server and a Forge group in Your Agents |
-| `UnityEditor/Content/CoreModels.cs` (`Npcs`) | An NPC is a placed base object that idles: no collider (the player walks through her), no behaviour, no record type of its own | Seeing a character stand in the world comes before the world's characters | The world's characters come → an NPC record (look, move set, behaviour) with a body that collides |
+| `Play/GameSession.cs` (`OnKilled`) | Killed, the player wakes up whole at once where it fell (`Revival.WakeUp`), its fight settled | Fights are being tested; Moti: "let it wake up with full power, stop fighting" | The game has a death (a load, a menu) → the player falls as a character does |

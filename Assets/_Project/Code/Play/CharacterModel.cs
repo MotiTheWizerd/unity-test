@@ -205,6 +205,12 @@ namespace Forge.Play
         public bool Play(string move) => _animation != null && _animation.Play(move);
 
         /// <summary>
+        /// Plays the action <paramref name="move"/> through on its whole body and stays at its end (a death: it lies as it
+        /// fell) until <see cref="Resume"/> at 1 lets it go; false when it has no such move, or it isn't one that stays.
+        /// </summary>
+        public bool PlayThrough(string move) => _animation != null && _animation.PlayThrough(move);
+
+        /// <summary>
         /// How its move <paramref name="move"/> plays, measured from the clip as <paramref name="measure"/> says: a bow's
         /// draw by the string's pull (<see cref="ShotFinder"/>), a block by the shield coming up (<see cref="RaiseFinder"/>),
         /// else by the blade's cut (<see cref="SwingFinder"/>); false when it has none.

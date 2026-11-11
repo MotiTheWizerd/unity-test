@@ -97,6 +97,23 @@ namespace Forge.Tests.Game
         }
 
         [Test]
+        public void FacingTarget_TheBodyTurnsToWhereItLooks_AtTheTurnRate_StandingOrMoving()
+        {
+            var player = Standing(BodyFacing.Target);
+
+            player.Tick(Turn(150f), Frame);
+            var firstStep = player.BodyHeading;
+            Run(player, PlayerCommands.None, 1f);
+            var standing = player.BodyHeading;
+            // Stepping left while looking at 150: the body keeps facing the look, not the way it goes.
+            Run(player, Walk(-1f, 0f), 0.5f);
+
+            Assert.That(firstStep, Is.EqualTo(LocomotionSettings.Default.TurnRate * Frame).Within(1e-3f), "Turns, not snaps.");
+            Assert.That(standing, Is.EqualTo(150f).Within(1e-3f));
+            Assert.That(player.BodyHeading, Is.EqualTo(150f).Within(1e-3f));
+        }
+
+        [Test]
         public void FacingMovement_TurnsTheShortWayRound()
         {
             var player = Standing(BodyFacing.Movement);

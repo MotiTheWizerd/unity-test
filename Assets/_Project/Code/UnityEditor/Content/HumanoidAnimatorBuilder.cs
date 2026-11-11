@@ -288,23 +288,26 @@ namespace Forge.UnityEditor.Content
         }
 
         // The set's actions, each on a layer of its own body parts, which HumanoidAnimation weighs in while one plays: a
-        // draw or a sheathe on the arms (MoveRole.ArmsAction), so the body walks or runs on unchanged; any other (a slash)
-        // on the upper body (MoveRole.UpperBodyAction), so the torso turns into it while the legs still walk. Each starts
-        // by a trigger named after it. A layer is left out when the set has no action for it.
+        // draw or a sheathe on the arms (MoveRole.ArmsAction), so the body walks or runs on unchanged; a slash or a shot
+        // on the upper body (MoveRole.UpperBodyAction), so the torso turns into it while the legs still walk; a death on
+        // the whole body (MoveRole.FullBodyAction), played through and stayed at its end. Each starts by a trigger named
+        // after it. A layer is left out when the set has no action for it.
         static void BuildActions(string set, AnimatorController controller)
         {
             BuildActionLayer(set, controller, HumanoidAnimation.ArmsLayer, ArmsParts, Actions(set, MoveRole.ArmsAction));
             BuildActionLayer(set, controller, HumanoidAnimation.UpperBodyLayer, UpperBodyParts, Actions(set, MoveRole.UpperBodyAction));
+            BuildActionLayer(set, controller, HumanoidAnimation.FullBodyLayer, null, Actions(set, MoveRole.FullBodyAction), stays: true);
         }
 
         static IEnumerable<AnimationClip> Actions(string set, MoveRole role) =>
             Moves(set, role).Select(move => Clip(set, move)).Where(clip => clip != null);
 
-        // A layer masked to parts, resting until a trigger starts one of its clips. The layer's weight does the
-        // blending in and out (HumanoidAnimation), so its states change at once: a crossfade into the empty rest state
-        // would draw the limbs toward the rig's neutral pose on the way out.
+        // A layer masked to parts (none: the whole body), resting until a trigger starts one of its clips. The layer's
+        // weight does the blending in and out (HumanoidAnimation), so its states change at once: a crossfade into the
+        // empty rest state would draw the limbs toward the rig's neutral pose on the way out. A layer that stays keeps
+        // each clip at its end once it has played (a death lies as it fell) until HumanoidAnimation rests it.
         static void BuildActionLayer(string set, AnimatorController controller, string name, AvatarMaskBodyPart[] parts,
-            IEnumerable<AnimationClip> clips)
+            IEnumerable<AnimationClip> clips, bool stays = false)
         {
             var actions = clips.ToArray();
             if (actions.Length == 0)
@@ -314,7 +317,7 @@ namespace Forge.UnityEditor.Content
             var layers = controller.layers;
             var layer = layers[layers.Length - 1];
             layer.defaultWeight = 0f;
-            layer.avatarMask = Mask(set, name, parts);
+            layer.avatarMask = parts != null ? Mask(set, name, parts) : null;
             controller.layers = layers;
 
             // The layer's actions play at its pace, which holds one still (a bow at full draw) at 0.
@@ -322,7 +325,7 @@ namespace Forge.UnityEditor.Content
             controller.AddParameter(new AnimatorControllerParameter { name = pace, type = AnimatorControllerParameterType.Float, defaultFloat = 1f });
 
             var machine = layer.stateMachine;
-            var rest = machine.AddState("Rest");
+            var rest = machine.AddState(HumanoidAnimation.RestState);
             rest.writeDefaultValues = false;
             machine.defaultState = rest;
             foreach (var clip in actions)
@@ -338,6 +341,8 @@ namespace Forge.UnityEditor.Content
                 start.hasFixedDuration = true;
                 start.canTransitionToSelf = false;
                 start.conditions = new[] { new AnimatorCondition { mode = AnimatorConditionMode.If, parameter = trigger } };
+                if (stays)
+                    continue;
                 var end = state.AddTransition(rest);
                 end.hasExitTime = true;
                 end.exitTime = 1f;

@@ -19,6 +19,9 @@ namespace Forge.UnityEditor.Content
 
         /// <summary>An action on the whole upper body, the legs still walking (a slash, a shot).</summary>
         UpperBodyAction,
+
+        /// <summary>An action on the whole body, played through and stayed at its end (a death: it falls and lies so).</summary>
+        FullBodyAction,
     }
 
     /// <summary>
@@ -35,9 +38,10 @@ namespace Forge.UnityEditor.Content
     /// Beside the sets, <see cref="ReferenceFolder"/> holds the skeleton the clips are read against
     /// (<see cref="AnimationImport.ReferenceRig"/>); a folder named with a leading underscore is never a set
     /// (<see cref="IsSet"/>).
-    /// An action plays on the arms alone when it draws or sheathes, else on the upper body. A move's name is its own
-    /// across the set's folders, since content names it so ("BowShot"). The import (<see cref="AnimationImport"/>) loops
-    /// what repeats; the animator builder (<see cref="HumanoidAnimatorBuilder"/>) plays whichever of them are present.
+    /// An action plays on the arms alone when it draws or sheathes, on the whole body, stayed at its end, when it is a
+    /// death (<see cref="WholeBody"/>), else on the upper body. A move's name is its own across the set's folders, since
+    /// content names it so ("BowShot"). The import (<see cref="AnimationImport"/>) loops what repeats; the animator
+    /// builder (<see cref="HumanoidAnimatorBuilder"/>) plays whichever of them are present.
     /// </summary>
     static class HumanoidMoves
     {
@@ -64,6 +68,9 @@ namespace Forge.UnityEditor.Content
 
         /// <summary>Putting the weapons away (the arms only).</summary>
         public const string Sheathe = "Sheathe";
+
+        /// <summary>What a death's name has in it ("SwordDeath", "BowDeath2"): the whole body falls, and stays as it fell.</summary>
+        public const string Death = Forge.Play.HumanoidAnimation.DeathMove;
 
         /// <summary>The ground moves, slowest first: the speed blend's order.</summary>
         public static readonly string[] Ground = { Idle, Walk, Run, Sprint };
@@ -118,13 +125,16 @@ namespace Forge.UnityEditor.Content
                 case LocomotionFolder: return MoveRole.Ground;
                 case AirFolder: return MoveRole.Air;
                 case StylesFolder when parts.Length > 2 && IsStanceName(move): return MoveRole.Stance;
-                default: return ArmsOnly(move) ? MoveRole.ArmsAction : MoveRole.UpperBodyAction;
+                default: return WholeBody(move) ? MoveRole.FullBodyAction : ArmsOnly(move) ? MoveRole.ArmsAction : MoveRole.UpperBodyAction;
             }
         }
 
         /// <summary>Whether <paramref name="move"/> plays on the arms alone (drawing and sheathing, a style's too: "BowDraw").</summary>
         public static bool ArmsOnly(string move) =>
             move != null && (move.EndsWith(Draw, StringComparison.Ordinal) || move.EndsWith(Sheathe, StringComparison.Ordinal));
+
+        /// <summary>Whether <paramref name="move"/> plays on the whole body and stays at its end: a death ("SwordDeath", "BowDeath2").</summary>
+        public static bool WholeBody(string move) => move != null && move.IndexOf(Death, StringComparison.Ordinal) >= 0;
 
         /// <summary>Whether a move of <paramref name="role"/> named <paramref name="move"/> repeats while it lasts (standing, walking, falling) rather than playing once.</summary>
         public static bool Loops(MoveRole role, string move) =>

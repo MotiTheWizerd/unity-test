@@ -9,7 +9,8 @@ Humanoid/
                      crouched CrouchIdle CrouchWalk CrouchRun CrouchSprint, crouched with weapons drawn
                      DrawnCrouchIdle DrawnCrouchWalk ..., and CrouchDown StandUp between
   Air/               Jump Fall Land, and with weapons drawn DrawnJump
-  Styles/<Style>/    a combat style's moves: its stance <Style>Idle, its draw and sheathe (on the arms), its blows
+  Styles/<Style>/    a combat style's moves: its stance <Style>Idle, its draw and sheathe (on the arms), its blows,
+                     its deaths (a name with Death in it: the whole body, stayed at its end)
   <Other>/           more actions (Interact, Emotes, ...)
   <Move>.json        beside a clip, optional: how the move holds ({ "rightHand": { "points": [0, 0, 1] } }: what the
                      right hand holds points straight ahead; x right, y up, z forward); the hand is turned the least
@@ -49,6 +50,8 @@ with `_` is not a set.
 | DrawnCrouchIdle | Mixamo "Sword And Shield Crouch Idle" | Adobe Mixamo |
 | CrouchDown | Mixamo "Standing To Crouch" | Adobe Mixamo |
 | StandUp | Mixamo "Crouched To Standing" | Adobe Mixamo |
+| SwordDeath, SwordDeath2 | Mixamo sword-and-shield deaths (Moti's picks, 2026-11-11; exact names to fill in) | Adobe Mixamo |
+| BowDeath, BowDeath2 | Mixamo bow deaths (Moti's picks, 2026-11-11; exact names to fill in) | Adobe Mixamo |
 | _Reference/TPose | VikingM1 as Mixamo rigged it, downloaded in Mixamo's T-pose with skin (the skeleton the clips are read against, not a move) | Moti and studio-raven's VikingM1, rigged and posed by Adobe Mixamo |
 
 Downloaded by Moti from mixamo.com as FBX for Unity, 30 fps, without skin, travel left in (not "in place"). Mixamo

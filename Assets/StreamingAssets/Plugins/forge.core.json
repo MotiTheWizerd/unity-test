@@ -10,6 +10,27 @@
   "records": [
     {
       "type": "actor",
+      "id": "forge.core:actor/elf_woman",
+      "displayName": "Elf Woman",
+      "items": [
+        {
+          "item": "forge.core:viking_sword",
+          "count": 1,
+          "equip": [
+            "forge.core:equip_slot/right_hand"
+          ]
+        },
+        {
+          "item": "forge.core:round_shield_painted",
+          "count": 1,
+          "equip": [
+            "forge.core:equip_slot/left_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "actor",
       "id": "forge.core:actor/player",
       "displayName": "Player",
       "items": [
@@ -45,6 +66,27 @@
       "id": "forge.core:actor/training_dummy",
       "displayName": "Training Dummy",
       "items": []
+    },
+    {
+      "type": "actor",
+      "id": "forge.core:actor/viking_woman",
+      "displayName": "Viking Woman",
+      "items": [
+        {
+          "item": "forge.core:viking_sword",
+          "count": 1,
+          "equip": [
+            "forge.core:equip_slot/right_hand"
+          ]
+        },
+        {
+          "item": "forge.core:round_shield_painted",
+          "count": 1,
+          "equip": [
+            "forge.core:equip_slot/left_hand"
+          ]
+        }
+      ]
     },
     {
       "type": "base_object",
@@ -639,6 +681,12 @@
           "animation": "BowIdle",
           "staminaCost": 0.0,
           "held": false
+        },
+        {
+          "kind": "death",
+          "animation": "BowDeath",
+          "staminaCost": 0.0,
+          "held": false
         }
       ]
     },
@@ -662,6 +710,12 @@
         {
           "kind": "sheathe",
           "animation": "Sheathe",
+          "staminaCost": 0.0,
+          "held": false
+        },
+        {
+          "kind": "death",
+          "animation": "SwordDeath",
           "staminaCost": 0.0,
           "held": false
         }
@@ -795,7 +849,8 @@
         "minScale": 1.0,
         "maxScale": 1.0,
         "alignToSlope": false
-      }
+      },
+      "actor": "forge.core:actor/elf_woman"
     },
     {
       "type": "equip_slot",
@@ -2257,7 +2312,8 @@
         "minScale": 1.0,
         "maxScale": 1.0,
         "alignToSlope": false
-      }
+      },
+      "actor": "forge.core:actor/viking_woman"
     },
     {
       "type": "base_object",

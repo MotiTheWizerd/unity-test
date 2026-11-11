@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Forge.Data;
 using Forge.Data.Records;
 using Forge.Game.Actors;
+using Forge.Game.Attributes;
 using Forge.Game.Combat;
 using Forge.Game.Equipment;
 using Forge.Game.Items;
@@ -20,15 +21,17 @@ namespace Forge.Play
     /// <summary>
     /// The world's characters (a placed object whose look is an animated humanoid: the NPCs of the catalog) going about
     /// while it plays, each an actor as the player is (<see cref="PlayedActor"/>: a body of its own, of the humanoid
-    /// <see cref="BodyShape"/> at its own height, its look riding on it, the same rules moving it, its own pack, hands
-    /// and weapons), told what to do by its mind (<see cref="Wander"/>: strolling about where it was placed) rather than
-    /// by keys. Its body stands in the player's way and the player in its. While it goes about, the placed object it was
-    /// stands hidden; bound for one game, disposed, every body goes and every placed object shows again where its
-    /// record has it.
+    /// <see cref="BodyShape"/> at its own height, its look riding on it, the same rules moving it), and who its base
+    /// object says (<see cref="BaseObjectRecord.Actor"/>, an <see cref="ActorRecord"/>: its name, the world's
+    /// attributes as its own numbers, so a blow hurts it, and what it starts out carrying and holding,
+    /// <see cref="StartingItems"/>: a sword and a shield, put away), told what to do by its mind (<see cref="IMind"/>)
+    /// rather than by keys: someone's, a <see cref="Fighter"/> that strolls about where it was placed
+    /// (<see cref="Wander"/>) and fights back whoever strikes it; no one's, a <see cref="Wander"/> alone. Its body
+    /// stands in the player's way and the player in its. While it goes about, the placed object it was stands hidden;
+    /// bound for one game, disposed, every body goes and every placed object shows again where its record has it.
     /// </summary>
-    // SHORTCUT: a character forgets where it walked when it streams out, and comes back home; its body takes the
-    // player's profile's shape (a race's record will give its own); it has no attributes and nothing in its pack until
-    // an actor record gives them (the fighting character), so no blow or arrow reaches it yet (SceneLayers).
+    // SHORTCUT: a character forgets where it walked, and how hurt it was, when it streams out, and comes back whole
+    // where it was placed; its body takes the player's profile's shape (a race's record will give its own).
     public sealed class WorldCharacters : IDisposable
     {
         readonly WorldView _view;
@@ -86,22 +89,31 @@ namespace Forge.Play
             if (animation == null || !TryGetKind(id, out var kind, out var prefab))
                 return;
 
-            // As tall as its eyes are high in its idle, at its walk's own pace (so its feet keep to the ground); its own
-            // dice, from its id, so it strolls the same way each time the game is played.
+            // As tall as its eyes are high in its idle, at its walk's and its run's own paces (so its feet keep to the
+            // ground); its own dice, from its id, so it goes about the same way each time the game is played.
             var shape = HumanoidHead.TryFindEyeLevel(prefab, animation.Clip(HumanoidAnimation.IdleMove), out var eyes)
                 ? _humanoid.ForEyes(eyes)
                 : _humanoid;
             if (!(eyes > 0f))
                 eyes = shape.Height - BodyShape.HeadAboveEyes;
             var pace = animation.GroundSpeedOf(HumanoidAnimation.WalkMove);
+            var run = animation.GroundSpeedOf(HumanoidAnimation.RunMove);
             var settings = pace > 0f ? _settings.WithSpeed(pace) : _settings;
-            var walking = new LocomotionSettings(walkSpeed: settings.Speed);
+            var walking = run > settings.Speed
+                ? new LocomotionSettings(walkSpeed: settings.Speed, runSpeed: run)
+                : new LocomotionSettings(walkSpeed: settings.Speed);
 
             var root = placed.transform.parent;
             var home = placed.transform.localPosition;
-            var mind = new Wander(new System.Numerics.Vector2(home.x, home.z), settings, new Random(StableHash(id.ToString())));
+            var dice = new Random(StableHash(id.ToString()));
+            var day = new Wander(new System.Numerics.Vector2(home.x, home.z), settings, dice);
+            // Who it is while the world plays: the actor its base object names, if any (placed for its look alone, it is no one).
+            var who = kind.Actor.HasValue && _stage.World.TryGet(kind.Actor.Value, out var record) && record is ActorRecord actor ? actor : null;
+            var mind = who != null
+                ? new Fighter(day, FighterSettings.SwordAndBoard(walking.WalkSpeed, walking.RunSpeed), dice)
+                : (IMind)day;
             var forward = placed.transform.forward;
-            _characters[id] = new Character(_stage, PlacedActors.IdOf(id), placed, root, kind.DisplayName, prefab, shape, walking, eyes, mind,
+            _characters[id] = new Character(_stage, PlacedActors.IdOf(id), placed, root, kind, who, prefab, shape, walking, eyes, mind,
                 Compass.HeadingOf(new System.Numerics.Vector2(forward.x, forward.z)));
         }
 
@@ -137,24 +149,34 @@ namespace Forge.Play
             }
         }
 
-        // One character going about: the actor it is, and the mind telling it where.
+        // One character going about: the actor it is, and the mind telling it what to do.
         sealed class Character : IDisposable
         {
             readonly GameObject _placed;
             readonly Transform _root;
             readonly ActorEquipment _equipment;
-            readonly Wander _mind;
+            readonly IDisposable _attributeEvents;
+            readonly IMind _mind;
 
-            public Character(GameStage stage, ActorId id, GameObject placed, Transform root, string displayName, GameObject prefab, BodyShape shape,
-                LocomotionSettings walking, float eyes, Wander mind, float heading)
+            /// <param name="kind">What it is placed as (its look, its name when it is no one).</param>
+            /// <param name="record">Who it is: its name and what it starts with; null for a character that is no one (nothing hurts it, it holds nothing).</param>
+            public Character(GameStage stage, ActorId id, GameObject placed, Transform root, BaseObjectRecord kind, ActorRecord record,
+                GameObject prefab, BodyShape shape, LocomotionSettings walking, float eyes, IMind mind, float heading)
             {
                 _placed = placed;
                 _root = root;
                 _mind = mind;
-                // Its own pack and hands, empty until its record gives it something.
+                // Its own numbers over the world's attributes, and its own pack and hands with what its record gives it
+                // (a sword and a shield, put away), before the look is built, so they show on it from the start.
+                var attributes = record != null && stage.Attributes != null ? new ActorAttributes(stage.Attributes, id) : null;
+                if (attributes != null)
+                    _attributeEvents = AttributeEvents.Bind(attributes, stage.Events);
                 var inventory = new Inventory();
                 _equipment = new ActorEquipment(id, inventory, stage.Events);
-                Actor = new PlayedActor(stage, id, placed.name, shape, walking, eyes, null, inventory, _equipment, displayName);
+                if (record != null)
+                    StartingItems.Give(record, stage.World, inventory, _equipment);
+                Actor = new PlayedActor(stage, id, placed.name, shape, walking, eyes, attributes, inventory, _equipment,
+                    record != null ? record.DisplayName : kind.DisplayName);
                 Actor.Rules.Facing = BodyFacing.Movement;
                 Actor.ChangeLook(prefab);
                 Actor.PlaceAt(placed.transform.position, heading);
@@ -163,38 +185,114 @@ namespace Forge.Play
 
             public PlayedActor Actor { get; }
 
-            // The mind works where the world's things are placed (the world root's space), so a rebase moves nothing
-            // of it; the actor, where its body is (the scene's).
+            // It sees, decides and does, each frame. The mind works where the world's things are placed (the world
+            // root's space), so a rebase moves nothing of it; the actor, where its body is (the scene's).
             public void Tick(float deltaTime)
             {
-                var rules = Actor.Rules;
-                var feet = rules.Feet.ToUnity();
-                var at = _root != null ? _root.InverseTransformPoint(feet) : feet;
-                var velocity = _mind.Step(new System.Numerics.Vector2(at.x, at.z), deltaTime);
-                var way = new Vector3(velocity.X, 0f, velocity.Y);
-                if (_root != null)
-                    way = _root.TransformDirection(way);
-
-                var commands = PlayerCommands.None;
-                var speed = way.magnitude;
-                if (speed > 1e-4f)
+                // Fallen, it lies where it fell: its mind has nothing to say.
+                if (Actor.Fallen)
                 {
-                    // Straight ahead the way it is going, at the share of its walk the mind asks for.
-                    rules.Look.Set(Compass.HeadingOf(new System.Numerics.Vector2(way.x, way.z)), 0f);
-                    var ahead = Math.Min(1f, speed / rules.Locomotion.Settings.WalkSpeed);
-                    commands = new PlayerCommands(new System.Numerics.Vector2(0f, ahead), System.Numerics.Vector2.Zero, sprint: false, jump: false,
-                        walk: true);
+                    Actor.Tick(ActorCommands.None, deltaTime);
+                    return;
                 }
 
-                Actor.Tick(ActorCommands.Moving(commands), deltaTime);
+                var rules = Actor.Rules;
+                var decision = _mind.Decide(See(), deltaTime);
+                var way = ToScene(new Vector3(decision.Velocity.X, 0f, decision.Velocity.Y));
+                var speed = way.magnitude;
+                var moving = speed > 1e-4f;
+
+                // It faces as the mind says (squaring up to a foe, at the turn rate), else the way it goes.
+                if (decision.Facing is float facing)
+                {
+                    rules.Look.Set(SceneHeading(facing), 0f);
+                    rules.Facing = BodyFacing.Target;
+                }
+                else
+                {
+                    if (moving)
+                        rules.Look.Set(Compass.HeadingOf(new System.Numerics.Vector2(way.x, way.z)), 0f);
+                    rules.Facing = BodyFacing.Movement;
+                }
+
+                var move = PlayerCommands.None;
+                if (moving)
+                {
+                    // The move in the look's frame (x right, y ahead), at the share of its walk, or of its run past it.
+                    var paces = rules.Locomotion.Settings;
+                    var walk = speed <= paces.WalkSpeed + 1e-3f;
+                    var share = Math.Min(1f, speed / (walk ? paces.WalkSpeed : paces.RunSpeed)) / speed;
+                    var ground = new System.Numerics.Vector2(way.x, way.z);
+                    var ahead = System.Numerics.Vector2.Dot(ground, Compass.Forward(rules.Look.Heading)) * share;
+                    var right = System.Numerics.Vector2.Dot(ground, Compass.Right(rules.Look.Heading)) * share;
+                    move = new PlayerCommands(new System.Numerics.Vector2(right, ahead), System.Numerics.Vector2.Zero, sprint: false, jump: false, walk: walk);
+                }
+
+                Actor.Tick(new ActorCommands(move, decision.ReadyWeapon, decision.UseRight, decision.UseLeft, releaseLeft: decision.ReleaseLeft), deltaTime);
             }
 
             public void Dispose()
             {
                 Actor.Dispose();
                 _equipment.Dispose();
+                _attributeEvents?.Dispose();
                 if (_placed != null)
                     _placed.SetActive(true);
+            }
+
+            // What the mind sees now: where it stands, what it is up to, its nearest opponent standing in the game,
+            // its weapons, and its hands.
+            MindSight See()
+            {
+                var stage = Actor.Stage;
+                var feet = Actor.Rules.Feet.ToUnity();
+                var mode = stage.Modes.ModeOf(Actor.Id);
+                System.Numerics.Vector2? opponent = null;
+                if (mode == Mode.Fight)
+                {
+                    var nearest = float.MaxValue;
+                    foreach (var foe in stage.Modes.OpponentsOf(Actor.Id))
+                    {
+                        if (!stage.Actors.TryGet(foe, out var standing))
+                            continue;
+                        var at = standing.Rules.Feet.ToUnity();
+                        var apart = (at - feet).sqrMagnitude;
+                        if (apart < nearest)
+                        {
+                            nearest = apart;
+                            opponent = Ground(at);
+                        }
+                    }
+                }
+
+                var rightBusy = false;
+                var guardUp = false;
+                foreach (var swing in Actor.Combat.Swings)
+                {
+                    if (swing.Guards)
+                        guardUp = true;
+                    else if (swing.Slot == CoreEquipSlots.RightHand)
+                        rightBusy = true;
+                }
+
+                return new MindSight(Ground(feet), mode, opponent, Actor.Readiness.State, rightBusy, guardUp);
+            }
+
+            // The ground plane (x, z) of the world root's space, where the mind works, from a scene position.
+            System.Numerics.Vector2 Ground(Vector3 scene)
+            {
+                var at = _root != null ? _root.InverseTransformPoint(scene) : scene;
+                return new System.Numerics.Vector2(at.x, at.z);
+            }
+
+            Vector3 ToScene(Vector3 direction) => _root != null ? _root.TransformDirection(direction) : direction;
+
+            // A heading in the world root's space, as the scene has it.
+            float SceneHeading(float heading)
+            {
+                var forward = Compass.Forward(heading);
+                var scene = ToScene(new Vector3(forward.X, 0f, forward.Y));
+                return Compass.HeadingOf(new System.Numerics.Vector2(scene.x, scene.z));
             }
         }
     }

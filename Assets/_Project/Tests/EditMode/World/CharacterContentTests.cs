@@ -51,5 +51,24 @@ namespace Forge.Tests.World
                 }
             }
         }
+
+        // Every placed character is an actor while the world plays (so it can be struck and strike back), with something
+        // in hand to fight with from the start.
+        [Test]
+        public void EveryPlacedCharacter_IsAnActor_ThatStartsArmed()
+        {
+            var store = new PluginFileStore(Path.Combine(Application.streamingAssetsPath, "Plugins"), new JsonPluginSerializer(RecordTypeRegistry.CreateDefault()));
+            var records = store.Load(CorePluginId).Records;
+            var npcs = records.OfType<BaseObjectRecord>().Where(r => r.AssetKey.StartsWith("characters/")).ToArray();
+            Assert.That(npcs, Is.Not.Empty, "The base game places no character.");
+
+            foreach (var npc in npcs)
+            {
+                Assert.That(npc.Actor.HasValue, Is.True, $"{npc.Id} is no actor.");
+                var actor = records.OfType<ActorRecord>().FirstOrDefault(a => a.Id == npc.Actor.Value);
+                Assert.That(actor, Is.Not.Null, $"{npc.Id}'s actor {npc.Actor} is not in the plugin.");
+                Assert.That(actor.Items.Any(item => item.Equip != null && item.Equip.Any()), Is.True, $"{actor.Id} starts with nothing in hand.");
+            }
+        }
     }
 }

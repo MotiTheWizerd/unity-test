@@ -16,6 +16,9 @@ namespace Forge.Tests.Content
             Assert.That(HumanoidMoves.RoleOf("Styles/OneHanded/Sheathe.fbx"), Is.EqualTo(MoveRole.ArmsAction));
             Assert.That(HumanoidMoves.RoleOf("Styles/Archery/BowShot.fbx"), Is.EqualTo(MoveRole.UpperBodyAction));
             Assert.That(HumanoidMoves.RoleOf("Emotes/SitIdle.fbx"), Is.EqualTo(MoveRole.UpperBodyAction), "Only a style has a stance.");
+            Assert.That(HumanoidMoves.RoleOf("Styles/OneHanded/SwordDeath.fbx"), Is.EqualTo(MoveRole.FullBodyAction));
+            Assert.That(HumanoidMoves.RoleOf("Styles/Archery/BowDeath2.fbx"), Is.EqualTo(MoveRole.FullBodyAction), "A death's variants too.");
+            Assert.That(HumanoidMoves.Loops(MoveRole.FullBodyAction, "SwordDeath"), Is.False);
         }
 
         [Test]

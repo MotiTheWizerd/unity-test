@@ -52,6 +52,7 @@ namespace Forge.Play
         readonly SoundListener _listener;
         readonly IDisposable _fightCauses;
         readonly IDisposable _modeTrace;
+        readonly IDisposable _deaths;
 
         /// <param name="camera">The camera the player sees through while playing, which the game's ears turn with (<see cref="SoundListener"/>).</param>
         /// <param name="view">The scene's world, which shows what playing changed.</param>
@@ -70,8 +71,9 @@ namespace Forge.Play
             PlacedActors = new PlacedActors(Combatants);
             Modes = new ActorModes(Events);
             _fightCauses = FightCauses.Bind(Modes, Events);
-            // Until something is built on the modes (the music, the world's characters' minds), the console says.
+            // Dev: the console says each change of mode, while fights are tuned (the characters' minds act on them).
             _modeTrace = Events.Subscribe<ModeChanged>(e => Debug.Log($"[Forge] {e.Actor} is in {e.To} mode (was {e.From})."));
+            _deaths = Events.Subscribe<ActorKilled>(OnKilled);
             // Silent or not, the scene has its ears (Unity wants one listener), at the camera until the player plays.
             _listener = new SoundListener(camera);
             if (sound != null)
@@ -135,7 +137,7 @@ namespace Forge.Play
                 End();
 
             World = new PlayedWorld(world, Changes);
-            Stage = new GameStage(World, Events, _view.Assets, Combatants, PlacedActors, LandShot, Sounds, _surfaces);
+            Stage = new GameStage(World, Events, Modes, _view.Assets, Combatants, PlacedActors, LandShot, Sounds, _surfaces);
             Bodies = new WorldPhysics(_view, World, OnSettled);
             // The world's characters stand on the player's body, each at its own height, until races give their own.
             Characters = new WorldCharacters(_view, Stage, _profile.Body, WanderSettings.Stroll);
@@ -272,6 +274,7 @@ namespace Forge.Play
             Changes.Removed -= OnRemoved;
             Changes.Cleared -= _view.ShowAsBuilt;
             Player.Dispose();
+            _deaths.Dispose();
             _modeTrace.Dispose();
             _fightCauses.Dispose();
             _director?.Dispose();
@@ -279,15 +282,33 @@ namespace Forge.Play
             _listener.Dispose();
         }
 
-        Inventory InventoryOf(ActorId actor) => actor == ActorId.Player ? Player.Inventory : null;
+        /// <summary>The actor <paramref name="actor"/> is as it stands in this game (the player, a character of the world); null when it doesn't stand in it.</summary>
+        public PlayedActor ActorOf(ActorId actor) => Stage != null && Stage.Actors.TryGet(actor, out var standing) ? standing : null;
 
-        // Where an actor is in the scene: the player's feet while it is spawned; the world's actors don't say yet.
-        Vector3? WhereIs(ActorId actor) =>
-            actor == ActorId.Player && Player.Player != null ? Player.Player.Feet.ToUnity() : (Vector3?)null;
+        // An actor's health ran out: a character falls and lies as it fell (its fight settled by FightCauses).
+        // SHORTCUT: the player wakes up whole at once where it fell (Moti's call while fights are tested: "let it wake up
+        // with full power, stop fighting"); its real death (a load, a menu) comes with the game.
+        void OnKilled(ActorKilled e)
+        {
+            var actor = ActorOf(e.Actor);
+            if (actor == null)
+                return;
+            if (e.Actor == ActorId.Player)
+            {
+                Revival.WakeUp(actor.Attributes);
+                Debug.Log("[Forge] The player fell, and wakes up whole (dev).");
+            }
+            else
+                actor.Fall();
+        }
 
-        // The voice an actor's own sounds are made in: the player's, as the character it is now has it.
-        string VoiceOf(ActorId actor) =>
-            actor == ActorId.Player && Player.Character != null ? CharacterVoice.Of(Player.Character.Root) : null;
+        Inventory InventoryOf(ActorId actor) => ActorOf(actor)?.Inventory;
+
+        // Where an actor is in the scene: its feet, while it stands in the game.
+        Vector3? WhereIs(ActorId actor) => ActorOf(actor)?.Rules.Feet.ToUnity();
+
+        // The voice an actor's own sounds are made in: as the character it looks like has it.
+        string VoiceOf(ActorId actor) => ActorOf(actor)?.Model is CharacterModel look ? CharacterVoice.Of(look.Root) : null;
 
         // A loose thing came to rest somewhere new (scene space): playing keeps it there, in the world's own coordinates.
         void OnSettled(RecordId id, Vector3 position, Quaternion rotation)

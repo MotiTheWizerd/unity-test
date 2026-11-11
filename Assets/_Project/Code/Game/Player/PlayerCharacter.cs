@@ -75,7 +75,7 @@ namespace Forge.Game.Player
             }
         }
 
-        /// <summary>How the body turns; the camera mode sets it (first person: with the look).</summary>
+        /// <summary>How the body turns; the camera mode sets the player's (first person: with the look), a mind its character's.</summary>
         public BodyFacing Facing { get; set; } = BodyFacing.Look;
 
         /// <summary>
@@ -183,7 +183,7 @@ namespace Forge.Game.Player
                 return;
             }
 
-            if (Aiming)
+            if (Aiming || Facing == BodyFacing.Target)
             {
                 if (deltaTime > 0f)
                     BodyHeading = TurnToward(BodyHeading, Look.Heading, Locomotion.Settings.TurnRate * deltaTime);

@@ -1,4 +1,5 @@
 using System;
+using Forge.Game.Actors;
 using Forge.Game.Motion;
 using Forge.World;
 using UnityEngine;
@@ -11,8 +12,8 @@ namespace Forge.Play
     /// walks up steps and slopes up to its limits, and slides along walls. Clutter it walks through, kicking it aside
     /// (<see cref="ClutterKicker"/>). Crouched, the capsule is its crouch height, its feet where they were, and it stands
     /// back up only when the room above it is clear (<see cref="ICrouchingBody"/>). Its own scene object, on the
-    /// <see cref="ActorLayer"/>, which looks into the scene leave out (<see cref="SceneLayers"/>). Positions are the feet,
-    /// in scene coordinates.
+    /// <see cref="ActorLayer"/>, which looks into the scene leave out unless they ask for actors (<see cref="SceneLayers"/>:
+    /// a blow, an arrow), tagged with whose it is (<see cref="ActorLink"/>). Positions are the feet, in scene coordinates.
     /// </summary>
     public sealed class ActorBody : IMotor, ICrouchingBody, IDisposable
     {
@@ -23,9 +24,11 @@ namespace Forge.Play
         readonly float _crouchedHeight;
 
         /// <param name="name">Its scene object's name ("Player", the character's).</param>
-        public ActorBody(string name, BodyShape shape)
+        /// <param name="actor">Whose body it is, for whatever meets it.</param>
+        public ActorBody(string name, BodyShape shape, ActorId actor)
         {
             _body = new GameObject(name) { layer = ActorLayer.Index };
+            _body.AddComponent<ActorLink>().Actor = actor;
             _controller = _body.AddComponent<CharacterController>();
             _standingHeight = shape.Height;
             _crouchedHeight = shape.CrouchHeight;
