@@ -1459,5 +1459,26 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: fde5010f80450ce45a1e250553fad008, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1562826758822918063}
   m_SourcePrefab: {fileID: 100100000, guid: fde5010f80450ce45a1e250553fad008, type: 3}
+--- !u!1 &5378621275931057250 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: fde5010f80450ce45a1e250553fad008, type: 3}
+  m_PrefabInstance: {fileID: 5072700645068742963}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1562826758822918063
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5378621275931057250}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f60d9e353560e44fbe81e57462cd63d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Forge.Play::Forge.Play.CharacterVoice
+  _voice: female

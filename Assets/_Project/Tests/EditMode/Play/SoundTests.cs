@@ -12,6 +12,14 @@ namespace Forge.Tests.Play
         static readonly LocomotionSettings Paces = LocomotionSettings.Default;
 
         [Test]
+        public void ASound_InAVoice_IsItsVersionMadeInIt_AndWithoutOne_ItselfAsItIs()
+        {
+            Assert.That(SoundDirector.Voiced(SoundDirector.Jump, "Female"), Is.EqualTo("foley/jumpfemale"));
+            Assert.That(SoundDirector.Voiced(SoundDirector.Jump, null), Is.EqualTo(SoundDirector.Jump));
+            Assert.That(SoundDirector.Voiced(SoundDirector.Jump, " "), Is.EqualTo(SoundDirector.Jump));
+        }
+
+        [Test]
         public void ATake_NeverPlaysTwiceRunning()
         {
             var picker = new TakePicker(new Random(7));

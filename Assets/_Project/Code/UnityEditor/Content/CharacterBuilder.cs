@@ -46,7 +46,8 @@ namespace Forge.UnityEditor.Content
                 if (HumanoidTPose.Straighten($"{folder}/{name}.fbx", out trued))
                     Debug.Log($"[Forge] {name}: T-pose trued ({trued}).");
                 var settings = SettingsOf(folder, name);
-                var prefab = BuildCharacter(folder, name, MoveSetOf(name, settings, moveSets), settings.textureSize > 0 ? settings.textureSize : TextureSize);
+                var prefab = BuildCharacter(folder, name, MoveSetOf(name, settings, moveSets), settings.textureSize > 0 ? settings.textureSize : TextureSize,
+                    settings.voice);
                 if (prefab == null)
                     continue;
                 // An NPC is placed in the world from the catalog, as a model is.
@@ -74,7 +75,7 @@ namespace Forge.UnityEditor.Content
             }
         }
 
-        // A character folder's optional {Name}.json: { "moves": "Guard", "textureSize": 4096 }.
+        // A character folder's optional {Name}.json: { "moves": "Guard", "textureSize": 4096, "voice": "female" }.
         static CharacterSettings SettingsOf(string folder, string name)
         {
             var settingsPath = $"{folder}/{name}.json";
@@ -102,14 +103,17 @@ namespace Forge.UnityEditor.Content
             public string moves;
             // Its textures' largest size; 0: TextureSize. The player is seen closest, so it may wear more.
             public int textureSize;
+            // The voice its own sounds are made in (CharacterVoice); none: the sounds as they are.
+            public string voice;
         }
 
         /// <summary>
         /// The prefab built for the character folder <paramref name="folder"/>, playing <paramref name="animations"/>
-        /// (none: it stands in its rest pose), its textures at most <paramref name="textureSize"/>, or null when it isn't
-        /// a character.
+        /// (none: it stands in its rest pose), its textures at most <paramref name="textureSize"/>, speaking in
+        /// <paramref name="voice"/> (<see cref="CharacterVoice"/>; none: no voice of its own), or null when it isn't a character.
         /// </summary>
-        public static GameObject BuildCharacter(string folder, string name, RuntimeAnimatorController animations, int textureSize = TextureSize)
+        public static GameObject BuildCharacter(string folder, string name, RuntimeAnimatorController animations, int textureSize = TextureSize,
+            string voice = null)
         {
             var modelPath = $"{folder}/{name}.fbx";
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
@@ -144,6 +148,17 @@ namespace Forge.UnityEditor.Content
                 animator.applyRootMotion = false;
                 // Off-screen characters don't pose their bones; the player is always on screen when it shows.
                 animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+
+                var speaks = instance.GetComponent<CharacterVoice>();
+                if (string.IsNullOrWhiteSpace(voice))
+                {
+                    if (speaks != null)
+                        Object.DestroyImmediate(speaks);
+                }
+                else
+                {
+                    (speaks != null ? speaks : instance.AddComponent<CharacterVoice>()).Configure(voice.Trim());
+                }
 
                 // After the animator: binding it puts the bones back as the file has them.
                 foreach (var skinned in instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))

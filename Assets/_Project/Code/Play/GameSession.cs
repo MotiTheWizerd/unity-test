@@ -74,7 +74,7 @@ namespace Forge.Play
             Player = new PlayerSession(profile, camera, Events, view.Assets, Combatants, PlacedActors, LandShot,
                 Sounds, new GroundSurfaces(view, frame, () => World));
             if (Sounds != null)
-                _director = new SoundDirector(Events, Sounds, WhereIs);
+                _director = new SoundDirector(Events, Sounds, WhereIs, VoiceOf);
             Interactions = new Interactions()
                 .Add(new TakeInteraction(Changes, InventoryOf, Events));
             _dropper = new ItemDropper(Changes, InventoryOf, Events);
@@ -265,6 +265,10 @@ namespace Forge.Play
         // Where an actor is in the scene: the player's feet while it is spawned; the world's actors don't say yet.
         Vector3? WhereIs(ActorId actor) =>
             actor == ActorId.Player && Player.Player != null ? Player.Player.Feet.ToUnity() : (Vector3?)null;
+
+        // The voice an actor's own sounds are made in: the player's, as the character it is now has it.
+        string VoiceOf(ActorId actor) =>
+            actor == ActorId.Player && Player.Character != null ? CharacterVoice.Of(Player.Character.Root) : null;
 
         // A loose thing came to rest somewhere new (scene space): playing keeps it there, in the world's own coordinates.
         void OnSettled(RecordId id, Vector3 position, Quaternion rotation)

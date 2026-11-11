@@ -1008,7 +1008,9 @@ later reach the world's characters as noise (a crouched step is softer).
 - **`SoundPlayer`** (one per `GameSession`) plays on a fixed pool of voices made once (the oldest gives way), each
   play a different take than the last (`TakePicker`), straying a little in loudness and pitch.
 - **`SoundDirector`** subscribes to the stream and plays each happening's key where its actor is
-  (`GameSession.WhereIs`: the player's feet today): `ActorJumped` → `foley/jump`; a combat move coming to its
+  (`GameSession.WhereIs`: the player's feet today): `ActorJumped` → `foley/jump`, in the actor's voice when it has
+  a version in it (`SoundDirector.Voiced`: a character's `{Name}.json` `"voice": "female"` puts a `CharacterVoice` on
+  its prefab, `GameSession.VoiceOf` reads it, and `foley/jumpfemale` plays, else `foley/jump`); a combat move coming to its
   moment (`MoveWindowOpened`, published as its window opens: a blow's cut, a bow's draw with the arrow on, a
   shield's raise) → `combat/<its animation>` (`combat/swordslash`, `combat/bowshot`); a shot (`ShotLoosed`, naming
   its move's release) → `combat/<release>` (`combat/bowrelease`), cutting the draw's creak short
