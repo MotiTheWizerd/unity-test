@@ -160,6 +160,12 @@ namespace Forge.Play
 
         AnimationClip IdleClip => _animation?.Clip(HumanoidAnimation.IdleMove);
 
+        /// <summary>
+        /// How fast its body goes at most with its weapons drawn, for its legs to keep to its drawn clips' stride
+        /// (<see cref="HumanoidAnimation.DrawnTopSpeed"/>), meters per second; infinity without them.
+        /// </summary>
+        public float DrawnTopSpeed => _animation?.DrawnTopSpeed ?? float.PositiveInfinity;
+
         /// <summary>The clip it stands ready in, holding its weapons out: its drawn idle, else its idle; null without animations.</summary>
         public AnimationClip StanceClip => _animation?.Clip(HumanoidAnimation.DrawnIdleMove) ?? IdleClip;
 

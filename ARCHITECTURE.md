@@ -889,7 +889,13 @@ from any camera, so both cameras read the same player.
   (`DrawnIdle`, `DrawnWalk`, `DrawnRun`, `DrawnSprint`) a second ground state plays while `Drawn`, each missing drawn
   move falling back to its plain one, unless it is faster than the fastest drawn clip: then that clip sped up to its
   pace (`DrawnMoves`: the sprint shown as `DrawnRun` faster), so the sword and the shield never drop into the plain
-  run's arms (`MoveSetContentTests` guards it). With a **sidestep** (`DrawnStrafe`, else `Strafe`: Mixamo's Sword And Shield
+  run's arms (`MoveSetContentTests` guards it). So that its legs don't race, a body with its weapons out (drawing or
+  drawn) goes no faster than its fastest drawn clip at its size played `HumanoidAnimation.MostStride` (1.2×) faster
+  (`DrawnTopSpeed`; `PlayedActor` sets it each frame as `PlayerLocomotion.TopSpeed`, which caps the ground velocity
+  whatever the pace, and a sprint that can't outrun the run is none, so it costs no stamina). With Mixamo's
+  sword-and-shield run, a jog at 2.9 m/s in the clips' size, that is about 3.3 m/s for VikingF1: the drawn run and
+  sprint (4.5 and 6 m/s) had played its legs 1.64× and 2.19×. Weapons away, the everyday paces are the profile's, set
+  against the everyday clips. A faster drawn run or a drawn sprint clip raises it by itself. With a **sidestep** (`DrawnStrafe`, else `Strafe`: Mixamo's Sword And Shield
   Strafe, a step to the right at a walk's pace) the drawn states blend by the way the body goes rather than its speed
   alone (`HumanoidAnimatorBuilder.DirectionalTree`, a freeform directional 2D tree on `SideSpeed` and `AheadSpeed`):
   each forward clip ahead at its speed and, played backward, as far behind; the strafe right at its speed, mirrored

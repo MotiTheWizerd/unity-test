@@ -127,6 +127,7 @@ namespace Forge.Game.Player
             Look.Turn(commands.Turn);
             foreach (var limit in Limits)
                 commands = limit.Allow(commands);
+            commands = Locomotion.WithinTopSpeed(commands);
             commands = Headroom(commands);
             if (Costs != null)
                 commands = Costs.Afford(commands, deltaTime);

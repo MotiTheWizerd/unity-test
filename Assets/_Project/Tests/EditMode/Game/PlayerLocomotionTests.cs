@@ -302,5 +302,39 @@ namespace Forge.Tests.Game
             Assert.Throws<ArgumentOutOfRangeException>(() => new LocomotionSettings(jumpHeight: -1f));
             Assert.That(new LocomotionSettings(gravity: 20f, jumpHeight: 1.25f).JumpSpeed, Is.EqualTo(Math.Sqrt(50.0)).Within(1e-4f));
         }
+
+        [Test]
+        public void ATopSpeed_HoldsTheRunAndTheSprint_NotAMoveUnderIt()
+        {
+            var player = OnFlatGround();
+            player.Locomotion.TopSpeed = 3f;
+
+            Run(player, Walk(0f, 1f), 1f);
+            Assert.That(GroundSpeed(player), Is.EqualTo(3f).Within(1e-3f), "The run, held.");
+            Run(player, Walk(0f, 1f, sprint: true), 1f);
+            Assert.That(GroundSpeed(player), Is.EqualTo(3f).Within(1e-3f), "The sprint too.");
+            Run(player, Walk(0f, 0.5f), 1f);
+            Assert.That(GroundSpeed(player), Is.EqualTo(Settings.RunSpeed * 0.5f).Within(1e-3f), "Slower than it, a move goes as asked.");
+        }
+
+        [Test]
+        public void ASprintThatCantOutrunTheRun_IsNoSprint()
+        {
+            var locomotion = new PlayerLocomotion(Settings) { TopSpeed = Settings.RunSpeed - 0.5f };
+            Assert.That(locomotion.WithinTopSpeed(Walk(0f, 1f, sprint: true)).Sprint, Is.False, "It would cost for nothing.");
+
+            locomotion.TopSpeed = Settings.SprintSpeed;
+            Assert.That(locomotion.WithinTopSpeed(Walk(0f, 1f, sprint: true)).Sprint, Is.True, "One that outruns the run is one.");
+        }
+
+        [Test]
+        public void ATopSpeed_IsMoreThanNothing_AndNoneAtFirst()
+        {
+            var locomotion = new PlayerLocomotion(Settings);
+
+            Assert.That(float.IsPositiveInfinity(locomotion.TopSpeed), Is.True);
+            Assert.Throws<ArgumentOutOfRangeException>(() => locomotion.TopSpeed = 0f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => locomotion.TopSpeed = float.NaN);
+        }
     }
 }

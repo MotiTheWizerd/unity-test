@@ -550,6 +550,40 @@ namespace Forge.Play
             return clip != null ? ClipSpeed(clip) * _animator.humanScale : 0f;
         }
 
+        /// <summary>
+        /// How much faster than it was made a stride may play before the legs race (a fast-forward look): a body whose
+        /// clips are slower than it goes is held to this much past its fastest (<see cref="DrawnTopSpeed"/>).
+        /// </summary>
+        public const float MostStride = 1.2f;
+
+        // The drawn ground moves that walk, slowest first, as the builder names them.
+        static readonly string[] DrawnStrides = { Drawn + WalkMove, Drawn + RunMove, Drawn + "Sprint" };
+
+        float? _drawnTopSpeed;
+
+        /// <summary>
+        /// How fast this body goes at most with its weapons drawn, its legs kept to its drawn clips: the fastest of its own
+        /// drawn ground moves at its size (DrawnRun: Mixamo's sword-and-shield run, a jog), played at most
+        /// <see cref="MostStride"/> faster; meters per second. Infinity for a set without drawn ground moves of its own
+        /// (it walks its plain ones, whose paces the body is given). Its everyday paces aren't held: they are the
+        /// profile's, set against its everyday clips; the drawn stance has no paces but its clips'.
+        /// </summary>
+        public float DrawnTopSpeed
+        {
+            get
+            {
+                if (!_drawnTopSpeed.HasValue)
+                {
+                    var fastest = 0f;
+                    foreach (var move in DrawnStrides)
+                        fastest = Mathf.Max(fastest, GroundSpeedOf(move));
+                    _drawnTopSpeed = fastest > 0f ? fastest * MostStride : float.PositiveInfinity;
+                }
+
+                return _drawnTopSpeed.Value;
+            }
+        }
+
         // Each action layer comes in as its action starts and is out as it ends, so the layer's own state can go back
         // to rest at once, unseen; one held stays in. One let go still fades out still, and plays on once it is out.
         void FadeActions(float deltaTime)

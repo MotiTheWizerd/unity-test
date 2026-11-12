@@ -10,7 +10,8 @@ namespace Forge.Game.Player
     /// move this frame. On the ground the pace eases toward the wanted one quickly and the body is held down so it stays
     /// on downhill slopes; in the air gravity pulls and steering is weak. A jump needs the ground, or a moment after
     /// leaving it (coyote time), and only one per landing. The crouch key crouches, at a crouch's pace, until pressed
-    /// again; a sprint or a jump stands it up first, as Skyrim's sneak. Engine-free: the motor (<see cref="IMotor"/>)
+    /// again; a sprint or a jump stands it up first, as Skyrim's sneak. Whatever the pace, it goes no faster than its
+    /// <see cref="TopSpeed"/> (as fast as its look can show it going). Engine-free: the motor (<see cref="IMotor"/>)
     /// carries the move out, and whoever plays it (<see cref="PlayerCharacter"/>) lowers the body.
     /// </summary>
     public sealed class PlayerLocomotion
@@ -21,10 +22,33 @@ namespace Forge.Game.Player
         readonly LocomotionSettings _settings;
         float _sinceGrounded = float.PositiveInfinity;
         bool _jumped;
+        float _topSpeed = float.PositiveInfinity;
 
         public PlayerLocomotion(LocomotionSettings settings = null) => _settings = settings ?? LocomotionSettings.Default;
 
         public LocomotionSettings Settings => _settings;
+
+        /// <summary>
+        /// Meters per second it goes at most over the ground, whatever its pace: as fast as its look can show it going
+        /// (weapons drawn, its legs keep to its drawn clips' stride); infinity, as it starts: as fast as its paces.
+        /// </summary>
+        public float TopSpeed
+        {
+            get => _topSpeed;
+            set
+            {
+                if (!(value > 0f))
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "A top speed is more than 0 meters a second.");
+                _topSpeed = value;
+            }
+        }
+
+        /// <summary>
+        /// <paramref name="commands"/> as its <see cref="TopSpeed"/> lets them through: a sprint that can't outrun the run
+        /// isn't one, so it costs nothing; the rest unchanged.
+        /// </summary>
+        public PlayerCommands WithinTopSpeed(PlayerCommands commands) =>
+            commands.Sprint && TopSpeed <= _settings.RunSpeed ? commands.Allowing(sprint: false, jump: commands.Jump, walk: commands.Walk) : commands;
 
         /// <summary>Meters per second, world axes (y up).</summary>
         public Vector3 Velocity { get; private set; }
@@ -100,7 +124,8 @@ namespace Forge.Game.Player
             _jumped = false;
         }
 
-        // The ground velocity the commands ask for: the stick or keys turned by the heading, never faster than the pace.
+        // The ground velocity the commands ask for: the stick or keys turned by the heading, never faster than the pace,
+        // nor than its top speed.
         Vector2 Wanted(PlayerCommands commands, float heading)
         {
             var move = commands.Move;
@@ -114,7 +139,9 @@ namespace Forge.Game.Player
                 : Crouching ? _settings.CrouchSpeed
                 : Walking || commands.Walk ? _settings.WalkSpeed
                 : _settings.RunSpeed;
-            return (Compass.Right(heading) * move.X + Compass.Forward(heading) * move.Y) * pace;
+            var wanted = (Compass.Right(heading) * move.X + Compass.Forward(heading) * move.Y) * pace;
+            var speed = wanted.Length();
+            return speed > _topSpeed ? wanted * (_topSpeed / speed) : wanted;
         }
 
         static Vector2 MoveTowards(Vector2 current, Vector2 target, float maxStep)
