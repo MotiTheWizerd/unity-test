@@ -6,7 +6,8 @@ namespace Forge.Play
     /// <summary>
     /// A humanoid's head, read off the character itself rather than set by hand: its bones (the head and everything under
     /// it: jaw, eyes, a helmet's), which first person folds away (<see cref="HeadlessBody"/>), how high its eyes are
-    /// (<see cref="TryFindEyeLevel"/>) and where (<see cref="TryFindEyes"/>), which the first-person camera rides. Each is
+    /// (<see cref="TryFindEyeLevel"/>) and where, looking which way (<see cref="TryFindEyes"/>), which the first-person
+    /// camera rides and a head is turned by to look at someone (<see cref="HeadLook"/>). Each is
     /// measured once per character and clip (and height), then remembered.
     /// </summary>
     public static class HumanoidHead
@@ -15,7 +16,7 @@ namespace Forge.Play
         // VikingM1, VikingF1, ElfF1) they sit halfway, where their faces put them too (just above the nose's tip) within 1 cm.
         const float EyesUpTheHead = 0.5f;
 
-        static readonly Dictionary<(GameObject, AnimationClip, float), Vector3?> Found = new Dictionary<(GameObject, AnimationClip, float), Vector3?>();
+        static readonly Dictionary<(GameObject, AnimationClip, float), Pose?> Found = new Dictionary<(GameObject, AnimationClip, float), Pose?>();
         static readonly Dictionary<(GameObject, AnimationClip), float?> Levels = new Dictionary<(GameObject, AnimationClip), float?>();
 
         /// <summary>The head bone and every bone under it; empty when <paramref name="humanoid"/> has no head.</summary>
@@ -54,11 +55,12 @@ namespace Forge.Play
         }
 
         /// <summary>
-        /// Where <paramref name="character"/>'s eyes are, in its head bone's own frame: <paramref name="height"/> above its
-        /// root as it stands at the start of <paramref name="clip"/> (its idle), at the front of its face (the farthest ahead
-        /// of what its head carries) and midway across it. False when it has no head to find them on.
+        /// Where <paramref name="character"/>'s eyes are and which way they look, in its head bone's own frame:
+        /// <paramref name="height"/> above its root as it stands at the start of <paramref name="clip"/> (its idle), at the
+        /// front of its face (the farthest ahead of what its head carries) and midway across it, looking ahead and level as
+        /// it stands there (its root's forward and up). False when it has no head to find them on.
         /// </summary>
-        public static bool TryFindEyes(GameObject character, AnimationClip clip, float height, out Vector3 inHead)
+        public static bool TryFindEyes(GameObject character, AnimationClip clip, float height, out Pose inHead)
         {
             inHead = default;
             if (character == null || clip == null)
@@ -74,7 +76,7 @@ namespace Forge.Play
             return found.HasValue;
         }
 
-        static Vector3? Measure(GameObject character, AnimationClip clip, float height)
+        static Pose? Measure(GameObject character, AnimationClip clip, float height)
         {
             using (var sampler = ClipSampler.TryCreate(character, clip))
             {
@@ -94,7 +96,8 @@ namespace Forge.Play
                 }
 
                 var eyes = float.IsInfinity(front) ? new Vector3(pivot.x, height, pivot.z) : new Vector3((left + right) * 0.5f, height, front);
-                return head.InverseTransformPoint(sampler.Root.TransformPoint(eyes));
+                return new Pose(head.InverseTransformPoint(sampler.Root.TransformPoint(eyes)),
+                    Quaternion.Inverse(head.rotation) * sampler.Root.rotation);
             }
         }
 

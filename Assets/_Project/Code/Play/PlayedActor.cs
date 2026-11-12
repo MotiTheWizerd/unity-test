@@ -24,7 +24,8 @@ namespace Forge.Play
     /// through its <see cref="ActorLink"/>, its guard covering the way its body faces), and its look (<see cref="Model"/>,
     /// changed at will: <see cref="ChangeLook"/>) with everything shown on it:
     /// what it holds, its draws and sheathes, its swings, the blade's sweep through the scene, its shots and their
-    /// flight, its footsteps. Each frame it does what it is told (<see cref="Tick"/>, <see cref="ActorCommands"/>) and
+    /// flight, its footsteps, its head turned to whom it looks at (<see cref="LooksAt"/>). Each frame it does what it is
+    /// told (<see cref="Tick"/>, <see cref="ActorCommands"/>) and
     /// shows it. Only who tells it differs: the player's controls (<see cref="PlayerSession"/>), a mind
     /// (<see cref="WorldCharacters"/>). It stands on the game's roster (<see cref="ActorRoster"/>) from the moment it is
     /// made; disposed, it leaves, body and look go, and it can be struck no more.
@@ -42,6 +43,7 @@ namespace Forge.Play
         BladeSweep _sweep;
         ShotView _shotView;
         ArrowFlights _arrows;
+        HeadLook _headLook;
         FootstepView _footsteps;
 
         /// <param name="stage">The game it stands in.</param>
@@ -130,6 +132,23 @@ namespace Forge.Play
         public bool Fallen { get; private set; }
 
         /// <summary>
+        /// Whom its head turns to while its body goes about its business (<see cref="HeadLook"/>), while both stand: the
+        /// one a character's gaze settles on (<see cref="Forge.Game.Minds.Gaze"/>); default: no one, it looks as its
+        /// animation has it.
+        /// </summary>
+        public ActorId LooksAt { get; set; }
+
+        /// <summary>Where its eyes are now (the scene's): its look's own, as its head moves, else the rules' above its feet.</summary>
+        public Vector3 Eyes
+        {
+            get
+            {
+                var eyes = _model?.Eyes(Rules.EyeHeight);
+                return eyes != null ? eyes.position : Rules.Eyes.ToUnity();
+            }
+        }
+
+        /// <summary>
         /// It falls (its health ran out): its swings stop, its body lies down (<see cref="ActorBody.Lie"/>: no obstacle,
         /// struck by nothing) and its look dies in its weapon's style's death (<see cref="ActorCombat.DeathAnimation"/>,
         /// else the look's own; one of the death's variants by chance, <see cref="CharacterModel.Vary"/>) and stays so;
@@ -188,6 +207,8 @@ namespace Forge.Play
             _sweep = new BladeSweep(Combat, _model, Stage.World, Stage.Identify);
             _shotView = new ShotView(Combat, Equipment, _model, Stage.Assets, AimPose);
             _arrows = new ArrowFlights(Combat, _model, Stage.Assets, AimPose, Stage.Identify, Stage.LandShot);
+            // Last on the pose: the head turns once the upper body is set (a stance kept, a bow's aim).
+            _headLook = new HeadLook(_model, Rules.EyeHeight, LookedAt);
             if (Stage.Sounds != null)
                 _footsteps = new FootstepView(_model, Stage.Sounds, Stage.Surfaces, Rules.Locomotion.Settings);
             Show(0f);
@@ -277,6 +298,8 @@ namespace Forge.Play
             _shotView = null;
             _arrows?.Dispose();
             _arrows = null;
+            _headLook?.Dispose();
+            _headLook = null;
             _combatView?.Dispose();
             _combatView = null;
             _guardView = null;
@@ -285,6 +308,10 @@ namespace Forge.Play
             Look = null;
             Rules.EyeHeight = _eyeHeight;
         }
+
+        // The eyes of whom it looks at, while both stand; null for no one.
+        Vector3? LookedAt() =>
+            !Fallen && !LooksAt.IsDefault && Stage.Actors.TryGet(LooksAt, out var other) && !other.Fallen ? other.Eyes : (Vector3?)null;
 
         // Where it aims from and which way: as set (the player's camera), else from its eyes along its look.
         ViewPose AimPose() => Aim != null ? Aim() : new ViewPose(Rules.Eyes, FirstPersonCamera.Looking(Rules.Look));

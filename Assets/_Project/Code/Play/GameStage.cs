@@ -6,6 +6,7 @@ using Forge.Game.Actors;
 using Forge.Game.Attributes;
 using Forge.Game.Combat;
 using Forge.Game.Events;
+using Forge.Game.Minds;
 using Forge.Play.Sound;
 using Forge.World;
 using Forge.World.Assets;
@@ -21,8 +22,8 @@ namespace Forge.Play
     /// (<see cref="Assets"/>, for what is held), who can be struck (<see cref="Combatants"/>, the world's placed actors
     /// among them as they are met, <see cref="PlacedActors"/>), who stands in the game (<see cref="Actors"/>), where a
     /// shot that lands goes (<see cref="LandShot"/>), what sounds play on (<see cref="Sounds"/>; null: the game plays
-    /// silent) and what is underfoot (<see cref="Surfaces"/>; null: nothing in particular). One per game begun
-    /// (<see cref="GameSession.Begin"/>), gone when it ends.
+    /// silent), what is underfoot (<see cref="Surfaces"/>; null: nothing in particular) and who sees whom
+    /// (<see cref="Sight"/>). One per game begun (<see cref="GameSession.Begin"/>), gone when it ends.
     /// </summary>
     public sealed class GameStage
     {
@@ -76,6 +77,9 @@ namespace Forge.Play
 
         /// <summary>What is underfoot, which steps sound of; null: nothing in particular.</summary>
         public GroundSurfaces Surfaces { get; }
+
+        /// <summary>Whether one point sees another past the world's solid things, which characters' eyes go by.</summary>
+        public ILineOfSight Sight { get; } = new PhysicsLineOfSight();
 
         /// <summary>
         /// Whom a collider in the scene belongs to: an actor's body (<see cref="ActorLink"/>), or a placed actor of the

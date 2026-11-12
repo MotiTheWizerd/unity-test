@@ -130,7 +130,8 @@ namespace Forge.Play
         /// <summary>
         /// A point riding its head where its eyes are, made the first time it is asked for
         /// (<see cref="HumanoidHead.TryFindEyes"/>): <paramref name="height"/> above its body's feet as it stands at rest,
-        /// at the front of its face; so it sways, leans and stoops with the head as it animates. Null without a head.
+        /// at the front of its face, its forward where the face looks; so it sways, leans, stoops and turns with the head
+        /// as it animates. Null without a head.
         /// </summary>
         public Transform Eyes(float height)
         {
@@ -141,7 +142,8 @@ namespace Forge.Play
                 return null;
             _eyes = new GameObject("Eyes").transform;
             _eyes.SetParent(head, false);
-            _eyes.localPosition = inHead;
+            _eyes.localPosition = inHead.position;
+            _eyes.localRotation = inHead.rotation;
             _eyes.gameObject.layer = Root.layer;
             return _eyes;
         }
@@ -306,26 +308,36 @@ namespace Forge.Play
         /// the arms hold turns by all of it while the hips stay: an archer swinging the bow onto the aim, high or low, left
         /// or right. On this frame's pose, so from <see cref="Posed"/>.
         /// </summary>
-        public void TurnUpperBody(Quaternion turn)
+        public void TurnUpperBody(Quaternion turn) => Turn(SpineBones, turn);
+
+        /// <summary>
+        /// Turns its head by <paramref name="turn"/> (scene space), spread over the neck and the head, so the face turns by
+        /// all of it while the shoulders stay: looking at someone. On this frame's pose, so from <see cref="Posed"/>.
+        /// </summary>
+        public void TurnHead(Quaternion turn) => Turn(NeckBones, turn);
+
+        static readonly HumanBodyBones[] SpineBones = { HumanBodyBones.Spine, HumanBodyBones.Chest, HumanBodyBones.UpperChest };
+        static readonly HumanBodyBones[] NeckBones = { HumanBodyBones.Neck, HumanBodyBones.Head };
+
+        // Turns a chain of its bones (root first) by `turn`, each bone by its share about its own joint; one after the
+        // other, what hangs from the last turns by all.
+        void Turn(HumanBodyBones[] chain, Quaternion turn)
         {
             if (_humanoid == null)
                 return;
             var bones = 0;
-            foreach (var id in SpineBones)
+            foreach (var id in chain)
                 bones += _humanoid.GetBoneTransform(id) != null ? 1 : 0;
             if (bones == 0)
                 return;
-            // Each bone turns by its share about its own joint; one after the other, what hangs from the last turns by all.
             var share = Quaternion.Slerp(Quaternion.identity, turn, 1f / bones);
-            foreach (var id in SpineBones)
+            foreach (var id in chain)
             {
                 var bone = _humanoid.GetBoneTransform(id);
                 if (bone != null)
                     bone.rotation = share * bone.rotation;
             }
         }
-
-        static readonly HumanBodyBones[] SpineBones = { HumanBodyBones.Spine, HumanBodyBones.Chest, HumanBodyBones.UpperChest };
 
         /// <summary>
         /// Makes <paramref name="look"/> part of its look without hanging it anywhere (an arrow on the string, laid there by

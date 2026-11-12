@@ -921,7 +921,14 @@ from any camera, so both cameras read the same player.
   back by the difference between the hips the action was made on (`StanceFinder`, read off the clip moment by moment
   with a `ClipSampler`, remembered per character and clip) and the hips it stands on now, as much as the action shows
   (`HumanoidAnimation.TryGetUpperBodyAction`: its layer's weight, less a whole-body action laid over it), at most a
-  90° twist; a pose the animator didn't write anew (culled) isn't turned twice. `MoveSetContentTests` guards that
+  90° twist; a pose the animator didn't write anew (culled) isn't turned twice. Last on the pose, `HeadLook` (made
+  with every look by `PlayedActor`) turns the neck and head (`CharacterModel.TurnHead`, which shares
+  `TurnUpperBody`'s chain turn) so the face looks at the eyes of whom the actor looks at (`PlayedActor.LooksAt`,
+  `PlayedActor.Eyes`), as far as a neck turns (75° aside, 35° up or down, from where the body faces), at 270°/s,
+  easing in and back to the animation's over 0.3 s; the face is the look's `Eyes` point, which carries the face's
+  turn as well as its place (`HumanoidHead.TryFindEyes`: ahead and level as it stands at the start of its idle).
+  Checked live on VikingF1: walked round her at 3 m, her face kept within 3° of the player's eyes, held at 75° past
+  it, and let go half a second after the player went behind her. `MoveSetContentTests` guards that
   each move the core styles name plays where its kind needs. Playing an action already playing starts it over (a
   second blow before the first's reaction is done). A move's **variants** are clips named after it with a number
   from 2 on (`SwordDeath2`, `HumanoidAnimation.Variant`), and `Vary` picks the move or one of them by chance (a
@@ -1107,6 +1114,17 @@ Plugin) stands the first of `CoreModels.Npcs` 4 m right of the items at the star
   mid-swing; its opponent gone (fallen, despawned) it stands ready, the shield down. The fight over
   (the 5 s cool-off), it puts its weapons away and goes back to its day. Its own dice. Every character fights back for
   now (Moti's call: "basic, fight"); a per-character confidence (fights or flees) is a field of its actor record to come.
+- **`Gaze`** (Game.Minds): whom a character looks at, its head turned to them while its body goes about its business
+  (whatever its mind decides). Each frame it is given those it takes an interest in (`GazeInterest`: who and where
+  their eyes are, most interesting first) and looks at the first it notices: one it is focused on
+  (`GazeInterest.Focused`: a foe, whose every move it watches) wherever they stand, seen or not, for as long as they
+  are of interest; anyone else (someone passing by) within `GazeSettings.Notice` (4 m, level), within `Sight` (100°)
+  either side of where its body faces, and seen (`ILineOfSight`: nothing solid between their eyes;
+  `PhysicsLineOfSight`, a line against `SceneLayers.Solid`, is the stage's `Sight`), kept out to `LetGo` (5 m, so the
+  edge doesn't flicker) and through `Linger` (0.5 s) out of sight or behind it (someone passing behind a post).
+  Someone more interesting noticed takes its eye; someone of no more interest (gone, fallen, the fight over) is let go
+  at once. `GazeSettings.Person` holds those numbers; a character's own (a shy one looks away) is a
+  field of its record to come. The look turns the head: `HeadLook`, below.
 - **`WorldCharacters`** (Play), `GameSession.Characters`, bound like `WorldPhysics` for one game: every placed object
   the view shows whose look has humanoid animations is taken over by a `PlayedActor` made as the player is, named
   `PlacedActors.IdOf` its placed object: an `ActorBody` of the profile's `BodyShape` at its own height
@@ -1122,7 +1140,10 @@ Plugin) stands the first of `CoreModels.Npcs` 4 m right of the items at the star
   `Mode` from the stage's `ActorModes`, the nearest of its `OpponentsOf` that stands (`Opponents.TryNearest`), its
   `WeaponReadiness.State`, its right hand's swing and its guard) and carries out the decision: the look turned the way
   the mind faces (`BodyFacing.Target`, its `TargetHeading`) or the way it goes (`Movement`), the velocity put into the look's frame as a
-  walk or a run (`PlayerCommands`), the hands into `ActorCommands`. The placed object hides meanwhile; the game ending
+  walk or a run (`PlayerCommands`), the hands into `ActorCommands`. Then its `Gaze` looks about from its eyes as its
+  body now faces, among those it takes an interest in (the foe it fights, focused, so its eyes stay on it while the
+  sword-and-shield stance turns its torso side-on; then the player standing in the game, if that isn't its foe), and
+  whom it settles on is its `PlayedActor.LooksAt`; fallen, it looks at no one. The placed object hides meanwhile; the game ending
   (or the character streaming out) takes body and look away and shows it again where its record has it.
 - **Falling** (`PlayedActor.Fall`, which `GameSession` calls on `ActorKilled`): a character whose health ran out stops
   its swings and lies down in its weapon's style's death (`CombatMoveKind.Death`, `ActorCombat.DeathAnimation`: the

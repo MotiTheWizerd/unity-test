@@ -26,7 +26,9 @@ namespace Forge.Play
     /// attributes as its own numbers, so a blow hurts it, and what it starts out carrying and holding,
     /// <see cref="StartingItems"/>: a sword and a shield, put away), told what to do by its mind (<see cref="IMind"/>)
     /// rather than by keys: someone's, a <see cref="Fighter"/> that strolls about where it was placed
-    /// (<see cref="Wander"/>) and fights back whoever strikes it; no one's, a <see cref="Wander"/> alone. Its body
+    /// (<see cref="Wander"/>) and fights back whoever strikes it; no one's, a <see cref="Wander"/> alone. Its head turns
+    /// to whom its eyes settle on (<see cref="Gaze"/>, <see cref="PlayedActor.LooksAt"/>): the foe it fights, else the
+    /// player passing near. Its body
     /// stands in the player's way and the player in its. While it goes about, the placed object it was stands hidden;
     /// bound for one game, disposed, every body goes and every placed object shows again where its record has it.
     /// </summary>
@@ -157,6 +159,8 @@ namespace Forge.Play
             readonly ActorEquipment _equipment;
             readonly IDisposable _attributeEvents;
             readonly IMind _mind;
+            readonly Gaze _gaze;
+            readonly List<GazeInterest> _interests = new List<GazeInterest>();
 
             /// <param name="kind">What it is placed as (its look, its name when it is no one).</param>
             /// <param name="record">Who it is: its name and what it starts with; null for a character that is no one (nothing hurts it, it holds nothing).</param>
@@ -166,6 +170,7 @@ namespace Forge.Play
                 _placed = placed;
                 _root = root;
                 _mind = mind;
+                _gaze = new Gaze(GazeSettings.Person, stage.Sight);
                 // Its own numbers over the world's attributes, and its own pack and hands with what its record gives it
                 // (a sword and a shield, put away), before the look is built, so they show on it from the start.
                 var attributes = record != null && stage.Attributes != null ? new ActorAttributes(stage.Attributes, id) : null;
@@ -189,9 +194,11 @@ namespace Forge.Play
             // root's space), so a rebase moves nothing of it; the actor, where its body is (the scene's).
             public void Tick(float deltaTime)
             {
-                // Fallen, it lies where it fell: its mind has nothing to say.
+                // Fallen, it lies where it fell: its mind has nothing to say, and it looks at no one.
                 if (Actor.Fallen)
                 {
+                    _gaze.LookAway();
+                    Actor.LooksAt = default;
                     Actor.Tick(ActorCommands.None, deltaTime);
                     return;
                 }
@@ -231,6 +238,24 @@ namespace Forge.Play
                 }
 
                 Actor.Tick(new ActorCommands(move, decision.ReadyWeapon, decision.UseRight, decision.UseLeft, releaseLeft: decision.ReleaseLeft), deltaTime);
+
+                // Its eyes go where its body now faces, its head after them.
+                _gaze.Look(Actor.Eyes.ToNumerics(), rules.BodyHeading, Interests(), deltaTime);
+                Actor.LooksAt = _gaze.Target;
+            }
+
+            // Whom it takes an interest in now, most first: the foe it fights, its eyes on its every move; then the player
+            // passing by, if that isn't its foe.
+            IReadOnlyList<GazeInterest> Interests()
+            {
+                _interests.Clear();
+                var stage = Actor.Stage;
+                if (Opponents.TryNearest(stage.Modes, Actor.Id, Actor.Rules.Feet, stage.Actors, out var foe, out _) &&
+                    stage.Actors.TryGet(foe, out var fighting))
+                    _interests.Add(new GazeInterest(foe, fighting.Eyes.ToNumerics(), focused: true));
+                if (foe != ActorId.Player && stage.Actors.TryGet(ActorId.Player, out var player) && !player.Fallen)
+                    _interests.Add(new GazeInterest(player.Id, player.Eyes.ToNumerics()));
+                return _interests;
             }
 
             public void Dispose()
