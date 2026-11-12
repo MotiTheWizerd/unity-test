@@ -404,27 +404,31 @@ namespace Forge.UnityEditor.Content
             return state;
         }
 
-        // The set's actions, each on a layer of its own body parts, which HumanoidAnimation weighs in while one plays: a
-        // draw or a sheathe on the arms (MoveRole.ArmsAction), so the body walks or runs on unchanged; a slash or a shot
-        // on the upper body (MoveRole.UpperBodyAction), so the torso turns into it while the legs still walk; a death on
-        // the whole body (MoveRole.FullBodyAction), played through and stayed at its end. Each starts by a trigger named
-        // after it. A layer is left out when the set has no action for it.
+        // The set's actions, each on a layer of its own body parts as its settings say (MoveSettings.Plays), which
+        // HumanoidAnimation weighs in while one plays: a draw or a sheathe on the arms (MoveRole.ArmsAction), so the body
+        // walks or runs on unchanged; a slash or a shot on the upper body (MoveRole.UpperBodyAction), so the torso turns
+        // into it while the legs still walk; a death on the whole body (MoveRole.FullBodyAction), played through and
+        // stayed at its end (MoveSettings.StaysAtEnd). Each starts by a trigger named after it. A layer is left out when
+        // the set has no action for it.
         static void BuildActions(string set, AnimatorController controller)
         {
             BuildActionLayer(set, controller, HumanoidAnimation.ArmsLayer, ArmsParts, Actions(set, MoveRole.ArmsAction));
             BuildActionLayer(set, controller, HumanoidAnimation.UpperBodyLayer, UpperBodyParts, Actions(set, MoveRole.UpperBodyAction));
-            BuildActionLayer(set, controller, HumanoidAnimation.FullBodyLayer, null, Actions(set, MoveRole.FullBodyAction), stays: true);
+            BuildActionLayer(set, controller, HumanoidAnimation.FullBodyLayer, null, Actions(set, MoveRole.FullBodyAction));
         }
 
-        static IEnumerable<AnimationClip> Actions(string set, MoveRole role) =>
-            Moves(set, role).Select(move => Clip(set, move)).Where(clip => clip != null);
+        // The set's actions in `role`, each with whether it stays at its end once played.
+        static IEnumerable<(AnimationClip Clip, bool Stays)> Actions(string set, MoveRole role) =>
+            Moves(set, role).Select(move => (clip: Clip(set, move), stays: TryEntry(set, move, out var entry) && entry.StaysAtEnd))
+                .Where(action => action.clip != null);
 
         // A layer masked to parts (none: the whole body), resting until a trigger starts one of its clips. The layer's
         // weight does the blending in and out (HumanoidAnimation), so its states change at once: a crossfade into the
-        // empty rest state would draw the limbs toward the rig's neutral pose on the way out. A layer that stays keeps
-        // each clip at its end once it has played (a death lies as it fell) until HumanoidAnimation rests it.
+        // empty rest state would draw the limbs toward the rig's neutral pose on the way out. A clip that stays keeps
+        // its end once it has played (a death lies as it fell) until HumanoidAnimation rests the layer; the rest go back
+        // to rest as they end.
         static void BuildActionLayer(string set, AnimatorController controller, string name, AvatarMaskBodyPart[] parts,
-            IEnumerable<AnimationClip> clips, bool stays = false)
+            IEnumerable<(AnimationClip Clip, bool Stays)> clips)
         {
             var actions = clips.ToArray();
             if (actions.Length == 0)
@@ -445,7 +449,7 @@ namespace Forge.UnityEditor.Content
             var rest = machine.AddState(HumanoidAnimation.RestState);
             rest.writeDefaultValues = false;
             machine.defaultState = rest;
-            foreach (var clip in actions)
+            foreach (var (clip, stays) in actions)
             {
                 var trigger = clip.name;
                 controller.AddParameter(trigger, AnimatorControllerParameterType.Trigger);
@@ -603,23 +607,41 @@ namespace Forge.UnityEditor.Content
 
         // The set's own clip for the move, else the base set's.
         static AnimationClip Clip(string set, string move) =>
-            OwnClip(set, move) ?? (set == BaseSet ? null : OwnClip(BaseSet, move));
-
-        static AnimationClip OwnClip(string set, string move) =>
-            Index(set).TryGetValue(move, out var found)
-                ? AssetDatabase.LoadAllAssetsAtPath(found.Path).OfType<AnimationClip>().FirstOrDefault(c => c.name == move)
+            TryEntry(set, move, out var entry)
+                ? AssetDatabase.LoadAllAssetsAtPath(entry.Path).OfType<AnimationClip>().FirstOrDefault(c => c.name == move)
                 : null;
 
-        // Each set's own moves by name, where each is and what it is (HumanoidMoves.RoleOf), read once per build.
-        static readonly Dictionary<string, Dictionary<string, (string Path, MoveRole Role)>> Indexes =
-            new Dictionary<string, Dictionary<string, (string Path, MoveRole Role)>>(System.StringComparer.Ordinal);
+        // The set's own move of that name, else the base set's.
+        static bool TryEntry(string set, string move, out IndexedMove entry) =>
+            Index(set).TryGetValue(move, out entry) || (set != BaseSet && Index(BaseSet).TryGetValue(move, out entry));
 
-        // The set's own moves: every clip in its folders, the ones it can't play left out, each said why.
-        static Dictionary<string, (string Path, MoveRole Role)> Index(string set)
+        // A move of a set: where its clip is, what it is (HumanoidMoves.RoleOf), and whether, played through, it stays at
+        // its end (MoveSettings.StaysAtEnd).
+        readonly struct IndexedMove
+        {
+            public IndexedMove(string path, MoveRole role, bool staysAtEnd)
+            {
+                Path = path;
+                Role = role;
+                StaysAtEnd = staysAtEnd;
+            }
+
+            public string Path { get; }
+            public MoveRole Role { get; }
+            public bool StaysAtEnd { get; }
+        }
+
+        // Each set's own moves by name, read once per build.
+        static readonly Dictionary<string, Dictionary<string, IndexedMove>> Indexes =
+            new Dictionary<string, Dictionary<string, IndexedMove>>(System.StringComparer.Ordinal);
+
+        // The set's own moves: every clip in its folders, as its folder and its settings say (MoveSettings), the ones it
+        // can't play left out, each said why.
+        static Dictionary<string, IndexedMove> Index(string set)
         {
             if (Indexes.TryGetValue(set, out var index))
                 return index;
-            index = new Dictionary<string, (string Path, MoveRole Role)>(System.StringComparer.Ordinal);
+            index = new Dictionary<string, IndexedMove>(System.StringComparer.Ordinal);
             Indexes.Add(set, index);
             var folder = SetFolder(set);
             if (!Directory.Exists(folder))
@@ -631,13 +653,27 @@ namespace Forge.UnityEditor.Content
             foreach (var file in files)
             {
                 var move = HumanoidMoves.MoveName(file);
-                var role = HumanoidMoves.RoleOf(file.Substring(folder.Length + 1));
+                MoveSettings settings;
+                try
+                {
+                    settings = MoveSettings.Read(file);
+                }
+                catch (System.InvalidOperationException refused)
+                {
+                    Debug.LogError($"[Forge] {refused.Message} {move} is left out.");
+                    continue;
+                }
+
+                var role = HumanoidMoves.RoleOf(file.Substring(folder.Length + 1), settings);
                 if (role == null)
                 {
                     Debug.LogWarning($"[Forge] {file} is in no move folder of {set} ({HumanoidMoves.LocomotionFolder}, " +
                         $"{HumanoidMoves.AirFolder}, {HumanoidMoves.StylesFolder}/<Style>, or one for actions); left out.");
                     continue;
                 }
+
+                if (HumanoidMoves.IgnoresPlays(role.Value, settings))
+                    Debug.LogWarning($"[Forge] {MoveSettings.PathFor(file)}: \"plays\" is for actions; a move in {set}/{file.Substring(folder.Length + 1).Split('/')[0]} plays as its folder says.");
 
                 var belongs = HumanoidMoves.Misplaced(move, role.Value);
                 if (belongs != null)
@@ -652,7 +688,7 @@ namespace Forge.UnityEditor.Content
                     continue;
                 }
 
-                index.Add(move, (file, role.Value));
+                index.Add(move, new IndexedMove(file, role.Value, settings.StaysAtEnd));
             }
 
             return index;

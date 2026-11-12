@@ -1,4 +1,7 @@
 using System.Linq;
+using Forge.Data.Records;
+using Forge.Play;
+using Forge.UnityEditor.Content;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -35,5 +38,49 @@ namespace Forge.Tests.Content
                         $"{state.name} moves at {child.position} (threshold {child.threshold}) in the plain {child.motion.name}: the weapons drop.");
             }
         }
+
+        // Each move the core styles name plays where its settings (its .json beside its clip) put it, its name nothing:
+        // a draw and a sheathe on the arms alone, a death on the whole body staying at its end (its variants too), a
+        // stance as a ground state of its own, the rest on the upper body.
+        [Test]
+        public void TheCoreStylesMoves_PlayWhereTheirSettingsPutThem()
+        {
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
+            Assert.That(controller, Is.Not.Null, "Build Characters makes the base move set's controller.");
+
+            foreach (var style in CoreCombatStyleSet.All())
+            {
+                foreach (var move in style.Moves)
+                {
+                    switch (move.Kind)
+                    {
+                        case CombatMoveKind.Draw:
+                        case CombatMoveKind.Sheathe:
+                            Assert.That(StateOn(controller, HumanoidAnimation.ArmsLayer, move.Animation), Is.Not.Null, $"{move.Animation} on the arms.");
+                            break;
+                        case CombatMoveKind.Death:
+                            var deaths = new[] { move.Animation, HumanoidAnimation.Variant(move.Animation, 2) };
+                            foreach (var death in deaths)
+                            {
+                                var state = StateOn(controller, HumanoidAnimation.FullBodyLayer, death);
+                                Assert.That(state, Is.Not.Null, $"{death} on the whole body.");
+                                Assert.That(state.transitions, Is.Empty, $"{death} stays at its end.");
+                            }
+
+                            break;
+                        case CombatMoveKind.Stance:
+                            Assert.That(controller.layers[0].stateMachine.states.Select(s => s.state.name),
+                                Does.Contain(HumanoidAnimation.StanceGround(move.Animation)), $"{move.Animation} is a stance.");
+                            break;
+                        default:
+                            Assert.That(StateOn(controller, HumanoidAnimation.UpperBodyLayer, move.Animation), Is.Not.Null, $"{move.Animation} on the upper body.");
+                            break;
+                    }
+                }
+            }
+        }
+
+        static AnimatorState StateOn(AnimatorController controller, string layer, string name) =>
+            controller.layers.Single(l => l.name == layer).stateMachine.states.Select(s => s.state).SingleOrDefault(s => s.name == name);
     }
 }

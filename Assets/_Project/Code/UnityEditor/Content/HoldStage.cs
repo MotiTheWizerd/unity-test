@@ -198,9 +198,9 @@ namespace Forge.UnityEditor.Content
 
             if (_clip != null)
             {
-                var curves = MoveSettings.Read(AssetDatabase.GetAssetPath(_clip));
-                _character.AimHand(true, new Vector3(curves[0].Value, curves[1].Value, curves[2].Value));
-                _character.AimHand(false, new Vector3(curves[3].Value, curves[4].Value, curves[5].Value));
+                var settings = MoveSettings.Read(AssetDatabase.GetAssetPath(_clip));
+                _character.AimHand(true, settings.RightHand);
+                _character.AimHand(false, settings.LeftHand);
             }
 
             for (var hand = 0; hand < Hands.Length; hand++)
@@ -229,9 +229,9 @@ namespace Forge.UnityEditor.Content
         void Save(string jsonPath, Vector3 points)
         {
             var right = _hand == 0;
+            // The rest of what the move's .json says is kept as it is.
             var existing = MoveSettings.Parse(File.Exists(jsonPath) ? File.ReadAllText(jsonPath) : null, jsonPath);
-            var other = new Vector3(existing[right ? 3 : 0].Value, existing[right ? 4 : 1].Value, existing[right ? 5 : 2].Value);
-            File.WriteAllText(jsonPath, MoveSettings.Write(right ? points : other, right ? other : points));
+            File.WriteAllText(jsonPath, existing.WithHands(right ? points : existing.RightHand, right ? existing.LeftHand : points).Write());
             AssetDatabase.ImportAsset(jsonPath, ImportAssetOptions.ForceUpdate);
             Debug.Log($"[Forge] {Path.GetFileName(jsonPath)}: the {(right ? "right" : "left")} hand points [{points.x:0.00}, {points.y:0.00}, {points.z:0.00}].");
             Pose();

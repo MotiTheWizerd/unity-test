@@ -11,7 +11,7 @@ namespace Forge.UnityEditor.Content
     /// The clip never turns the body it plays on (its turn is baked into the pose); its travel stays root motion, which
     /// the player ignores (its body moves itself) but which tells how fast the clip walks. Its rise and fall stay in the
     /// pose (a stride's bob), except a jump's, which the body's own rise already shows. Whether a clip loops or lifts is
-    /// its move's, by the folder it sits in (<see cref="HumanoidMoves.RoleOf"/>).
+    /// its move's, by the folder it sits in and its settings (<see cref="HumanoidMoves.RoleOf"/>, <see cref="MoveSettings"/>).
     /// </summary>
     sealed class AnimationImport : AssetPostprocessor
     {
@@ -94,13 +94,15 @@ namespace Forge.UnityEditor.Content
 
             var importer = (ModelImporter)assetImporter;
             var name = Path.GetFileNameWithoutExtension(assetPath);
-            var role = HumanoidMoves.RoleOf(InSet(assetPath));
+            // The move's settings (its .json beside it, there or not: a change to it reimports the clip): what it is, and
+            // how it holds, as curves the animator blends into its parameters; every clip carries them, so a move that
+            // says nothing says zero.
+            context.DependsOnSourceAsset(MoveSettings.PathFor(assetPath));
+            var settings = MoveSettings.Read(assetPath);
+            var role = HumanoidMoves.RoleOf(InSet(assetPath), settings);
             var loops = role.HasValue && HumanoidMoves.Loops(role.Value, name);
             var lifts = role.HasValue && HumanoidMoves.Lifts(role.Value, name);
-            // How the move holds (its .json beside it, there or not: a change to it reimports the clip), as curves the
-            // animator blends into its parameters; every clip carries them, so a move that says nothing says zero.
-            context.DependsOnSourceAsset(MoveSettings.PathFor(assetPath));
-            var curves = MoveSettings.Read(assetPath)
+            var curves = settings.Curves
                 .Select(c => new ClipAnimationInfoCurve { name = c.Name, curve = AnimationCurve.Constant(0f, 1f, c.Value) })
                 .ToArray();
             importer.clipAnimations = importer.defaultClipAnimations.Take(1).Select(clip =>

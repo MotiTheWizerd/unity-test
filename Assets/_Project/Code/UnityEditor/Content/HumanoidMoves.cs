@@ -2,7 +2,7 @@ using System;
 
 namespace Forge.UnityEditor.Content
 {
-    /// <summary>What a move is to the animator, from where it sits in its move set (<see cref="HumanoidMoves.RoleOf"/>).</summary>
+    /// <summary>What a move is to the animator, from where it sits in its move set and what its settings say (<see cref="HumanoidMoves.RoleOf"/>).</summary>
     enum MoveRole
     {
         /// <summary>Walked on the ground, blended by speed, or by the way the body goes when the set sidesteps (Locomotion/: Idle, Run, DrawnRun, DrawnStrafe).</summary>
@@ -20,7 +20,7 @@ namespace Forge.UnityEditor.Content
         /// <summary>An action on the whole upper body, the legs still walking (a slash, a shot).</summary>
         UpperBodyAction,
 
-        /// <summary>An action on the whole body, played through and stayed at its end (a death: it falls and lies so).</summary>
+        /// <summary>An action on the whole body (a death: it falls; one that stays at its end lies so, <see cref="MoveSettings.StaysAtEnd"/>).</summary>
         FullBodyAction,
     }
 
@@ -31,17 +31,17 @@ namespace Forge.UnityEditor.Content
     /// <item><see cref="LocomotionFolder"/>: the ground moves, blended by speed, their versions with weapons drawn and
     /// crouched, and the moves between standing and crouching.</item>
     /// <item><see cref="AirFolder"/>: the jump, the fall, the landing.</item>
-    /// <item><see cref="StylesFolder"/>/{Style}: a combat style's moves; its {Style}Idle is its stance, the rest actions.</item>
-    /// <item>Any other folder (Interact, Emotes, ...): actions.</item>
+    /// <item><see cref="StylesFolder"/>/{Style}: a combat style's moves; any other folder (Interact, Emotes, ...): more
+    /// actions.</item>
     /// <item><see cref="BuiltFolder"/>: what the builder makes (the controller, its masks), never moves.</item>
     /// </list>
     /// Beside the sets, <see cref="ReferenceFolder"/> holds the skeleton the clips are read against
     /// (<see cref="AnimationImport.ReferenceRig"/>); a folder named with a leading underscore is never a set
     /// (<see cref="IsSet"/>).
-    /// An action plays on the arms alone when it draws or sheathes, on the whole body, stayed at its end, when it is a
-    /// death (<see cref="WholeBody"/>), else on the upper body. A move's name is its own across the set's folders, since
-    /// content names it so ("BowShot"). The import (<see cref="AnimationImport"/>) loops what repeats; the animator
-    /// builder (<see cref="HumanoidAnimatorBuilder"/>) plays whichever of them are present.
+    /// An action plays where its settings say (<see cref="MoveSettings.Plays"/>: on the arms alone, the whole body, or as
+    /// a style's stance), else on the upper body; nothing is told from its name. A move's name is its own across the
+    /// set's folders, since content names it so ("BowShot"). The import (<see cref="AnimationImport"/>) loops what
+    /// repeats; the animator builder (<see cref="HumanoidAnimatorBuilder"/>) plays whichever of them are present.
     /// </summary>
     static class HumanoidMoves
     {
@@ -62,15 +62,6 @@ namespace Forge.UnityEditor.Content
         public const string Jump = "Jump";
         public const string Fall = "Fall";
         public const string Land = "Land";
-
-        /// <summary>Drawing the weapons (the arms only, whatever the legs do).</summary>
-        public const string Draw = "Draw";
-
-        /// <summary>Putting the weapons away (the arms only).</summary>
-        public const string Sheathe = "Sheathe";
-
-        /// <summary>What a death's name has in it ("SwordDeath", "BowDeath2"): the whole body falls, and stays as it fell.</summary>
-        public const string Death = Forge.Play.HumanoidAnimation.DeathMove;
 
         /// <summary>The ground moves, slowest first: the speed blend's order.</summary>
         public static readonly string[] Ground = { Idle, Walk, Run, Sprint };
@@ -119,34 +110,37 @@ namespace Forge.UnityEditor.Content
 
         /// <summary>
         /// What the move at <paramref name="path"/> (in its set, "Styles/Archery/BowShot.fbx", '/' or '\' between
-        /// folders) is, by its folder and name; null for none (outside any folder, or among what is built). Pure, so
-        /// testable.
+        /// folders) is, by its folder and, for an action, what its <paramref name="settings"/> say
+        /// (<see cref="MoveSettings.Plays"/>; a Locomotion or an Air move is its folder's whatever they say); null for
+        /// none (outside any folder, or among what is built). Pure, so testable.
         /// </summary>
-        public static MoveRole? RoleOf(string path)
+        public static MoveRole? RoleOf(string path, MoveSettings settings)
         {
             if (string.IsNullOrEmpty(path))
                 return null;
             var parts = path.Replace('\\', '/').Split('/');
             if (parts.Length < 2)
                 return null;
-            var move = MoveName(parts[parts.Length - 1]);
             switch (parts[0])
             {
                 case BuiltFolder:
                 case ReferenceFolder: return null;
                 case LocomotionFolder: return MoveRole.Ground;
                 case AirFolder: return MoveRole.Air;
-                case StylesFolder when parts.Length > 2 && IsStanceName(move): return MoveRole.Stance;
-                default: return WholeBody(move) ? MoveRole.FullBodyAction : ArmsOnly(move) ? MoveRole.ArmsAction : MoveRole.UpperBodyAction;
+                default: return (settings ?? MoveSettings.None).Plays ?? MoveRole.UpperBodyAction;
             }
         }
 
-        /// <summary>Whether <paramref name="move"/> plays on the arms alone (drawing and sheathing, a style's too: "BowDraw").</summary>
-        public static bool ArmsOnly(string move) =>
-            move != null && (move.EndsWith(Draw, StringComparison.Ordinal) || move.EndsWith(Sheathe, StringComparison.Ordinal));
+        /// <summary>What the move at <paramref name="path"/> is when it has no settings (<see cref="MoveSettings.None"/>).</summary>
+        public static MoveRole? RoleOf(string path) => RoleOf(path, MoveSettings.None);
 
-        /// <summary>Whether <paramref name="move"/> plays on the whole body and stays at its end: a death ("SwordDeath", "BowDeath2").</summary>
-        public static bool WholeBody(string move) => move != null && move.IndexOf(Death, StringComparison.Ordinal) >= 0;
+        /// <summary>
+        /// Whether a move of <paramref name="role"/>, whose folder decides what it is, has <paramref name="settings"/> that
+        /// try to say otherwise ("plays" on a Locomotion or an Air move): it plays as its folder says, and they are
+        /// pointless.
+        /// </summary>
+        public static bool IgnoresPlays(MoveRole role, MoveSettings settings) =>
+            (role == MoveRole.Ground || role == MoveRole.Air) && settings?.Plays != null;
 
         /// <summary>Whether a move of <paramref name="role"/> named <paramref name="move"/> repeats while it lasts (standing, walking, falling) rather than playing once.</summary>
         public static bool Loops(MoveRole role, string move) =>
@@ -181,8 +175,5 @@ namespace Forge.UnityEditor.Content
             var dot = name.LastIndexOf('.');
             return dot > 0 ? name.Substring(0, dot) : name;
         }
-
-        // A style's stance is its idle ("BowIdle").
-        static bool IsStanceName(string move) => move.EndsWith(Idle, StringComparison.Ordinal) && move != Idle;
     }
 }

@@ -6,20 +6,31 @@ namespace Forge.Tests.Content
     public class HumanoidMovesTests
     {
         [Test]
-        public void AMovesFolder_SaysWhatItIs()
+        public void AMovesFolder_SaysWhatItIs_AnActionsSettingsWhereItPlays_ItsNameNothing()
         {
             Assert.That(HumanoidMoves.RoleOf("Locomotion/Run.fbx"), Is.EqualTo(MoveRole.Ground));
             Assert.That(HumanoidMoves.RoleOf("Locomotion/DrawnRun.fbx"), Is.EqualTo(MoveRole.Ground));
             Assert.That(HumanoidMoves.RoleOf("Air/Jump.fbx"), Is.EqualTo(MoveRole.Air));
-            Assert.That(HumanoidMoves.RoleOf(@"Styles\Archery\BowIdle.fbx"), Is.EqualTo(MoveRole.Stance), "Either slash.");
-            Assert.That(HumanoidMoves.RoleOf("Styles/Archery/BowDraw.fbx"), Is.EqualTo(MoveRole.ArmsAction));
-            Assert.That(HumanoidMoves.RoleOf("Styles/OneHanded/Sheathe.fbx"), Is.EqualTo(MoveRole.ArmsAction));
-            Assert.That(HumanoidMoves.RoleOf("Styles/Archery/BowShot.fbx"), Is.EqualTo(MoveRole.UpperBodyAction));
-            Assert.That(HumanoidMoves.RoleOf("Emotes/SitIdle.fbx"), Is.EqualTo(MoveRole.UpperBodyAction), "Only a style has a stance.");
-            Assert.That(HumanoidMoves.RoleOf("Styles/OneHanded/SwordDeath.fbx"), Is.EqualTo(MoveRole.FullBodyAction));
-            Assert.That(HumanoidMoves.RoleOf("Styles/Archery/BowDeath2.fbx"), Is.EqualTo(MoveRole.FullBodyAction), "A death's variants too.");
+            Assert.That(HumanoidMoves.RoleOf("Styles/Archery/BowShot.fbx"), Is.EqualTo(MoveRole.UpperBodyAction), "An action that doesn't say.");
+            Assert.That(HumanoidMoves.RoleOf("Styles/Archery/BowDraw.fbx"), Is.EqualTo(MoveRole.UpperBodyAction), "Its name says nothing...");
+            Assert.That(HumanoidMoves.RoleOf("Styles/Archery/BowDraw.fbx", Says("arms")), Is.EqualTo(MoveRole.ArmsAction), "...its settings do.");
+            Assert.That(HumanoidMoves.RoleOf(@"Styles\Archery\BowIdle.fbx", Says("stance")), Is.EqualTo(MoveRole.Stance), "Either slash.");
+            Assert.That(HumanoidMoves.RoleOf("Styles/OneHanded/SwordDeath.fbx", Says("wholeBody")), Is.EqualTo(MoveRole.FullBodyAction));
+            Assert.That(HumanoidMoves.RoleOf("Emotes/Wave.fbx", Says("arms")), Is.EqualTo(MoveRole.ArmsAction), "Any folder of actions.");
             Assert.That(HumanoidMoves.Loops(MoveRole.FullBodyAction, "SwordDeath"), Is.False);
         }
+
+        [Test]
+        public void ALocomotionOrAnAirMove_PlaysAsItsFolderSays_WhateverItsSettingsSay()
+        {
+            Assert.That(HumanoidMoves.RoleOf("Locomotion/Run.fbx", Says("arms")), Is.EqualTo(MoveRole.Ground));
+            Assert.That(HumanoidMoves.RoleOf("Air/Jump.fbx", Says("wholeBody")), Is.EqualTo(MoveRole.Air));
+            Assert.That(HumanoidMoves.IgnoresPlays(MoveRole.Ground, Says("arms")), Is.True, "The builder says so.");
+            Assert.That(HumanoidMoves.IgnoresPlays(MoveRole.Ground, MoveSettings.None), Is.False);
+            Assert.That(HumanoidMoves.IgnoresPlays(MoveRole.ArmsAction, Says("arms")), Is.False);
+        }
+
+        static MoveSettings Says(string plays) => MoveSettings.Parse($"{{ \"plays\": \"{plays}\" }}", "test.json");
 
         [Test]
         public void WhatIsBuilt_OrInNoFolder_IsNoMove()

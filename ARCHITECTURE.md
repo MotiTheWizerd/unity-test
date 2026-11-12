@@ -863,9 +863,10 @@ from any camera, so both cameras read the same player.
 - **Animations** (`Content/Animations/<Set>/<Folder>/<Move>.fbx`): one Mixamo clip per move (FBX for Unity, 30 fps,
   without skin, travel left in), named after its move, a name of its own across the set, and sorted by what it is: the
   folder says (`HumanoidMoves.RoleOf` → `MoveRole`): `Locomotion/` the ground moves (Idle, Walk, Run, Sprint blended
-  by speed, and their `Drawn…` versions), `Air/` Jump, Fall, Land, `Styles/<Style>/` a combat style's moves (its
-  `{Style}Idle` its stance, the rest actions), any other folder (Interact, Emotes, later) actions; `_Built/` holds what
-  the builder makes (the controller, its masks). A clip in no folder, a ground or air move out of its folder, or a
+  by speed, and their `Drawn…` versions), `Air/` Jump, Fall, Land, `Styles/<Style>/` a combat style's moves, any
+  other folder (Interact, Emotes, later) more actions; where an action plays (or that it is a style's stance) is its
+  settings' to say (`MoveSettings`, below), never its name; `_Built/` holds what the builder makes (the controller,
+  its masks). A clip in no folder, a ground or air move out of its folder, or a
   second move of one name is left out of the build with a warning. A folder beside the sets named with a leading `_` is
   not a set (`HumanoidMoves.IsSet`): `_Reference/TPose.fbx` is the skeleton every clip is read against
   (`AnimationImport.ReferenceRig`): a Mixamo-rigged character downloaded from Mixamo standing in its T-pose (VikingM1
@@ -900,33 +901,34 @@ from any camera, so both cameras read the same player.
   it has) a crouched ground state plays while `Crouched`, whatever is drawn (the drawn states are entered only
   standing); standing still, `CrouchDown` and `StandUp` (played once, `HumanoidMoves.PostureChanges`) go down and up
   when the set has them, moving it just crossfades. A combat style can name a **stance** (`CombatMoveKind.Stance`; Archery's
-  `BowIdle`, Mixamo Standing Idle 01, the bow held low, side-on as its draw ends): any `Styles/<Style>/{Style}Idle`
-  clip (`MoveRole.Stance`) gets its own drawn ground state, the same moves standing in it, entered while `Drawn` and
+  `BowIdle`, Mixamo Standing Idle 01, the bow held low, side-on as its draw ends): a clip whose settings say
+  `"plays": "stance"` (`MoveRole.Stance`) gets its own drawn ground state, the same moves standing in it, entered while `Drawn` and
   the int `Stance` holds its key (`HumanoidAnimation.StanceKey`, from its name, so builder and player agree; 0: the
   set's own drawn moves); `WeaponReadiness.StanceAnimation` names it. Every other clip is an **action** (`Draw`, `Sheathe`,
-  a combat style's `SwordSlash`), played on a trigger named after it over whatever the legs do: a draw or a sheathe
-  on an **Arms** layer (`MoveRole.ArmsAction`, by its name's ending; `<Set> Arms.mask`: arms and fingers), a death (a
-  name with `Death` in it: `SwordDeath`, `BowDeath2`; `MoveRole.FullBodyAction`) on a **Full Body** layer with no mask
-  whose states have no way out, so played through (`HumanoidAnimation.PlayThrough`, `CharacterModel.PlayThrough`) the
-  clip stays at its last frame and the layer stays weighed in until `Resume` at 1 lets it fade, and the layer is
-  rested unseen; anything else on an **Upper Body** layer (`MoveRole.UpperBodyAction`; `<Set> Upper Body.mask`: also
-  the body and head, so the torso turns into a cut). A move's **variants** are clips named after it with a number
+  a combat style's `SwordSlash`), played on a trigger named after it over whatever the legs do, on the layer its
+  settings say: `"arms"` on an **Arms** layer (`MoveRole.ArmsAction`: a draw, a sheathe; `<Set> Arms.mask`: arms and
+  fingers), `"wholeBody"` on a **Full Body** layer with no mask (`MoveRole.FullBodyAction`), where one that
+  `"staysAtEnd"` (a death: `SwordDeath`, `BowDeath2`) has no way out, so played through
+  (`HumanoidAnimation.PlayThrough`, `CharacterModel.PlayThrough`) the clip stays at its last frame and the layer stays
+  weighed in until `Resume` at 1 lets it fade, and the layer is rested unseen, and any other plays out; an action that
+  doesn't say on an **Upper Body** layer (`MoveRole.UpperBodyAction`; `<Set> Upper Body.mask`: also the body and
+  head, so the torso turns into a cut). `MoveSetContentTests` guards that each move the core styles name plays where
+  its kind needs. A move's **variants** are clips named after it with a number
   from 2 on (`SwordDeath2`, `HumanoidAnimation.Variant`), and `Vary` picks the move or one of them by chance (a
   death isn't the same every time); the rest of the chain names the one picked. `HumanoidAnimation.Play` finds the layer holding the action and
   weighs it in for as long as the clip lasts: in as it starts, out by its end.
   The layer's own states change at once (no crossfade into its empty rest state, which would pull the limbs toward the
-  rig's neutral pose).
-  the body and head, so the torso turns into a cut). `HumanoidAnimation.Play` finds the layer holding the action and
-  weighs it in for as long as the clip lasts: in as it starts, out by its end.
-  The layer's own states change at once (no crossfade into its empty rest state, which would pull the limbs toward the
   rig's neutral pose). A draw and a put-away are moves of the weapon's combat style (`CombatMoveKind.Draw`/`Sheathe`:
-  One-Handed's `Draw`/`Sheathe` from the hip, Archery's `BowDraw`/`BowSheathe` from the back; any move ending in Draw or
-  Sheathe plays on the Arms layer), else the set's own `Draw`/`Sheathe`; `WeaponReadiness` names the one to play
+  One-Handed's `Draw`/`Sheathe` from the hip, Archery's `BowDraw`/`BowSheathe` from the back, each `"plays": "arms"`),
+  else the set's own `Draw`/`Sheathe`; `WeaponReadiness` names the one to play
   (`DrawAnimation`) and times it by the look (`IReadyTimings`: `CharacterModel.TryReadyTime`, the clip's length and the
   moment the hand is at the hip sheath, `SheathFinder`, or at the back spot, `BackFinder.TryFindReach`), so a style's
   draw is a record and a clip (`ReadinessView` binds a `WeaponReadiness` to a `CharacterModel`). A new move is a file dropped in and a rebuild.
-  **How a move holds** (`MoveSettings`): a clip's optional `<Move>.json` beside it says where what each hand holds
-  points in it (`{ "rightHand": { "points": [0, 0, 1] } }`: the grip's +Y, a sword's blade, straight ahead in the
+  **A move's settings** (`MoveSettings`): a clip's optional `<Move>.json` beside it says what its name never does,
+  every part optional: where an action plays (`"plays"`: `"arms"`, `"upperBody"`, what an action that doesn't say
+  does, `"wholeBody"`, or `"stance"`; a Locomotion or Air move plays as its folder says, and the build warns that
+  the setting is pointless), whether a whole-body action played through stays at its end (`"staysAtEnd": true`, a
+  death; only on the whole body), and, **how a move holds**, where what each hand holds points in it (`{ "rightHand": { "points": [0, 0, 1] } }`: the grip's +Y, a sword's blade, straight ahead in the
   body's frame, x right, y up, z forward; `leftHand` too), since a Mixamo move is animated with nothing in the hand
   and holds our sword as it may (Sword And Shield Idle held it across the body, behind the shield). The import writes
   the six values into every clip as curves driving the controller's `Right/Left Hand Points X/Y/Z` parameters
@@ -940,7 +942,8 @@ from any camera, so both cameras read the same player.
   profile's looks stands in the Scene view at its pivot, posed in a chosen move (its drawn idle) by a playable graph,
   a thing from the prefab catalog in a chosen hand as the game holds it (the same `CharacterModel`, the same aim), none
   of it saved with the scene; the thing is selected and turned with the rotate gizmo, and one button writes where it
-  points into the move's .json (`MoveSettings.Write`) and poses the stage again, the hand now carrying it there.
+  points into the move's .json (`MoveSettings.WithHands`, `Write`: the rest of what it says is kept) and poses the
+  stage again, the hand now carrying it there.
 - **How the body moved** (`BodyMotion`, `Forge.Game.Motion`, shared by anything with a body): `PlayerCharacter.Motion` each frame, from where the body actually went
   (ground speed, vertical speed, grounded), so a run into a wall shows standing. `StrideMatch` keeps the feet planted:
   the speed in the clips' own size (the avatar's `humanScale`) picks the blend, and past the fastest clip it plays
