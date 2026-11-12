@@ -1173,8 +1173,9 @@ later reach the world's characters as noise (a crouched step is softer).
   moment (`MoveWindowOpened`, published as its window opens: a blow's cut, a bow's draw with the arrow on, a
   shield's raise) → `combat/<its animation>` (`combat/swordslash`, `combat/bowshot`); a shot (`ShotLoosed`, naming
   its move's release) → `combat/<release>` (`combat/bowrelease`), cutting the draw's creak short
-  (`SoundPlayer.Stop`, by the `SoundHandle` a play returns). So a mod's new move is heard by a folder named for its
-  animation. A key the catalog lacks plays nothing, so a sound joins by dropping in its folder and building.
+  (`SoundPlayer.Stop`, by the `SoundHandle` a play returns); a blow landing (`HitLanded`, on a body or a raised shield)
+  → `combat/hit` at the struck one's hands height, one of its takes each time (Moti's three sword clashes). So a mod's
+  new move is heard by a folder named for its animation. A key the catalog lacks plays nothing, so a sound joins by dropping in its folder and building.
 - **Footsteps** (`FootstepView`, per character) are the one presentation-timed sound: a step lands when a foot that
   swung (faster than 1.2× its body) slows to nearly standing (under 0.35×: a planted foot is still in the world,
   `StepDetector`), so any clip, slope or crouch steps in time. The gait (`Gaits.Of`: still, sneak, walk, run, sprint,

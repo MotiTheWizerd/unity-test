@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 834fce98388de40498decb8e2cc9d2aa, type: 3}
+  m_Name: Hit
+  m_EditorClassIdentifier: Forge.Play::Forge.Play.Sound.SoundCue
+  _takes:
+  - {fileID: 8300000, guid: 62734f6b89a3bcd4fb9c5be2af6aa401, type: 3}
+  - {fileID: 8300000, guid: e2449db0a432aca4181af2701fae6757, type: 3}
+  - {fileID: 8300000, guid: ef1faa41ec7e1d44a9f987645430ce84, type: 3}
+  _volume: 0.8
+  _volumeJitter: 0.1
+  _pitchJitter: 0.05
+  _bus: 1
+  _range: 25

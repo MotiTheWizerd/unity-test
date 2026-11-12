@@ -17,6 +17,8 @@ MonoBehaviour:
     _asset: {fileID: 11400000, guid: ee60112caec7fcd44a9f77bb27546322, type: 2}
   - _key: combat/bowshot
     _asset: {fileID: 11400000, guid: cdb16c2ae823ef84d8165d3ae7bb87ff, type: 2}
+  - _key: combat/hit
+    _asset: {fileID: 11400000, guid: 439fb39b59eddf54eb22134b0ddf501e, type: 2}
   - _key: combat/swordslash
     _asset: {fileID: 11400000, guid: a501f74a6b02b4c4c9a6ec3e45ff91ad, type: 2}
   - _key: foley/jump

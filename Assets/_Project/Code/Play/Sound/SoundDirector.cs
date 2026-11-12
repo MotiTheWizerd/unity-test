@@ -12,7 +12,8 @@ namespace Forge.Play.Sound
     /// The game's happenings heard: it listens to the game's stream and plays each one's sound where its actor is, so
     /// the rules never play a sound, only say what happened (an actor jumped, a blow swung, a bow was drawn and loosed).
     /// Which sound each plays is a key under Content/Sounds (<see cref="Jump"/>: "foley/jump"; a combat move's moment and a
-    /// shot's release, by its animation: <see cref="MoveOf"/>, "combat/swordslash", "combat/bowshot", "combat/bowrelease");
+    /// shot's release, by its animation: <see cref="MoveOf"/>, "combat/swordslash", "combat/bowshot", "combat/bowrelease";
+    /// a blow landing, on a body or a raised shield, where it was struck: <see cref="Hit"/>, one of its takes each time);
     /// one the catalog lacks plays nothing, so a sound is added by dropping its folder in and building. A sound of the
     /// actor's own body plays in its voice when it has a version in it (<see cref="Voiced"/>). Where an actor is
     /// comes from whoever runs the game (the player's feet today, the world's actors later).
@@ -21,6 +22,9 @@ namespace Forge.Play.Sound
     {
         /// <summary>What an actor taking off in a jump plays.</summary>
         public const string Jump = "foley/jump";
+
+        /// <summary>What a blow landing plays where it struck, on a body or a raised shield.</summary>
+        public const string Hit = "combat/hit";
 
         /// <summary>What a combat move's moment or a shot's release plays, by its animation ("SwordSlash": "combat/swordslash").</summary>
         public static string MoveOf(string animation) => "combat/" + animation.ToLowerInvariant();
@@ -57,6 +61,7 @@ namespace Forge.Play.Sound
                 events.Subscribe<ActorJumped>(e => PlayVoicedAt(e.Actor, Jump)),
                 events.Subscribe<MoveWindowOpened>(OnMoveWindowOpened),
                 events.Subscribe<ShotLoosed>(OnShotLoosed),
+                events.Subscribe<HitLanded>(e => PlayAt(e.Target, Hit, HandsHeight)),
             };
         }
 
