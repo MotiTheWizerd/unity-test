@@ -17,6 +17,8 @@ namespace Forge.Tests.Content
             Assert.That(HumanoidMoves.RoleOf(@"Styles\Archery\BowIdle.fbx", Says("stance")), Is.EqualTo(MoveRole.Stance), "Either slash.");
             Assert.That(HumanoidMoves.RoleOf("Styles/OneHanded/SwordDeath.fbx", Says("wholeBody")), Is.EqualTo(MoveRole.FullBodyAction));
             Assert.That(HumanoidMoves.RoleOf("Emotes/Wave.fbx", Says("arms")), Is.EqualTo(MoveRole.ArmsAction), "Any folder of actions.");
+            Assert.That(HumanoidMoves.RoleOf("Styles/OneHanded/SwordHit.fbx", Says("reaction")), Is.EqualTo(MoveRole.Reaction));
+            Assert.That(HumanoidMoves.Loops(MoveRole.Reaction, "SwordHit"), Is.False, "A blow taken plays once.");
             Assert.That(HumanoidMoves.Loops(MoveRole.FullBodyAction, "SwordDeath"), Is.False);
         }
 

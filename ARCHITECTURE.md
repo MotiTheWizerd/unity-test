@@ -910,10 +910,13 @@ from any camera, so both cameras read the same player.
   fingers), `"wholeBody"` on a **Full Body** layer with no mask (`MoveRole.FullBodyAction`), where one that
   `"staysAtEnd"` (a death: `SwordDeath`, `BowDeath2`) has no way out, so played through
   (`HumanoidAnimation.PlayThrough`, `CharacterModel.PlayThrough`) the clip stays at its last frame and the layer stays
-  weighed in until `Resume` at 1 lets it fade, and the layer is rested unseen, and any other plays out; an action that
-  doesn't say on an **Upper Body** layer (`MoveRole.UpperBodyAction`; `<Set> Upper Body.mask`: also the body and
-  head, so the torso turns into a cut). `MoveSetContentTests` guards that each move the core styles name plays where
-  its kind needs. A move's **variants** are clips named after it with a number
+  weighed in until `Resume` at 1 lets it fade, and the layer is rested unseen, and any other plays out; `"reaction"`
+  (`MoveRole.Reaction`: a blow taken) on a **Reactions** layer laid over all the others, whole body and **additive**,
+  so how its clip moves from its first frame is added to whatever plays beneath (a swing, a walk, a raised shield goes
+  on under the flinch); an action that doesn't say on an **Upper Body** layer (`MoveRole.UpperBodyAction`;
+  `<Set> Upper Body.mask`: also the body and head, so the torso turns into a cut). `MoveSetContentTests` guards that
+  each move the core styles name plays where its kind needs. Playing an action already playing starts it over (a
+  second blow before the first's reaction is done). A move's **variants** are clips named after it with a number
   from 2 on (`SwordDeath2`, `HumanoidAnimation.Variant`), and `Vary` picks the move or one of them by chance (a
   death isn't the same every time); the rest of the chain names the one picked. `HumanoidAnimation.Play` finds the layer holding the action and
   weighs it in for as long as the clip lasts: in as it starts, out by its end.
@@ -926,7 +929,7 @@ from any camera, so both cameras read the same player.
   draw is a record and a clip (`ReadinessView` binds a `WeaponReadiness` to a `CharacterModel`). A new move is a file dropped in and a rebuild.
   **A move's settings** (`MoveSettings`): a clip's optional `<Move>.json` beside it says what its name never does,
   every part optional: where an action plays (`"plays"`: `"arms"`, `"upperBody"`, what an action that doesn't say
-  does, `"wholeBody"`, or `"stance"`; a Locomotion or Air move plays as its folder says, and the build warns that
+  does, `"wholeBody"`, `"reaction"`, or `"stance"`; a Locomotion or Air move plays as its folder says, and the build warns that
   the setting is pointless), whether a whole-body action played through stays at its end (`"staysAtEnd": true`, a
   death; only on the whole body), and, **how a move holds**, where what each hand holds points in it (`{ "rightHand": { "points": [0, 0, 1] } }`: the grip's +Y, a sword's blade, straight ahead in the
   body's frame, x right, y up, z forward; `leftHand` too), since a Mixamo move is animated with nothing in the hand
@@ -1122,6 +1125,15 @@ Plugin) stands the first of `CoreModels.Npcs` 4 m right of the items at the star
   by nothing). Fallen, its mind has nothing to say, nothing moves it and nothing costs it (no regen), its shots fly on,
   a new look lies as the old one did, and `FightCauses` has settled its fight; `Rise` would get it up again, body and
   look. The player instead wakes up whole (see the shortcuts).
+- **Taking a blow** (`ActorCombat.Struck`): whoever lands a blow tells the struck one's guard (`IGuard.Jolt`) the
+  `Blow` as it is felt: the impact's seconds, which way it travelled, and how much of it got past the guard to the
+  body (1 less what the raised shield stopped). Both stop for the impact; when any of it reached the body the struck
+  one's look gives with it in its weapon's style's hit (`CombatMoveKind.Hit`, `ActorCombat.HitAnimation`: One-Handed's
+  `SwordHit`, Mixamo's Sword And Shield Impact, `SwordHit2`, `SwordHit3` its variants by chance; else the set's own
+  `Hit`, none yet), laid over whatever it is doing on the Reactions layer (`CombatView`), so its own swing goes on: a
+  hit doesn't interrupt one, and the blade that struck cuts on through the body, both for now. The same for the
+  player and every character. Which reaction plays is the rules' to say, so the blow's direction (kept on the
+  `Blow`), how hard it was, and later a fighter's position and skill can choose it.
 - **Shortcuts, for now:** a character's body takes the player's profile's shape (a race's record will give its own);
   it forgets where it walked, and how hurt it was, when it streams out, and comes back whole where it was placed.
   `PlayerCharacter`,

@@ -75,6 +75,7 @@ namespace Forge.Tests.Game
                     {
                         new CombatMove(CombatMoveKind.Attack, "BowShot", held: true, release: "BowRelease"),
                         new CombatMove(CombatMoveKind.Death, "BowDeath"),
+                        new CombatMove(CombatMoveKind.Hit, "BowHit"),
                     }),
                     Bow,
                     Arrow,
@@ -144,6 +145,16 @@ namespace Forge.Tests.Game
             Hold(Bow);
 
             Assert.That(_combat.DeathAnimation, Is.EqualTo("BowDeath"));
+        }
+
+        [Test]
+        public void ItsHit_IsItsWeaponsStyles_ElseTheLooksOwn()
+        {
+            Assert.That(_combat.HitAnimation, Is.Null, "Nothing in hand: the look's own.");
+            Hold(Sword);
+            Assert.That(_combat.HitAnimation, Is.Null, "The sword's style has no hit here: the look's own.");
+            Hold(Bow);
+            Assert.That(_combat.HitAnimation, Is.EqualTo("BowHit"), "The bow's, with a bow in hand.");
         }
 
         [Test]
@@ -715,6 +726,58 @@ namespace Forge.Tests.Game
             Assert.That(foe.Swings, Has.Count.EqualTo(1), "Still coming back...");
             foe.Tick(0.02f);
             Assert.That(foe.Swings, Is.Empty, "...then over, sooner than the swing would have played out.");
+        }
+
+        [Test]
+        public void WhatOfABlowGetsPastTheGuard_TheStruckOneGivesWith_WhichWayItCame_TheStrikerNot()
+        {
+            var foe = RaiseShieldAgainstAFoe();
+            var struck = new List<Blow>();
+            _combat.Struck += struck.Add;
+            var foeStruck = new List<Blow>();
+            foe.Struck += foeStruck.Add;
+
+            foe.Strike(foe.Swings.Single(), ActorId.Player, FromTheFront);
+
+            Assert.That(struck.Single().Reached, Is.EqualTo(0.4f).Within(1e-5f), "The shield stopped 60%.");
+            Assert.That(struck.Single().Direction, Is.EqualTo(FromTheFront));
+            Assert.That(struck.Single().Seconds, Is.EqualTo(ActorCombat.ImpactSeconds));
+            Assert.That(foeStruck, Is.Empty, "The one who struck stops a moment, but isn't struck.");
+        }
+
+        [Test]
+        public void ABlowFromBehind_ReachesTheBodyWhole()
+        {
+            var foe = RaiseShieldAgainstAFoe();
+            var struck = new List<Blow>();
+            _combat.Struck += struck.Add;
+
+            foe.Strike(foe.Swings.Single(), ActorId.Player, FromBehind);
+
+            Assert.That(struck.Single().Reached, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void ABlowTheGuardStopsWhole_JoltsButIsNotFelt_OnTheBody()
+        {
+            var stalls = new List<float>();
+            _combat.Stalled += stalls.Add;
+            var struck = new List<Blow>();
+            _combat.Struck += struck.Add;
+
+            _combat.Jolt(new Blow(ActorCombat.ImpactSeconds, FromTheFront, 0f));
+
+            Assert.That(stalls.Single(), Is.EqualTo(ActorCombat.ImpactSeconds), "The impact stops it a moment...");
+            Assert.That(struck, Is.Empty, "...but nothing reached the body.");
+        }
+
+        [Test]
+        public void ABlow_IsFeltForNoLessThanNothing_AndReachesAShareOfTheBody()
+        {
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new Blow(-1f, null, 1f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new Blow(0.1f, null, 1.5f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new Blow(0.1f, null, float.NaN));
+            Assert.That((new Blow(0f, null, 0f).ReachedBody, new Blow(0f, null, 0.2f).ReachedBody), Is.EqualTo((false, true)));
         }
 
         [Test]

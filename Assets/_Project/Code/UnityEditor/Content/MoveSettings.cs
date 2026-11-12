@@ -11,9 +11,10 @@ namespace Forge.UnityEditor.Content
     /// its folder says (<see cref="HumanoidMoves.RoleOf"/>); a move's name says nothing of it but its name:
     /// <list type="bullet">
     /// <item>"plays": where an action plays (<see cref="Plays"/>): "arms" alone, whatever the legs do (a draw, a sheathe);
-    /// "upperBody", the legs walking on beneath (a slash: an action that doesn't say); "wholeBody" (a death); or "stance",
-    /// a combat style's drawn idle, which its drawn ground moves stand in ("BowIdle"). A Locomotion or an Air move plays
-    /// as its folder says.</item>
+    /// "upperBody", the legs walking on beneath (a slash: an action that doesn't say); "wholeBody" (a death);
+    /// "reaction", laid over whatever the body does, the whole of it (a blow taken: a swing goes on beneath); or
+    /// "stance", a combat style's drawn idle, which its drawn ground moves stand in ("BowIdle"). A Locomotion or an Air
+    /// move plays as its folder says.</item>
     /// <item>"staysAtEnd": a whole-body action played through stays at its end (a death: it lies as it fell) until let go
     /// (<see cref="StaysAtEnd"/>).</item>
     /// <item>"rightHand", "leftHand": where what the hand holds points in it (<c>{ "points": [0, 0, 1] }</c>: the grip's
@@ -36,6 +37,7 @@ namespace Forge.UnityEditor.Content
             { "arms", MoveRole.ArmsAction },
             { "upperBody", MoveRole.UpperBodyAction },
             { "wholeBody", MoveRole.FullBodyAction },
+            { "reaction", MoveRole.Reaction },
             { "stance", MoveRole.Stance },
         };
 

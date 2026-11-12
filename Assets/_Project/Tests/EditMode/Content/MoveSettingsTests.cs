@@ -58,6 +58,7 @@ namespace Forge.Tests.Content
             Assert.That(MoveSettings.Parse("{ \"plays\": \"arms\" }", "a.json").Plays, Is.EqualTo(MoveRole.ArmsAction));
             Assert.That(MoveSettings.Parse("{ \"plays\": \"upperBody\" }", "a.json").Plays, Is.EqualTo(MoveRole.UpperBodyAction));
             Assert.That(MoveSettings.Parse("{ \"plays\": \"wholeBody\" }", "a.json").Plays, Is.EqualTo(MoveRole.FullBodyAction));
+            Assert.That(MoveSettings.Parse("{ \"plays\": \"reaction\" }", "a.json").Plays, Is.EqualTo(MoveRole.Reaction));
             Assert.That(MoveSettings.Parse("{ \"plays\": \"stance\" }", "a.json").Plays, Is.EqualTo(MoveRole.Stance));
             var death = MoveSettings.Parse("{ \"plays\": \"wholeBody\", \"staysAtEnd\": true }", "a.json");
             Assert.That((death.Plays, death.StaysAtEnd), Is.EqualTo(((MoveRole?)MoveRole.FullBodyAction, true)));
@@ -74,6 +75,7 @@ namespace Forge.Tests.Content
 
             var stays = Assert.Throws<InvalidOperationException>(() => MoveSettings.Parse("{ \"plays\": \"upperBody\", \"staysAtEnd\": true }", "Styles/A/Bow.json"));
             Assert.That(stays.Message, Does.Contain("Styles/A/Bow.json").And.Contain("staysAtEnd"), "Only the whole body's layer stays.");
+            Assert.Throws<InvalidOperationException>(() => MoveSettings.Parse("{ \"plays\": \"reaction\", \"staysAtEnd\": true }", "a.json"), "Nor does a reaction.");
             Assert.Throws<InvalidOperationException>(() => MoveSettings.Parse("{ \"staysAtEnd\": true }", "a.json"), "Nor without saying where it plays.");
         }
 

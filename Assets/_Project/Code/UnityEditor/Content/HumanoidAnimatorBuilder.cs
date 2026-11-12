@@ -408,13 +408,15 @@ namespace Forge.UnityEditor.Content
         // HumanoidAnimation weighs in while one plays: a draw or a sheathe on the arms (MoveRole.ArmsAction), so the body
         // walks or runs on unchanged; a slash or a shot on the upper body (MoveRole.UpperBodyAction), so the torso turns
         // into it while the legs still walk; a death on the whole body (MoveRole.FullBodyAction), played through and
-        // stayed at its end (MoveSettings.StaysAtEnd). Each starts by a trigger named after it. A layer is left out when
-        // the set has no action for it.
+        // stayed at its end (MoveSettings.StaysAtEnd); and last, a reaction (MoveRole.Reaction: a blow taken) added on top
+        // of all of them, so whatever plays beneath goes on. Each starts by a trigger named after it. A layer is left out
+        // when the set has no action for it.
         static void BuildActions(string set, AnimatorController controller)
         {
             BuildActionLayer(set, controller, HumanoidAnimation.ArmsLayer, ArmsParts, Actions(set, MoveRole.ArmsAction));
             BuildActionLayer(set, controller, HumanoidAnimation.UpperBodyLayer, UpperBodyParts, Actions(set, MoveRole.UpperBodyAction));
             BuildActionLayer(set, controller, HumanoidAnimation.FullBodyLayer, null, Actions(set, MoveRole.FullBodyAction));
+            BuildActionLayer(set, controller, HumanoidAnimation.ReactionsLayer, null, Actions(set, MoveRole.Reaction), additive: true);
         }
 
         // The set's actions in `role`, each with whether it stays at its end once played.
@@ -426,9 +428,9 @@ namespace Forge.UnityEditor.Content
         // weight does the blending in and out (HumanoidAnimation), so its states change at once: a crossfade into the
         // empty rest state would draw the limbs toward the rig's neutral pose on the way out. A clip that stays keeps
         // its end once it has played (a death lies as it fell) until HumanoidAnimation rests the layer; the rest go back
-        // to rest as they end.
+        // to rest as they end. An additive layer adds how its clip moves from its first frame to what plays beneath.
         static void BuildActionLayer(string set, AnimatorController controller, string name, AvatarMaskBodyPart[] parts,
-            IEnumerable<(AnimationClip Clip, bool Stays)> clips)
+            IEnumerable<(AnimationClip Clip, bool Stays)> clips, bool additive = false)
         {
             var actions = clips.ToArray();
             if (actions.Length == 0)
@@ -439,6 +441,7 @@ namespace Forge.UnityEditor.Content
             var layer = layers[layers.Length - 1];
             layer.defaultWeight = 0f;
             layer.avatarMask = parts != null ? Mask(set, name, parts) : null;
+            layer.blendingMode = additive ? AnimatorLayerBlendingMode.Additive : AnimatorLayerBlendingMode.Override;
             controller.layers = layers;
 
             // The layer's actions play at its pace, which holds one still (a bow at full draw) at 0.

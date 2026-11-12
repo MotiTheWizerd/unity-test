@@ -718,6 +718,12 @@
           "animation": "SwordDeath",
           "staminaCost": 0.0,
           "held": false
+        },
+        {
+          "kind": "hit",
+          "animation": "SwordHit",
+          "staminaCost": 0.0,
+          "held": false
         }
       ]
     },

@@ -11,8 +11,9 @@ namespace Forge.Play
     /// hold it, and once let go goes into its move's release (a bow's: the string let go, the bow coming down), else plays
     /// on from there; a raised block that takes a blow is jolted by its style's reaction, then held up again. A blow's
     /// impact freezes the look as long as it stops the fighting (hit-stop), and a blade that bounced off plays its move
-    /// back to where it came from. Bound while the look exists (the player while spawned); the rules never know it is
-    /// there.
+    /// back to where it came from. A blow that reaches the body plays its hit over whatever the look does
+    /// (<see cref="ActorCombat.HitAnimation"/>, else the look's own <see cref="HumanoidAnimation.HitMove"/>; one of its
+    /// variants by chance). Bound while the look exists (the player while spawned); the rules never know it is there.
     /// </summary>
     public sealed class CombatView : IDisposable
     {
@@ -31,6 +32,7 @@ namespace Forge.Play
             _combat.Blocked += OnBlocked;
             _combat.Stalled += _model.Freeze;
             _combat.Recoiled += OnRecoiled;
+            _combat.Struck += OnStruck;
         }
 
         public void Dispose()
@@ -42,8 +44,12 @@ namespace Forge.Play
             _combat.Blocked -= OnBlocked;
             _combat.Stalled -= _model.Freeze;
             _combat.Recoiled -= OnRecoiled;
+            _combat.Struck -= OnStruck;
             _combat.Timings = null;
         }
+
+        // A blow reached the body: it gives with it, over whatever it does.
+        void OnStruck(Blow blow) => _model.Play(_model.Vary(_combat.HitAnimation ?? HumanoidAnimation.HitMove));
 
         // A blade that met what it can't cut through plays back the way it came, as long as the rules let it come back.
         void OnRecoiled(Swing swing) => _model.Rebound(swing.Move.Animation, ActorCombat.RecoilSeconds);

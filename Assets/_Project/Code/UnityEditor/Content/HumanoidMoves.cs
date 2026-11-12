@@ -22,6 +22,12 @@ namespace Forge.UnityEditor.Content
 
         /// <summary>An action on the whole body (a death: it falls; one that stays at its end lies so, <see cref="MoveSettings.StaysAtEnd"/>).</summary>
         FullBodyAction,
+
+        /// <summary>
+        /// A reaction laid over whatever the body does (a blow taken): how its clip moves from its first frame is added on
+        /// top, the whole body, so a swing, a walk or a block goes on beneath it.
+        /// </summary>
+        Reaction,
     }
 
     /// <summary>

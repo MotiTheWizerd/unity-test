@@ -63,10 +63,13 @@ namespace Forge.Game.Combat
     /// A blow that lands is felt (<see cref="ImpactSeconds"/>, hit-stop): the swing that struck and everything the struck
     /// one does stop a moment (<see cref="Stall"/>, <see cref="IGuard.Jolt"/>, <see cref="Stalled"/> for the looks to
     /// freeze); a blade a guard stopped, or that met a wall (<see cref="Bounce"/>), comes back over
-    /// <see cref="RecoilSeconds"/>, its blow spent (<see cref="Recoiled"/>).
+    /// <see cref="RecoilSeconds"/>, its blow spent (<see cref="Recoiled"/>). What of a blow reaches the struck one's body
+    /// it gives with (<see cref="Struck"/>), in its weapon's style's hit (<see cref="HitAnimation"/>), whatever it is
+    /// doing: its own swing goes on.
     /// </para>
     /// Told as it happens (<see cref="SwingStarted"/>, <see cref="SwingHeld"/>, <see cref="SwingLetGo"/>,
-    /// <see cref="Loosed"/>, <see cref="Blocked"/>, <see cref="Stalled"/>, <see cref="Recoiled"/>, <see cref="SwingEnded"/>)
+    /// <see cref="Loosed"/>, <see cref="Blocked"/>, <see cref="Stalled"/>, <see cref="Recoiled"/>, <see cref="Struck"/>,
+    /// <see cref="SwingEnded"/>)
     /// for the look, and on the stream
     /// (<see cref="AttackStarted"/>, <see cref="ShotLoosed"/>, <see cref="HitLanded"/>, <see cref="HitBlocked"/>,
     /// <see cref="GuardBroken"/>, <see cref="ActorKilled"/>) for the rest. Engine-free; the game ticks it.
@@ -178,6 +181,9 @@ namespace Forge.Game.Combat
         /// <summary>A swing's blade met what it can't cut through and comes back (<see cref="RecoilSeconds"/>), for the look to play it back.</summary>
         public event Action<Swing> Recoiled;
 
+        /// <summary>A blow reached its body (some of it past any guard), for the look to give with it (<see cref="HitAnimation"/>).</summary>
+        public event Action<Blow> Struck;
+
         /// <summary>
         /// Which way the actor faces (scene space; only its level part counts), which its guard covers; until set, its
         /// guard covers every way.
@@ -188,20 +194,13 @@ namespace Forge.Game.Combat
         /// The move its death plays: its weapon's style's (<see cref="CombatMoveKind.Death"/>: a sword's, a bow's), of
         /// the first thing it holds whose style has one; null: the look's own.
         /// </summary>
-        public string DeathAnimation
-        {
-            get
-            {
-                foreach (var equipped in _equipment.All)
-                {
-                    var move = StyleMove(equipped, CombatMoveKind.Death);
-                    if (move != null)
-                        return move.Animation;
-                }
+        public string DeathAnimation => HeldStyleAnimation(CombatMoveKind.Death);
 
-                return null;
-            }
-        }
+        /// <summary>
+        /// The move it gives with when a blow reaches its body (<see cref="Struck"/>): its weapon's style's
+        /// (<see cref="CombatMoveKind.Hit"/>), of the first thing it holds whose style has one; null: the look's own.
+        /// </summary>
+        public string HitAnimation => HeldStyleAnimation(CombatMoveKind.Hit);
 
         /// <summary>The block raised now, its guard up (a shield in its window); null when none is.</summary>
         public Swing Guard
@@ -349,7 +348,12 @@ namespace Forge.Game.Combat
         }
 
         /// <inheritdoc/>
-        public void Jolt(float seconds) => Stall(seconds);
+        public void Jolt(Blow blow)
+        {
+            Stall(blow.Seconds);
+            if (blow.ReachedBody)
+                Struck?.Invoke(blow);
+        }
 
         /// <inheritdoc/>
         public float Block(ActorId attacker, RecordId weapon, float damage, Vector3? direction, BlowMet met = BlowMet.Anywhere)
@@ -371,6 +375,19 @@ namespace Forge.Game.Combat
             Blocked?.Invoke(guard, StyleMove(guard.Weapon, CombatMoveKind.Blocked));
             _events?.Publish(new HitBlocked(attacker, Owner, weapon, stopped));
             return block.Stops;
+        }
+
+        // The animation of the move of `kind` of the first thing it holds whose style has one; null when none has.
+        string HeldStyleAnimation(CombatMoveKind kind)
+        {
+            foreach (var equipped in _equipment.All)
+            {
+                var move = StyleMove(equipped, kind);
+                if (move != null)
+                    return move.Animation;
+            }
+
+            return null;
         }
 
         // The move of `kind` of the style `equipped` is fought with; null when it has none.
@@ -400,14 +417,14 @@ namespace Forge.Game.Combat
         }
 
         // The weapon's blow, `power` times as strong, on the target, less what its guard stops of the harm to its health;
-        // the target jolted by it, and the swing that dealt it (none for a shot) stopped a moment in it, bouncing off a
-        // guard that stopped it; told on the stream.
+        // the target jolted by it (giving with what got past its guard), and the swing that dealt it (none for a shot)
+        // stopped a moment in it, bouncing off a guard that stopped it; told on the stream.
         void Land(BaseObjectRecord weapon, float power, ActorId target, ActorAttributes attributes, Vector3? direction, BlowMet met, Swing swing)
         {
             var guarded = _combatants.TryGetGuard(target, out var guard);
             var stops = guarded ? guard.Block(Owner, weapon.Id, HealthDamage(weapon, power), direction, met) : 0f;
             if (guarded)
-                guard.Jolt(ImpactSeconds);
+                guard.Jolt(new Blow(ImpactSeconds, direction, 1f - stops));
             if (swing != null)
                 Impact(swing, bounces: stops > 0f);
             var health = 0f;

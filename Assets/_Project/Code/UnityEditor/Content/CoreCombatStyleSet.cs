@@ -9,7 +9,8 @@ namespace Forge.UnityEditor.Content
     /// one-handed, drawn from the hip and a slash that costs nothing; archery, drawn from the back, its attack an arrow
     /// drawn while held and loosed on release, the string let go and the bow brought down after, stood in with the bow
     /// held low; a shield, raised against blows while held and jolted when one lands on it. A sword and a bow each
-    /// have a death of their own, the actor falling with it in hand.
+    /// have a death of their own, the actor falling with it in hand; a sword has a hit, the actor giving with a blow
+    /// that reaches its body.
     /// </summary>
     static class CoreCombatStyleSet
     {
@@ -41,6 +42,9 @@ namespace Forge.UnityEditor.Content
         public const string SwordDeath = "SwordDeath";
         public const string BowDeath = "BowDeath";
 
+        /// <summary>The move set's move an actor gives with when a blow reaches its body with a sword in hand (Mixamo's Sword And Shield Impact).</summary>
+        public const string SwordHit = "SwordHit";
+
         public static IEnumerable<CombatStyleRecord> All()
         {
             yield return new CombatStyleRecord(CoreCombatStyles.OneHanded, "One-Handed", new[]
@@ -49,6 +53,7 @@ namespace Forge.UnityEditor.Content
                 new CombatMove(CombatMoveKind.Draw, SwordDraw),
                 new CombatMove(CombatMoveKind.Sheathe, SwordSheathe),
                 new CombatMove(CombatMoveKind.Death, SwordDeath),
+                new CombatMove(CombatMoveKind.Hit, SwordHit),
             });
             yield return new CombatStyleRecord(CoreCombatStyles.Archery, "Archery", new[]
             {

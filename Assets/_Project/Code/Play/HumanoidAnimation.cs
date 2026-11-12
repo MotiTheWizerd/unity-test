@@ -16,9 +16,10 @@ namespace Forge.Play
     /// the crouched ground moves while crouched (<see cref="Crouched"/>, when the set has them), and
     /// the drawn ground moves (<see cref="Drawn"/>), standing in the drawn weapon's style's stance when the set has it
     /// (<see cref="Stance"/>: a bow held low rather than a sword up), and actions (a draw, a sheathe, a slash: <see cref="Play"/>, each
-    /// started by a trigger named after its clip) play on an action layer, the <see cref="ArmsLayer"/> (a draw) or the
-    /// <see cref="UpperBodyLayer"/> (a slash), whichever holds them, weighed in only while they play, so the legs move on
-    /// beneath. The weight fades in as an action starts and is out by the time it ends. A controller built without them
+    /// started by a trigger named after its clip) play on an action layer, the <see cref="ArmsLayer"/> (a draw), the
+    /// <see cref="UpperBodyLayer"/> (a slash), the <see cref="FullBodyLayer"/> (a death) or, added over all of them, the
+    /// <see cref="ReactionsLayer"/> (a blow taken), whichever holds them, weighed in only while they play, so the legs
+    /// move on beneath. The weight fades in as an action starts and is out by the time it ends. A controller built without them
     /// just walks. The body moves itself; the animations only show it (no root motion).
     /// </summary>
     public sealed class HumanoidAnimation
@@ -47,12 +48,16 @@ namespace Forge.Play
         public const string DrawnIdleMove = Drawn + IdleMove;
         /// <summary>The move it dies in when its weapon's style has none of its own (<see cref="PlayThrough"/>), when its set has one.</summary>
         public const string DeathMove = "Death";
+        /// <summary>The move it gives with when a blow reaches its body and its weapon's style has none of its own, when its set has one.</summary>
+        public const string HitMove = "Hit";
         public const string DrawTrigger = "Draw";
         public const string SheatheTrigger = "Sheathe";
         public const string ArmsLayer = "Arms";
         public const string UpperBodyLayer = "Upper Body";
-        /// <summary>The action layer of the whole body, whose actions stay at their end once played (a death).</summary>
+        /// <summary>The action layer of the whole body, whose actions may stay at their end once played (a death).</summary>
         public const string FullBodyLayer = "Full Body";
+        /// <summary>The action layer laid over all the others, adding its reactions (a blow taken) to whatever plays beneath.</summary>
+        public const string ReactionsLayer = "Reactions";
         /// <summary>An action layer's state while no action plays.</summary>
         public const string RestState = "Rest";
 
@@ -129,7 +134,7 @@ namespace Forge.Play
             _directional = side && ahead;
             _rightHandPoints = HandPointsIds(animator, true);
             _leftHandPoints = HandPointsIds(animator, false);
-            foreach (var name in new[] { ArmsLayer, UpperBodyLayer, FullBodyLayer })
+            foreach (var name in new[] { ArmsLayer, UpperBodyLayer, FullBodyLayer, ReactionsLayer })
             {
                 var index = animator.GetLayerIndex(name);
                 if (index < 0)
@@ -274,14 +279,19 @@ namespace Forge.Play
         }
 
         /// <summary>
-        /// Plays the action <paramref name="move"/> (a move set's clip beyond its ground and air moves: a draw, a slash)
-        /// on the action layer that holds it, weighed in for as long as it lasts; false when the set has no such action.
+        /// Plays the action <paramref name="move"/> (a move set's clip beyond its ground and air moves: a draw, a slash, a
+        /// blow taken) on the action layer that holds it, weighed in for as long as it lasts, from its start even when it
+        /// is playing already (a second blow); false when the set has no such action.
         /// </summary>
         public bool Play(string move)
         {
             if (!TryAction(move, out var layer, out var clip))
                 return false;
-            _animator.SetTrigger(move);
+            var state = Animator.StringToHash(move);
+            if (_animator.GetCurrentAnimatorStateInfo(layer.Index).shortNameHash == state)
+                _animator.Play(state, layer.Index, 0f);
+            else
+                _animator.SetTrigger(move);
             SetPace(layer, 1f);
             layer.Held = layer.Thawing = layer.Rebounding = false;
             layer.Reacting = layer.Returning = 0f;

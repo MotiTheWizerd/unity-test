@@ -21,7 +21,10 @@ namespace Forge.Game.Combat
         /// </summary>
         float Block(ActorId attacker, RecordId weapon, float damage, Vector3? direction, BlowMet met = BlowMet.Anywhere);
 
-        /// <summary>A blow struck it, on its guard or its body: whatever it is doing stops for <paramref name="seconds"/> (the impact, felt by both).</summary>
-        void Jolt(float seconds);
+        /// <summary>
+        /// <paramref name="blow"/> struck it, on its guard or its body: whatever it is doing stops for its
+        /// <see cref="Blow.Seconds"/> (the impact, felt by both), and what of it reached the body it gives with.
+        /// </summary>
+        void Jolt(Blow blow);
     }
 }

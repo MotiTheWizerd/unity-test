@@ -28,6 +28,12 @@ namespace Forge.Data.Records
 
         /// <summary>What plays when the actor dies with this style's weapon in hand, and stays: it falls, and lies as it fell.</summary>
         Death,
+
+        /// <summary>
+        /// What plays when a blow reaches the actor's body with this style's weapon in hand: it gives with it, over
+        /// whatever it is doing (a swing goes on).
+        /// </summary>
+        Hit,
     }
 
     /// <summary>
