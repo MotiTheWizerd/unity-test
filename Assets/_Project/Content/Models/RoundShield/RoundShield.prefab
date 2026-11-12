@@ -48,6 +48,8 @@ MonoBehaviour:
   _facesHolder: {x: 0, y: 0, z: -1}
   _alongArm: {x: 1, y: 0, z: 0}
   _carried: 1
+  _inHandOffset: {x: 0, y: 0, z: 0}
+  _inHandTurn: {x: -25, y: -6, z: 0}
 --- !u!1001 &8235201618566237778
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -62,7 +64,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 48d76771d403a7b438e16238ae5f0cfa, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.016009368
+      value: 0.049516194
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 48d76771d403a7b438e16238ae5f0cfa, type: 3}
       propertyPath: m_LocalPosition.z
