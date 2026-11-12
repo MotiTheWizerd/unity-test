@@ -71,7 +71,8 @@ namespace Forge.Play
             _sunk = hover + soles;
             Root.transform.localPosition = Vector3.down * _sunk;
             _afterAnimation = Root.AddComponent<AfterAnimation>();
-            // The hands first: what they hold is laid on them after.
+            // The upper body turned to its action's stance first, then the hands, then what they hold laid on them.
+            _afterAnimation.Posed += KeepStance;
             _afterAnimation.Posed += AimHands;
             _afterAnimation.Posed += FaceHolders;
         }
@@ -566,6 +567,35 @@ namespace Forge.Play
                 middle += axis * ((ExtentOf(held, axis) - ExtentOf(held, -axis)) * 0.5f);
             return middle;
         }
+
+        // An action on the upper body (a raised shield, a slash) sets the spine on whatever hips the legs have, and was
+        // made on hips turned its own way (StanceFinder: Mixamo's sword-and-shield block side-on, its walk square-on), so
+        // over a walk it would turn as far aside, face and shield. The upper body is turned back by the difference, as
+        // much as the action shows, so it faces where it was made to; standing in the stance it was made from, nothing turns.
+        void KeepStance()
+        {
+            var spine = Bone(HumanBodyBones.Spine);
+            // A pose the animator didn't write anew (out of sight, culled) still has last frame's turn: not turned twice.
+            if (spine == null || (_stanceKept && spine.localRotation == _keptSpine))
+                return;
+            _stanceKept = false;
+            if (_animation == null || !_animation.TryGetUpperBodyAction(out var clip, out var at, out var weight) ||
+                !StanceFinder.TryFind(_prefab, clip, at, out var made) || !StanceFinder.TryMeasure(_humanoid, Root.transform, out var now))
+                return;
+            var turn = StanceFinder.Keep(made, now, weight, MostStanceTwist);
+            if (!(Mathf.Abs(turn) > 0.01f))
+                return;
+            TurnUpperBody(Quaternion.AngleAxis(turn, Root.transform.up));
+            _keptSpine = spine.localRotation;
+            _stanceKept = true;
+        }
+
+        // Degrees the upper body twists over the hips at most to keep an action's stance: as far as a spine turns.
+        const float MostStanceTwist = 90f;
+
+        // The spine as the last stance kept left it.
+        Quaternion _keptSpine;
+        bool _stanceKept;
 
         // Each hand turned, on this frame's pose, the least that points what it holds (its grip's +Y: the blade) where
         // the moves playing want it, as far as they do (HumanoidAnimation.TryGetHandAim, from the moves' .json beside

@@ -914,7 +914,14 @@ from any camera, so both cameras read the same player.
   (`MoveRole.Reaction`: a blow taken) on a **Reactions** layer laid over all the others, whole body and **additive**,
   so how its clip moves from its first frame is added to whatever plays beneath (a swing, a walk, a raised shield goes
   on under the flinch); an action that doesn't say on an **Upper Body** layer (`MoveRole.UpperBodyAction`;
-  `<Set> Upper Body.mask`: also the body and head, so the torso turns into a cut). `MoveSetContentTests` guards that
+  `<Set> Upper Body.mask`: also the body and head, so the torso turns into a cut). An upper-body action sets the spine
+  on whatever hips the legs have, and Mixamo's clips stand differently (its sword-and-shield Idle, Block and Strafe
+  side-on, the hips some 55° to the right, its Walk and Run square-on), so over a walk a raised shield would turn as
+  far aside, face and shield; each frame, before the hands are aimed, `CharacterModel.KeepStance` turns the upper body
+  back by the difference between the hips the action was made on (`StanceFinder`, read off the clip moment by moment
+  with a `ClipSampler`, remembered per character and clip) and the hips it stands on now, as much as the action shows
+  (`HumanoidAnimation.TryGetUpperBodyAction`: its layer's weight, less a whole-body action laid over it), at most a
+  90° twist; a pose the animator didn't write anew (culled) isn't turned twice. `MoveSetContentTests` guards that
   each move the core styles name plays where its kind needs. Playing an action already playing starts it over (a
   second blow before the first's reaction is done). A move's **variants** are clips named after it with a number
   from 2 on (`SwordDeath2`, `HumanoidAnimation.Variant`), and `Vary` picks the move or one of them by chance (a

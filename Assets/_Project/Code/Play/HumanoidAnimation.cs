@@ -143,7 +143,7 @@ namespace Forge.Play
                 var hasPace = false;
                 foreach (var parameter in animator.parameters)
                     hasPace |= parameter.nameHash == pace;
-                _actionLayers.Add(new ActionLayer { Index = index, Pace = hasPace ? pace : (int?)null, Stays = name == FullBodyLayer });
+                _actionLayers.Add(new ActionLayer { Name = name, Index = index, Pace = hasPace ? pace : (int?)null, Stays = name == FullBodyLayer });
             }
 
             DrawClip = Clip(DrawTrigger);
@@ -203,6 +203,51 @@ namespace Forge.Play
 
             return ids;
         }
+
+        /// <summary>
+        /// The action playing on the upper body now (a raised shield, a slash: <see cref="UpperBodyLayer"/>), how far into
+        /// it (a fraction), and how much of it shows in the pose: its layer's weight, less what the whole body's action laid
+        /// over it hides (a death); false when none shows. Read once the animator has posed the frame.
+        /// </summary>
+        public bool TryGetUpperBodyAction(out AnimationClip clip, out float at, out float weight)
+        {
+            clip = null;
+            at = weight = 0f;
+            ActionLayer upper = null;
+            foreach (var layer in _actionLayers)
+            {
+                if (layer.Name == UpperBodyLayer)
+                    upper = layer;
+            }
+
+            if (upper == null || !(upper.Weight > 0f))
+                return false;
+            var state = _animator.GetCurrentAnimatorStateInfo(upper.Index);
+            if (!ClipsByState().TryGetValue(state.shortNameHash, out clip))
+                return false;
+            at = clip.isLooping ? Mathf.Repeat(state.normalizedTime, 1f) : Mathf.Clamp01(state.normalizedTime);
+            weight = upper.Weight;
+            foreach (var layer in _actionLayers)
+            {
+                if (layer.Name == FullBodyLayer)
+                    weight *= 1f - layer.Weight;
+            }
+
+            return weight > 0f;
+        }
+
+        // The controller's clips by the state that plays each (named after it, as the builder names them), made once.
+        Dictionary<int, AnimationClip> ClipsByState()
+        {
+            if (_clipsByState != null)
+                return _clipsByState;
+            _clipsByState = new Dictionary<int, AnimationClip>();
+            foreach (var clip in _animator.runtimeAnimatorController.animationClips)
+                _clipsByState[Animator.StringToHash(clip.name)] = clip;
+            return _clipsByState;
+        }
+
+        Dictionary<int, AnimationClip> _clipsByState;
 
         /// <summary>The clip weighing most on the ground (base) layer now; null when none plays.</summary>
         public AnimationClip PlayingGround
@@ -567,6 +612,7 @@ namespace Forge.Play
         // parameter, when the controller has one), and whether its actions stay at their end once played (the whole body's).
         sealed class ActionLayer
         {
+            public string Name;
             public int Index;
             public int? Pace;
             public bool Stays;
