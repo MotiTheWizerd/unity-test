@@ -85,7 +85,7 @@ namespace Forge.Play
         {
             if (!(weight > 0f) || !ArcheryAim.TryDrawLine(_model, out var from, out var along))
                 return;
-            var aimed = ArcheryAim.Target(_view(), from) - from;
+            var aimed = ArcheryAim.Target(_view(), from, _model) - from;
             if (aimed.sqrMagnitude < 1e-6f)
                 return;
             var turn = Quaternion.RotateTowards(Quaternion.identity, Quaternion.FromToRotation(along, aimed.normalized), MostTurn);

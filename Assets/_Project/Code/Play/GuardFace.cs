@@ -3,10 +3,10 @@ using UnityEngine;
 namespace Forge.Play
 {
     /// <summary>
-    /// The face of a raised guard (a shield held up): a box over the held shield's look, a trigger, so it stops no body
-    /// and no loose thing, but a blade or an arrow that looks for it meets it before the body behind it
-    /// (<see cref="BladeSweep"/>, <see cref="ArrowFlights"/>). Whose it is, the body it hangs under says
-    /// (<see cref="ActorLink"/>). On only while the guard is up (<see cref="GuardView"/>). Runtime-only.
+    /// The face of a raised guard (a shield held up): a box over the held shield's look, a trigger on the
+    /// <see cref="HitboxLayer"/>, so it stops no body and no loose thing, but a blade or an arrow that looks for it meets
+    /// it before the body behind it (<see cref="BladeSweep"/>, <see cref="ArrowFlights"/>). Whose it is, the body it hangs
+    /// under says (<see cref="ActorLink"/>). On only while the guard is up (<see cref="GuardView"/>). Runtime-only.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class GuardFace : MonoBehaviour
@@ -23,7 +23,7 @@ namespace Forge.Play
             if (face != null)
                 return face;
 
-            var holder = new GameObject("Guard Face") { layer = look.layer };
+            var holder = new GameObject("Guard Face") { layer = HitboxLayer.Index };
             holder.transform.SetParent(look.transform, false);
             face = holder.AddComponent<GuardFace>();
             face._box = holder.AddComponent<BoxCollider>();
@@ -43,8 +43,11 @@ namespace Forge.Play
         /// <summary>Puts the face up (the guard raised) or away.</summary>
         public void Raise(bool up)
         {
-            if (_box != null)
-                _box.enabled = up;
+            if (_box == null)
+                return;
+            _box.enabled = up;
+            // A look attached again is laid on its model's layer, this with it: a face is met on its own.
+            gameObject.layer = HitboxLayer.Index;
         }
 
         // The box over every mesh of the look, in the look's own space, no thinner than a blade can miss.

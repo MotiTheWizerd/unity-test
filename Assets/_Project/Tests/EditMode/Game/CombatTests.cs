@@ -561,6 +561,47 @@ namespace Forge.Tests.Game
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new AmmoPart(1.5f));
         }
 
+        [Test]
+        public void AnArrowStuckInSomeone_IsTheirsToCarry_UnlessItBreaks()
+        {
+            var shots = ReadyBow(5);
+            for (var i = 0; i < 2; i++)
+            {
+                _combat.TryAttack(CoreEquipSlots.RightHand);
+                _combat.Tick(1f);
+                _combat.Release(CoreEquipSlots.RightHand);
+                _combat.Tick(0.01f);
+            }
+
+            var rolls = new Queue<float>(new[] { 0.5f, 0.1f });
+            var landings = new ShotLandings(new WorldChanges(), _events, () => rolls.Dequeue());
+            var carried = new Inventory();
+
+            Assert.That(landings.Lodge(shots[0], Dummy, carried), Is.True, "Rolled 0.5 against a fifth: it stays in them.");
+            Assert.That(landings.Lodge(shots[1], Dummy, carried), Is.False, "Rolled 0.1: it broke.");
+            _events.Flush();
+
+            Assert.That(carried.CountOf(Arrow.Id), Is.EqualTo(1), "The one that stayed is theirs.");
+            var landed = _told.OfType<ShotLanded>().ToArray();
+            Assert.That(landed.Select(l => (l.Actor, l.Placed, l.LodgedIn, l.Broke)),
+                Is.EqualTo(new[] { (ActorId.Player, (RecordId?)null, (ActorId?)Dummy, false), (ActorId.Player, (RecordId?)null, (ActorId?)null, true) }));
+        }
+
+        [Test]
+        public void AHit_TellsWhereOnTheBodyItMet()
+        {
+            var shots = ReadyBow(5);
+            _combat.TryAttack(CoreEquipSlots.RightHand);
+            _combat.Tick(2f);
+            _combat.Release(CoreEquipSlots.RightHand);
+            _combat.Tick(0.01f);
+
+            Assert.That(_combat.Strike(shots.Single(), Dummy, null, BlowMet.Body, BodyPart.Head), Is.True);
+            _events.Flush();
+
+            Assert.That(_told.OfType<HitLanded>().Single().Part, Is.EqualTo(BodyPart.Head));
+        }
+
         // The player with a sword and a shield drawn, its shield raised (the left hand used, held into its window), a
         // guard facing +Z; and the dummy, fighting back with a sword.
         ActorCombat RaiseShieldAgainstAFoe()

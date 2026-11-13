@@ -21,7 +21,8 @@ namespace Forge.Play
     /// spawn to the next; what is worn modifies its attributes while it stands, and its load weighs on it,
     /// <see cref="Burden"/>), whether its weapons are drawn (<see cref="Readiness"/>), how it fights
     /// (<see cref="Combat"/>: one who can be struck among the game's combatants, its body found by blows and arrows
-    /// through its <see cref="ActorLink"/>, its guard covering the way its body faces), and its look (<see cref="Model"/>,
+    /// through its <see cref="ActorLink"/>, part by part on its look's <see cref="Hitboxes"/>, its guard covering the way
+    /// its body faces), and its look (<see cref="Model"/>,
     /// changed at will: <see cref="ChangeLook"/>) with everything shown on it:
     /// what it holds, its draws and sheathes, its swings, the blade's sweep through the scene, its shots and their
     /// flight, its footsteps, its head turned to whom it looks at (<see cref="LooksAt"/>). Each frame it does what it is
@@ -199,6 +200,8 @@ namespace Forge.Play
                 return;
 
             _model = new CharacterModel(Body.Body, prefab, Body.Hover);
+            // Fitted to the look as it stands at rest, before anything poses it.
+            Hitboxes.Build(_model, prefab);
             Rules.EyeHeight = _model.TryGetEyeHeight(out var eyes) ? eyes : _eyeHeight;
             _equipmentView = new EquipmentView(Equipment, _model, Stage.World, Stage.Assets);
             _readinessView = new ReadinessView(Readiness, _model);
@@ -206,7 +209,7 @@ namespace Forge.Play
             _guardView = new GuardView(Combat, _model, Stage.World);
             _sweep = new BladeSweep(Combat, _model, Stage.World, Stage.Identify);
             _shotView = new ShotView(Combat, Equipment, _model, Stage.Assets, AimPose);
-            _arrows = new ArrowFlights(Combat, _model, Stage.Assets, AimPose, Stage.Identify, Stage.LandShot);
+            _arrows = new ArrowFlights(Combat, _model, Stage.Assets, AimPose, Stage.Identify, Stage.LandShot, Stage.LodgeShot);
             // Last on the pose: the head turns once the upper body is set (a stance kept, a bow's aim).
             _headLook = new HeadLook(_model, Rules.EyeHeight, LookedAt);
             if (Stage.Sounds != null)

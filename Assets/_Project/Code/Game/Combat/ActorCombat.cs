@@ -285,9 +285,10 @@ namespace Forge.Game.Combat
         /// its blow lands, met first by the target's guard, if the swing is in its hit window, its weapon strikes with
         /// itself (not a bow: what it shoots strikes; not a block), the target can be struck and isn't the swinger, and
         /// this swing hasn't struck it yet. Landed, both feel it a moment; a guard that stopped it bounces it back.
-        /// Whether it landed.
+        /// Whether it landed. <paramref name="part"/>: where on the body it met, when known.
         /// </summary>
-        public bool Strike(Swing swing, ActorId target, Vector3? direction = null, BlowMet met = BlowMet.Anywhere)
+        public bool Strike(Swing swing, ActorId target, Vector3? direction = null, BlowMet met = BlowMet.Anywhere,
+            BodyPart part = BodyPart.None)
         {
             if (swing == null)
                 throw new ArgumentNullException(nameof(swing));
@@ -296,17 +297,18 @@ namespace Forge.Game.Combat
             if (!_combatants.TryGet(target, out var attributes) || IsDead(attributes) || !swing.MarkStruck(target))
                 return false;
 
-            Land(swing.Weapon.Record, 1f, target, attributes, direction, met, swing);
+            Land(swing.Weapon.Record, 1f, target, attributes, direction, met, part, swing);
             return true;
         }
 
         /// <summary>
         /// What this actor shot reached <paramref name="target"/>, flying <paramref name="direction"/> (scene space; null:
-        /// from wherever), meeting it where <paramref name="met"/> says: the weapon's blow lands, times the shot's power,
-        /// met first by the target's guard, if the target can be struck and isn't the shooter, and the shot hasn't struck
-        /// anyone yet. Whether it landed.
+        /// from wherever), meeting it where <paramref name="met"/> says (on its <paramref name="part"/>, when known): the
+        /// weapon's blow lands, times the shot's power, met first by the target's guard, if the target can be struck and
+        /// isn't the shooter, and the shot hasn't struck anyone yet. Whether it landed.
         /// </summary>
-        public bool Strike(Shot shot, ActorId target, Vector3? direction = null, BlowMet met = BlowMet.Anywhere)
+        public bool Strike(Shot shot, ActorId target, Vector3? direction = null, BlowMet met = BlowMet.Anywhere,
+            BodyPart part = BodyPart.None)
         {
             if (shot == null)
                 throw new ArgumentNullException(nameof(shot));
@@ -316,7 +318,7 @@ namespace Forge.Game.Combat
                 return false;
 
             shot.Landed = true;
-            Land(shot.Weapon, shot.Power, target, attributes, direction, met, null);
+            Land(shot.Weapon, shot.Power, target, attributes, direction, met, part, null);
             return true;
         }
 
@@ -419,7 +421,8 @@ namespace Forge.Game.Combat
         // The weapon's blow, `power` times as strong, on the target, less what its guard stops of the harm to its health;
         // the target jolted by it (giving with what got past its guard), and the swing that dealt it (none for a shot)
         // stopped a moment in it, bouncing off a guard that stopped it; told on the stream.
-        void Land(BaseObjectRecord weapon, float power, ActorId target, ActorAttributes attributes, Vector3? direction, BlowMet met, Swing swing)
+        void Land(BaseObjectRecord weapon, float power, ActorId target, ActorAttributes attributes, Vector3? direction, BlowMet met,
+            BodyPart part, Swing swing)
         {
             var guarded = _combatants.TryGetGuard(target, out var guard);
             var stops = guarded ? guard.Block(Owner, weapon.Id, HealthDamage(weapon, power), direction, met) : 0f;
@@ -439,7 +442,7 @@ namespace Forge.Game.Combat
                     health += applied;
             }
 
-            _events?.Publish(new HitLanded(Owner, target, weapon.Id, health));
+            _events?.Publish(new HitLanded(Owner, target, weapon.Id, health, part));
             if (IsDead(attributes))
                 _events?.Publish(new ActorKilled(target, Owner));
         }

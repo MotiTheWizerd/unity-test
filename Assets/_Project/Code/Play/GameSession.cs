@@ -137,7 +137,7 @@ namespace Forge.Play
                 End();
 
             World = new PlayedWorld(world, Changes);
-            Stage = new GameStage(World, Events, Modes, _view.Assets, Combatants, PlacedActors, LandShot, Sounds, _surfaces);
+            Stage = new GameStage(World, Events, Modes, _view.Assets, Combatants, PlacedActors, LandShot, LodgeShot, Sounds, _surfaces);
             Bodies = new WorldPhysics(_view, World, OnSettled);
             // The world's characters stand on the player's body, each at its own height, until races give their own.
             Characters = new WorldCharacters(_view, Stage, _profile.Body, WanderSettings.Stroll);
@@ -326,6 +326,14 @@ namespace Forge.Play
             var placed = _landings.Land(shot, _view.Space, _frame.ToWorld(position).ToNumerics(), rotation.ToNumerics());
             if (placed != null)
                 Bodies?.Stick(placed.Id, stuckIn);
+        }
+
+        // What was shot stuck in someone standing in the game: theirs to carry, unless it broke.
+        void LodgeShot(Shot shot, ActorId into)
+        {
+            var actor = ActorOf(into);
+            if (actor != null)
+                _landings.Lodge(shot, into, actor.Inventory);
         }
 
         // What was taken leaves the scene, and the player looks again at what is in sight.

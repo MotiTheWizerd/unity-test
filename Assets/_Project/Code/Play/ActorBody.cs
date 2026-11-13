@@ -13,7 +13,7 @@ namespace Forge.Play
     /// (<see cref="ClutterKicker"/>). Crouched, the capsule is its crouch height, its feet where they were, and it stands
     /// back up only when the room above it is clear (<see cref="ICrouchingBody"/>). Its own scene object, on the
     /// <see cref="ActorLayer"/>, which looks into the scene leave out unless they ask for actors (<see cref="SceneLayers"/>:
-    /// a blow, an arrow), tagged with whose it is (<see cref="ActorLink"/>). Guarding (<see cref="Guard"/>: its weapons in
+    /// a blow; an arrow meets its look's <see cref="Hitboxes"/> instead), tagged with whose it is (<see cref="ActorLink"/>). Guarding (<see cref="Guard"/>: its weapons in
     /// hand) the capsule is its shape's guard wide, so two fighters' guards meet rather than sink into each other. Lying
     /// (<see cref="Lie"/>: fallen), the capsule is switched off where the feet are, so nothing bumps into it and no blow
     /// finds it, until it stands again. Positions are the feet, in scene coordinates.

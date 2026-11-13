@@ -90,39 +90,50 @@ namespace Forge.Game.Combat
     }
 
     /// <summary>
-    /// What <see cref="Actor"/> shot (one <see cref="Ammo"/>) landed: it stays there as <see cref="Placed"/>, to be taken
-    /// back, or it broke (no placed object).
+    /// What <see cref="Actor"/> shot (one <see cref="Ammo"/>) landed: it stays in the world as <see cref="Placed"/>, to be
+    /// taken back, or in someone (<see cref="LodgedIn"/>, carried by them from then on), or it broke.
     /// </summary>
     public readonly struct ShotLanded : IGameEvent
     {
-        public ShotLanded(ActorId actor, RecordId ammo, RecordId? placed)
+        public ShotLanded(ActorId actor, RecordId ammo, RecordId? placed, ActorId? lodgedIn = null)
         {
             Actor = actor;
             Ammo = ammo;
             Placed = placed;
+            LodgedIn = lodgedIn;
         }
 
         public ActorId Actor { get; }
 
         public RecordId Ammo { get; }
 
-        /// <summary>The placed object it now is, or null: it broke.</summary>
+        /// <summary>The placed object it now is in the world, or null: it isn't (it broke, or it is in someone).</summary>
         public RecordId? Placed { get; }
 
-        public bool Broke => Placed == null;
+        /// <summary>Who it stuck in and now carries it, or null: no one (it is in the world, or it broke).</summary>
+        public ActorId? LodgedIn { get; }
 
-        public override string ToString() => Broke ? $"{Actor}'s {Ammo} broke" : $"{Actor}'s {Ammo} landed as {Placed}";
+        public bool Broke => Placed == null && LodgedIn == null;
+
+        public override string ToString() =>
+            Broke ? $"{Actor}'s {Ammo} broke"
+            : LodgedIn != null ? $"{Actor}'s {Ammo} lodged in {LodgedIn}"
+            : $"{Actor}'s {Ammo} landed as {Placed}";
     }
 
-    /// <summary>A blow landed: <see cref="Attacker"/>'s <see cref="Weapon"/> struck <see cref="Target"/>, taking <see cref="Damage"/> health.</summary>
+    /// <summary>
+    /// A blow landed: <see cref="Attacker"/>'s <see cref="Weapon"/> struck <see cref="Target"/> (on its <see cref="Part"/>),
+    /// taking <see cref="Damage"/> health.
+    /// </summary>
     public readonly struct HitLanded : IGameEvent
     {
-        public HitLanded(ActorId attacker, ActorId target, RecordId weapon, float damage)
+        public HitLanded(ActorId attacker, ActorId target, RecordId weapon, float damage, BodyPart part = BodyPart.None)
         {
             Attacker = attacker;
             Target = target;
             Weapon = weapon;
             Damage = damage;
+            Part = part;
         }
 
         public ActorId Attacker { get; }
@@ -134,7 +145,11 @@ namespace Forge.Game.Combat
         /// <summary>Health the blow took (after nothing was left to take, less than it would have).</summary>
         public float Damage { get; }
 
-        public override string ToString() => $"{Attacker} hit {Target} with {Weapon} for {Damage:0.#}";
+        /// <summary>Where on the target's body it met; <see cref="BodyPart.None"/> when that isn't known.</summary>
+        public BodyPart Part { get; }
+
+        public override string ToString() =>
+            $"{Attacker} hit {Target}{(Part == BodyPart.None ? "" : $"'s {Part}")} with {Weapon} for {Damage:0.#}";
     }
 
     /// <summary>

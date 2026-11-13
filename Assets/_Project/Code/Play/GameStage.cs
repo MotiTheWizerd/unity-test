@@ -21,14 +21,15 @@ namespace Forge.Play
     /// (<see cref="Modes"/>), the looks of the world's things
     /// (<see cref="Assets"/>, for what is held), who can be struck (<see cref="Combatants"/>, the world's placed actors
     /// among them as they are met, <see cref="PlacedActors"/>), who stands in the game (<see cref="Actors"/>), where a
-    /// shot that lands goes (<see cref="LandShot"/>), what sounds play on (<see cref="Sounds"/>; null: the game plays
+    /// shot that lands goes (<see cref="LandShot"/>, <see cref="LodgeShot"/>), what sounds play on (<see cref="Sounds"/>; null: the game plays
     /// silent), what is underfoot (<see cref="Surfaces"/>; null: nothing in particular) and who sees whom
     /// (<see cref="Sight"/>). One per game begun (<see cref="GameSession.Begin"/>), gone when it ends.
     /// </summary>
     public sealed class GameStage
     {
         public GameStage(IRecordStore world, GameEvents events, ActorModes modes, IAssetCatalog assets, Combatants combatants,
-            PlacedActors placedActors, ArrowFlights.Landing landShot, SoundPlayer sounds = null, GroundSurfaces surfaces = null)
+            PlacedActors placedActors, ArrowFlights.Landing landShot, ArrowFlights.Lodging lodgeShot, SoundPlayer sounds = null,
+            GroundSurfaces surfaces = null)
         {
             World = world ?? throw new ArgumentNullException(nameof(world));
             Events = events ?? throw new ArgumentNullException(nameof(events));
@@ -37,6 +38,7 @@ namespace Forge.Play
             Combatants = combatants ?? throw new ArgumentNullException(nameof(combatants));
             PlacedActors = placedActors ?? throw new ArgumentNullException(nameof(placedActors));
             LandShot = landShot ?? throw new ArgumentNullException(nameof(landShot));
+            LodgeShot = lodgeShot ?? throw new ArgumentNullException(nameof(lodgeShot));
             Sounds = sounds;
             Surfaces = surfaces;
             Actors = new ActorRoster();
@@ -71,6 +73,9 @@ namespace Forge.Play
 
         /// <summary>Where what an actor shoots goes once it lands, with its pose there and what it is in.</summary>
         public ArrowFlights.Landing LandShot { get; }
+
+        /// <summary>Where what an actor shoots goes once it sticks in someone.</summary>
+        public ArrowFlights.Lodging LodgeShot { get; }
 
         /// <summary>What an actor's sounds (its footsteps) play on; null: the game plays silent.</summary>
         public SoundPlayer Sounds { get; }

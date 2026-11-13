@@ -14,14 +14,16 @@ namespace Forge.Play
     /// What an actor's bow looses, flown through the engine's world: each shot leaves the string where the arrow lay
     /// (<see cref="ArcheryAim.TryDrawLine"/>), towards what the aim's line meets (<see cref="ArcheryAim.Target"/>),
     /// at its speed (<see cref="Shot.Speed"/>), and falls as it flies (<see cref="Flight"/>). Every frame the way from
-    /// where its point was to where it is is tested through the physics (the world's things and the actors' bodies,
-    /// <see cref="SceneLayers.Targets"/>, but the archer's own, which it leaves from beside), so a fast arrow misses
-    /// nothing between frames; what it meets, it sticks in, and whoever that is takes its blow
-    /// (<see cref="ActorCombat.Strike(Shot, ActorId)"/>; whom a collider belongs to is <c>identify</c>'s to say); a
-    /// loose thing it meets is pushed by it, its whole momentum
-    /// given at the point struck. Stuck, it is handed to <c>landed</c> with its pose there and the loose thing it is in, if
-    /// any (the game keeps it as the item it is, or it breaks: <see cref="ShotLandings"/>), and its flying look goes.
-    /// Scene coordinates; bound while the look exists.
+    /// where its point was to where it is is tested through the physics (the world's things, and the actors where they
+    /// are drawn: their hitboxes and raised guards; but the archer's own, which it leaves from beside:
+    /// <see cref="ArcheryAim.TryMeet"/>), so a fast arrow misses nothing between frames; what it meets, it sticks in, and whoever that
+    /// is takes its blow, on the part it met (<see cref="ActorCombat.Strike(Shot, ActorId, System.Numerics.Vector3?, BlowMet, BodyPart)"/>;
+    /// whom a collider belongs to is <c>identify</c>'s to say). Stuck in someone (a hitbox, a shield's face) it stays in
+    /// them as it struck, moving with them, a while (<see cref="LodgedSeconds"/>), and is handed to <c>lodged</c> (the
+    /// game gives it to whom it is in, or it breaks: <see cref="ShotLandings"/>). Stuck in the world, a loose thing it
+    /// meets is pushed by it, its whole momentum given at the point struck; it is handed to <c>landed</c> with its pose
+    /// there and the loose thing it is in, if any (the game keeps it as the item it is, or it breaks), and its flying look
+    /// goes. Scene coordinates; bound while the look exists.
     /// </summary>
     public sealed class ArrowFlights : IDisposable
     {
@@ -30,6 +32,12 @@ namespace Forge.Play
         /// in <paramref name="stuckIn"/>, the loose thing it struck; null when that doesn't move (the ground, a wall).
         /// </summary>
         public delegate void Landing(Shot shot, Vector3 position, Quaternion rotation, Rigidbody stuckIn);
+
+        /// <summary>A shot stuck in <paramref name="into"/> (its body, or the shield it holds up).</summary>
+        public delegate void Lodging(Shot shot, ActorId into);
+
+        /// <summary>Seconds an arrow stays seen in whom it struck before it goes (what it is, they carry).</summary>
+        public const float LodgedSeconds = 30f;
 
         // The longest an arrow flies before it is given up on (gone out of the world), seconds.
         const float LongestFlight = 15f;
@@ -43,14 +51,15 @@ namespace Forge.Play
         readonly Func<ViewPose> _aim;
         readonly Func<Collider, ActorId?> _identify;
         readonly Landing _landed;
+        readonly Lodging _lodged;
         readonly List<Flying> _flying = new List<Flying>();
-        readonly RaycastHit[] _hits = new RaycastHit[8];
 
         /// <param name="aim">Where the archer looks from and which way (the camera): what that line meets is aimed at.</param>
         /// <param name="identify">Whom a collider belongs to, or null for no one who can be struck.</param>
-        /// <param name="landed">Where a shot that stuck goes.</param>
+        /// <param name="landed">Where a shot that stuck in the world goes.</param>
+        /// <param name="lodged">Where a shot that stuck in someone goes.</param>
         public ArrowFlights(ActorCombat combat, CharacterModel model, IAssetCatalog assets, Func<ViewPose> aim, Func<Collider, ActorId?> identify,
-            Landing landed)
+            Landing landed, Lodging lodged)
         {
             _combat = combat ?? throw new ArgumentNullException(nameof(combat));
             _model = model ?? throw new ArgumentNullException(nameof(model));
@@ -58,6 +67,7 @@ namespace Forge.Play
             _aim = aim ?? throw new ArgumentNullException(nameof(aim));
             _identify = identify ?? throw new ArgumentNullException(nameof(identify));
             _landed = landed ?? throw new ArgumentNullException(nameof(landed));
+            _lodged = lodged ?? throw new ArgumentNullException(nameof(lodged));
             _combat.Loosed += OnLoosed;
         }
 
@@ -75,7 +85,7 @@ namespace Forge.Play
                 var from = arrow.Flight.Position.ToUnity();
                 var way = next.Position.ToUnity() - from;
                 var length = way.magnitude;
-                if (length > 1e-5f && TryMeet(arrow.Shot, from, way / length, length, out var hit))
+                if (length > 1e-5f && TryMeet(from, way / length, length, out var hit))
                 {
                     _flying.RemoveAt(i);
                     Stick(arrow, hit, way / length, next.Velocity.ToUnity());
@@ -122,39 +132,31 @@ namespace Forge.Play
 
             var point = tail + along * (ArrowLook.Tail(look) + ArrowLook.Point(look));
             var arrow = new Flying { Shot = shot, Look = look };
-            arrow.Flight = Flight.Toward(point.ToNumerics(), ArcheryAim.Target(_aim(), point).ToNumerics(), shot.Speed);
+            arrow.Flight = Flight.Toward(point.ToNumerics(), ArcheryAim.Target(_aim(), point, _model).ToNumerics(), shot.Speed);
             _flying.Add(arrow);
             Pose(arrow, point, arrow.Flight.Heading.ToUnity());
         }
 
-        // The nearest thing on the arrow's way: the world's, an actor's body, or a raised guard's face before it
-        // (<see cref="GuardFace"/>); never the shooter's own, which the arrow leaves from beside and must never stick in,
-        // nor any other trigger.
-        bool TryMeet(Shot shot, Vector3 from, Vector3 direction, float length, out RaycastHit nearest)
-        {
-            nearest = default;
-            var found = false;
-            var count = Physics.RaycastNonAlloc(from, direction, _hits, length, SceneLayers.Targets, QueryTriggerInteraction.Collide);
-            for (var i = 0; i < count; i++)
-            {
-                var hit = _hits[i];
-                if ((found && hit.distance >= nearest.distance) || (hit.collider.isTrigger && !IsGuard(hit.collider)) ||
-                    _identify(hit.collider) == shot.Shooter)
-                    continue;
-                nearest = hit;
-                found = true;
-            }
-
-            return found;
-        }
-
-        static bool IsGuard(Collider collider) => collider.GetComponent<GuardFace>() != null;
+        // The nearest thing on the arrow's way, never the shooter's own, which it leaves from beside and must never stick in.
+        bool TryMeet(Vector3 from, Vector3 direction, float length, out RaycastHit nearest) =>
+            ArcheryAim.TryMeet(from, direction, length, _model, out nearest);
 
         void Stick(Flying arrow, RaycastHit hit, Vector3 heading, Vector3 velocity)
         {
             var target = _identify(hit.collider);
             if (target.HasValue)
-                _combat.Strike(arrow.Shot, target.Value, heading.ToNumerics(), IsGuard(hit.collider) ? BlowMet.Guard : BlowMet.Body);
+            {
+                var guard = ArcheryAim.IsGuard(hit.collider);
+                _combat.Strike(arrow.Shot, target.Value, heading.ToNumerics(), guard ? BlowMet.Guard : BlowMet.Body,
+                    guard ? BodyPart.None : Hitbox.PartOf(hit.collider));
+                if (ArcheryAim.IsOnSomeone(hit.collider))
+                {
+                    Lodge(arrow, hit, heading);
+                    _lodged(arrow.Shot, target.Value);
+                    return;
+                }
+            }
+
             // It stops in what it strikes, so all it carried goes into it (Skyrim knocks a cup off a shelf so).
             var struck = hit.rigidbody != null && !hit.rigidbody.isKinematic ? hit.rigidbody : null;
             if (struck != null && PhysicalObjects.TryGetMass(arrow.Shot.Ammo, out var mass))
@@ -163,6 +165,26 @@ namespace Forge.Play
             var look = arrow.Look.transform;
             _landed(arrow.Shot, look.position, look.rotation, struck);
             Destroy(arrow.Look);
+        }
+
+        // Its look stays in what it met, sunk in as it struck, and rides it: placed by where that stood in the physics when
+        // it was met (a moving collider's body there may be a step behind its bone), then hung from it; gone in a while.
+        void Lodge(Flying arrow, RaycastHit hit, Vector3 heading)
+        {
+            Pose(arrow, hit.point + heading * Sinks, heading);
+            var look = arrow.Look.transform;
+            var carrier = hit.collider.transform;
+            var body = hit.collider.attachedRigidbody;
+            if (body != null)
+            {
+                var back = Quaternion.Inverse(body.rotation);
+                var offset = back * (look.position - body.position);
+                var turn = back * look.rotation;
+                look.SetPositionAndRotation(carrier.position + carrier.rotation * offset, carrier.rotation * turn);
+            }
+
+            look.SetParent(carrier, true);
+            UnityEngine.Object.Destroy(arrow.Look, LodgedSeconds);
         }
 
         // Its point at `point`, pointing along `heading`.
