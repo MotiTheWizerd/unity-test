@@ -17,22 +17,30 @@ namespace Forge.UnityEditor.Content
     /// grip, the same aim from the move's .json), and the thing is turned with the Scene view's rotate gizmo until it
     /// looks right; one button writes where it now points into the move's .json beside its clip
     /// (<see cref="MoveSettings"/>), which reimports the clip, and the stage poses again with the hand carrying it there.
-    /// She is shown in the window itself (<see cref="StagePreview"/>), whichever tab the editor has in front. The stage is
-    /// never saved with the scene and goes when the window closes. Forge → Characters → Hold Stage.
+    /// She is shown in the window itself (<see cref="StagePreview"/>), whichever tab the editor has in front. What she
+    /// holds is one pick (Holds: the sword and shield in the drawn idle, the bow in the bow's idle), or typed per hand. The
+    /// stage is never saved with the scene and goes when the window closes. Forge → Characters → Hold Stage.
     /// </summary>
     sealed class HoldStage : EditorWindow
     {
         const string ProfilePath = "Assets/_Project/Settings/Player/PlayerProfile.asset";
         const string CatalogPath = "Assets/_Project/Content/PrefabCatalog.asset";
-        const string DefaultMove = HumanoidAnimation.DrawnIdleMove;
         static readonly string[] Hands = { "RightHand", "LeftHand" };
-        // What each hand holds by default: the player's starting sword and shield.
-        static readonly string[] DefaultHeld = { "models/viking_sword", "models/round_shield_painted" };
 
+        // What she can be stood holding, one pick away: what each hand holds (catalog keys, Hands' order), the move it is
+        // tuned in, and the hand the sliders turn. The first is the default.
+        static readonly (string Name, string[] Held, string Move, int Hand)[] Kits =
+        {
+            ("Sword and shield", new[] { "models/viking_sword", "models/round_shield_painted" }, HumanoidAnimation.DrawnIdleMove, 0),
+            ("Bow", new[] { "", "models/hunting_bow" }, CoreCombatStyleSet.BowIdle, 1),
+        };
+
+        // Kept by the editor through a script reload (leaving play), as the window's picks are; so not readonly.
         int _look;
+        int _kit;
         int _move = -1;
         int _hand;
-        readonly string[] _heldKeys = (string[])DefaultHeld.Clone();
+        string[] _heldKeys = (string[])Kits[0].Held.Clone();
 
         GameObject _stage;
         GameObject _standing;
@@ -100,8 +108,18 @@ namespace Forge.UnityEditor.Content
             _look = Mathf.Clamp(_look, 0, looks.Length - 1);
             _look = EditorGUILayout.Popup("Character", _look, looks.Select(l => l.name).ToArray());
             var moves = MovesOf(looks[_look]);
-            if (_move < 0)
-                _move = Math.Max(0, Array.FindIndex(moves, m => m.name == DefaultMove));
+            // A kit picked sets both hands, the move it is tuned in and the hand the sliders turn; any can be changed after.
+            EditorGUI.BeginChangeCheck();
+            _kit = EditorGUILayout.Popup("Holds", _kit, Kits.Select(kit => kit.Name).ToArray());
+            if (EditorGUI.EndChangeCheck() || _move < 0)
+            {
+                var kit = Kits[_kit];
+                kit.Held.CopyTo(_heldKeys, 0);
+                _move = Math.Max(0, Array.FindIndex(moves, m => m.name == kit.Move));
+                _hand = kit.Hand;
+                _leanForward = _leanRight = 0f;
+            }
+
             _move = Mathf.Clamp(_move, 0, Math.Max(0, moves.Length - 1));
             _move = EditorGUILayout.Popup("Move", _move, moves.Select(m => m.name).ToArray());
             _heldKeys[0] = EditorGUILayout.TextField("Right hand holds", _heldKeys[0]);
@@ -137,7 +155,7 @@ namespace Forge.UnityEditor.Content
             }
 
             var jsonPath = _clip != null ? MoveSettings.PathFor(AssetDatabase.GetAssetPath(_clip)) : null;
-            EditorGUILayout.HelpBox("Move (W) or turn (E) the sword or the shield in the Scene view: that is where it sits in the hand, " +
+            EditorGUILayout.HelpBox("Move (W) or turn (E) what she holds in the Scene view: that is where it sits in the hand, " +
                 "in every move. Turn a hand with the sliders: that is this move's, and whatever the hand holds follows it. Save keeps " +
                 "everything as you see it, both hands; she is then stood again from the saved files and measured against what you left.",
                 MessageType.None);
@@ -266,7 +284,8 @@ namespace Forge.UnityEditor.Content
         }
 
         // The move's first frame with each hand turned as the window has it (the move's .json, as the sliders change it),
-        // by the game's own code; what the hands hold stays where it sits in them.
+        // by the game's own code; what the hands hold stays where it sits in them, turned as the game turns it on every
+        // frame (a bow's string to her chest).
         void PoseHands()
         {
             if (_graph.IsValid())
@@ -277,6 +296,7 @@ namespace Forge.UnityEditor.Content
 
             _character.AimHand(true, _aims[0]);
             _character.AimHand(false, _aims[1]);
+            _character.FaceHolders();
             SceneView.RepaintAll();
         }
 

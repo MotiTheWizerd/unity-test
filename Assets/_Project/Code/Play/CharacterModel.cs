@@ -707,9 +707,13 @@ namespace Forge.Play
         Vector3 _rightAim;
         Vector3 _leftAim;
 
-        // What a hand holds with a side that faces its holder (a bow's string) turns about its length, on this frame's
-        // pose, to face the chest: the stance holds the bow one way, a draw another, and the string faces the archer in both.
-        void FaceHolders()
+        /// <summary>
+        /// What a hand holds with a side that faces its holder (a bow's string) turns about its length, on this frame's
+        /// pose, to face the chest: the stance holds the bow one way, a draw another, and the string faces the archer in
+        /// both. Done by itself on every frame the moves pose; this is for a pose held still (the editor's hold stage),
+        /// after the hands are aimed (<see cref="AimHand(bool, Vector3)"/>), so it holds as the game does.
+        /// </summary>
+        public void FaceHolders()
         {
             var chest = BackFinder.Chest(_humanoid);
             if (chest == null)
