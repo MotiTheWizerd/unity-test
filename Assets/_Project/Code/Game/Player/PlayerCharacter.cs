@@ -100,6 +100,14 @@ namespace Forge.Game.Player
             }
         }
 
+        /// <summary>
+        /// How fast it goes at most by the way it goes as its body has it: as fast as its look can show it going, which
+        /// whoever plays it sets (weapons drawn, its legs keep to its drawn clips' stride, slower to a side than ahead).
+        /// Measured from the way the body turns to face rather than the way it faces now, so a body turning to its
+        /// movement goes ahead's, and one squared up to its foe sidesteps at the sidestep's. None, as it starts.
+        /// </summary>
+        public TopSpeeds TopSpeeds { get; set; }
+
         /// <summary>Compass degrees the body faces, which its look (model, animations) is turned to.</summary>
         public float BodyHeading { get; private set; }
 
@@ -127,6 +135,7 @@ namespace Forge.Game.Player
             Look.Turn(commands.Turn);
             foreach (var limit in Limits)
                 commands = limit.Allow(commands);
+            Locomotion.TopSpeed = TopSpeeds.Along(BodyWay(commands.Move));
             commands = Locomotion.WithinTopSpeed(commands);
             commands = Headroom(commands);
             if (Costs != null)
@@ -193,6 +202,15 @@ namespace Forge.Game.Player
             Lowered = Math.Abs(target - Lowered) <= step ? target : Lowered + Math.Sign(target - Lowered) * step;
         }
 
+        // The heading the body turns to face: the look's (at once in first person; a drawn bow squares up to the shot,
+        // whatever else the body faces), its target's, or none while it faces its movement (whichever way it goes).
+        float? TurnsTo => Facing == BodyFacing.Look || Aiming ? Look.Heading : Facing == BodyFacing.Target ? TargetHeading : (float?)null;
+
+        // The way `move` (the stick or keys, as the look has it) goes as the body has it once turned to what it faces:
+        // straight ahead for a body that turns to face its movement.
+        Vector2 BodyWay(Vector2 move) =>
+            TurnsTo is float facing ? Compass.Relative(Compass.FromRelative(move, Look.Heading), facing) : Vector2.UnitY;
+
         void TurnBody(float deltaTime)
         {
             if (Facing == BodyFacing.Look)
@@ -201,11 +219,10 @@ namespace Forge.Game.Player
                 return;
             }
 
-            // A drawn bow squares up to the shot, whatever else the body faces.
-            if (Aiming || Facing == BodyFacing.Target)
+            if (TurnsTo is float heading)
             {
                 if (deltaTime > 0f)
-                    BodyHeading = TurnToward(BodyHeading, Aiming ? Look.Heading : TargetHeading, Locomotion.Settings.TurnRate * deltaTime);
+                    BodyHeading = TurnToward(BodyHeading, heading, Locomotion.Settings.TurnRate * deltaTime);
                 return;
             }
 

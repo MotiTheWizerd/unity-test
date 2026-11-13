@@ -7,7 +7,10 @@ VikingF1's drawn stance, a hand on the grip lays the forearm's axis 1.1 cm behin
 6.5 cm below the strap's middle; the characters' forearms reach 3.7 (ElfF1) to 5.9 cm (VikingM1) from that axis,
 8.6 cm on the armoured VikingHero. So the back is fitted to a 5.5 cm reach: the board moves 3.1 cm further from the
 grip (the grip's legs stretch, the bar and the pivot stay: the pivot is the grip Forge holds), and the strap's bar
-stands 8.3 cm further out and 6.5 cm lower, over the forearm. The collision hull follows the board.
+stands 8.3 cm further out and 6.5 cm lower, over the forearm. As made the strap is also 35.8 cm from the grip, past
+the elbow (wrist to elbow 22-23 cm on VikingF1, VikingM1 and ElfF1, with the fist on the grip 10 cm past the
+wrist), so nothing went through it; it moves in along the arm to 21 cm, the middle of the forearm. The collision
+hull follows the board.
 
 Run: blender --background --factory-startup --python round_shield_fit_arm.py -- <in.fbx> <out.fbx>
 Blender's local axes are the FBX's with x mirrored against Unity's mesh: y and z (board normal, boss at +z) match.
@@ -20,6 +23,7 @@ import bpy
 BOARD_SHIFT = 0.031  # the board, away from the grip's bar (+z)
 STRAP_OUT = 0.083    # the strap's bar, further out from the board (-z)
 STRAP_DOWN = 0.065   # the strap, along the board toward the arm's side (-y)
+STRAP_IN = 0.148     # the strap, along the arm toward the grip (x), from 35.8 cm off it to 21
 
 
 def islands(bm):
@@ -65,10 +69,13 @@ def fit(mesh_object):
     for v in grip:
         # Feet on the board (z >= 0.042) move with it; the bar (z <= 0) stays on the pivot.
         v.co.z += BOARD_SHIFT * (1.0 - ramp(v.co.z, 0.042, 0.0))
+    xs = [v.co.x for v in strap]
+    toward_grip = -1.0 if (min(xs) + max(xs)) / 2 > 0 else 1.0
     for v in strap:
         out = ramp(v.co.z, 0.043, 0.013)
         v.co.z += BOARD_SHIFT - STRAP_OUT * out
         v.co.y -= STRAP_DOWN
+        v.co.x += STRAP_IN * toward_grip
     bm.to_mesh(mesh_object.data)
     bm.free()
     mesh_object.data.update()

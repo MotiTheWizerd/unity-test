@@ -20,8 +20,9 @@ namespace Forge.Play
     /// way running up the arm from the grip, the side facing its holder to the hand, and it stays as the hand holds it
     /// (<see cref="HoldFinder.Strapped"/>). <see cref="Carried"/>: where it goes while put away. <see cref="InHand"/>: how it
     /// sits on the grip in the hand. A model without one is held any way round, as modelled, and carried at the hip.
+    /// Picked as a whole in the editor's Scene view, so moving it by eye moves the thing held, not one of its meshes.
     /// </summary>
-    [DisallowMultipleComponent]
+    [DisallowMultipleComponent, SelectionBase]
     public sealed class HeldLook : MonoBehaviour
     {
         [SerializeField, Tooltip("The side that faces whoever holds it, in the model's frame (a bow's string: -X); zero: any side.")]

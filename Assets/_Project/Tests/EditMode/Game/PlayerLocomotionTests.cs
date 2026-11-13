@@ -307,7 +307,7 @@ namespace Forge.Tests.Game
         public void ATopSpeed_HoldsTheRunAndTheSprint_NotAMoveUnderIt()
         {
             var player = OnFlatGround();
-            player.Locomotion.TopSpeed = 3f;
+            player.TopSpeeds = new TopSpeeds(3f, 3f);
 
             Run(player, Walk(0f, 1f), 1f);
             Assert.That(GroundSpeed(player), Is.EqualTo(3f).Within(1e-3f), "The run, held.");
@@ -315,6 +315,35 @@ namespace Forge.Tests.Game
             Assert.That(GroundSpeed(player), Is.EqualTo(3f).Within(1e-3f), "The sprint too.");
             Run(player, Walk(0f, 0.5f), 1f);
             Assert.That(GroundSpeed(player), Is.EqualTo(Settings.RunSpeed * 0.5f).Within(1e-3f), "Slower than it, a move goes as asked.");
+        }
+
+        [Test]
+        public void TopSpeeds_HoldASidestepToItsOwn_MeasuredFromTheWayTheBodyTurnsToFace()
+        {
+            var player = OnFlatGround();
+            var top = new TopSpeeds(3f, 1.2f);
+            player.TopSpeeds = top;
+
+            Run(player, Walk(1f, 0f), 1f);
+            Assert.That(GroundSpeed(player), Is.EqualTo(1.2f).Within(1e-3f), "Facing the look, a step aside: the sidestep's.");
+            Assert.That(player.Locomotion.TopSpeed, Is.EqualTo(1.2f).Within(1e-3f), "So a sprint aside, unable to outrun the run, is none.");
+            Run(player, Walk(0f, -1f), 1f);
+            Assert.That(GroundSpeed(player), Is.EqualTo(3f).Within(1e-3f), "Backing away: ahead's, its run played backward.");
+            Run(player, Walk(1f, 1f), 1f);
+            Assert.That(GroundSpeed(player), Is.EqualTo(top.Along(new Vector2(1f, 1f))).Within(1e-3f), "Between, the two together.");
+
+            player.Facing = BodyFacing.Movement;
+            Run(player, Walk(1f, 0f), 1f);
+            Assert.That(GroundSpeed(player), Is.EqualTo(3f).Within(1e-3f), "Turning to face where it goes, it goes ahead from the start.");
+
+            // Looking north, it steps east: aside of a foe to the north, ahead to one in the east, as soon as it turns to it.
+            player.Facing = BodyFacing.Target;
+            player.TargetHeading = 0f;
+            Run(player, Walk(1f, 0f), 1f);
+            Assert.That(GroundSpeed(player), Is.EqualTo(1.2f).Within(1e-3f), "Squared up to its foe, a sidestep.");
+            player.TargetHeading = 90f;
+            player.Tick(Walk(1f, 0f), Frame);
+            Assert.That(player.Locomotion.TopSpeed, Is.EqualTo(3f).Within(1e-3f));
         }
 
         [Test]

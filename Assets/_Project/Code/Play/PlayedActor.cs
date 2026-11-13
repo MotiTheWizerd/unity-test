@@ -249,7 +249,7 @@ namespace Forge.Play
             _guardView?.Tick();
             _arrows?.Tick(deltaTime);
             Rules.Aiming = Combat.Aiming;
-            Rules.Locomotion.TopSpeed = TopSpeed();
+            Rules.TopSpeeds = TopSpeedsNow();
             Rules.Tick(commands.Move, deltaTime);
             Show(deltaTime);
             _sweep?.Tick();
@@ -311,12 +311,13 @@ namespace Forge.Play
         }
 
         // As fast as its look can show it going: with its weapons out (from the draw on, as the drawn moves play) its legs
-        // keep to its drawn clips (a jog, for now), so it goes no faster than they stride; put away, as fast as its paces.
-        float TopSpeed()
+        // keep to its drawn clips (a jog ahead, a sidestep aside, for now), so it goes no faster than they stride; put
+        // away, as fast as its paces.
+        TopSpeeds TopSpeedsNow()
         {
             var state = Readiness.State;
             var weaponsOut = state == Forge.Game.Equipment.Readiness.Drawing || state == Forge.Game.Equipment.Readiness.Drawn;
-            return weaponsOut && _model != null ? _model.DrawnTopSpeed : float.PositiveInfinity;
+            return weaponsOut && _model != null ? _model.DrawnTopSpeeds : TopSpeeds.None;
         }
 
         // The eyes of whom it looks at, while both stand; null for no one.

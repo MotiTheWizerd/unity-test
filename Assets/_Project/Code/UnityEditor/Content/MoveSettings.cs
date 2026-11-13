@@ -131,7 +131,8 @@ namespace Forge.UnityEditor.Content
             return "{ " + string.Join(", ", parts) + " }\n";
         }
 
-        static string Number(float value) => value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        // Four places: a hand saved by eye on the Hold Stage comes back as it was left, not a degree off.
+        static string Number(float value) => value.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture);
 
         static void Add(List<(string, float)> curves, bool right, Vector3 points)
         {

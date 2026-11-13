@@ -25,6 +25,14 @@ namespace Forge.Core.Geometry
             return new Vector2((float)Math.Cos(radians), -(float)Math.Sin(radians));
         }
 
+        /// <summary><paramref name="ground"/> (x, z) as something facing <paramref name="headingDegrees"/> has it: x to its right, y ahead.</summary>
+        public static Vector2 Relative(Vector2 ground, float headingDegrees) =>
+            new Vector2(Vector2.Dot(ground, Right(headingDegrees)), Vector2.Dot(ground, Forward(headingDegrees)));
+
+        /// <summary>A way as something facing <paramref name="headingDegrees"/> has it (x to its right, y ahead), on the ground (x, z): <see cref="Relative"/> undone.</summary>
+        public static Vector2 FromRelative(Vector2 relative, float headingDegrees) =>
+            Right(headingDegrees) * relative.X + Forward(headingDegrees) * relative.Y;
+
         /// <summary>The heading that faces along <paramref name="ground"/> (x, z); north for none.</summary>
         public static float HeadingOf(Vector2 ground) =>
             ground.LengthSquared() < 1e-12f ? 0f : Normalize((float)(Math.Atan2(ground.X, ground.Y) / DegreesToRadians));

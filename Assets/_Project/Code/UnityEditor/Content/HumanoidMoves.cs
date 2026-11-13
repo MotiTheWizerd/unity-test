@@ -85,7 +85,7 @@ namespace Forge.UnityEditor.Content
         /// Sidestepping to the right at a walk's pace (Locomotion/). The builder mirrors it for the left and speeds it up
         /// for the faster paces, and a ground state that has one blends by the way the body goes, not its speed alone.
         /// </summary>
-        public const string Strafe = "Strafe";
+        public const string Strafe = Forge.Play.HumanoidAnimation.StrafeMove;
 
         /// <summary>The sidestep with weapons drawn ("DrawnStrafe"): a fighter circling its foe; falls back to the plain one.</summary>
         public static readonly string DrawnStrafe = Drawn(Strafe);

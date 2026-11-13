@@ -161,10 +161,10 @@ namespace Forge.Play
         AnimationClip IdleClip => _animation?.Clip(HumanoidAnimation.IdleMove);
 
         /// <summary>
-        /// How fast its body goes at most with its weapons drawn, for its legs to keep to its drawn clips' stride
-        /// (<see cref="HumanoidAnimation.DrawnTopSpeed"/>), meters per second; infinity without them.
+        /// How fast its body goes at most with its weapons drawn, ahead and aside, for its legs to keep to its drawn clips'
+        /// stride (<see cref="HumanoidAnimation.DrawnTopSpeeds"/>), meters per second; none without them.
         /// </summary>
-        public float DrawnTopSpeed => _animation?.DrawnTopSpeed ?? float.PositiveInfinity;
+        public TopSpeeds DrawnTopSpeeds => _animation?.DrawnTopSpeeds ?? TopSpeeds.None;
 
         /// <summary>The clip it stands ready in, holding its weapons out: its drawn idle, else its idle; null without animations.</summary>
         public AnimationClip StanceClip => _animation?.Clip(HumanoidAnimation.DrawnIdleMove) ?? IdleClip;
@@ -472,23 +472,26 @@ namespace Forge.Play
             return false;
         }
 
+        /// <summary>
+        /// Where <paramref name="bone"/> ("RightHand") holds things (a hand's grip point, whose +Y a move's aim turns,
+        /// <see cref="AimHand(bool, Vector3)"/>); false when the model has no such bone.
+        /// </summary>
+        public bool TryGetHoldPoint(string bone, out Transform point)
+        {
+            point = null;
+            return Enum.TryParse(bone, out HumanBodyBones id) && TryPoint(id, out point);
+        }
+
         /// <summary>The look <paramref name="bone"/> ("RightHand") holds in hand now, and its grip; false when it holds nothing, or it is sheathed.</summary>
         public bool TryGetHeld(string bone, out GameObject look, out Transform grip)
         {
             look = null;
             grip = null;
-            if (!Enum.TryParse(bone, out HumanBodyBones id))
+            if (!Enum.TryParse(bone, out HumanBodyBones id) || !TryInHand(id, out var held))
                 return false;
-            foreach (var held in _attached.Values)
-            {
-                if (held.Bone != id || (held.Sheathes && !_inHand))
-                    continue;
-                look = held.Look;
-                grip = held.Grip;
-                return true;
-            }
-
-            return false;
+            look = held.Look;
+            grip = held.Grip;
+            return true;
         }
 
         /// <summary>The ground move it plays most of now (its idle, its drawn idle), for whatever tunes a move by its look; null without animations.</summary>
@@ -615,10 +618,11 @@ namespace Forge.Play
         Quaternion _keptSpine;
         bool _stanceKept;
 
-        // Each hand turned, on this frame's pose, the least that points what it holds (its grip's +Y: the blade) where
-        // the moves playing want it, as far as they do (HumanoidAnimation.TryGetHandAim, from the moves' .json beside
-        // their clips): a Mixamo move is animated with nothing in the hand, and holds our sword as it may. The fingers,
-        // the grip and what hangs from it come along, so it turns an empty hand just the same.
+        // Each hand turned, on this frame's pose, the least that points the hand (the point it holds at, its +Y) where the
+        // moves playing want it, as far as they do (HumanoidAnimation.TryGetHandAim, from the moves' .json beside their
+        // clips): a Mixamo move is animated with nothing in the hand. A move says how the hand goes, whatever it holds;
+        // how each thing sits in the hand is the thing's own (HeldLook.InHand), so a sword or a shield never tuned follows
+        // the hand as it fits. The fingers, the grip and what hangs from it come along.
         void AimHands()
         {
             if (_animation == null)
@@ -638,8 +642,9 @@ namespace Forge.Play
         }
 
         /// <summary>
-        /// Turns the right or left hand, on its pose as it stands now, the least that points what it holds (its grip's +Y)
-        /// along <paramref name="aim"/> in the body's frame, by as much as its length (<see cref="HandAim"/>); nothing for
+        /// Turns the right or left hand, on its pose as it stands now, the least that points the hand (the point it holds
+        /// at, its +Y), whatever it holds, along <paramref name="aim"/> in the body's frame, by as much as its length
+        /// (<see cref="HandAim"/>); nothing for
         /// no aim. What the moves playing want is applied each frame by itself; this is for a pose held still (the
         /// editor's hold stage).
         /// </summary>
@@ -662,6 +667,39 @@ namespace Forge.Play
             }
 
             hand.rotation = turn * hand.rotation;
+        }
+
+        // What the hand `id` holds in hand now; false when it holds nothing there (or it is put away).
+        bool TryInHand(HumanBodyBones id, out Held found)
+        {
+            foreach (var held in _attached.Values)
+            {
+                if (held.Bone == id && !held.OnBack && !(held.Sheathes && !_inHand))
+                {
+                    found = held;
+                    return true;
+                }
+            }
+
+            found = null;
+            return false;
+        }
+
+        /// <summary>
+        /// How what <paramref name="bone"/> ("RightHand") holds would sit on its grip (<see cref="HeldLook.InHand"/>: an
+        /// offset in meters and a turn) for the grip to lie at <paramref name="grip"/> (scene space) on the hand as it is
+        /// posed now: <see cref="Place"/> undone, so a thing put somewhere by eye is held there; false when the bone holds
+        /// nothing in hand.
+        /// </summary>
+        public bool TrySeatFor(string bone, Pose grip, out Pose seat)
+        {
+            seat = Pose.identity;
+            if (!Enum.TryParse(bone, out HumanBodyBones id) || !TryPoint(id, out var point) || !TryInHand(id, out var held))
+                return false;
+            // Placed, the grip lies at the point turned by the hand's turn and the seat, the seat's offset at the grip's scale.
+            var frame = Quaternion.Inverse(point.rotation * held.InHandTurn);
+            seat = new Pose(frame * (grip.position - point.position) / held.Grip.lossyScale.x, frame * grip.rotation);
+            return true;
         }
 
         // Seconds a hand's aim takes to come all the way in or out.

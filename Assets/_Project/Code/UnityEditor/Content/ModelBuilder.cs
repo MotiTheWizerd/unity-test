@@ -191,6 +191,56 @@ namespace Forge.UnityEditor.Content
             throw new System.InvalidOperationException($"{path}: \"carried\" is \"hip\" or \"back\".");
         }
 
+        /// <summary>
+        /// Writes how the model in <paramref name="folder"/> sits on its grip in the hand (<see cref="HeldLook.InHand"/>:
+        /// <paramref name="offset"/> meters, <paramref name="turn"/> degrees as a Transform's rotation) into its
+        /// {Name}.json, keeping whatever else it says; the prefab is rebuilt from it by <see cref="BuildModel"/>.
+        /// </summary>
+        public static void WriteHold(string folder, string name, Vector3 offset, Vector3 turn)
+        {
+            var path = $"{folder}/{name}.json";
+            var settings = (File.Exists(path) ? JsonUtility.FromJson<ModelSettings>(File.ReadAllText(path)) : null) ?? new ModelSettings();
+            settings.inHandOffset = offset == Vector3.zero ? null : new[] { offset.x, offset.y, offset.z };
+            settings.inHandTurn = turn == Vector3.zero ? null : new[] { turn.x, turn.y, turn.z };
+            File.WriteAllText(path, Write(settings));
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+        }
+
+        // A model's settings as its json, only what they say, in the order SettingsOf reads them.
+        static string Write(ModelSettings settings)
+        {
+            var parts = new List<string>();
+            void Numbers(string key, float[] values)
+            {
+                if (values != null && values.Length > 0)
+                    parts.Add($"\"{key}\": [{string.Join(", ", values.Select(Number))}]");
+            }
+
+            void Names(string key, string[] values)
+            {
+                if (values != null && values.Length > 0)
+                    parts.Add($"\"{key}\": [{string.Join(", ", values.Select(Quoted))}]");
+            }
+
+            Numbers("rest", settings.rest);
+            Numbers("inHandOffset", settings.inHandOffset);
+            Numbers("inHandTurn", settings.inHandTurn);
+            Numbers("facesHolder", settings.facesHolder);
+            Numbers("alongArm", settings.alongArm);
+            if (!string.IsNullOrEmpty(settings.carried))
+                parts.Add($"\"carried\": {Quoted(settings.carried)}");
+            if (settings.cutout)
+                parts.Add("\"cutout\": true");
+            Names("cutoutParts", settings.cutoutParts);
+            Names("transparentParts", settings.transparentParts);
+            return "{ " + string.Join(", ", parts) + " }\n";
+        }
+
+        // To a tenth of a millimetre, or a hundredth of a degree.
+        static string Number(float value) => value.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture);
+
+        static string Quoted(string value) => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+
         static Vector3? Triple(string path, string key, float[] values)
         {
             if (values == null || values.Length == 0)

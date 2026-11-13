@@ -1,1 +1,1 @@
-{ "rest": [-90, 0, 0], "facesHolder": [0, 0, -1], "alongArm": [1, 0, 0], "carried": "back", "inHandTurn": [-25, -6, 0] }
+{ "rest": [-90, 0, 0], "inHandOffset": [0.0273, 0, 0.0009], "inHandTurn": [-25, -5.9999, -0.0014], "facesHolder": [0, 0, -1], "alongArm": [1, 0, 0], "carried": "back" }

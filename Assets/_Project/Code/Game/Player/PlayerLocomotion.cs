@@ -30,7 +30,8 @@ namespace Forge.Game.Player
 
         /// <summary>
         /// Meters per second it goes at most over the ground, whatever its pace: as fast as its look can show it going
-        /// (weapons drawn, its legs keep to its drawn clips' stride); infinity, as it starts: as fast as its paces.
+        /// (weapons drawn, its legs keep to its drawn clips' stride), along the way it goes, which whoever moves it sets
+        /// each frame (<see cref="PlayerCharacter.TopSpeeds"/>); infinity, as it starts: as fast as its paces.
         /// </summary>
         public float TopSpeed
         {
@@ -139,7 +140,7 @@ namespace Forge.Game.Player
                 : Crouching ? _settings.CrouchSpeed
                 : Walking || commands.Walk ? _settings.WalkSpeed
                 : _settings.RunSpeed;
-            var wanted = (Compass.Right(heading) * move.X + Compass.Forward(heading) * move.Y) * pace;
+            var wanted = Compass.FromRelative(move, heading) * pace;
             var speed = wanted.Length();
             return speed > _topSpeed ? wanted * (_topSpeed / speed) : wanted;
         }

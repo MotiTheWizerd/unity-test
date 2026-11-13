@@ -57,8 +57,7 @@ namespace Forge.Game.Motion
         /// Its travel over the ground as the body facing <paramref name="heading"/> (compass degrees) has it: x to the
         /// body's right, y ahead, meters per second; so a body facing its foe sidesteps or backs away.
         /// </summary>
-        public Vector2 Relative(float heading) =>
-            new Vector2(Vector2.Dot(Ground, Compass.Right(heading)), Vector2.Dot(Ground, Compass.Forward(heading)));
+        public Vector2 Relative(float heading) => Compass.Relative(Ground, heading);
 
         /// <summary>The motion of a body that went from <paramref name="from"/> to <paramref name="to"/> in <paramref name="deltaTime"/> seconds.</summary>
         public static BodyMotion Between(Vector3 from, Vector3 to, float deltaTime, bool grounded, bool crouched = false)
