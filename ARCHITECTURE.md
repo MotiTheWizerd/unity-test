@@ -793,8 +793,9 @@ from any camera, so both cameras read the same player.
   without animation draws plainly, which can't drive them, so `ModelImport` makes it skinned (no bones); such a mesh
   is measured by its bounds, not baked (`RendererBounds.TryGetPosed`: a bone-less bake is empty until it has drawn).
   The other characters have no blend shapes and no face bones, and the rest of the controls change nothing yet (see
-  Shortcuts). To come: the body under the head (a headless base body on a Mixamo rig, the head bound to its bones,
-  the neck seam matched in place, normals and weights), then hand-made shapes; the tone darkens the eyes' whites too.
+  Shortcuts). The body under the head is **BodyWarriorM**, the first replaceable body (see Characters). To come: this
+  head in place of its Head piece (bound to its bones, the neck seam matched in place, normals and weights), then
+  hand-made shapes; the tone darkens the eyes' whites too.
 - **Turntables** (`TurntablePreview`, World/Assets; `TurntableView`, Play.Hud): a thing shown live in a
   `PreviewStudio`, as Skyrim shows the chosen item and the character carrying it. Whoever shows it builds it
   (`Show(subject, build)`): an item from its asset key through the world's `IAssetCatalog` (`Show(assets, key)`;
@@ -882,7 +883,12 @@ from any camera, so both cameras read the same player.
   upright, at its own size, idling in its move set, and names it the actor of the same id (`CoreActorSet`: a
   sword-and-board fighter, the Viking Sword and the Painted Round Shield put away), so that placed, it lives
   (`WorldCharacters`); `CharacterContentTests` guards both. The models and textures are plain git objects
-  (`.gitattributes`), as the ground's are.
+  (`.gitattributes`), as the ground's are. A **replaceable body** (the player's, as Skyrim's) is a character whose
+  model is cut into the pieces equipment replaces, each a mesh of its own on its one skeleton: `Body` (torso, arms,
+  legs), `Head`, `Hands`, `Feet`. blender-tests `ai_models/pieces.py` cuts them after Mixamo, at seams found from the
+  rig's own bones (low on the neck, above the wrists and the ankles), both sides of a seam the same vertices, normals
+  and weights, so no line shows. It is built as any character is. **BodyWarriorM** (1.80 m, 50k triangles) is the
+  first, the male base body under the face editor's WarriorM head; nothing replaces a piece yet.
 - **Animations** (`Content/Animations/<Set>/<Folder>/<Move>.fbx`): one Mixamo clip per move (FBX for Unity, 30 fps,
   without skin, travel left in), named after its move, a name of its own across the set, and sorted by what it is: the
   folder says (`HumanoidMoves.RoleOf` → `MoveRole`): `Locomotion/` the ground moves (Idle, Walk, Run, Sprint blended

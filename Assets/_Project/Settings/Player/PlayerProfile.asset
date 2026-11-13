@@ -20,6 +20,7 @@ MonoBehaviour:
   _slopeLimit: 50
   _model: {fileID: 6738044124541388394, guid: 4108fd9475ebc3e4c830ce4bb53245bc, type: 3}
   _looks:
+  - {fileID: 2414651281906343737, guid: ac0bddb9a13c47946818ddb297941efb, type: 3}
   - {fileID: 5378621275931057250, guid: c658d8c05932fd446a210998c9b6ace0, type: 3}
   - {fileID: 6738044124541388394, guid: 4108fd9475ebc3e4c830ce4bb53245bc, type: 3}
   - {fileID: 8301520851496015657, guid: a69373ee747a66a4496309ea698c2843, type: 3}
