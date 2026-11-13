@@ -38,6 +38,29 @@ namespace Forge.Game.Combat
         }
 
         /// <summary>
+        /// Which way to loose something from <paramref name="from"/> at <paramref name="speed"/> so it falls onto
+        /// <paramref name="target"/>, as an archer allows for the drop: the flatter of the two arcs that reach it; beyond
+        /// its reach, the arc that carries it farthest towards it (45° up); straight above or below, straight at it. A
+        /// unit vector.
+        /// </summary>
+        public static Vector3 Lead(Vector3 from, Vector3 target, float speed)
+        {
+            if (!(speed > 0f) || float.IsInfinity(speed))
+                throw new ArgumentOutOfRangeException(nameof(speed), speed, "A flight's speed is a finite number above zero.");
+            var way = target - from;
+            var level = new Vector2(way.X, way.Z);
+            var across = level.Length();
+            if (across < 1e-4f)
+                return way.Y >= 0f ? Vector3.UnitY : -Vector3.UnitY;
+
+            double v2 = speed * speed, x = across, y = way.Y;
+            var root = v2 * v2 - Gravity * (Gravity * x * x + 2.0 * y * v2);
+            var angle = root >= 0.0 ? Math.Atan((v2 - Math.Sqrt(root)) / (Gravity * x)) : Math.PI / 4.0;
+            var ahead = level / across * (float)Math.Cos(angle);
+            return new Vector3(ahead.X, (float)Math.Sin(angle), ahead.Y);
+        }
+
+        /// <summary>
         /// <paramref name="seconds"/> later: falling as it goes. The velocity is taken at the step's end (semi-implicit
         /// Euler), so a long flight's height stays true to within a step's fall.
         /// </summary>

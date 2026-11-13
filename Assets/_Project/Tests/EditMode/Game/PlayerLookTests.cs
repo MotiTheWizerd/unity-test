@@ -41,6 +41,27 @@ namespace Forge.Tests.Game
         }
 
         [Test]
+        public void Along_LooksTheWayItPoints_HeadingOnTheGround_PitchAboveIt()
+        {
+            var look = new PlayerLook(123f, 10f);
+
+            look.Along(new Vector3(1f, 1f, 0f) * 3f);
+            Assert.That(look.Heading, Is.EqualTo(90f).Within(1e-3f));
+            Assert.That(look.Pitch, Is.EqualTo(45f).Within(1e-3f));
+
+            look.Along(new Vector3(0f, -0.5f, -2f));
+            Assert.That(look.Heading, Is.EqualTo(180f).Within(1e-3f));
+            Assert.That(look.Pitch, Is.EqualTo(-14.036f).Within(1e-2f));
+
+            look.Along(Vector3.UnitY);
+            Assert.That(look.Heading, Is.EqualTo(180f).Within(1e-3f), "Straight up, the heading stays.");
+            Assert.That(look.Pitch, Is.EqualTo(PlayerLook.MaxPitch));
+
+            look.Along(Vector3.Zero);
+            Assert.That(look.Pitch, Is.EqualTo(PlayerLook.MaxPitch), "No direction, no change.");
+        }
+
+        [Test]
         public void Compass_NorthIsPlusZ_EastIsPlusX()
         {
             Assert.That(Vector2.Distance(Compass.Forward(0f), new Vector2(0f, 1f)), Is.LessThan(1e-6f));

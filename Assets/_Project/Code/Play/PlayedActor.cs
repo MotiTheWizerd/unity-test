@@ -33,6 +33,9 @@ namespace Forge.Play
     /// </summary>
     public sealed class PlayedActor : IDisposable
     {
+        // Of the way from the feet up to the eyes, where the chest is on a look that can't tell (no chest bone).
+        const float ChestOfEyeHeight = 0.8f;
+
         readonly float _eyeHeight;
         readonly EquipmentModifiers _equipmentModifiers;
         string _deathMove;
@@ -146,6 +149,22 @@ namespace Forge.Play
             {
                 var eyes = _model?.Eyes(Rules.EyeHeight);
                 return eyes != null ? eyes.position : Rules.Eyes.ToUnity();
+            }
+        }
+
+        /// <summary>
+        /// Where its chest is now (the scene's), what a shot at it is aimed at: its look's own, as its body moves, else
+        /// most of the way up to its eyes.
+        /// </summary>
+        public Vector3 Chest
+        {
+            get
+            {
+                var chest = _model?.Bone(HumanBodyBones.Chest);
+                if (chest != null)
+                    return chest.position;
+                var feet = Rules.Feet.ToUnity();
+                return Vector3.Lerp(feet, Eyes, ChestOfEyeHeight);
             }
         }
 

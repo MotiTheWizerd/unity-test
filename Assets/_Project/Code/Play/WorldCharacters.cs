@@ -24,9 +24,10 @@ namespace Forge.Play
     /// <see cref="BodyShape"/> at its own height, its look riding on it, the same rules moving it), and who its base
     /// object says (<see cref="BaseObjectRecord.Actor"/>, an <see cref="ActorRecord"/>: its name, the world's
     /// attributes as its own numbers, so a blow hurts it, and what it starts out carrying and holding,
-    /// <see cref="StartingItems"/>: a sword and a shield, put away), told what to do by its mind (<see cref="IMind"/>)
-    /// rather than by keys: someone's, a <see cref="Fighter"/> that strolls about where it was placed
-    /// (<see cref="Wander"/>) and fights back whoever strikes it; no one's, a <see cref="Wander"/> alone. Its head turns
+    /// <see cref="StartingItems"/>: a bow, or a sword and a shield, put away), told what to do by its mind
+    /// (<see cref="IMind"/>) rather than by keys: someone's, a <see cref="Fighter"/> that strolls about where it was placed
+    /// (<see cref="Wander"/>) and fights back whoever strikes it, a blade in hand or shooting, its shots aimed at its foe's
+    /// chest as far off as its mind says; no one's, a <see cref="Wander"/> alone. Its head turns
     /// to whom its eyes settle on (<see cref="Gaze"/>, <see cref="PlayedActor.LooksAt"/>): the foe it fights, else the
     /// player passing near. Its body
     /// stands in the player's way and the player in its. While it goes about, the placed object it was stands hidden;
@@ -112,7 +113,7 @@ namespace Forge.Play
             // Who it is while the world plays: the actor its base object names, if any (placed for its look alone, it is no one).
             var who = kind.Actor.HasValue && _stage.World.TryGet(kind.Actor.Value, out var record) && record is ActorRecord actor ? actor : null;
             var mind = who != null
-                ? new Fighter(day, FighterSettings.SwordAndBoard(walking.WalkSpeed, walking.RunSpeed), dice)
+                ? new Fighter(day, FighterSettings.SwordAndBoard(walking.WalkSpeed, walking.RunSpeed), ArcherySettings.Hunter, dice)
                 : (IMind)day;
             var forward = placed.transform.forward;
             _characters[id] = new Character(_stage, PlacedActors.IdOf(id), placed, root, kind, who, prefab, shape, walking, eyes, mind,
@@ -209,7 +210,8 @@ namespace Forge.Play
                 var speed = way.magnitude;
                 var moving = speed > 1e-4f;
 
-                // It faces as the mind says (squaring up to a foe, at the turn rate), else the way it goes.
+                // It faces as the mind says (squaring up to a foe, at the turn rate), else the way it goes; aiming, it looks
+                // along its shot.
                 if (decision.Facing is float facing)
                 {
                     var heading = SceneHeading(facing);
@@ -224,6 +226,9 @@ namespace Forge.Play
                     rules.Facing = BodyFacing.Movement;
                 }
 
+                if (decision.Aim is System.Numerics.Vector2 off)
+                    AimAtFoe(off);
+
                 var move = PlayerCommands.None;
                 if (moving)
                 {
@@ -237,7 +242,8 @@ namespace Forge.Play
                     move = new PlayerCommands(new System.Numerics.Vector2(right, ahead), System.Numerics.Vector2.Zero, sprint: false, jump: false, walk: walk);
                 }
 
-                Actor.Tick(new ActorCommands(move, decision.ReadyWeapon, decision.UseRight, decision.UseLeft, releaseLeft: decision.ReleaseLeft), deltaTime);
+                Actor.Tick(new ActorCommands(move, decision.ReadyWeapon, decision.UseRight, decision.UseLeft, decision.ReleaseRight,
+                    decision.ReleaseLeft), deltaTime);
 
                 // Its eyes go where its body now faces, its head after them.
                 _gaze.Look(Actor.Eyes.ToNumerics(), rules.BodyHeading, Interests(), deltaTime);
@@ -268,7 +274,7 @@ namespace Forge.Play
             }
 
             // What the mind sees now: where it stands, what it is up to, its nearest opponent standing in the game,
-            // its weapons, and its hands.
+            // its weapons (and whether they shoot), and its hands (and how far its bow is drawn).
             MindSight See()
             {
                 var stage = Actor.Stage;
@@ -288,7 +294,22 @@ namespace Forge.Play
                         rightBusy = true;
                 }
 
-                return new MindSight(Ground(feet), mode, opponent, Actor.Readiness.State, rightBusy, guardUp);
+                return new MindSight(Ground(feet), mode, opponent, Actor.Readiness.State, rightBusy, guardUp,
+                    Actor.Combat.Shoots(CoreEquipSlots.RightHand), Actor.Combat.DrawPull);
+            }
+
+            // Its look (what its shot flies along, what its body squares up to while it draws) along a true shot from its
+            // eyes at its foe's chest, the drop allowed for at a full draw's speed, then turned `off` as the mind aims
+            // (degrees, x to the right, y up); no foe standing, it looks as it faces.
+            void AimAtFoe(System.Numerics.Vector2 off)
+            {
+                var stage = Actor.Stage;
+                var rules = Actor.Rules;
+                if (!Opponents.TryNearest(stage.Modes, Actor.Id, rules.Feet, stage.Actors, out var foe, out _) ||
+                    !stage.Actors.TryGet(foe, out var target))
+                    return;
+                rules.Look.Along(Flight.Lead(rules.Eyes, target.Chest.ToNumerics(), Shot.FullDrawSpeed));
+                rules.Look.Turn(off);
             }
 
             // The ground plane (x, z) of the world root's space, where the mind works, from a scene position.

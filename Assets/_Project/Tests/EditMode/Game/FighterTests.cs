@@ -14,6 +14,8 @@ namespace Forge.Tests.Game
         static readonly Vector2 Here = new Vector2(10f, -4f);
         static readonly FighterSettings Settings = new FighterSettings(reach: 1.4f, walkSpeed: 1.5f, runSpeed: 4f, runBeyond: 5f,
             minPause: 0.8f, maxPause: 2f, blockChance: 0f, blockSeconds: 1.2f);
+        static readonly ArcherySettings Bow = new ArcherySettings(range: 25f, standOff: 5f, spacedAt: 8f, minPause: 0.6f, maxPause: 1.8f,
+            minAim: 0.3f, maxAim: 1f, spread: 1.5f);
 
         // Its day: always strolling north at 1 m/s.
         sealed class Stroll : IMind
@@ -28,10 +30,14 @@ namespace Forge.Tests.Game
         }
 
         static Fighter Make(FighterSettings? settings = null, Stroll day = null, int seed = 1) =>
-            new Fighter(day ?? new Stroll(), settings ?? Settings, new Random(seed));
+            new Fighter(day ?? new Stroll(), settings ?? Settings, Bow, new Random(seed));
 
         static MindSight Fighting(Vector2? opponent, Readiness weapons = Readiness.Drawn, bool rightBusy = false, bool guardUp = false) =>
             new MindSight(Here, Mode.Fight, opponent, weapons, rightBusy, guardUp);
+
+        // In a fight with a bow drawn (held in both hands): its right hand drawing or loosing while busy, the arrow so far drawn.
+        static MindSight Shooting(Vector2? opponent, bool rightBusy = false, float drawPull = 0f) =>
+            new MindSight(Here, Mode.Fight, opponent, Readiness.Drawn, rightBusy, false, shoots: true, drawPull: drawPull);
 
         [Test]
         public void AtEase_ItsDayGoesOn_WeaponsAway()
@@ -212,6 +218,163 @@ namespace Forge.Tests.Game
             Assert.That(sheathing.Velocity, Is.EqualTo(Vector2.Zero));
             Assert.That(day.Asked, Is.EqualTo(1), "Its day went on only once the weapons were away.");
             Assert.That(sheathed.Velocity, Is.EqualTo(new Vector2(0f, 1f)));
+        }
+
+        [Test]
+        public void WithABow_OutOfRange_ItClosesIn_AndInRange_ItStandsFacingTheFoe()
+        {
+            var fighter = Make();
+
+            var far = fighter.Decide(Shooting(Here + new Vector2(0f, -40f)), Frame);
+            var inRange = fighter.Decide(Shooting(Here + new Vector2(15f, 0f)), Frame);
+
+            Assert.That(far.Velocity, Is.EqualTo(new Vector2(0f, -Settings.RunSpeed)));
+            Assert.That(far.Facing, Is.EqualTo(180f).Within(1e-3f));
+            Assert.That(far.HandsBusy, Is.False);
+            Assert.That(inRange.Velocity, Is.EqualTo(Vector2.Zero));
+            Assert.That(inRange.Facing, Is.EqualTo(90f).Within(1e-3f));
+        }
+
+        [Test]
+        public void WithABow_ItDraws_AimsAWhileAtFullDraw_AndLooses_EachShotItsOwnWayOff()
+        {
+            const float nock = 0.2f, pullSeconds = 0.6f, letGo = 0.5f;
+            var fighter = Make();
+            var foe = Here + new Vector2(0f, 15f);
+            var aims = new List<Vector2>();
+            var drawing = false;
+            var drawnAt = -1f;
+            var fullSeen = -1f;
+            var freeAt = -1f;
+            var busyUntil = -1f;
+            Vector2? aim = null;
+            for (var t = 0f; t < 30f; t += Frame)
+            {
+                // Its body: the arrow on the string after the nock, drawn to full over the pull; let go, the bow comes down.
+                var pull = drawing ? Math.Max(0f, Math.Min(1f, (t - drawnAt - nock) / pullSeconds)) : 0f;
+                var busy = drawing || t < busyUntil;
+                var decision = fighter.Decide(Shooting(foe, busy, pull), Frame);
+                Assert.That(decision.Velocity, Is.EqualTo(Vector2.Zero));
+                Assert.That(decision.Facing, Is.EqualTo(0f).Within(1e-3f));
+                if (drawing && pull >= 1f && fullSeen < 0f)
+                    fullSeen = t;
+
+                if (decision.UseRight)
+                {
+                    Assert.That(busy, Is.False, "No draw while the last shot plays out.");
+                    Assert.That(decision.Aim, Is.Not.Null, "It aims from the draw's start.");
+                    Assert.That(decision.Aim.Value.Length(), Is.LessThanOrEqualTo(Bow.Spread + 1e-4f));
+                    if (freeAt >= 0f)
+                        Assert.That(t - freeAt, Is.InRange(Bow.MinPause - Frame, Bow.MaxPause + 2 * Frame), "A pause between shots.");
+                    drawing = true;
+                    drawnAt = t;
+                    fullSeen = -1f;
+                    aim = decision.Aim;
+                    aims.Add(aim.Value);
+                    continue;
+                }
+
+                if (!drawing)
+                {
+                    Assert.That(decision.Aim, Is.Null, "Not drawing, it doesn't aim.");
+                    continue;
+                }
+
+                Assert.That(decision.Aim, Is.EqualTo(aim), "One shot, one way off.");
+                if (!decision.ReleaseRight)
+                    continue;
+                Assert.That(pull, Is.EqualTo(1f), "Loosed only at full draw.");
+                Assert.That(t - fullSeen, Is.InRange(Bow.MinAim - Frame, Bow.MaxAim + Frame), "Aimed a while first.");
+                drawing = false;
+                busyUntil = freeAt = t + letGo;
+            }
+
+            Assert.That(aims.Count, Is.InRange(6, 20), "Many shots in 30 s, each a draw, an aim, a loose and a pause.");
+            Assert.That(new HashSet<Vector2>(aims).Count, Is.EqualTo(aims.Count), "Each shot strays its own way.");
+        }
+
+        [Test]
+        public void WithABow_Crowded_ItBacksAway_FacingItsFoe_StillShooting_ThenHoldsItsGround()
+        {
+            var north = new Vector2(0f, 1f);
+            var fighter = Make();
+
+            var crowded = fighter.Decide(Shooting(Here + north * 3f), Frame);
+            Assert.That(crowded.Velocity, Is.EqualTo(-north * Settings.WalkSpeed));
+            Assert.That(crowded.Facing, Is.EqualTo(0f).Within(1e-3f));
+            Assert.That(fighter.Decide(Shooting(Here + north * 6f), Frame).Velocity, Is.EqualTo(-north * Settings.WalkSpeed),
+                "Past its stand-off it backs on...");
+            Assert.That(fighter.Decide(Shooting(Here + north * 8f), Frame).Velocity, Is.EqualTo(Vector2.Zero), "...to where it is spaced,");
+            Assert.That(fighter.Decide(Shooting(Here + north * 6f), Frame).Velocity, Is.EqualTo(Vector2.Zero), "then holds its ground.");
+
+            var backing = Make();
+            var drewBacking = false;
+            for (var t = 0f; t < 5f && !drewBacking; t += Frame)
+            {
+                var decision = backing.Decide(Shooting(Here + north * 3f), Frame);
+                drewBacking = decision.UseRight && decision.Velocity == -north * Settings.WalkSpeed;
+            }
+
+            Assert.That(drewBacking, Is.True, "It draws as it backs away.");
+        }
+
+        [Test]
+        public void WithABow_ADrawUnderWay_IsSeenThrough_WhereverItsFoeGoes()
+        {
+            var fighter = Make();
+            var near = Here + new Vector2(0f, 15f);
+            var t = 0f;
+            for (; t < 5f && !fighter.Decide(Shooting(near), Frame).UseRight; t += Frame)
+            {
+            }
+
+            Assert.That(t, Is.LessThan(5f), "It drew.");
+            var gone = Here + new Vector2(0f, 40f);
+            var drawing = fighter.Decide(Shooting(gone, rightBusy: true, drawPull: 0.5f), Frame);
+            Assert.That(drawing.Velocity, Is.EqualTo(Vector2.Zero), "It doesn't chase mid-draw.");
+            Assert.That(drawing.Aim, Is.Not.Null);
+            Assert.That(drawing.ReleaseRight, Is.False);
+
+            var loosed = false;
+            for (var s = 0f; s < 2f && !loosed; s += Frame)
+                loosed = fighter.Decide(Shooting(gone, rightBusy: true, drawPull: 1f), Frame).ReleaseRight;
+            Assert.That(loosed, Is.True, "It looses at its foe even out of range.");
+            Assert.That(fighter.Decide(Shooting(gone), Frame).Velocity, Is.EqualTo(new Vector2(0f, Settings.RunSpeed)), "Then closes in.");
+        }
+
+        [Test]
+        public void WithABow_ADrawThatNeverCame_ItWaitsAndTriesAgain()
+        {
+            var fighter = Make();
+            var foe = Here + new Vector2(0f, 15f);
+            var tries = new List<float>();
+            for (var t = 0f; t < 10f; t += Frame)
+            {
+                // No arrows: the draw never starts, the hand stays free.
+                var decision = fighter.Decide(Shooting(foe), Frame);
+                Assert.That(decision.ReleaseRight, Is.False);
+                if (decision.UseRight)
+                    tries.Add(t);
+                else
+                    Assert.That(decision.Aim, Is.Null);
+            }
+
+            Assert.That(tries.Count, Is.InRange(4, 17));
+            for (var i = 1; i < tries.Count; i++)
+                Assert.That(tries[i] - tries[i - 1], Is.InRange(Bow.MinPause - Frame, Bow.MaxPause + 2 * Frame));
+        }
+
+        [Test]
+        public void ArcherySettings_RefuseNonsense()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ArcherySettings(0f, 0f, 1f, 1f, 2f, 0.3f, 1f, 1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ArcherySettings(25f, 9f, 8f, 1f, 2f, 0.3f, 1f, 1f), "Spaced beyond its stand-off.");
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ArcherySettings(25f, 5f, 30f, 1f, 2f, 0.3f, 1f, 1f), "Spaced within its range.");
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ArcherySettings(25f, 5f, 8f, 3f, 2f, 0.3f, 1f, 1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ArcherySettings(25f, 5f, 8f, 1f, 2f, 1.3f, 1f, 1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ArcherySettings(25f, 5f, 8f, 1f, 2f, 0.3f, 1f, -1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ArcherySettings(25f, 5f, 8f, 1f, 2f, 0.3f, 1f, 45f));
+            Assert.DoesNotThrow(() => new ArcherySettings(25f, 0f, 1f, 0f, 0f, 0f, 0f, 0f), "It may never give ground, and shoot true.");
         }
 
         [Test]

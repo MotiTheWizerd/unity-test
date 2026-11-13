@@ -136,6 +136,9 @@ namespace Forge.Game.Combat
             }
         }
 
+        /// <summary>Whether what <paramref name="slot"/> holds shoots (a bow, which both hands hold): it is fought with from afar.</summary>
+        public bool Shoots(RecordId slot) => _equipment.In(slot)?.Record.Weapon?.Ammo != null;
+
         /// <summary>
         /// How far a weapon that shoots is drawn while its attack is held: 0 with none held (or the arrow not yet on the
         /// string) to 1 at full draw (<see cref="Swing.Pull"/>); 0 again once let go.

@@ -28,5 +28,20 @@ namespace Forge.Game.Player
             Heading = float.IsNaN(heading) || float.IsInfinity(heading) ? 0f : Compass.Normalize(heading);
             Pitch = float.IsNaN(pitch) ? 0f : Math.Max(-MaxPitch, Math.Min(MaxPitch, pitch));
         }
+
+        /// <summary>
+        /// Looks along <paramref name="direction"/> (+Y up, +Z north): its heading on the ground, its pitch above it;
+        /// straight up or down, the heading as it was. Nothing for no direction.
+        /// </summary>
+        public void Along(Vector3 direction)
+        {
+            var length = direction.Length();
+            if (!(length > 1e-6f) || float.IsInfinity(length))
+                return;
+            var ground = new Vector2(direction.X, direction.Z);
+            var heading = ground.LengthSquared() > 1e-12f ? Compass.HeadingOf(ground) : Heading;
+            var pitch = (float)Math.Asin(Math.Max(-1f, Math.Min(1f, direction.Y / length))) / Compass.DegreesToRadians;
+            Set(heading, pitch);
+        }
     }
 }

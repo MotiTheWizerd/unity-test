@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Forge.Play::Forge.Play.PlayerProfile
   _height: 1.85
   _radius: 0.3
+  _guardRadius: 0.45
   _eyeHeight: 1.72
   _crouchHeight: 1
   _stepHeight: 0.4

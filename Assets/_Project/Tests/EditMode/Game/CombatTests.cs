@@ -865,6 +865,40 @@ namespace Forge.Tests.Game
             Assert.That(flight.Step(0f).Position, Is.EqualTo(flight.Position), "No time, no move.");
         }
 
+        [Test]
+        public void ALead_AllowsForTheDrop_SoTheShotFallsOntoItsMark()
+        {
+            var from = new System.Numerics.Vector3(2f, 1.6f, -3f);
+            foreach (var mark in new[]
+                     {
+                         from + new System.Numerics.Vector3(0f, -0.3f, 20f), // a chest, level ground
+                         from + new System.Numerics.Vector3(-25f, 6f, 10f), // up a slope
+                         from + new System.Numerics.Vector3(4f, -2f, -3f), // close, below
+                     })
+            {
+                var way = Flight.Lead(from, mark, Shot.FullDrawSpeed);
+                Assert.That(way.Length(), Is.EqualTo(1f).Within(1e-4f));
+                var flight = new Flight(from, way * Shot.FullDrawSpeed);
+                var across = new System.Numerics.Vector2(mark.X - from.X, mark.Z - from.Z).Length();
+                while (new System.Numerics.Vector2(flight.Position.X - from.X, flight.Position.Z - from.Z).Length() < across)
+                    flight = flight.Step(0.0005f);
+                Assert.That(System.Numerics.Vector3.Distance(flight.Position, mark), Is.LessThan(0.08f), $"Onto {mark}.");
+                Assert.That(way.Y, Is.GreaterThan(System.Numerics.Vector3.Normalize(mark - from).Y), "Aimed above the mark.");
+            }
+        }
+
+        [Test]
+        public void ALead_BeyondReach_LoosesAt45Degrees_AndStraightUpOrDown_StraightAtIt()
+        {
+            var far = Flight.Lead(System.Numerics.Vector3.Zero, new System.Numerics.Vector3(1000f, 0f, 0f), Shot.FullDrawSpeed);
+            Assert.That(far.X, Is.EqualTo(far.Y).Within(1e-4f));
+            Assert.That(far.X, Is.GreaterThan(0f));
+
+            Assert.That(Flight.Lead(System.Numerics.Vector3.Zero, new System.Numerics.Vector3(0f, 5f, 0f), 10f), Is.EqualTo(System.Numerics.Vector3.UnitY));
+            Assert.That(Flight.Lead(System.Numerics.Vector3.Zero, new System.Numerics.Vector3(0f, -5f, 0f), 10f), Is.EqualTo(-System.Numerics.Vector3.UnitY));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => Flight.Lead(System.Numerics.Vector3.Zero, System.Numerics.Vector3.UnitX, 0f));
+        }
+
         sealed class FixedTimings : IMoveTimings
         {
             readonly MoveTiming _timing;
