@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Forge.Play::Forge.Play.Sound.SoundCue
   _takes:
   - {fileID: 8300000, guid: 461fa7d4731efc6429746a3a52ccf624, type: 3}
+  - {fileID: 8300000, guid: b47abecb41040aa44ac8466173d507f4, type: 3}
+  - {fileID: 8300000, guid: 1f5cf299cfc493b41b9111e88a870403, type: 3}
   _volume: 0.7
   _volumeJitter: 0.1
   _pitchJitter: 0.05

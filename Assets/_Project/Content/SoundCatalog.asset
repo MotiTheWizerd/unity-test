@@ -29,6 +29,10 @@ MonoBehaviour:
     _asset: {fileID: 11400000, guid: c00c44d54dd8592488b1d0408163e055, type: 2}
   - _key: foley/jumpfemale
     _asset: {fileID: 11400000, guid: 5df648cb8cb0fc4409845ac66baeb433, type: 2}
+  - _key: foley/pain
+    _asset: {fileID: 11400000, guid: 65a8ea3522d9ac64584516d747ddeebe, type: 2}
+  - _key: foley/painfemale
+    _asset: {fileID: 11400000, guid: 9f2cc71d4c2bee4469a9f4921e5303c1, type: 2}
   - _key: footsteps/run
     _asset: {fileID: 11400000, guid: b297e749983be76409ccd5d93ce2bef3, type: 2}
   - _key: footsteps/sneak

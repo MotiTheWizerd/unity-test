@@ -15,7 +15,8 @@ namespace Forge.Play.Sound
     /// Which sound each plays is a key under Content/Sounds (<see cref="Jump"/>: "foley/jump"; a combat move's moment and a
     /// shot's release, by its animation: <see cref="MoveOf"/>, "combat/swordslash", "combat/bowshot", "combat/bowrelease";
     /// a blow landing on a body where it was struck: <see cref="Hit"/>; one met by a raised shield instead, in what the
-    /// shield is made of: <see cref="Block"/>, "combat/blockmetal"; one of its takes each time); one the catalog lacks
+    /// shield is made of: <see cref="Block"/>, "combat/blockmetal"; a cry from whoever a blow hurt: <see cref="Pain"/>;
+    /// one of its takes each time); one the catalog lacks
     /// plays nothing, so a sound is added by dropping its folder in and building. A sound of the actor's own body plays
     /// in its voice when it has a version in it (<see cref="Voiced"/>), and a struck thing's in what it is made of when
     /// it has one (<see cref="Made"/>). Where an actor is comes from whoever runs the game (the player's feet today, the
@@ -31,6 +32,9 @@ namespace Forge.Play.Sound
 
         /// <summary>What a blow met by a raised shield plays, in what the shield is made of (<see cref="Made"/>).</summary>
         public const string Block = "combat/block";
+
+        /// <summary>What an actor cries out when a blow takes its health, in its voice (<see cref="Voiced"/>: "foley/painfemale").</summary>
+        public const string Pain = "foley/pain";
 
         /// <summary>What a combat move's moment or a shot's release plays, by its animation ("SwordSlash": "combat/swordslash").</summary>
         public static string MoveOf(string animation) => "combat/" + animation.ToLowerInvariant();
@@ -53,6 +57,9 @@ namespace Forge.Play.Sound
 
         // Meters above its feet a weapon is heard from: about the hands.
         const float HandsHeight = 1.2f;
+
+        // Meters above its feet a voice is heard from: about the mouth.
+        const float MouthHeight = 1.6f;
 
         readonly SoundPlayer _sounds;
         readonly Func<ActorId, Vector3?> _whereIs;
@@ -82,12 +89,17 @@ namespace Forge.Play.Sound
                 events.Subscribe<ShotLoosed>(OnShotLoosed),
                 // A blow is heard where it met: on the shield that took it, else on the body.
                 events.Subscribe<HitBlocked>(OnBlocked),
-                events.Subscribe<HitLanded>(e =>
-                {
-                    if (!e.Blocked)
-                        PlayAt(e.Target, Hit, HandsHeight);
-                }),
+                events.Subscribe<HitLanded>(OnLanded),
             };
+        }
+
+        // A blow on the body is heard on it (one a shield took was heard there); whoever it hurt cries out.
+        void OnLanded(HitLanded e)
+        {
+            if (!e.Blocked)
+                PlayAt(e.Target, Hit, HandsHeight);
+            if (e.Damage > 0f)
+                PlayVoicedAt(e.Target, Pain, MouthHeight);
         }
 
         // The blow rings or thuds on the shield as it is made; one of no kind in particular plays the plain block.
@@ -122,11 +134,12 @@ namespace Forge.Play.Sound
         SoundHandle PlayAt(ActorId actor, string key, float above = 0f) =>
             _whereIs(actor) is Vector3 where ? _sounds.Play(key, where + Vector3.up * above) : SoundHandle.None;
 
-        // A sound of the actor's own body (a jump's breath): in its voice when there is a version in it, else as it is.
-        void PlayVoicedAt(ActorId actor, string key)
+        // A sound of the actor's own body (a jump's breath, a cry), `above` its feet: in its voice when there is a version
+        // in it, else as it is.
+        void PlayVoicedAt(ActorId actor, string key, float above = 0f)
         {
             if (_whereIs(actor) is Vector3 where)
-                _sounds.PlayFirst(new[] { (Voiced(key, _voiceOf(actor)), 1f), (key, 1f) }, where);
+                _sounds.PlayFirst(new[] { (Voiced(key, _voiceOf(actor)), 1f), (key, 1f) }, where + Vector3.up * above);
         }
 
         public void Dispose()

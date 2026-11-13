@@ -17,6 +17,7 @@ namespace Forge.Tests.Play
             Assert.That(SoundDirector.Voiced(SoundDirector.Jump, "Female"), Is.EqualTo("foley/jumpfemale"));
             Assert.That(SoundDirector.Voiced(SoundDirector.Jump, null), Is.EqualTo(SoundDirector.Jump));
             Assert.That(SoundDirector.Voiced(SoundDirector.Jump, " "), Is.EqualTo(SoundDirector.Jump));
+            Assert.That(SoundDirector.Voiced(SoundDirector.Pain, "female"), Is.EqualTo("foley/painfemale"), "Her cry: Foley/PainFemale.");
         }
 
         [Test]

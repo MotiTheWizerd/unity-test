@@ -14,6 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Forge.Play::Forge.Play.Sound.SoundCue
   _takes:
   - {fileID: 8300000, guid: b53b6edbd6ca5e54aae0a6a064d21683, type: 3}
+  - {fileID: 8300000, guid: 95eece9852c326a43aacf3afe9afb5e7, type: 3}
+  - {fileID: 8300000, guid: 1cef72955c825b9448ff30d01177cf3e, type: 3}
+  - {fileID: 8300000, guid: db66ecdaf75bca041abb4a5c94e321d8, type: 3}
+  - {fileID: 8300000, guid: 56e53bb455c86ae4cb8aae96d2c3f673, type: 3}
+  - {fileID: 8300000, guid: 351cf2db7acff6046afd2fe9d794cca0, type: 3}
+  - {fileID: 8300000, guid: 5b655a01a02e923449f930780556cc43, type: 3}
+  - {fileID: 8300000, guid: 20d520b5051704943a5871a92f6663d4, type: 3}
+  - {fileID: 8300000, guid: e40eda72190678f4b9c706ba21ecf4ba, type: 3}
+  - {fileID: 8300000, guid: 526d04336de6fe0449a4700a710ac7c4, type: 3}
+  - {fileID: 8300000, guid: 94cbdc10faca2814fb3279584421aceb, type: 3}
   _volume: 0.7
   _volumeJitter: 0.1
   _pitchJitter: 0.05
