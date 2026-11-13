@@ -169,7 +169,7 @@ namespace Forge.Editing
             var name = displayName.Trim();
             var variant = new BaseObjectRecord(session.NewId(VariantIdPrefix), name, baseObject.AssetKey, baseObject.Category,
                 baseObject.Placement, MaterialOverrides.Layer(baseObject.Materials, placed.Materials), baseObject.Item, baseObject.Equippable, baseObject.Weapon, baseObject.Actor,
-                baseObject.Ammo, baseObject.Physics, baseObject.Block);
+                baseObject.Ammo, baseObject.Physics, baseObject.Block, baseObject.Surface);
             session.Batch($"Make variant {name}", () =>
             {
                 session.Put(variant);

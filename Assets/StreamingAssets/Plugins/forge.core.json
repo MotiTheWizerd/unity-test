@@ -1328,7 +1328,8 @@
       "block": {
         "stops": 0.6,
         "effort": 0.5
-      }
+      },
+      "surface": "wood"
     },
     {
       "type": "base_object",
@@ -1369,7 +1370,8 @@
       "block": {
         "stops": 0.75,
         "effort": 0.5
-      }
+      },
+      "surface": "metal"
     },
     {
       "type": "base_object",
@@ -1938,7 +1940,8 @@
       "block": {
         "stops": 0.5,
         "effort": 0.5
-      }
+      },
+      "surface": "wood"
     },
     {
       "type": "base_object",
@@ -1979,7 +1982,8 @@
       "block": {
         "stops": 0.5,
         "effort": 0.5
-      }
+      },
+      "surface": "wood"
     },
     {
       "type": "base_object",

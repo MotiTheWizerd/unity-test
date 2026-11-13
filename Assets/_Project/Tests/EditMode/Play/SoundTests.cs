@@ -20,6 +20,14 @@ namespace Forge.Tests.Play
         }
 
         [Test]
+        public void ABlock_SoundsAsTheShieldIsMade_AndOfNoKind_ThePlainBlock()
+        {
+            Assert.That(SoundDirector.Made(SoundDirector.Block, "metal"), Is.EqualTo("combat/blockmetal"));
+            Assert.That(SoundDirector.Made(SoundDirector.Block, "wood"), Is.EqualTo("combat/blockwood"));
+            Assert.That(SoundDirector.Made(SoundDirector.Block, null), Is.EqualTo(SoundDirector.Block));
+        }
+
+        [Test]
         public void ATake_NeverPlaysTwiceRunning()
         {
             var picker = new TakePicker(new Random(7));

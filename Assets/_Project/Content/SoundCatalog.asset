@@ -13,6 +13,10 @@ MonoBehaviour:
   m_Name: SoundCatalog
   m_EditorClassIdentifier: Forge.Play::Forge.Play.Sound.SoundCatalog
   _entries:
+  - _key: combat/blockmetal
+    _asset: {fileID: 11400000, guid: d661d6fb08abc9b41bc62a46e0382378, type: 2}
+  - _key: combat/blockwood
+    _asset: {fileID: 11400000, guid: 1db69e5fc4fd1534b9b486be25d26659, type: 2}
   - _key: combat/bowrelease
     _asset: {fileID: 11400000, guid: ee60112caec7fcd44a9f77bb27546322, type: 2}
   - _key: combat/bowshot

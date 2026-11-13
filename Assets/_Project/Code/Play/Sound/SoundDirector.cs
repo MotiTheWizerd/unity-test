@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Forge.Data;
 using Forge.Game.Actors;
 using Forge.Game.Combat;
 using Forge.Game.Events;
@@ -13,18 +14,23 @@ namespace Forge.Play.Sound
     /// the rules never play a sound, only say what happened (an actor jumped, a blow swung, a bow was drawn and loosed).
     /// Which sound each plays is a key under Content/Sounds (<see cref="Jump"/>: "foley/jump"; a combat move's moment and a
     /// shot's release, by its animation: <see cref="MoveOf"/>, "combat/swordslash", "combat/bowshot", "combat/bowrelease";
-    /// a blow landing, on a body or a raised shield, where it was struck: <see cref="Hit"/>, one of its takes each time);
-    /// one the catalog lacks plays nothing, so a sound is added by dropping its folder in and building. A sound of the
-    /// actor's own body plays in its voice when it has a version in it (<see cref="Voiced"/>). Where an actor is
-    /// comes from whoever runs the game (the player's feet today, the world's actors later).
+    /// a blow landing on a body where it was struck: <see cref="Hit"/>; one met by a raised shield instead, in what the
+    /// shield is made of: <see cref="Block"/>, "combat/blockmetal"; one of its takes each time); one the catalog lacks
+    /// plays nothing, so a sound is added by dropping its folder in and building. A sound of the actor's own body plays
+    /// in its voice when it has a version in it (<see cref="Voiced"/>), and a struck thing's in what it is made of when
+    /// it has one (<see cref="Made"/>). Where an actor is comes from whoever runs the game (the player's feet today, the
+    /// world's actors later).
     /// </summary>
     public sealed class SoundDirector : IDisposable
     {
         /// <summary>What an actor taking off in a jump plays.</summary>
         public const string Jump = "foley/jump";
 
-        /// <summary>What a blow landing plays where it struck, on a body or a raised shield.</summary>
+        /// <summary>What a blow landing on a body plays where it struck.</summary>
         public const string Hit = "combat/hit";
+
+        /// <summary>What a blow met by a raised shield plays, in what the shield is made of (<see cref="Made"/>).</summary>
+        public const string Block = "combat/block";
 
         /// <summary>What a combat move's moment or a shot's release plays, by its animation ("SwordSlash": "combat/swordslash").</summary>
         public static string MoveOf(string animation) => "combat/" + animation.ToLowerInvariant();
@@ -33,8 +39,17 @@ namespace Forge.Play.Sound
         /// The version of <paramref name="key"/> made in <paramref name="voice"/> ("foley/jump", "female": "foley/jumpfemale",
         /// the folder Foley/JumpFemale); the key itself without a voice.
         /// </summary>
-        public static string Voiced(string key, string voice) =>
-            string.IsNullOrWhiteSpace(voice) ? key : key + voice.Trim().ToLowerInvariant();
+        public static string Voiced(string key, string voice) => Version(key, voice);
+
+        /// <summary>
+        /// The version of <paramref name="key"/> for something made of <paramref name="surface"/> ("combat/block", "metal":
+        /// "combat/blockmetal", the folder Combat/BlockMetal); the key itself for nothing in particular.
+        /// </summary>
+        public static string Made(string key, string surface) => Version(key, surface);
+
+        // `key` with `word` after it, its folder named so too; the key itself without one.
+        static string Version(string key, string word) =>
+            string.IsNullOrWhiteSpace(word) ? key : key + word.Trim().ToLowerInvariant();
 
         // Meters above its feet a weapon is heard from: about the hands.
         const float HandsHeight = 1.2f;
@@ -42,6 +57,7 @@ namespace Forge.Play.Sound
         readonly SoundPlayer _sounds;
         readonly Func<ActorId, Vector3?> _whereIs;
         readonly Func<ActorId, string> _voiceOf;
+        readonly Func<RecordId, string> _surfaceOf;
         readonly IDisposable[] _subscriptions;
         // Each actor's bow creaking as it is drawn, cut short when it is loosed.
         readonly Dictionary<ActorId, SoundHandle> _drawing = new Dictionary<ActorId, SoundHandle>();
@@ -49,20 +65,36 @@ namespace Forge.Play.Sound
         /// <param name="events">The game's stream, which it listens to.</param>
         /// <param name="whereIs">Where an actor is now (scene space), or null when it can't say (not in the scene).</param>
         /// <param name="voiceOf">The voice an actor's own sounds are made in (<see cref="CharacterVoice"/>), or null for none.</param>
-        public SoundDirector(GameEvents events, SoundPlayer sounds, Func<ActorId, Vector3?> whereIs, Func<ActorId, string> voiceOf = null)
+        /// <param name="surfaceOf">What a thing is made of to strike (its base object's surface), or null for nothing in particular.</param>
+        public SoundDirector(GameEvents events, SoundPlayer sounds, Func<ActorId, Vector3?> whereIs, Func<ActorId, string> voiceOf = null,
+            Func<RecordId, string> surfaceOf = null)
         {
             if (events == null)
                 throw new ArgumentNullException(nameof(events));
             _sounds = sounds ?? throw new ArgumentNullException(nameof(sounds));
             _whereIs = whereIs ?? throw new ArgumentNullException(nameof(whereIs));
             _voiceOf = voiceOf ?? (_ => null);
+            _surfaceOf = surfaceOf ?? (_ => null);
             _subscriptions = new[]
             {
                 events.Subscribe<ActorJumped>(e => PlayVoicedAt(e.Actor, Jump)),
                 events.Subscribe<MoveWindowOpened>(OnMoveWindowOpened),
                 events.Subscribe<ShotLoosed>(OnShotLoosed),
-                events.Subscribe<HitLanded>(e => PlayAt(e.Target, Hit, HandsHeight)),
+                // A blow is heard where it met: on the shield that took it, else on the body.
+                events.Subscribe<HitBlocked>(OnBlocked),
+                events.Subscribe<HitLanded>(e =>
+                {
+                    if (!e.Blocked)
+                        PlayAt(e.Target, Hit, HandsHeight);
+                }),
             };
+        }
+
+        // The blow rings or thuds on the shield as it is made; one of no kind in particular plays the plain block.
+        void OnBlocked(HitBlocked e)
+        {
+            if (_whereIs(e.Target) is Vector3 where)
+                _sounds.PlayFirst(new[] { (Made(Block, _surfaceOf(e.Guard)), 1f), (Block, 1f) }, where + Vector3.up * HandsHeight);
         }
 
         // A blow's swish, a shield's raise; a bow's creak, kept to be cut short when it is loosed.

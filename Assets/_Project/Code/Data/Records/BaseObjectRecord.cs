@@ -9,7 +9,8 @@ namespace Forge.Data.Records
     /// What it is beyond its look comes in optional parts: an <see cref="ItemPart"/> makes it something to carry, an
     /// <see cref="EquippablePart"/> something its carrier can equip, a <see cref="WeaponPart"/> something to fight with, and
     /// an <see cref="AmmoPart"/> something a weapon shoots, a <see cref="BlockPart"/> something to block blows with (a
-    /// shield), and a <see cref="PhysicsPart"/> a loose physical thing that is no item.
+    /// shield), and a <see cref="PhysicsPart"/> a loose physical thing that is no item. What it is made of
+    /// (<see cref="Surface"/>) says how it sounds struck.
     /// </summary>
     public sealed class BaseObjectRecord : Record
     {
@@ -23,11 +24,14 @@ namespace Forge.Data.Records
         /// <param name="ammo">What makes it ammunition a weapon shoots; null = not ammo. Only an item is.</param>
         /// <param name="physics">What makes it a loose physical thing while playing, with its mass; null = an item is by its weight, anything else stands still.</param>
         /// <param name="block">How well it blocks a blow held up against it (a shield); null = it doesn't. Only a weapon does.</param>
+        /// <param name="surface">What it is made of to strike (<see cref="Surfaces"/>: "wood", "metal"); null = nothing in particular.</param>
         public BaseObjectRecord(RecordId id, string displayName, string assetKey, string category = null, PlacementRules placement = null,
             IEnumerable<MaterialOverride> materials = null, ItemPart item = null, EquippablePart equippable = null, WeaponPart weapon = null,
-            RecordId? actor = null, AmmoPart ammo = null, PhysicsPart physics = null, BlockPart block = null)
+            RecordId? actor = null, AmmoPart ammo = null, PhysicsPart physics = null, BlockPart block = null, string surface = null)
             : base(id)
         {
+            if (surface != null && !Surfaces.IsValid(surface))
+                throw new ArgumentException($"A surface is a lowercase word ('wood', 'metal'), not '{surface}'.", nameof(surface));
             if (block != null && weapon == null)
                 throw new ArgumentException("Only a weapon blocks (its style raises it): give it a weapon part too.", nameof(block));
             if (physics != null && actor.HasValue)
@@ -60,6 +64,7 @@ namespace Forge.Data.Records
             Ammo = ammo;
             Physics = physics;
             Block = block;
+            Surface = surface;
         }
 
         public string DisplayName { get; }
@@ -103,5 +108,11 @@ namespace Forge.Data.Records
 
         /// <summary>How well it blocks a blow held up against it (a shield), or null: it doesn't.</summary>
         public BlockPart Block { get; }
+
+        /// <summary>
+        /// What it is made of to strike ("wood", "metal"; <see cref="Surfaces"/>), which its sounds are found by (a
+        /// wooden shield thuds where an iron one rings), or null: nothing in particular.
+        /// </summary>
+        public string Surface { get; }
     }
 }

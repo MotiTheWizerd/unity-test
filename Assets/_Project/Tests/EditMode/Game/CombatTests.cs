@@ -665,9 +665,12 @@ namespace Forge.Tests.Game
             Assert.That(_attacker.Current(CoreAttributes.Health), Is.EqualTo(30f - 12f * 0.4f).Within(1e-4f), "60% of 12 stopped.");
             Assert.That(_attacker.Current(CoreAttributes.Stamina), Is.EqualTo(10f - 12f * 0.6f * 0.5f).Within(1e-4f), "Half a point per point stopped.");
             var blocked = _told.OfType<HitBlocked>().Single();
-            Assert.That((blocked.Attacker, blocked.Target, blocked.Weapon), Is.EqualTo((Dummy, ActorId.Player, Sword.Id)));
+            Assert.That((blocked.Attacker, blocked.Target, blocked.Weapon, blocked.Guard), Is.EqualTo((Dummy, ActorId.Player, Sword.Id, Shield.Id)),
+                "Told with what blocked it, for how it sounds.");
             Assert.That(blocked.Stopped, Is.EqualTo(7.2f).Within(1e-4f));
-            Assert.That(_told.OfType<HitLanded>().Single().Damage, Is.EqualTo(4.8f).Within(1e-4f), "What got through.");
+            var landed = _told.OfType<HitLanded>().Single();
+            Assert.That(landed.Damage, Is.EqualTo(4.8f).Within(1e-4f), "What got through.");
+            Assert.That(landed.Blocked, Is.True, "Past a guard: heard on the shield, not the body.");
             Assert.That(jolts.Single().Animation, Is.EqualTo("ShieldImpact"), "The style's reaction.");
             Assert.That(_combat.Guard, Is.Not.Null, "Still up.");
         }
@@ -683,6 +686,7 @@ namespace Forge.Tests.Game
             Assert.That(_attacker.Current(CoreAttributes.Health), Is.EqualTo(18f).Within(1e-4f), "All 12.");
             Assert.That(_attacker.Current(CoreAttributes.Stamina), Is.EqualTo(10f), "Nothing spent.");
             Assert.That(_told.OfType<HitBlocked>(), Is.Empty);
+            Assert.That(_told.OfType<HitLanded>().Single().Blocked, Is.False);
         }
 
         [Test]

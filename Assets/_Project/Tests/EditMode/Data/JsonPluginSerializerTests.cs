@@ -402,6 +402,21 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void BaseObjects_KeepWhatTheyAreMadeOf_AndNoneWritesNoSurfaceField()
+        {
+            var shield = new BaseObjectRecord(RecordId.Parse("core:shield"), "Shield", "models/shield", surface: "metal");
+            var house = new BaseObjectRecord(RecordId.Parse("core:house"), "House", "architecture/house");
+
+            var json = Write(Plugin("core", shield, house));
+            var things = Read(json).Records.OfType<BaseObjectRecord>().ToDictionary(o => o.AssetKey);
+
+            Assert.That(things["models/shield"].Surface, Is.EqualTo("metal"));
+            Assert.That(things["architecture/house"].Surface, Is.Null);
+            Assert.That(Regex.Matches(json, "\"surface\": ").Count, Is.EqualTo(1), "No surface is no field, not null.");
+            Assert.Throws<System.ArgumentException>(() => new BaseObjectRecord(RecordId.Parse("core:x"), "X", "x", surface: "Iron Plate"));
+        }
+
+        [Test]
         public void RoundTrip_PreservesPlacementRules_AndOmitsThemWhenAbsent()
         {
             var plugin = Plugin("core",

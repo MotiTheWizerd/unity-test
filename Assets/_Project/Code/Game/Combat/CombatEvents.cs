@@ -123,17 +123,19 @@ namespace Forge.Game.Combat
 
     /// <summary>
     /// A blow landed: <see cref="Attacker"/>'s <see cref="Weapon"/> struck <see cref="Target"/> (on its <see cref="Part"/>),
-    /// taking <see cref="Damage"/> health.
+    /// taking <see cref="Damage"/> health; <see cref="Blocked"/> when the target's guard took some of it (told first as a
+    /// <see cref="HitBlocked"/>).
     /// </summary>
     public readonly struct HitLanded : IGameEvent
     {
-        public HitLanded(ActorId attacker, ActorId target, RecordId weapon, float damage, BodyPart part = BodyPart.None)
+        public HitLanded(ActorId attacker, ActorId target, RecordId weapon, float damage, BodyPart part = BodyPart.None, bool blocked = false)
         {
             Attacker = attacker;
             Target = target;
             Weapon = weapon;
             Damage = damage;
             Part = part;
+            Blocked = blocked;
         }
 
         public ActorId Attacker { get; }
@@ -148,6 +150,9 @@ namespace Forge.Game.Combat
         /// <summary>Where on the target's body it met; <see cref="BodyPart.None"/> when that isn't known.</summary>
         public BodyPart Part { get; }
 
+        /// <summary>Whether the target's guard took some of it (its shield met it), what got past landing.</summary>
+        public bool Blocked { get; }
+
         public override string ToString() =>
             $"{Attacker} hit {Target}{(Part == BodyPart.None ? "" : $"'s {Part}")} with {Weapon} for {Damage:0.#}";
     }
@@ -158,12 +163,13 @@ namespace Forge.Game.Combat
     /// </summary>
     public readonly struct HitBlocked : IGameEvent
     {
-        public HitBlocked(ActorId attacker, ActorId target, RecordId weapon, float stopped)
+        public HitBlocked(ActorId attacker, ActorId target, RecordId weapon, float stopped, RecordId guard = default)
         {
             Attacker = attacker;
             Target = target;
             Weapon = weapon;
             Stopped = stopped;
+            Guard = guard;
         }
 
         public ActorId Attacker { get; }
@@ -172,6 +178,9 @@ namespace Forge.Game.Combat
 
         /// <summary>The attacker's weapon: its base object.</summary>
         public RecordId Weapon { get; }
+
+        /// <summary>What the target blocked with (its shield): its base object, what it is made of among the rest.</summary>
+        public RecordId Guard { get; }
 
         /// <summary>Health the guard stopped.</summary>
         public float Stopped { get; }

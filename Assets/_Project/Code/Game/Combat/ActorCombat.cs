@@ -375,7 +375,7 @@ namespace Forge.Game.Combat
             }
 
             Blocked?.Invoke(guard, StyleMove(guard.Weapon, CombatMoveKind.Blocked));
-            _events?.Publish(new HitBlocked(attacker, Owner, weapon, stopped));
+            _events?.Publish(new HitBlocked(attacker, Owner, weapon, stopped, guard.Weapon.Record.Id));
             return block.Stops;
         }
 
@@ -442,7 +442,7 @@ namespace Forge.Game.Combat
                     health += applied;
             }
 
-            _events?.Publish(new HitLanded(Owner, target, weapon.Id, health, part));
+            _events?.Publish(new HitLanded(Owner, target, weapon.Id, health, part, stops > 0f));
             if (IsDead(attributes))
                 _events?.Publish(new ActorKilled(target, Owner));
         }

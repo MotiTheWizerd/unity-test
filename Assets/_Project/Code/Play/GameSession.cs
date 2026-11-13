@@ -81,7 +81,7 @@ namespace Forge.Play
             _surfaces = new GroundSurfaces(view, frame, () => World);
             Player = new PlayerSession(profile, camera, Events);
             if (Sounds != null)
-                _director = new SoundDirector(Events, Sounds, WhereIs, VoiceOf);
+                _director = new SoundDirector(Events, Sounds, WhereIs, VoiceOf, SurfaceOf);
             Interactions = new Interactions()
                 .Add(new TakeInteraction(Changes, InventoryOf, Events));
             _dropper = new ItemDropper(Changes, InventoryOf, Events);
@@ -306,6 +306,9 @@ namespace Forge.Play
 
         // Where an actor is in the scene: its feet, while it stands in the game.
         Vector3? WhereIs(ActorId actor) => ActorOf(actor)?.Rules.Feet.ToUnity();
+
+        // What a thing of the world is made of to strike (a shield: wood, metal); null for nothing in particular.
+        string SurfaceOf(RecordId id) => World != null && World.TryGet(id, out var record) && record is BaseObjectRecord thing ? thing.Surface : null;
 
         // The voice an actor's own sounds are made in: as the character it looks like has it.
         string VoiceOf(ActorId actor) => ActorOf(actor)?.Model is CharacterModel look ? CharacterVoice.Of(look.Root) : null;

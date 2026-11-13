@@ -10,7 +10,8 @@ namespace Forge.UnityEditor.Content
     static class CoreGroundLayers
     {
         // What each is underfoot, which its footsteps are found by (Content/Sounds/Footsteps/<Surface>).
-        const string Grass = "grass", Dirt = "dirt", Stone = "stone", Sand = "sand", Snow = "snow", Gravel = "gravel", Wet = "wet";
+        const string Grass = Surfaces.Grass, Dirt = Surfaces.Dirt, Stone = Surfaces.Stone, Sand = Surfaces.Sand, Snow = Surfaces.Snow,
+            Gravel = Surfaces.Gravel, Wet = Surfaces.Wet;
 
         public static IEnumerable<GroundLayerRecord> All(string pluginId)
         {
