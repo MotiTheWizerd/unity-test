@@ -772,6 +772,14 @@ from any camera, so both cameras read the same player.
   carry weight along the bottom, red when overburdened. It reads again only when the inventory, the tab or the choice
   changes, or it opens, and draws on the next tick, never inside the click; the character and the item are drawn only
   while the screen is open.
+- **The face editor** (player creation, before play; the screen alone so far): `FaceEditorScreen` (Play.Hud,
+  FaceEditorScreen.uss), as Skyrim's race menu: the face's parts in a column (Head, Eyes, Brows, Nose, Mouth, Jaw, Skin,
+  Hair; `FaceEditorScreen.Parts`), the chosen part's controls beside it (a slider from 0 to 100 starting at 50, or a
+  choice stepped round between arrows: eye colour, hair style), the character large on the right (a `TurntableView`,
+  `CharacterModel.StandingStill`), and Randomize, Reset and Done along the bottom. Drawn on the next tick, never inside
+  the click. To look at it without a world: *Forge → Characters → Face Editor* plays `Scenes/FaceEditor.unity`, where
+  `FaceEditorStage` hosts the screen on its own character prefab (VikingF1). The characters have no blend shapes
+  and no face bones (one mesh each, a Mixamo head bone), so the controls change nothing yet (see Shortcuts).
 - **Turntables** (`TurntablePreview`, World/Assets; `TurntableView`, Play.Hud): a thing shown live in a
   `PreviewStudio`, as Skyrim shows the chosen item and the character carrying it. Whoever shows it builds it
   (`Show(subject, build)`): an item from its asset key through the world's `IAssetCatalog` (`Show(assets, key)`;
@@ -1974,3 +1982,4 @@ and the condition for removing it, and is listed here.
 | `EditorApp/Agent/ImageClipboard.cs` (`ForThisPlatform`) | Pasting a picture into the agent's message works on Windows only; elsewhere the clipboard has no picture | Forge runs on Windows today, and Unity's clipboard carries text only | Forge ships on macOS or Linux → a clipboard reader for that platform |
 | `Agent/Memory/SemantixMemory.cs` (`Origin`) | The agent's Semantix memory is made with origin `user`, so Semantix Studio doesn't list it under Your Agents | The server knows no `forge` origin yet, and one memory for all of Forge needs no picker | Users make memories at will → a `forge` origin on the server and a Forge group in Your Agents |
 | `Play/GameSession.cs` (`OnKilled`) | Killed, the player wakes up whole at once where it fell (`Revival.WakeUp`), its fight settled | Fights are being tested; Moti: "let it wake up with full power, stop fighting" | The game has a death (a load, a menu) → the player falls as a character does |
+| `Play/Hud/FaceEditorScreen.cs` | The face editor is its screen alone: its controls change nothing on the character, their values live in the screen, Done does nothing | Moti asked for the UI first; the characters have nothing to move a face with yet | The face's rules and its record arrive (a shared base head with blend shapes or landmark regions; the new game's start hosts the screen) |

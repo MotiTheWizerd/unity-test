@@ -151,7 +151,7 @@ namespace Forge.World.Assets
             foreach (var collider in subject.GetComponentsInChildren<Collider>(true))
             {
                 collider.enabled = false;
-                UnityEngine.Object.Destroy(collider);
+                PreviewStudio.Discard(collider);
             }
 
             _renderers = subject.GetComponentsInChildren<Renderer>(true);
@@ -176,7 +176,7 @@ namespace Forge.World.Assets
         void Clear()
         {
             if (_subject != null)
-                UnityEngine.Object.Destroy(_subject);
+                PreviewStudio.Discard(_subject);
             _subject = null;
             _renderers = Array.Empty<Renderer>();
             _animators = Array.Empty<Animator>();
@@ -200,7 +200,7 @@ namespace Forge.World.Assets
             if (_target == null)
                 return;
             _target.Release();
-            UnityEngine.Object.Destroy(_target);
+            PreviewStudio.Discard(_target);
             _target = null;
         }
     }

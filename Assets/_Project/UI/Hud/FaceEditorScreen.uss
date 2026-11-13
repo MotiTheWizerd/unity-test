@@ -1,0 +1,174 @@
+/*
+ * The player's face, made before play (Forge.Play.Hud.FaceEditorScreen), as Skyrim's race menu: the face's parts in a
+ * column, the chosen part's sliders beside them, the character large on the right, and the buttons along the bottom.
+ * Colours are the HUD's (PlayerHud.uss) and the inventory's (InventoryScreen.uss), the gold accent for what is chosen.
+ */
+
+.forge-face {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    padding: 40px 96px 40px 96px;
+    background-color: rgb(14, 13, 12);
+}
+
+.forge-face Label {
+    margin: 0;
+    padding: 0;
+    color: var(--forge-hud-text);
+    text-shadow: 1px 1px 3px var(--forge-hud-shadow);
+}
+
+.forge-face Label.forge-face__title {
+    margin-bottom: 20px;
+    font-size: 26px;
+    letter-spacing: 4px;
+    -unity-font-style: bold;
+}
+
+.forge-face__frame {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+/* The face's parts, a column of words; the chosen one gold. */
+.forge-face__parts {
+    width: 150px;
+    padding-right: 24px;
+    border-right-width: 1px;
+    border-color: var(--forge-inventory-line);
+}
+
+.forge-face Label.forge-face__part {
+    padding: 6px 0;
+    font-size: 18px;
+    letter-spacing: 1px;
+    color: var(--forge-hud-text-muted);
+}
+
+.forge-face Label.forge-face__part:hover {
+    color: var(--forge-hud-text);
+}
+
+.forge-face Label.forge-face__part--active {
+    color: var(--forge-accent);
+    -unity-font-style: bold;
+}
+
+/* The chosen part's controls: each its name and value over a slider, or a choice between arrows. */
+.forge-face__controls {
+    width: 360px;
+    margin: 0 24px;
+}
+
+.forge-face Label.forge-face__controls-title {
+    margin-bottom: 12px;
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--forge-hud-text-muted);
+}
+
+.forge-face__row {
+    padding: 8px 4px 10px 4px;
+    border-bottom-width: 1px;
+    border-color: var(--forge-inventory-line);
+}
+
+.forge-face Label.forge-face__row-name {
+    font-size: 15px;
+}
+
+.forge-face Label.forge-face__row-value {
+    font-size: 13px;
+    color: var(--forge-hud-text-muted);
+}
+
+.forge-face__slider {
+    margin: 6px 0 0 0;
+}
+
+/* Unity's theme sizes slider parts per orientation, so the overrides carry it. */
+.forge-face__slider.unity-base-slider--horizontal .unity-base-slider__tracker {
+    height: 4px;
+    margin-top: -2px;
+    border-width: 0;
+    border-radius: 2px;
+    background-color: rgba(244, 238, 226, 0.22);
+}
+
+.forge-face__slider.unity-base-slider--horizontal .unity-base-slider__dragger {
+    width: 14px;
+    height: 14px;
+    margin-top: -7px;
+    border-width: 1px;
+    border-radius: 7px;
+    border-color: var(--forge-hud-shadow);
+    background-color: var(--forge-accent);
+}
+
+.forge-face__choice {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.forge-face Label.forge-face__choice-name {
+    flex-grow: 1;
+    font-size: 15px;
+    -unity-text-align: middle-center;
+    color: var(--forge-accent);
+}
+
+/* The character large, on no backdrop of its own: a drag turns it, the wheel zooms. */
+.forge-face__character-view {
+    flex-grow: 1;
+    min-width: 240px;
+}
+
+/* The hint on the left, the buttons on the right. */
+.forge-face__footer {
+    flex-direction: row;
+    align-items: center;
+    padding-top: 14px;
+    border-top-width: 1px;
+    border-color: var(--forge-inventory-line);
+}
+
+.forge-face Label.forge-face__hint {
+    flex-grow: 1;
+    font-size: 13px;
+    color: var(--forge-hud-text-muted);
+}
+
+.forge-face__button {
+    min-width: 110px;
+    height: 34px;
+    margin: 0 0 0 10px;
+    border-width: 1px;
+    border-color: var(--forge-inventory-line);
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.45);
+    color: var(--forge-hud-text);
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+.forge-face__button:hover {
+    background-color: var(--forge-inventory-chosen);
+    color: var(--forge-accent);
+}
+
+.forge-face__button--primary {
+    border-color: var(--forge-accent-border);
+    color: var(--forge-accent);
+    -unity-font-style: bold;
+}
+
+.forge-face__choice-arrow {
+    min-width: 34px;
+    width: 34px;
+    margin: 0;
+    font-size: 20px;
+}

@@ -105,9 +105,19 @@ namespace Forge.World.Assets
             if (Camera != null)
                 Camera.targetTexture = null;
             if (_rig != null)
-                UnityEngine.Object.Destroy(_rig);
+                Discard(_rig);
             if (_environment != null)
-                UnityEngine.Object.Destroy(_environment);
+                Discard(_environment);
+        }
+
+        // Gone at the end of the frame while playing; at once in the editor, where a deferred destroy is refused
+        // (a screen built outside play, as its tests do).
+        internal static void Discard(UnityEngine.Object thing)
+        {
+            if (Application.isPlaying)
+                UnityEngine.Object.Destroy(thing);
+            else
+                UnityEngine.Object.DestroyImmediate(thing);
         }
 
         // The surroundings as a small cube map: each texel's colour by how far up its direction points.
