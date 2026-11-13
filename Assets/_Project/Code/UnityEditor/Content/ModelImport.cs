@@ -51,6 +51,10 @@ namespace Forge.UnityEditor.Content
 
             foreach (var part in root.GetComponentsInChildren<MeshFilter>(true).Where(f => f.name.EndsWith(ColliderSuffix, StringComparison.Ordinal)).ToArray())
                 MakeCollider(part);
+            // A model imported without animation draws its meshes plainly, which can't drive blend shapes: a head's face
+            // sliders are its shapes, so a mesh that has them draws skinned.
+            foreach (var part in root.GetComponentsInChildren<MeshFilter>(true).Where(f => f.sharedMesh != null && f.sharedMesh.blendShapeCount > 0).ToArray())
+                DrawSkinned(part);
             if (root.TryGetComponent<LODGroup>(out var group))
                 SetDistances(group);
         }
@@ -64,6 +68,20 @@ namespace Forge.UnityEditor.Content
 
         static bool IsModel(string path) =>
             path.StartsWith(ModelsFolder + "/", StringComparison.Ordinal) || path.StartsWith(HeadsFolder + "/", StringComparison.Ordinal);
+
+        static void DrawSkinned(MeshFilter part)
+        {
+            var mesh = part.sharedMesh;
+            var plain = part.GetComponent<MeshRenderer>();
+            var materials = plain != null ? plain.sharedMaterials : Array.Empty<Material>();
+            var holder = part.gameObject;
+            if (plain != null)
+                UnityEngine.Object.DestroyImmediate(plain);
+            UnityEngine.Object.DestroyImmediate(part);
+            var skinned = holder.AddComponent<SkinnedMeshRenderer>();
+            skinned.sharedMesh = mesh;
+            skinned.sharedMaterials = materials;
+        }
 
         static void MakeCollider(MeshFilter part)
         {

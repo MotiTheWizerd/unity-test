@@ -784,8 +784,17 @@ from any camera, so both cameras read the same player.
   bust Tripo made from Iris's three-view sheet, scaled to 23.2 cm chin to crown and exported by blender-tests
   `ai_models/head.py` (one shell of 47k quads, 94k triangles, no rig yet; 4K maps, no metal, its smoothness 0.6 of
   Tripo's, which read wet), imported as the models are (`ModelImport.HeadsFolder`) and built by `ModelBuilder.BuildModel`
-  but listed in no catalog: a head is placed nowhere in the world. The characters have no blend shapes and no face
-  bones (one mesh each, a Mixamo head bone), so the controls change nothing yet (see Shortcuts).
+  but listed in no catalog: a head is placed nowhere in the world. **What a control does** is `FaceLook`'s: a slider
+  drives the blend shape named by its part and its name without spaces (`NoseWidth`, `JawWidth`, `JawChin`), -100 at 0,
+  none at 50, 100 at 100 (blend shape weights are unclamped), so a shape key made in Blender is a working slider with no
+  code; Skin's Tone tints the skin (`_BaseColor` through a property block), a touch paler at 0 to deep brown at 100.
+  `head.py` makes the first three from two landmarks it finds on the face's middle line (the nose tip, the chin's
+  front), each a push with a soft falloff round one, so nothing near the neck moves. A mesh with blend shapes imported
+  without animation draws plainly, which can't drive them, so `ModelImport` makes it skinned (no bones); such a mesh
+  is measured by its bounds, not baked (`RendererBounds.TryGetPosed`: a bone-less bake is empty until it has drawn).
+  The other characters have no blend shapes and no face bones, and the rest of the controls change nothing yet (see
+  Shortcuts). To come: the body under the head (a headless base body on a Mixamo rig, the head bound to its bones,
+  the neck seam matched in place, normals and weights), then hand-made shapes; the tone darkens the eyes' whites too.
 - **Turntables** (`TurntablePreview`, World/Assets; `TurntableView`, Play.Hud): a thing shown live in a
   `PreviewStudio`, as Skyrim shows the chosen item and the character carrying it. Whoever shows it builds it
   (`Show(subject, build)`): an item from its asset key through the world's `IAssetCatalog` (`Show(assets, key)`;
@@ -1988,4 +1997,4 @@ and the condition for removing it, and is listed here.
 | `EditorApp/Agent/ImageClipboard.cs` (`ForThisPlatform`) | Pasting a picture into the agent's message works on Windows only; elsewhere the clipboard has no picture | Forge runs on Windows today, and Unity's clipboard carries text only | Forge ships on macOS or Linux → a clipboard reader for that platform |
 | `Agent/Memory/SemantixMemory.cs` (`Origin`) | The agent's Semantix memory is made with origin `user`, so Semantix Studio doesn't list it under Your Agents | The server knows no `forge` origin yet, and one memory for all of Forge needs no picker | Users make memories at will → a `forge` origin on the server and a Forge group in Your Agents |
 | `Play/GameSession.cs` (`OnKilled`) | Killed, the player wakes up whole at once where it fell (`Revival.WakeUp`), its fight settled | Fights are being tested; Moti: "let it wake up with full power, stop fighting" | The game has a death (a load, a menu) → the player falls as a character does |
-| `Play/Hud/FaceEditorScreen.cs` | The face editor is its screen alone: its controls change nothing on the character, their values live in the screen, Done does nothing | Moti asked for the UI first; the characters have nothing to move a face with yet | The face's rules and its record arrive (a shared base head with blend shapes or landmark regions; the new game's start hosts the screen) |
+| `Play/Hud/FaceEditorScreen.cs` | The face lives in the screen (no record, Done does nothing), and only Nose Width, Jaw Width, Jaw Chin and Skin Tone change the head; the rest change nothing | Moti asked for the UI first; the base head has three landmark shapes so far | The face's record arrives and the head has a shape for every slider (the new game's start hosts the screen) |

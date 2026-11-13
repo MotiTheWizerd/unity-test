@@ -42,7 +42,9 @@ namespace Forge.World
                 foreach (var renderer in go.GetComponentsInChildren<Renderer>())
                 {
                     var part = renderer.bounds;
-                    if (renderer is SkinnedMeshRenderer skinned && skinned.sharedMesh != null)
+                    // Only a mesh on bones is posed by them; one without (a head whose face is blend shapes alone) bakes
+                    // to nothing until it has drawn once, and stands as its bounds say.
+                    if (renderer is SkinnedMeshRenderer skinned && skinned.sharedMesh != null && skinned.bones.Length > 0)
                     {
                         if (baked == null)
                             baked = new Mesh { name = "Posed" };

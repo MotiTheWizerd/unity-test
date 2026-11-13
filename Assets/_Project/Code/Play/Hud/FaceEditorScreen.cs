@@ -11,10 +11,10 @@ namespace Forge.Play.Hud
     /// The player's face, made before play, as Skyrim's race menu: a column of the face's parts on the left (Head, Eyes,
     /// Brows, Nose, Mouth, Jaw, Skin, Hair), the chosen part's sliders and choices beside it, the character standing large
     /// on the right (a <see cref="TurntableView"/>: drag to turn it, the wheel to zoom), and Randomize, Reset and Done
-    /// along the bottom. Drawn by FaceEditorScreen.uss. Whatever hosts it ticks it while it is on screen.
+    /// along the bottom; each change shows on the head at once (<see cref="FaceLook"/>). Drawn by FaceEditorScreen.uss. Whatever hosts it ticks it while it is on screen.
     /// </summary>
-    // SHORTCUT: the screen alone, its controls change nothing on the character yet (values live in the screen, Done
-    // does nothing); the face's rules and its record come next.
+    // SHORTCUT: the face lives in the screen (no record, Done does nothing), and only the controls the head has a shape
+    // for change it (FaceLook); the face's record and the rest of its shapes come next.
     public sealed class FaceEditorScreen : IDisposable
     {
         public const string UssClass = "forge-face";
@@ -92,6 +92,7 @@ namespace Forge.Play.Hud
         readonly Dictionary<(string, string), int> _values = new Dictionary<(string, string), int>();
         readonly System.Random _random = new System.Random();
         Part _part;
+        GameObject _look;
         bool _dirty = true;
 
         /// <param name="parent">Where the screen goes: a full-screen element of the panel.</param>
@@ -124,7 +125,7 @@ namespace Forge.Play.Hud
             _characterView.AddToClassList(CharacterViewClass);
             frame.Add(_characterView);
             if (character != null)
-                _characterView.Show(character, holder => Build(holder, character));
+                _characterView.Show(character, holder => _look = Build(holder, character));
 
             var footer = Make<VisualElement>(_root, FooterClass);
             Make<Label>(footer, HintClass).text = "Drag: Turn   ·   Wheel: Zoom   ·   Double-click: Face On";
@@ -183,13 +184,32 @@ namespace Forge.Play.Hud
                     _values[(part.Name, control.Name)] = control.IsChoice ? _random.Next(control.Choices.Length) : _random.Next(101);
             }
 
+            ShowAll();
+
             _dirty = true;
         }
 
         void Reset()
         {
             _values.Clear();
+            ShowAll();
             _dirty = true;
+        }
+
+        // Every control's value on the head.
+        void ShowAll()
+        {
+            foreach (var part in Parts)
+            {
+                foreach (var control in part.Controls)
+                    FaceLook.Apply(_look, part.Name, control.Name, Value(part.Name, control.Name));
+            }
+        }
+
+        void Set(Part part, Control control, int value)
+        {
+            _values[(part.Name, control.Name)] = value;
+            FaceLook.Apply(_look, part.Name, control.Name, value);
         }
 
         // Drawn at the next tick, never inside the click that asked.
@@ -214,7 +234,7 @@ namespace Forge.Play.Hud
             slider.AddToClassList(SliderClass);
             slider.RegisterValueChangedCallback(e =>
             {
-                _values[(part.Name, control.Name)] = e.newValue;
+                Set(part, control, e.newValue);
                 value.text = Number(e.newValue);
             });
             row.Add(slider);
@@ -239,7 +259,7 @@ namespace Forge.Play.Hud
             void Step(int by)
             {
                 var length = control.Choices.Length;
-                _values[(part.Name, control.Name)] = (Value(part.Name, control.Name) + by + length) % length;
+                Set(part, control, (Value(part.Name, control.Name) + by + length) % length);
                 Show();
             }
 
