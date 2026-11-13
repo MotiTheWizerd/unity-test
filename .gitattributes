@@ -12,10 +12,8 @@
 *.asmdef     text eol=lf
 *.inputactions text eol=lf
 *.cs         text eol=lf diff=csharp
-
 # Forge terrain heights (plugin side files): binary, never line-ending converted
 *.terrain binary
-
 # Binary art via Git LFS
 *.png  filter=lfs diff=lfs merge=lfs -text
 *.jpg  filter=lfs diff=lfs merge=lfs -text
@@ -32,27 +30,25 @@
 *.mp3  filter=lfs diff=lfs merge=lfs -text
 *.ogg  filter=lfs diff=lfs merge=lfs -text
 *.raw  filter=lfs diff=lfs merge=lfs -text
-
 # Ground textures (CC0, ~66 MB) are kept as plain git objects, not LFS: the account's LFS budget is used up.
 Assets/_Project/Content/Ground/**/*.jpg -filter -diff -merge binary
 Assets/_Project/Content/Ground/**/*.png -filter -diff -merge binary
-
 # Material textures (CC0) likewise: plain git objects, not LFS.
 Assets/_Project/Content/Materials/**/*.jpg -filter -diff -merge binary
 Assets/_Project/Content/Materials/**/*.png -filter -diff -merge binary
-
 # Characters (rigged models, their textures and animations) likewise: plain git objects, not LFS.
 Assets/_Project/Content/Characters/**/*.fbx -filter -diff -merge binary
 Assets/_Project/Content/Characters/**/*.jpg -filter -diff -merge binary
 Assets/_Project/Content/Characters/**/*.png -filter -diff -merge binary
 Assets/_Project/Content/Animations/**/*.fbx -filter -diff -merge binary
-
 # Models (static meshes and their textures) likewise: plain git objects, not LFS.
 Assets/_Project/Content/Models/**/*.fbx -filter -diff -merge binary
 Assets/_Project/Content/Models/**/*.png -filter -diff -merge binary
 Assets/_Project/Content/Models/**/*.jpg -filter -diff -merge binary
-
 # Sounds (recordings and the takes built from them) likewise: plain git objects, not LFS.
 Assets/_Project/Content/Sounds/**/*.wav -filter -diff -merge binary
 Assets/_Project/Content/Sounds/**/*.mp3 -filter -diff -merge binary
 Assets/_Project/Content/Sounds/**/*.ogg -filter -diff -merge binary
+Assets/_Project/Content/Heads/**/*.fbx !text !filter !merge !diff
+Assets/_Project/Content/Heads/**/*.jpg !text !filter !merge !diff
+Assets/_Project/Content/Heads/**/*.png !text !filter !merge !diff

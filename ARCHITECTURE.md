@@ -40,6 +40,7 @@ Assets/_Project/
                  Placeholder/ holds generated placeholder prefabs + materials; Ground/ the ground textures (CC0);
                  Characters/ one folder per rigged character (model, texture, built material and prefab);
                  Models/ one folder per static model (the real art: model, textures, built material and prefab)
+                 Heads/ the face editor's base heads (model, maps, built material and prefab; in no catalog)
   Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview), Water.shader (sea and lakes), Sky.shader (the skybox), Terrain/ (the ground: URP Terrain Lit with its tiling broken up)
   Materials/     GizmoOverlay.mat, PlacementGhost.mat, Water.mat, Sky.mat, InteriorFloor.mat (runtime code copies
                  materials assets reference, never Shader.Find, so builds include the shaders)
@@ -778,8 +779,13 @@ from any camera, so both cameras read the same player.
   choice stepped round between arrows: eye colour, hair style), the character large on the right (a `TurntableView`,
   `CharacterModel.StandingStill`), and Randomize, Reset and Done along the bottom. Drawn on the next tick, never inside
   the click. To look at it without a world: *Forge → Characters → Face Editor* plays `Scenes/FaceEditor.unity`, where
-  `FaceEditorStage` hosts the screen on its own character prefab (VikingF1). The characters have no blend shapes
-  and no face bones (one mesh each, a Mixamo head bone), so the controls change nothing yet (see Shortcuts).
+  `FaceEditorStage` hosts the screen on a prefab of its own: a rigged character stands in its idle, a head alone is
+  shown as it is. It shows **WarriorM** (`Content/Heads/WarriorM`), the first base head: a bald, neutral, symmetric
+  bust Tripo made from Iris's three-view sheet, scaled to 23.2 cm chin to crown and exported by blender-tests
+  `ai_models/head.py` (one shell of 47k quads, 94k triangles, no rig yet; 4K maps, no metal, its smoothness 0.6 of
+  Tripo's, which read wet), imported as the models are (`ModelImport.HeadsFolder`) and built by `ModelBuilder.BuildModel`
+  but listed in no catalog: a head is placed nowhere in the world. The characters have no blend shapes and no face
+  bones (one mesh each, a Mixamo head bone), so the controls change nothing yet (see Shortcuts).
 - **Turntables** (`TurntablePreview`, World/Assets; `TurntableView`, Play.Hud): a thing shown live in a
   `PreviewStudio`, as Skyrim shows the chosen item and the character carrying it. Whoever shows it builds it
   (`Show(subject, build)`): an item from its asset key through the world's `IAssetCatalog` (`Show(assets, key)`;

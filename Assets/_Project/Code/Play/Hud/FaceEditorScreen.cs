@@ -95,7 +95,7 @@ namespace Forge.Play.Hud
         bool _dirty = true;
 
         /// <param name="parent">Where the screen goes: a full-screen element of the panel.</param>
-        /// <param name="character">The character whose face is made, a prefab; null shows none.</param>
+        /// <param name="character">Whose face is made: a character prefab, or a head alone (Content/Heads); null shows none.</param>
         public FaceEditorScreen(VisualElement parent, GameObject character)
         {
             if (parent == null)
@@ -124,7 +124,7 @@ namespace Forge.Play.Hud
             _characterView.AddToClassList(CharacterViewClass);
             frame.Add(_characterView);
             if (character != null)
-                _characterView.Show(character, holder => CharacterModel.StandingStill(holder, character).Root);
+                _characterView.Show(character, holder => Build(holder, character));
 
             var footer = Make<VisualElement>(_root, FooterClass);
             Make<Label>(footer, HintClass).text = "Drag: Turn   ·   Wheel: Zoom   ·   Double-click: Face On";
@@ -276,6 +276,12 @@ namespace Forge.Play.Hud
 
             throw new ArgumentException($"No control '{control}' on face part '{part}'.", nameof(control));
         }
+
+        // A rigged character stands still in its idle; a head alone (a bust, no rig) is shown as it is.
+        static GameObject Build(Transform holder, GameObject prefab) =>
+            prefab.GetComponentInChildren<Animator>(true) != null
+                ? CharacterModel.StandingStill(holder, prefab).Root
+                : UnityEngine.Object.Instantiate(prefab, holder, false);
 
         static int Start(Control control) => control.IsChoice ? 0 : Middle;
 

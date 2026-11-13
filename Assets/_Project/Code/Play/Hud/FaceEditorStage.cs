@@ -12,7 +12,7 @@ namespace Forge.Play.Hud
     [RequireComponent(typeof(UIDocument))]
     public sealed class FaceEditorStage : MonoBehaviour
     {
-        [SerializeField, Tooltip("The character whose face is made, a character prefab.")]
+        [SerializeField, Tooltip("Whose face is made: a character prefab, or a head alone (Content/Heads).")]
         GameObject _character;
 
         [NonSerialized] FaceEditorScreen _screen;

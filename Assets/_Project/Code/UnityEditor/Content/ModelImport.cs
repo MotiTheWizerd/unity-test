@@ -17,6 +17,9 @@ namespace Forge.UnityEditor.Content
     sealed class ModelImport : AssetPostprocessor
     {
         public const string ModelsFolder = "Assets/_Project/Content/Models";
+
+        /// <summary>The face editor's heads, one folder each, imported as the models are but placed nowhere in the world.</summary>
+        public const string HeadsFolder = "Assets/_Project/Content/Heads";
         const string ColliderSuffix = "_COL";
 
         // A model shows its full detail while it stands at least this share of the screen's height, and is culled below
@@ -59,7 +62,8 @@ namespace Forge.UnityEditor.Content
         public static float LodHeight(int level, int levels) =>
             levels <= 1 ? CullHeight : FullDetailHeight * Mathf.Pow(CullHeight / FullDetailHeight, level / (levels - 1f));
 
-        static bool IsModel(string path) => path.StartsWith(ModelsFolder + "/", StringComparison.Ordinal);
+        static bool IsModel(string path) =>
+            path.StartsWith(ModelsFolder + "/", StringComparison.Ordinal) || path.StartsWith(HeadsFolder + "/", StringComparison.Ordinal);
 
         static void MakeCollider(MeshFilter part)
         {
