@@ -184,6 +184,8 @@ namespace Forge.Play
                 Actor = new PlayedActor(stage, id, placed.name, shape, walking, eyes, attributes, inventory, _equipment,
                     record != null ? record.DisplayName : kind.DisplayName);
                 Actor.Rules.Facing = BodyFacing.Movement;
+                // Dead, it goes limp, to be dragged off; it doesn't get up again.
+                Actor.GoesLimp = true;
                 Actor.ChangeLook(prefab);
                 Actor.PlaceAt(placed.transform.position, heading);
                 _placed.SetActive(false);

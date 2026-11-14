@@ -84,8 +84,8 @@ namespace Forge.Play
             _rigidbody.WakeUp();
         }
 
-        // The grip starts on the point taken, beside the body in the world's frame (so a rebase moves both alike), and the
-        // joint ties that point to it. Held steady, the grip faces as the carrier does, and the joint locks the body's turn
+        // The grip starts on the point taken, beside the body in the frame it moves with (the world's; a limp body's own
+        // look's for a part of it, Carriable), so a rebase moves both alike, and the joint ties that point to it. Held steady, the grip faces as the carrier does, and the joint locks the body's turn
         // to the grip's as it was when taken: a spring could not, the hold's pull being far stronger, a hair off its
         // centre, than any spring that would not shake.
         void Hold(Vector3 point, CarryHold hold, Quaternion facing)
@@ -95,7 +95,7 @@ namespace Forge.Play
             Target = point;
             Facing = facing;
             var grip = new GameObject("Carry Grip").transform;
-            grip.SetParent(transform.parent, false);
+            grip.SetParent(TryGetComponent<Carriable>(out var part) && part.Frame != null ? part.Frame : transform.parent, false);
             grip.SetPositionAndRotation(point, hold == CarryHold.Steady ? facing : Quaternion.identity);
             _grip = grip.gameObject.AddComponent<Rigidbody>();
             _grip.isKinematic = true;

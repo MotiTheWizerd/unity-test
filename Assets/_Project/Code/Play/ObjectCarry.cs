@@ -7,7 +7,8 @@ using UnityEngine;
 namespace Forge.Play
 {
     /// <summary>
-    /// How an actor grabs and carries loose things, Skyrim's way: the physical body of a world object in reach, along the
+    /// How an actor grabs and carries loose things, Skyrim's way: the physical body of a world object in reach (or of a
+    /// part of something that may be carried though it is none, <see cref="Carriable"/>: a limp body's arm), along the
     /// middle of the view (<see cref="ReachRay"/>, a thin line then a ball, as the use key aims), no heavier than the actor
     /// can lift, is held a little way in front of its eyes, where it looks (<see cref="Carried"/>), one of two ways
     /// (<see cref="CarryHold"/>): loose (the use key held), by the point the line met, the rest hanging from there and
@@ -110,7 +111,10 @@ namespace Forge.Play
                 body.WakeUp();
         }
 
-        /// <summary>Throws what is carried the way <paramref name="view"/> looks: the lighter, the faster.</summary>
+        /// <summary>
+        /// Throws what is carried the way <paramref name="view"/> looks: the lighter, the faster; a part of something
+        /// (a limp body's arm) goes with all it is joined to, as heavy as all of it.
+        /// </summary>
         public void Throw(ViewPose view)
         {
             if (!IsCarrying)
@@ -119,8 +123,24 @@ namespace Forge.Play
             Drop();
             if (body == null)
                 return;
-            var speed = Mathf.Min(_settings.ThrowSpeed, _settings.ThrowImpulse / Mathf.Max(body.mass, 0.01f));
-            body.linearVelocity = view.Forward.ToUnity() * speed;
+            var whole = body.TryGetComponent<Carriable>(out var part) ? part.Whole : null;
+            var mass = body.mass;
+            if (whole != null)
+            {
+                mass = 0f;
+                foreach (var joined in whole)
+                    mass += joined.mass;
+            }
+
+            var velocity = view.Forward.ToUnity() * Mathf.Min(_settings.ThrowSpeed, _settings.ThrowImpulse / Mathf.Max(mass, 0.01f));
+            if (whole == null)
+            {
+                body.linearVelocity = velocity;
+                return;
+            }
+
+            foreach (var joined in whole)
+                joined.linearVelocity = velocity;
         }
 
         public void Dispose() => Drop();
@@ -157,10 +177,11 @@ namespace Forge.Play
             return false;
         }
 
+        // A loose body: a world object's, or one that may be carried though it is none (a part of a body gone limp).
         static bool IsFree(RaycastHit hit, out Rigidbody body)
         {
             body = hit.collider.attachedRigidbody;
-            return body != null && !body.isKinematic && body.GetComponent<RecordLink>() != null;
+            return body != null && !body.isKinematic && (body.GetComponent<RecordLink>() != null || body.GetComponent<Carriable>() != null);
         }
     }
 

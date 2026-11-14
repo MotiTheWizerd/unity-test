@@ -14,8 +14,9 @@ namespace Forge.Play
     /// skin as it stands at rest: the vertices the part's bones carry most, along the way they lie longest, as wide as
     /// most of them stand off that line; so a slight elf and a broad viking are each met where they are drawn, armor and
     /// all. Fitted once a character (by its prefab) and kept. Triggers on the <see cref="HitboxLayer"/>, with kinematic
-    /// bodies, as moving colliders should have: they stop nothing, and only a look that asks for them finds them
-    /// (<see cref="SceneLayers.Strikes"/>). Whose they are, the body they hang under says (<see cref="ActorLink"/>).
+    /// bodies, as moving colliders should have (<see cref="Ride"/>): they stop nothing, and only a look that asks for them
+    /// finds them (<see cref="SceneLayers.Strikes"/>); a look gone limp makes them its solid parts (<see cref="Ragdoll"/>,
+    /// <see cref="Solid"/>). Whose they are, the body they hang under says (<see cref="ActorLink"/>).
     /// Runtime-only; they go with the look.
     /// </summary>
     public static class Hitboxes
@@ -254,25 +255,50 @@ namespace Forge.Play
             return way;
         }
 
-        // A part's hitbox hung from its bone: the capsule a trigger along its own up, moved with the bone every frame (a
-        // kinematic body, as a moving collider should have).
+        /// <summary>
+        /// <paramref name="hitbox"/> as its look animates: a trigger on the <see cref="HitboxLayer"/>, moved with its bone
+        /// every frame by a kinematic body of its own, as a moving collider should have (its look, gone limp, made it solid:
+        /// <see cref="Solid"/>).
+        /// </summary>
+        public static void Ride(Hitbox hitbox)
+        {
+            var box = hitbox.gameObject;
+            box.layer = HitboxLayer.Index;
+            box.GetComponent<CapsuleCollider>().isTrigger = true;
+            if (!box.TryGetComponent<Rigidbody>(out var body))
+                body = box.AddComponent<Rigidbody>();
+            body.isKinematic = true;
+            body.useGravity = false;
+        }
+
+        /// <summary>
+        /// <paramref name="hitbox"/> as its look lies limp (<see cref="Ragdoll"/>): solid, on <paramref name="layer"/>, and
+        /// with no body of its own, so it is a part of the body its bone (or the nearest above it) has.
+        /// </summary>
+        public static void Solid(Hitbox hitbox, int layer)
+        {
+            var box = hitbox.gameObject;
+            if (box.TryGetComponent<Rigidbody>(out var body))
+                Object.DestroyImmediate(body);
+            box.GetComponent<CapsuleCollider>().isTrigger = false;
+            box.layer = layer;
+        }
+
+        // A part's hitbox hung from its bone: the capsule along its own up, riding the bone (Ride).
         static Hitbox Hang(Transform bone, Shape shape)
         {
             var (humanBone, part) = Parts[shape.Part];
-            var box = new GameObject($"Hitbox {humanBone}") { layer = HitboxLayer.Index };
+            var box = new GameObject($"Hitbox {humanBone}");
             box.transform.SetParent(bone, false);
             box.transform.localPosition = shape.Center;
             box.transform.localRotation = shape.Turn;
             var hitbox = box.AddComponent<Hitbox>();
             hitbox.Part = part;
             var capsule = box.AddComponent<CapsuleCollider>();
-            capsule.isTrigger = true;
             capsule.direction = 1;
             capsule.radius = shape.Radius;
             capsule.height = shape.Height;
-            var body = box.AddComponent<Rigidbody>();
-            body.isKinematic = true;
-            body.useGravity = false;
+            Ride(hitbox);
             return hitbox;
         }
 

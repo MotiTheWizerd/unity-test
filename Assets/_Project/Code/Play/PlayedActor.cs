@@ -25,7 +25,8 @@ namespace Forge.Play
     /// its body faces), and its look (<see cref="Model"/>,
     /// changed at will: <see cref="ChangeLook"/>) with everything shown on it:
     /// what it holds, its draws and sheathes, its swings, the blade's sweep through the scene, its shots and their
-    /// flight, its footsteps, its head turned to whom it looks at (<see cref="LooksAt"/>). Each frame it does what it is
+    /// flight, its footsteps, its head turned to whom it looks at (<see cref="LooksAt"/>), its body gone limp once dead if it
+    /// goes limp (<see cref="GoesLimp"/>, <see cref="Ragdoll"/>). Each frame it does what it is
     /// told (<see cref="Tick"/>, <see cref="ActorCommands"/>) and
     /// shows it. Only who tells it differs: the player's controls (<see cref="PlayerSession"/>), a mind
     /// (<see cref="WorldCharacters"/>). It stands on the game's roster (<see cref="ActorRoster"/>) from the moment it is
@@ -36,10 +37,18 @@ namespace Forge.Play
         // Of the way from the feet up to the eyes, where the chest is on a look that can't tell (no chest bone).
         const float ChestOfEyeHeight = 0.8f;
 
+        // How long past its death's end a body that goes limp still lies as its death left it, seconds: the pose settled.
+        const float LimpAfterDeath = 0.1f;
+
+        // How far above and below where a limp body's pelvis lies the ground it gets up on is looked for, meters.
+        const float GroundSearch = 2f;
+
         readonly float _eyeHeight;
         readonly EquipmentModifiers _equipmentModifiers;
         string _deathMove;
+        float _limpIn;
         CharacterModel _model;
+        Ragdoll _ragdoll;
         EquipmentView _equipmentView;
         ReadinessView _readinessView;
         CombatView _combatView;
@@ -136,6 +145,12 @@ namespace Forge.Play
         public bool Fallen { get; private set; }
 
         /// <summary>
+        /// Whether, fallen, its body goes limp once its death has played (<see cref="Ragdoll"/>): it lies as the world has it
+        /// and can be dragged off. Else (the player's, which gets up again) it lies as its death left it.
+        /// </summary>
+        public bool GoesLimp { get; set; }
+
+        /// <summary>
         /// Whom its head turns to while its body goes about its business (<see cref="HeadLook"/>), while both stand: the
         /// one a character's gaze settles on (<see cref="Forge.Game.Minds.Gaze"/>); default: no one, it looks as its
         /// animation has it.
@@ -171,8 +186,9 @@ namespace Forge.Play
         /// <summary>
         /// It falls (its health ran out): its swings stop, its body lies down (<see cref="ActorBody.Lie"/>: no obstacle,
         /// struck by nothing) and its look dies in its weapon's style's death (<see cref="ActorCombat.DeathAnimation"/>,
-        /// else the look's own; one of the death's variants by chance, <see cref="CharacterModel.Vary"/>) and stays so;
-        /// nothing moves it, nothing costs it, and its look stays down, until it rises.
+        /// else the look's own; one of the death's variants by chance, <see cref="CharacterModel.Vary"/>) and stays so, or,
+        /// one that <see cref="GoesLimp"/>, then goes limp; nothing moves it, nothing costs it, and its look stays down,
+        /// until it rises.
         /// </summary>
         public void Fall()
         {
@@ -184,14 +200,25 @@ namespace Forge.Play
             var death = Combat.DeathAnimation ?? HumanoidAnimation.DeathMove;
             _deathMove = _model != null ? _model.Vary(death) : death;
             _model?.PlayThrough(_deathMove);
+            _limpIn = (_model != null ? _model.LengthOf(_deathMove) : 0f) + LimpAfterDeath;
         }
 
-        /// <summary>It gets up again (revived): its body stands where it lay, its look rises out of its death, and it is itself again.</summary>
+        /// <summary>
+        /// It gets up again (revived): its body stands where it lay (limp, where its pelvis lies now), its look rises out of
+        /// its death, and it is itself again.
+        /// </summary>
         public void Rise()
         {
             if (!Fallen)
                 return;
             Fallen = false;
+            if (_ragdoll != null && _ragdoll.Limp)
+            {
+                var pelvis = _ragdoll.Pelvis;
+                _ragdoll.Stiffen();
+                PlaceAt(GroundUnder(pelvis), Rules.BodyHeading);
+            }
+
             Body.Lie(false);
             if (_deathMove != null)
                 _model?.Resume(_deathMove, 1f);
@@ -219,8 +246,8 @@ namespace Forge.Play
                 return;
 
             _model = new CharacterModel(Body.Body, prefab, Body.Hover);
-            // Fitted to the look as it stands at rest, before anything poses it.
-            Hitboxes.Build(_model, prefab);
+            // Fitted to the look as it stands at rest, before anything poses it; and its rest kept, for going limp.
+            _ragdoll = new Ragdoll(_model, Hitboxes.Build(_model, prefab));
             Rules.EyeHeight = _model.TryGetEyeHeight(out var eyes) ? eyes : _eyeHeight;
             _equipmentView = new EquipmentView(Equipment, _model, Stage.World, Stage.Assets);
             _readinessView = new ReadinessView(Readiness, _model);
@@ -234,9 +261,12 @@ namespace Forge.Play
             if (Stage.Sounds != null)
                 _footsteps = new FootstepView(_model, Stage.Sounds, Stage.Surfaces, Rules.Locomotion.Settings);
             Show(0f);
-            // Fallen, the new look lies as the old one did: at the end of its death.
+            // Fallen, the new look lies as the old one did: at the end of its death (limp at once, if it goes limp).
             if (Fallen && _deathMove != null)
+            {
                 _model.Hold(_deathMove, 1f);
+                _limpIn = 0f;
+            }
         }
 
         /// <summary>
@@ -249,10 +279,16 @@ namespace Forge.Play
         {
             if (Fallen)
             {
-                // Down: whatever it is told, it lies still (its guard's face away with its guard); its shots fly on.
+                // Down: whatever it is told, it lies still (its guard's face away with its guard); its shots fly on. Its
+                // death played, one that goes limp does, and lies as the world has it.
                 _guardView?.Tick();
                 _arrows?.Tick(deltaTime);
+                if (_ragdoll != null && _ragdoll.Limp)
+                    return;
                 _model?.Animate(BodyMotion.Still, deltaTime);
+                _limpIn -= deltaTime;
+                if (GoesLimp && _limpIn <= 0f)
+                    _ragdoll?.GoLimp();
                 return;
             }
 
@@ -326,6 +362,8 @@ namespace Forge.Play
             _combatView?.Dispose();
             _combatView = null;
             _guardView = null;
+            // Its bodies and joints go with the look.
+            _ragdoll = null;
             _model?.Dispose();
             _model = null;
             Look = null;
@@ -341,6 +379,13 @@ namespace Forge.Play
             var weaponsOut = state == Forge.Game.Equipment.Readiness.Drawing || state == Forge.Game.Equipment.Readiness.Drawn;
             return weaponsOut && _model != null ? _model.DrawnTopSpeeds : TopSpeeds.None;
         }
+
+        // The ground under `point` (the scene's), where a body that lay there stands; the point itself over none.
+        static Vector3 GroundUnder(Vector3 point) =>
+            Physics.Raycast(point + Vector3.up * GroundSearch, Vector3.down, out var hit, GroundSearch * 2f, SceneLayers.Solid,
+                QueryTriggerInteraction.Ignore)
+                ? hit.point
+                : point;
 
         // The eyes of whom it looks at, while both stand; null for no one.
         Vector3? LookedAt() =>

@@ -233,6 +233,33 @@ namespace Forge.Play
         /// </summary>
         public string Vary(string move) => _animation != null ? _animation.Vary(move) : move;
 
+        /// <summary>How long its move <paramref name="move"/> plays, seconds; 0 when it has no such move.</summary>
+        public float LengthOf(string move)
+        {
+            var clip = _animation?.Clip(move);
+            return clip != null ? clip.length : 0f;
+        }
+
+        /// <summary>
+        /// Whether its animations pose it (so it is made): off, its animators rest where they are and nothing works on its
+        /// pose (<see cref="Posed"/>), its bones left to whatever else moves them (a body gone limp, <see cref="Ragdoll"/>);
+        /// on again, its animations take it up where they left it.
+        /// </summary>
+        public bool Animated
+        {
+            get => _afterAnimation.enabled;
+            set
+            {
+                foreach (var animator in Animators)
+                {
+                    animator.keepAnimatorStateOnDisable = true;
+                    animator.enabled = value;
+                }
+
+                _afterAnimation.enabled = value;
+            }
+        }
+
         /// <summary>
         /// How its move <paramref name="move"/> plays, measured from the clip as <paramref name="measure"/> says: a bow's
         /// draw by the string's pull (<see cref="ShotFinder"/>), a block by the shield coming up (<see cref="RaiseFinder"/>),
