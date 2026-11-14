@@ -76,7 +76,7 @@ namespace Forge.Editing
             // All ids up front: each id stays free until its record is put.
             var newIds = session.NewIds(PlacedIdPrefix, originals.Count);
             var copies = originals
-                .Select((p, i) => new PlacedObjectRecord(newIds[i], p.BaseId, p.Space, p.Position, p.Rotation, p.Scale, p.Materials))
+                .Select((p, i) => p.WithId(newIds[i]))
                 .Select(copy => place != null ? place(copy) : copy)
                 .ToList();
             session.Batch(description, () =>

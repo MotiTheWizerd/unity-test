@@ -38,6 +38,9 @@ namespace Forge.UnityEditor
         // Meters to the right of the items' row the village woman strolls about (WorldCharacters).
         const float VillagerAside = 4f;
 
+        // Meters ahead of the start a woman lies dead, short of the items' row: a body to take up and drag off.
+        const float FallenAhead = 1.3f;
+
         // The bare earth around the start, so grass doesn't hide the items: dirt within the inner radius (m) of the
         // items' row, fading into the grass by the outer.
         const float ClearingInner = 3.5f;
@@ -92,6 +95,7 @@ namespace Forge.UnityEditor
             records.AddRange(ItemsAtTheStart(records.OfType<BaseObjectRecord>().Where(r => r.Item != null).ToList()));
             records.Add(DummyAtTheStart());
             records.Add(VillagerAtTheStart());
+            records.Add(FallenAtTheStart());
 
             return new Plugin(new PluginManifest(PluginId, "0.1.0"), records);
         }
@@ -159,6 +163,17 @@ namespace Forge.UnityEditor
             var facing = Quaternion.CreateFromAxisAngle(Vector3.UnitY, (MainStart.Heading + 180f) * Compass.DegreesToRadians);
             return new PlacedObjectRecord(new RecordId(PluginId, "ref/start_" + id), new RecordId(PluginId, id), MainSpace,
                 ItemsCentre() + new Vector3(aside.X, 0f, aside.Y), facing, 1f);
+        }
+
+        // The first of the world's characters again, placed dead (the Creation Kit's "Starts Dead") FallenAhead in front of
+        // the start, lying across its view: a body to take up and drag off as a game begins.
+        static PlacedObjectRecord FallenAtTheStart()
+        {
+            var id = CoreModels.Npcs[0].Id;
+            var ahead = Compass.Forward(MainStart.Heading) * FallenAhead;
+            var facing = Quaternion.CreateFromAxisAngle(Vector3.UnitY, (MainStart.Heading + 90f) * Compass.DegreesToRadians);
+            return new PlacedObjectRecord(new RecordId(PluginId, "ref/start_fallen_" + id), new RecordId(PluginId, id), MainSpace,
+                MainStart.Position + new Vector3(ahead.X, 0f, ahead.Y), facing, 1f, startsDead: true);
         }
 
         static BaseObjectRecord BaseObject(string name, string displayName, string assetKey, string category, PlacementRules placement = null,

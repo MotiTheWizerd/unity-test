@@ -188,9 +188,10 @@ namespace Forge.Play
         /// struck by nothing) and its look dies in its weapon's style's death (<see cref="ActorCombat.DeathAnimation"/>,
         /// else the look's own; one of the death's variants by chance, <see cref="CharacterModel.Vary"/>) and stays so, or,
         /// one that <see cref="GoesLimp"/>, then goes limp; nothing moves it, nothing costs it, and its look stays down,
-        /// until it rises.
+        /// until it rises. <paramref name="already"/>: it lay dead before anyone saw it (placed so,
+        /// <see cref="Forge.Data.Records.PlacedObjectRecord.StartsDead"/>): its look lies at its death's end at once.
         /// </summary>
-        public void Fall()
+        public void Fall(bool already = false)
         {
             if (Fallen)
                 return;
@@ -199,6 +200,12 @@ namespace Forge.Play
             Body.Lie(true);
             var death = Combat.DeathAnimation ?? HumanoidAnimation.DeathMove;
             _deathMove = _model != null ? _model.Vary(death) : death;
+            if (already)
+            {
+                LieAtDeathsEnd();
+                return;
+            }
+
             _model?.PlayThrough(_deathMove);
             _limpIn = (_model != null ? _model.LengthOf(_deathMove) : 0f) + LimpAfterDeath;
         }
@@ -261,12 +268,9 @@ namespace Forge.Play
             if (Stage.Sounds != null)
                 _footsteps = new FootstepView(_model, Stage.Sounds, Stage.Surfaces, Rules.Locomotion.Settings);
             Show(0f);
-            // Fallen, the new look lies as the old one did: at the end of its death (limp at once, if it goes limp).
+            // Fallen, the new look lies as the old one did: at the end of its death.
             if (Fallen && _deathMove != null)
-            {
-                _model.Hold(_deathMove, 1f);
-                _limpIn = 0f;
-            }
+                LieAtDeathsEnd();
         }
 
         /// <summary>
@@ -378,6 +382,23 @@ namespace Forge.Play
             var state = Readiness.State;
             var weaponsOut = state == Forge.Game.Equipment.Readiness.Drawing || state == Forge.Game.Equipment.Readiness.Drawn;
             return weaponsOut && _model != null ? _model.DrawnTopSpeeds : TopSpeeds.None;
+        }
+
+        // Its look at its death's end now, all of it at once (not fading in), going limp, if it goes limp, once its pose has
+        // settled there; a death that can't be held still plays through.
+        void LieAtDeathsEnd()
+        {
+            if (_model == null)
+                return;
+            if (!_model.Hold(_deathMove, 1f))
+            {
+                _model.PlayThrough(_deathMove);
+                _limpIn = _model.LengthOf(_deathMove) + LimpAfterDeath;
+                return;
+            }
+
+            _model.Animate(BodyMotion.Still, 0f);
+            _limpIn = LimpAfterDeath;
         }
 
         // The ground under `point` (the scene's), where a body that lay there stands; the point itself over none.

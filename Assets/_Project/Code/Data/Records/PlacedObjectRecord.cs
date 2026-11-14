@@ -8,13 +8,15 @@ namespace Forge.Data.Records
     /// <summary>
     /// An instance of a <see cref="BaseObjectRecord"/> placed in a space; its position is local to that space. It may
     /// wear other materials than its base object in some of its slots (<see cref="Materials"/>); every other slot keeps
-    /// the base object's look.
+    /// the base object's look. A character may be placed dead (<see cref="StartsDead"/>), as the Creation Kit's
+    /// reference flag has it: a body lying where it fell, from the first.
     /// </summary>
     public sealed class PlacedObjectRecord : Record
     {
         /// <param name="materials">Slots dressed in another material; null or empty: the base object's look throughout.</param>
+        /// <param name="startsDead">A character placed dead: it lies where it is, a body, from the first; nothing else minds it.</param>
         public PlacedObjectRecord(RecordId id, RecordId baseId, RecordId space, Vector3 position, Quaternion rotation, float scale,
-            IEnumerable<MaterialOverride> materials = null)
+            IEnumerable<MaterialOverride> materials = null, bool startsDead = false)
             : base(id)
         {
             if (baseId.IsDefault)
@@ -34,6 +36,7 @@ namespace Forge.Data.Records
             Rotation = rotation;
             Scale = scale;
             Materials = MaterialOverrides.Validated(materials, nameof(materials));
+            StartsDead = startsDead;
         }
 
         public RecordId BaseId { get; }
@@ -50,8 +53,14 @@ namespace Forge.Data.Records
         /// <summary>The slots dressed in another material than the base object's, sorted by slot name; empty when none are.</summary>
         public IReadOnlyList<MaterialOverride> Materials { get; }
 
+        /// <summary>Whether it is a character placed dead: a body lying where it is from the first (the Creation Kit's "Starts Dead").</summary>
+        public bool StartsDead { get; }
+
         /// <summary>The material worn in <paramref name="slot"/> instead of the base object's, or null when it keeps that.</summary>
         public RecordId? MaterialIn(string slot) => MaterialOverrides.In(Materials, slot);
+
+        /// <summary>A copy under another id (a duplicate), all else as it is.</summary>
+        public PlacedObjectRecord WithId(RecordId id) => new PlacedObjectRecord(id, BaseId, Space, Position, Rotation, Scale, Materials, StartsDead);
 
         public PlacedObjectRecord WithPosition(Vector3 position) => WithTransform(position, Rotation, Scale);
 
@@ -60,7 +69,11 @@ namespace Forge.Data.Records
         public PlacedObjectRecord WithScale(float scale) => WithTransform(Position, Rotation, scale);
 
         public PlacedObjectRecord WithTransform(Vector3 position, Quaternion rotation, float scale) =>
-            new PlacedObjectRecord(Id, BaseId, Space, position, rotation, scale, Materials);
+            new PlacedObjectRecord(Id, BaseId, Space, position, rotation, scale, Materials, StartsDead);
+
+        /// <summary>A copy placed dead (<paramref name="startsDead"/>), or alive.</summary>
+        public PlacedObjectRecord WithStartsDead(bool startsDead) =>
+            new PlacedObjectRecord(Id, BaseId, Space, Position, Rotation, Scale, Materials, startsDead);
 
         /// <summary>A copy wearing <paramref name="material"/> in <paramref name="slot"/>; null gives the slot back its base look.</summary>
         public PlacedObjectRecord WithMaterial(string slot, RecordId? material)
@@ -71,11 +84,11 @@ namespace Forge.Data.Records
 
         /// <summary>A copy wearing exactly <paramref name="materials"/>; null or empty: the base object's look throughout.</summary>
         public PlacedObjectRecord WithMaterials(IEnumerable<MaterialOverride> materials) =>
-            new PlacedObjectRecord(Id, BaseId, Space, Position, Rotation, Scale, materials);
+            new PlacedObjectRecord(Id, BaseId, Space, Position, Rotation, Scale, materials, StartsDead);
 
         /// <summary>A copy that is an instance of <paramref name="baseId"/> instead, wearing <paramref name="materials"/> (null: none of its own).</summary>
         public PlacedObjectRecord WithBase(RecordId baseId, IEnumerable<MaterialOverride> materials = null) =>
-            new PlacedObjectRecord(Id, baseId, Space, Position, Rotation, Scale, materials);
+            new PlacedObjectRecord(Id, baseId, Space, Position, Rotation, Scale, materials, StartsDead);
 
         /// <summary>True when position, rotation and scale are exactly equal.</summary>
         public bool HasSameTransform(PlacedObjectRecord other) =>

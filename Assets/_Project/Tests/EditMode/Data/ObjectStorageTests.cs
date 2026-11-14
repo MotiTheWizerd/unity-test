@@ -121,6 +121,47 @@ namespace Forge.Tests.Data
         }
 
         [Test]
+        public void Codec_RoundTripsABodyPlacedDead_WithOrWithoutMaterials_AndBlocksWithNoneStayAsTheyWere()
+        {
+            var dead = At("core:ref/a", 1f, 2f).WithStartsDead(true);
+            var objects = new[] { dead, Dressed(At("core:ref/b", 3f, 4f)), Dressed(At("core:ref/c", 5f, 6f)).WithStartsDead(true) };
+
+            ObjectCodec.Encode(objects, out var codec);
+            var copy = RoundTrip(objects);
+
+            Assert.That(codec, Is.EqualTo(ObjectCodec.WithFlags));
+            Assert.That(copy.Select(o => o.StartsDead), Is.EqualTo(new[] { true, false, true }));
+            Assert.That(copy[1].Materials, Is.EqualTo(objects[1].Materials));
+            Assert.That(copy[2].MaterialIn("Roof"), Is.EqualTo(Slate));
+            Assert.That(copy[0].Position, Is.EqualTo(dead.Position));
+
+            var alive = new[] { At("core:ref/a", 1f, 2f), Dressed(At("core:ref/b", 3f, 4f)) };
+            Assert.That(ObjectCodec.Encode(alive.Select(o => o.WithStartsDead(true).WithStartsDead(false)).ToArray(), out var aliveCodec),
+                Is.EqualTo(ObjectCodec.Encode(alive, out _)), "Raised again, a body writes exactly what it did before.");
+            Assert.That(aliveCodec, Is.EqualTo(ObjectCodec.WithMaterials));
+        }
+
+        [Test]
+        public void Codec_RefusesFlagsItDoesntKnow()
+        {
+            var block = ObjectCodec.Encode(new[] { At("core:ref/a", 1f, 2f).WithStartsDead(true) }, out var codec);
+            block[block.Length - 1] = 0x81;
+
+            Assert.Throws<DataValidationException>(() => ObjectCodec.Decode(block, codec, Key(0, 0), Core()));
+        }
+
+        [Test]
+        public void Store_SavesAndReloadsABodyPlacedDead()
+        {
+            _store.Save(Plugin("core", Base("core:rock"), At("core:ref/a", 1f, 1f).WithStartsDead(true), At("core:ref/b", 70f, 1f)));
+
+            var loaded = Store().Load("core");
+
+            Assert.That(loaded.Objects.Read(Key(0, 0)).Single().StartsDead, Is.True);
+            Assert.That(loaded.Objects.Read(Key(1, 0)).Single().StartsDead, Is.False);
+        }
+
+        [Test]
         public void Store_SavesAndReloadsMaterials_AndCopiesTheirBlocksUnchanged()
         {
             _store.Save(Plugin("core", Base("core:rock"), Dressed(At("core:ref/a", 1f, 1f)), At("core:ref/b", 70f, 1f)));

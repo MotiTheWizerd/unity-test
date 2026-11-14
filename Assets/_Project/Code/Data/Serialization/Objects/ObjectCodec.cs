@@ -13,8 +13,10 @@ namespace Forge.Data.Serialization
     /// the space is not repeated; namespaces and base object ids go through a string table, since a block repeats
     /// a few of them; names are written once each. Transforms are plain floats. A block where some object wears other
     /// materials (<see cref="PlacedObjectRecord.Materials"/>) is written in <see cref="WithMaterials"/>: each object
-    /// then also lists its overrides (slot, material namespace, material name, all through the string table). Every
-    /// other block stays in <see cref="Plain"/>, byte for byte what it always was.
+    /// then also lists its overrides (slot, material namespace, material name, all through the string table). A block
+    /// where some object is flagged (<see cref="PlacedObjectRecord.StartsDead"/>) is written in <see cref="WithFlags"/>:
+    /// each object lists its overrides and then its flags, a byte (<see cref="ObjectFlags"/>). Every other block stays in
+    /// <see cref="Plain"/> or <see cref="WithMaterials"/>, byte for byte what it always was.
     /// </summary>
     static class ObjectCodec
     {
@@ -24,9 +26,20 @@ namespace Forge.Data.Serialization
         /// <summary>The codec of blocks where some object wears other materials in some of its slots.</summary>
         public const byte WithMaterials = 2;
 
+        /// <summary>The codec of blocks where some object is flagged (placed dead): each lists its materials, then its flags.</summary>
+        public const byte WithFlags = 3;
+
+        /// <summary>A placed object's flags, as a <see cref="WithFlags"/> block writes them.</summary>
+        [Flags]
+        enum ObjectFlags : byte
+        {
+            None = 0,
+            StartsDead = 1,
+        }
+
         static readonly Encoding Utf8 = new UTF8Encoding(false);
 
-        public static bool IsKnown(byte codec) => codec == Plain || codec == WithMaterials;
+        public static bool IsKnown(byte codec) => codec == Plain || codec == WithMaterials || codec == WithFlags;
 
         /// <param name="codec">Which codec the block was written in, stored beside it.</param>
         public static byte[] Encode(IReadOnlyList<PlacedObjectRecord> objects, out byte codec)
@@ -37,6 +50,12 @@ namespace Forge.Data.Serialization
             codec = Plain;
             foreach (var placed in objects)
             {
+                if (FlagsOf(placed) != ObjectFlags.None)
+                {
+                    codec = WithFlags;
+                    break;
+                }
+
                 if (placed.Materials.Count > 0)
                     codec = WithMaterials;
             }
@@ -69,7 +88,7 @@ namespace Forge.Data.Serialization
                     Write(writer, placed.Position);
                     Write(writer, placed.Rotation);
                     writer.Write(placed.Scale);
-                    if (codec != WithMaterials)
+                    if (codec == Plain)
                         continue;
                     writer.Write((byte)placed.Materials.Count);
                     foreach (var material in placed.Materials)
@@ -78,6 +97,9 @@ namespace Forge.Data.Serialization
                         writer.Write((ushort)Index(material.Material.Namespace));
                         writer.Write((ushort)Index(material.Material.Name));
                     }
+
+                    if (codec == WithFlags)
+                        writer.Write((byte)FlagsOf(placed));
                 }
             }
 
@@ -125,13 +147,17 @@ namespace Forge.Data.Serialization
                         var position = ReadVector3(reader);
                         var rotation = ReadQuaternion(reader);
                         var scale = reader.ReadSingle();
-                        var materials = codec == WithMaterials ? ReadMaterials(reader, strings) : null;
+                        var materials = codec != Plain ? ReadMaterials(reader, strings) : null;
+                        var flags = codec == WithFlags ? (ObjectFlags)reader.ReadByte() : ObjectFlags.None;
+                        if ((flags & ~ObjectFlags.StartsDead) != ObjectFlags.None)
+                            throw Damaged($"gives '{id}' flags this Forge doesn't know ({(byte)flags})");
 
                         if (id.Namespace != manifest.Id && !manifest.HasMaster(id.Namespace))
                             throw new DataValidationException(new[] { $"Plugin '{manifest.Id}' writes record '{id}' but '{id.Namespace}' is neither the plugin itself nor one of its masters." });
                         if (!seen.Add(id))
                             throw new DataValidationException(new[] { $"Plugin '{manifest.Id}' contains record '{id}' more than once." });
-                        var placed = new PlacedObjectRecord(id, baseId, key.Space, position, rotation, scale, materials);
+                        var placed = new PlacedObjectRecord(id, baseId, key.Space, position, rotation, scale, materials,
+                            (flags & ObjectFlags.StartsDead) != ObjectFlags.None);
                         if (ObjectBlockKey.Of(placed) != key)
                             throw Damaged($"holds '{id}', which stands in chunk {ObjectBlockKey.Of(placed).Coord}, not {key.Coord}");
                         objects[i] = placed;
@@ -167,6 +193,8 @@ namespace Forge.Data.Serialization
                 hash = (hash ^ c) * prime;
             return hash;
         }
+
+        static ObjectFlags FlagsOf(PlacedObjectRecord placed) => placed.StartsDead ? ObjectFlags.StartsDead : ObjectFlags.None;
 
         static MaterialOverride[] ReadMaterials(BinaryReader reader, string[] strings)
         {

@@ -89,7 +89,7 @@ namespace Forge.Play
         void OnShown(RecordId id, GameObject placed)
         {
             var animation = HumanoidAnimation.On(placed);
-            if (animation == null || !TryGetKind(id, out var kind, out var prefab))
+            if (animation == null || !TryGetKind(id, out var record, out var kind, out var prefab))
                 return;
 
             // As tall as its eyes are high in its idle, at its walk's and its run's own paces (so its feet keep to the
@@ -111,13 +111,15 @@ namespace Forge.Play
             var dice = new Random(StableHash(id.ToString()));
             var day = new Wander(new System.Numerics.Vector2(home.x, home.z), settings, dice);
             // Who it is while the world plays: the actor its base object names, if any (placed for its look alone, it is no one).
-            var who = kind.Actor.HasValue && _stage.World.TryGet(kind.Actor.Value, out var record) && record is ActorRecord actor ? actor : null;
+            var who = kind.Actor.HasValue && _stage.World.TryGet(kind.Actor.Value, out var actorRecord) && actorRecord is ActorRecord actor
+                ? actor
+                : null;
             var mind = who != null
                 ? new Fighter(day, FighterSettings.SwordAndBoard(walking.WalkSpeed, walking.RunSpeed), ArcherySettings.Hunter, dice)
                 : (IMind)day;
             var forward = placed.transform.forward;
             _characters[id] = new Character(_stage, PlacedActors.IdOf(id), placed, root, kind, who, prefab, shape, walking, eyes, mind,
-                Compass.HeadingOf(new System.Numerics.Vector2(forward.x, forward.z)));
+                Compass.HeadingOf(new System.Numerics.Vector2(forward.x, forward.z)), record.StartsDead);
         }
 
         void OnRemoving(RecordId id, GameObject placed)
@@ -128,14 +130,16 @@ namespace Forge.Play
             _characters.Remove(id);
         }
 
-        // What a placed object is (its base object) and the prefab its look is.
-        bool TryGetKind(RecordId id, out BaseObjectRecord kind, out GameObject prefab)
+        // A placed object's record, what it is (its base object) and the prefab its look is.
+        bool TryGetKind(RecordId id, out PlacedObjectRecord placed, out BaseObjectRecord kind, out GameObject prefab)
         {
+            placed = null;
             kind = null;
             prefab = null;
-            if (!_stage.World.TryGet(id, out var record) || !(record is PlacedObjectRecord placed) ||
-                !_stage.World.TryGet(placed.BaseId, out var baseRecord) || !(baseRecord is BaseObjectRecord baseObject))
+            if (!_stage.World.TryGet(id, out var record) || !(record is PlacedObjectRecord placedRecord) ||
+                !_stage.World.TryGet(placedRecord.BaseId, out var baseRecord) || !(baseRecord is BaseObjectRecord baseObject))
                 return false;
+            placed = placedRecord;
             kind = baseObject;
             return _view.Assets.TryGetTemplate(baseObject.AssetKey, out prefab);
         }
@@ -165,8 +169,9 @@ namespace Forge.Play
 
             /// <param name="kind">What it is placed as (its look, its name when it is no one).</param>
             /// <param name="record">Who it is: its name and what it starts with; null for a character that is no one (nothing hurts it, it holds nothing).</param>
+            /// <param name="dead">Placed dead: it lies there a body from the first, its health gone, its kit on it.</param>
             public Character(GameStage stage, ActorId id, GameObject placed, Transform root, BaseObjectRecord kind, ActorRecord record,
-                GameObject prefab, BodyShape shape, LocomotionSettings walking, float eyes, IMind mind, float heading)
+                GameObject prefab, BodyShape shape, LocomotionSettings walking, float eyes, IMind mind, float heading, bool dead)
             {
                 _placed = placed;
                 _root = root;
@@ -189,6 +194,11 @@ namespace Forge.Play
                 Actor.ChangeLook(prefab);
                 Actor.PlaceAt(placed.transform.position, heading);
                 _placed.SetActive(false);
+                if (!dead)
+                    return;
+                if (attributes != null && attributes.Set.Contains(CoreAttributes.Health))
+                    attributes.Drain(CoreAttributes.Health, attributes.Current(CoreAttributes.Health));
+                Actor.Fall(already: true);
             }
 
             public PlayedActor Actor { get; }
