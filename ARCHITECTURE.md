@@ -815,7 +815,11 @@ from any camera, so both cameras read the same player.
   humanoid's. `PlayedActor` binds one after its `HeadLook`, on whom it looks at; the face editor's character looks
   at the viewer (`TurntablePreview.Viewer`). Seen live: at 8x, his head 40° off the viewer, his eyes held on it;
   `ReplaceableBodyContentTests` turns WarriorM's own to within 0.5° of a point. To come: hand-made shapes, a portrait
-  framing, eyes that blink, Eyes' Colour; the lower lid's inside shows as flaps along the rim (`eyes.py`).
+  framing, eyes that blink, Eyes' Colour. The rim is laid on the outline in its order round the hole (each vertex as
+  far along the outline as it was along the cut's staircase edge; corners where the hole touched itself split, scraps
+  of skin left in the opening taken away), its depth from the skin as it was whole, and each face's corner there
+  draws its own texture island: a corner given another island's texture stretched its face across the map, the
+  shards once seen along the lower lid.
 - **Turntables** (`TurntablePreview`, World/Assets; `TurntableView`, Play.Hud): a thing shown live in a
   `PreviewStudio`, as Skyrim shows the chosen item and the character carrying it. Whoever shows it builds it
   (`Show(subject, build)`): an item from its asset key through the world's `IAssetCatalog` (`Show(assets, key)`;
