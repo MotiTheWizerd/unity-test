@@ -57,6 +57,7 @@ namespace Forge.Play
         ShotView _shotView;
         ArrowFlights _arrows;
         HeadLook _headLook;
+        EyeLook _eyeLook;
         FootstepView _footsteps;
 
         /// <param name="stage">The game it stands in.</param>
@@ -263,8 +264,9 @@ namespace Forge.Play
             _sweep = new BladeSweep(Combat, _model, Stage.World, Stage.Identify);
             _shotView = new ShotView(Combat, Equipment, _model, Stage.Assets, AimPose);
             _arrows = new ArrowFlights(Combat, _model, Stage.Assets, AimPose, Stage.Identify, Stage.LandShot, Stage.LodgeShot);
-            // Last on the pose: the head turns once the upper body is set (a stance kept, a bow's aim).
+            // Last on the pose: the head turns once the upper body is set (a stance kept, a bow's aim), and its eyes after.
             _headLook = new HeadLook(_model, Rules.EyeHeight, LookedAt);
+            _eyeLook = new EyeLook(_model, Rules.EyeHeight, LookedAt);
             if (Stage.Sounds != null)
                 _footsteps = new FootstepView(_model, Stage.Sounds, Stage.Surfaces, Rules.Locomotion.Settings);
             Show(0f);
@@ -363,6 +365,8 @@ namespace Forge.Play
             _arrows = null;
             _headLook?.Dispose();
             _headLook = null;
+            _eyeLook?.Dispose();
+            _eyeLook = null;
             _combatView?.Dispose();
             _combatView = null;
             _guardView = null;

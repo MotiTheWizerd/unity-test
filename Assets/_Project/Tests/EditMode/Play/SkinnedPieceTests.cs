@@ -48,14 +48,65 @@ namespace Forge.Tests.Play
         }
 
         [Test]
-        public void Stitch_RefusesAPiece_OnABoneTheBodyLacks()
+        public void Stitch_AddsTheBonesTheBodyLacks_OnItsBoneOfTheirParentsName_AsThePieceHasThem()
         {
             var body = Model("Body", "Body", out var bodySkin);
+            bodySkin.bones[1].gameObject.layer = 5;
+            Model("Piece", "Head", out var pieceSkin, eye: true);
+            var added = new List<Transform>();
+
+            var worn = SkinnedPiece.Stitch(body.transform, pieceSkin, added);
+
+            var eye = worn.bones[2];
+            var pieceEye = pieceSkin.bones[2];
+            Assert.That(added, Is.EqualTo(new[] { eye }));
+            Assert.That(eye.name, Is.EqualTo("mixamorig:LeftEye"));
+            Assert.That(eye.parent, Is.SameAs(bodySkin.bones[1]), "on the body's head");
+            Assert.That(eye.gameObject.layer, Is.EqualTo(5), "on its bone's layer");
+            Assert.That(Vector3.Distance(eye.localPosition, pieceEye.localPosition), Is.LessThan(1e-6f));
+            Assert.That(Quaternion.Angle(eye.localRotation, pieceEye.localRotation), Is.LessThan(1e-3f));
+            Assert.That(worn.bones.Take(2), Is.EqualTo(bodySkin.bones), "the rest are the body's own");
+            Assert.That(pieceEye.parent, Is.SameAs(pieceSkin.bones[1]), "the piece is left as it is");
+
+            Model("Second", "Hair", out var second, eye: true);
+            Assert.That(SkinnedPiece.Stitch(body.transform, second).bones[2], Is.SameAs(eye), "a later piece finds it");
+        }
+
+        [Test]
+        public void Stitch_RefusesAPiece_WhoseSkeletonTheBodyHasNoneOf()
+        {
+            var body = Model("Body", "Body", out var bodySkin);
+            bodySkin.bones[0].name = "mixamorig:Spine";
             bodySkin.bones[1].name = "mixamorig:Neck";
             Model("Piece", "Head", out var pieceSkin);
 
             Assert.Throws<ArgumentException>(() => SkinnedPiece.Stitch(body.transform, pieceSkin));
         }
+
+        [Test]
+        public void Wear_TakesTheBonesAHeadBrought_OffWithIt()
+        {
+            var body = Model("Body", "Body", out var bodySkin);
+            var heads = body.AddComponent<CharacterHeads>();
+            Model("Plain", "Head", out var plain);
+            Model("Warrior", "Head", out var warrior, eye: true);
+            heads.SetHeads(new[] { plain.transform.root.gameObject, warrior.transform.root.gameObject });
+
+            heads.Wear(1);
+            var eye = heads.WornBones.Single();
+            Assert.That(eye.parent, Is.SameAs(bodySkin.bones[1]));
+
+            heads.Wear(0);
+            Assert.That(heads.WornBones, Is.Empty);
+            Assert.That(Eyes(body), Is.Empty, "the plain head has none");
+
+            heads.Wear(1);
+            Assert.That(Eyes(body), Has.Length.EqualTo(1), "one, the head's own, worn again");
+            Assert.That(heads.WornRenderers.Single().bones[2], Is.SameAs(Eyes(body)[0]));
+        }
+
+        static Transform[] Eyes(GameObject body) =>
+            body.GetComponentsInChildren<Transform>(true).Where(t => t.name == "mixamorig:LeftEye").ToArray();
 
         [Test]
         public void Wear_PutsOnTheHead_InPlaceOfTheOneWorn_AndTheSameAgainChangesNothing()
@@ -130,9 +181,9 @@ namespace Forge.Tests.Play
         static SkinnedMeshRenderer[] HeadsDrawn(GameObject body) =>
             body.GetComponentsInChildren<SkinnedMeshRenderer>(true).Where(r => r.name == "Head").ToArray();
 
-        // A model as an FBX imports one: a root, its skeleton (the hips, the head on them) and a skinned mesh of its own
-        // on the head.
-        GameObject Model(string name, string meshName, out SkinnedMeshRenderer skinned)
+        // A model as an FBX imports one: a root, its skeleton (the hips, the head on them; with an eye on the head of its
+        // own, which a body's skeleton has not) and a skinned mesh of its own on the head.
+        GameObject Model(string name, string meshName, out SkinnedMeshRenderer skinned, bool eye = false)
         {
             var root = new GameObject(name);
             _made.Add(root);
@@ -142,6 +193,14 @@ namespace Forge.Tests.Play
             var head = new GameObject("mixamorig:Head").transform;
             head.SetParent(hips, false);
             head.localPosition = new Vector3(0f, 0.6f, 0f);
+            var bones = new List<Transform> { hips, head };
+            if (eye)
+            {
+                var left = new GameObject("mixamorig:LeftEye").transform;
+                left.SetParent(head, false);
+                left.SetLocalPositionAndRotation(new Vector3(0.03f, 0.07f, 0.08f), Quaternion.Euler(-90f, 0f, 20f));
+                bones.Add(left);
+            }
 
             var drawn = new GameObject(meshName);
             drawn.transform.SetParent(root.transform, false);
@@ -151,12 +210,12 @@ namespace Forge.Tests.Play
                 vertices = new[] { new Vector3(0f, 1.6f, 0f), new Vector3(0.1f, 1.7f, 0f), new Vector3(-0.1f, 1.7f, 0f) },
                 triangles = new[] { 0, 1, 2 },
                 boneWeights = Enumerable.Repeat(new BoneWeight { boneIndex0 = 1, weight0 = 1f }, 3).ToArray(),
-                bindposes = new[] { hips.worldToLocalMatrix, head.worldToLocalMatrix },
+                bindposes = bones.Select(b => b.worldToLocalMatrix).ToArray(),
             };
             _made.Add(mesh);
             skinned = drawn.AddComponent<SkinnedMeshRenderer>();
             skinned.sharedMesh = mesh;
-            skinned.bones = new[] { hips, head };
+            skinned.bones = bones.ToArray();
             skinned.rootBone = hips;
             return root;
         }

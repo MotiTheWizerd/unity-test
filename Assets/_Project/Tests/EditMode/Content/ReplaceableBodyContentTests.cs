@@ -61,6 +61,85 @@ namespace Forge.Tests.Content
             }
         }
 
+        [Test]
+        public void WarriorM_BringsEyesOfItsOwn_ThatTurnToWhatItLooksAt_AsFarAsEyesTurn()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BodyPath);
+            var holder = new GameObject("Body");
+            try
+            {
+                var model = new CharacterModel(holder.transform, prefab);
+                var heads = model.Root.GetComponentInChildren<CharacterHeads>();
+                var head = model.Bone(HumanBodyBones.Head);
+                Assert.That(heads.WornBones.Select(b => (b.name, b.parent)),
+                    Is.EquivalentTo(new[] { ("mixamorig:LeftEye", head), ("mixamorig:RightEye", head) }), "WarriorM's eyes, on the body's head");
+                var eyeballs = heads.WornRenderers.Single();
+                foreach (var eye in heads.WornBones)
+                    Assert.That(Carried(eyeballs, eye), Is.GreaterThan(500), $"{eye.name} carries its eyeball");
+
+                Assert.That(model.TryGetEyeHeight(out var height), Is.True);
+                var face = model.Eyes(height);
+                Vector3? target = null;
+                var look = new EyeLook(model, height, () => target);
+                Assert.That(look.EyeCount, Is.EqualTo(2));
+                var rest = heads.WornBones.Select(b => b.rotation).ToArray();
+
+                // Near, 15 degrees aside and 10 up: each eye on it, from where it is.
+                target = face.position + Quaternion.AngleAxis(-10f, face.right) * Quaternion.AngleAxis(15f, face.up) * face.forward * 0.8f;
+                for (var i = 0; i < 20; i++)
+                    look.Look(0.05f);
+                for (var e = 0; e < 2; e++)
+                {
+                    var eye = heads.WornBones[e];
+                    var looks = eye.rotation * Quaternion.Inverse(rest[e]) * face.forward;
+                    Assert.That(Vector3.Angle(looks, target.Value - eye.position), Is.LessThan(0.5f), $"{eye.name} looks at it");
+                }
+
+                // Far aside: as far as an eye turns.
+                target = face.position + face.right * 5f;
+                for (var i = 0; i < 20; i++)
+                    look.Look(0.05f);
+                var turned = heads.WornBones[0].rotation * Quaternion.Inverse(rest[0]) * face.forward;
+                Assert.That(Vector3.Angle(turned, face.forward), Is.EqualTo(EyeLook.MostTurn).Within(0.5f));
+
+                // Nothing: ahead again.
+                target = null;
+                for (var i = 0; i < 20; i++)
+                    look.Look(0.05f);
+                Assert.That(Quaternion.Angle(heads.WornBones[0].rotation, rest[0]), Is.LessThan(0.01f));
+
+                // A head without eyes of its own: nothing to turn; WarriorM again: its new eyes.
+                heads.Wear(Enumerable.Range(0, heads.Count).Single(i => heads.NameOf(i) == "BodyWarriorM"));
+                Assert.That(look.EyeCount, Is.EqualTo(0));
+                heads.Wear(Enumerable.Range(0, heads.Count).Single(i => heads.NameOf(i) == "WarriorM"));
+                Assert.That(look.EyeCount, Is.EqualTo(2));
+                look.Dispose();
+            }
+            finally
+            {
+                Object.DestroyImmediate(holder);
+            }
+        }
+
+        // How many of a skinned mesh's vertices a bone carries wholly.
+        static int Carried(SkinnedMeshRenderer skinned, Transform bone)
+        {
+            var index = System.Array.IndexOf(skinned.bones, bone);
+            var counts = skinned.sharedMesh.GetBonesPerVertex();
+            var weights = skinned.sharedMesh.GetAllBoneWeights();
+            var carried = 0;
+            for (int vertex = 0, at = 0; vertex < counts.Length; at += counts[vertex], vertex++)
+            {
+                for (var k = at; k < at + counts[vertex]; k++)
+                {
+                    if (weights[k].boneIndex == index && weights[k].weight > 0.999f)
+                        carried++;
+                }
+            }
+
+            return carried;
+        }
+
         static int TrianglesDrawing(SkinnedMeshRenderer renderer, Material material) =>
             Enumerable.Range(0, renderer.sharedMesh.subMeshCount)
                 .Where(i => renderer.sharedMaterials[i] == material)

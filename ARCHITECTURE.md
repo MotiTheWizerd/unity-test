@@ -804,10 +804,18 @@ from any camera, so both cameras read the same player.
   rim laid on the outline, the lids' inside a band into the eyeball; the eyeball is a sphere fitted to the painted
   eye (the AI sculpts one under the paint: WarriorM's 11.9 and 11.3 mm in radius, a real eye's 12), its cornea rising
   over an iris painted by code in the painted iris's colour. They are a third slot of the head's mesh, a material
-  named `{Head}Eyes` with its own colour map and a wet `_MetallicSmoothness` map (0.9), and ride the Head bone (Mixamo's
-  skeleton has no eye bones: eyes that look about will bring their own). Skin's Tone leaves them as made
-  (`FaceLook.IsEyes`: tinting slot by slot). To come: hand-made shapes, a portrait framing, eyes that look and blink,
-  Eyes' Colour.
+  named `{Head}Eyes` with its own colour map and a wet `_MetallicSmoothness` map (0.9). Mixamo's skeleton has no eye
+  bones, so a head brings its own: blender-tests `pieces.py` exports each head on the skeleton with `LeftEye` and
+  `RightEye` under Head, each at its eyeball's middle (the sphere through its back half, `neck.py`; 0.005 mm off it
+  read back), the eyeball wholly on it; `Stitch` adds them to the body (see Characters). Skin's Tone leaves them as
+  made (`FaceLook.IsEyes`: tinting slot by slot). They **look** (`EyeLook`, Play): after the head has turned, each
+  eye turns about its middle toward the point, from where it is (a near point draws them together), as far as an
+  eye turns in its lids (30° aside, 20° up or down, from where the face looks), at 600°/s, easing in and back to
+  ahead over 0.12 s; the eyes are the worn head's added bones (found again when another is put on), else the
+  humanoid's. `PlayedActor` binds one after its `HeadLook`, on whom it looks at; the face editor's character looks
+  at the viewer (`TurntablePreview.Viewer`). Seen live: at 8x, his head 40° off the viewer, his eyes held on it;
+  `ReplaceableBodyContentTests` turns WarriorM's own to within 0.5° of a point. To come: hand-made shapes, a portrait
+  framing, eyes that blink, Eyes' Colour; the lower lid's inside shows as flaps along the rim (`eyes.py`).
 - **Turntables** (`TurntablePreview`, World/Assets; `TurntableView`, Play.Hud): a thing shown live in a
   `PreviewStudio`, as Skyrim shows the chosen item and the character carrying it. Whoever shows it builds it
   (`Show(subject, build)`): an item from its asset key through the world's `IAssetCatalog` (`Show(assets, key)`;
@@ -915,7 +923,9 @@ from any camera, so both cameras read the same player.
   bones and material names and no avatar (`CharacterImport`). *Build Characters* builds each head into a prefab,
   lists them on the character (`CharacterHeads`) and puts on the one its `{Name}.json` names (`"head"`), so the
   prefab stands whole; a head is put on by **stitching** (`SkinnedPiece.Stitch`, Play): a new renderer under the
-  body, drawn by the body's bones of its bones' names, as armour will be. The bones stood where the body's stand when
+  body, drawn by the body's bones of its bones' names, as armour will be; a bone it brings that the body lacks (a
+  head's eyes) is made on the body's bone of its parent's name, as the piece has it there, and goes when the head is
+  taken off (`CharacterHeads.WornBones`). The bones stood where the body's stand when
   both were made, so a head lies where it was made to within 0.001 mm (`ReplaceableBodyContentTests`). Worn heads
   are drawn under the look like the body's own meshes, so the hitboxes and the headless first person take them; a
   head changed after they are made is not theirs yet (only the face editor changes it so far). **BodyWarriorM**
@@ -999,7 +1009,8 @@ from any camera, so both cameras read the same player.
   easing in and back to the animation's over 0.3 s; the face is the look's `Eyes` point, which carries the face's
   turn as well as its place (`HumanoidHead.TryFindEyes`: ahead and level as it stands at the start of its idle).
   Checked live on VikingF1: walked round her at 3 m, her face kept within 3° of the player's eyes, held at 75° past
-  it, and let go half a second after the player went behind her. `MoveSetContentTests` guards that
+  it, and let go half a second after the player went behind her. After it, `EyeLook` turns the eyes of a head that
+  has eye bones on the same point (Characters' face editor). `MoveSetContentTests` guards that
   each move the core styles name plays where its kind needs. Playing an action already playing starts it over (a
   second blow before the first's reaction is done). A move's **variants** are clips named after it with a number
   from 2 on (`SwordDeath2`, `HumanoidAnimation.Variant`), and `Vary` picks the move or one of them by chance (a

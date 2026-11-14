@@ -49,6 +49,9 @@ namespace Forge.World.Assets
         /// <summary>The picture, redrawn each <see cref="Tick"/>; null until <see cref="Resize"/> gives it a size.</summary>
         public RenderTexture Texture => _target;
 
+        /// <summary>Where the picture is seen from (its camera; the scene's), as of the last <see cref="Tick"/>.</summary>
+        public Vector3 Viewer => _studio.Camera.transform.position;
+
         /// <summary>What is shown (an asset key, a prefab), or null for nothing.</summary>
         public object Shown { get; private set; }
 

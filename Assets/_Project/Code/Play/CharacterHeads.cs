@@ -22,6 +22,9 @@ namespace Forge.Play
         [SerializeField, Tooltip("What the worn head draws with, under this object.")]
         List<SkinnedMeshRenderer> _wornRenderers = new List<SkinnedMeshRenderer>();
 
+        [SerializeField, Tooltip("The bones the worn head brought, which the body has not (its eyes), on the body's.")]
+        List<Transform> _wornBones = new List<Transform>();
+
         /// <summary>How many heads it can wear.</summary>
         public int Count => _heads.Length;
 
@@ -30,6 +33,9 @@ namespace Forge.Play
 
         /// <summary>What the worn head draws with, on the body's bones.</summary>
         public IReadOnlyList<SkinnedMeshRenderer> WornRenderers => _wornRenderers;
+
+        /// <summary>The bones the worn head brought, which the body has not (its eyes), on the body's; gone with it.</summary>
+        public IReadOnlyList<Transform> WornBones => _wornBones;
 
         /// <summary>The name of head <paramref name="index"/> (its prefab's).</summary>
         public string NameOf(int index) => _heads[index].name;
@@ -53,7 +59,7 @@ namespace Forge.Play
 
             TakeOff();
             foreach (var piece in _heads[index].GetComponentsInChildren<SkinnedMeshRenderer>(true))
-                _wornRenderers.Add(SkinnedPiece.Stitch(transform, piece));
+                _wornRenderers.Add(SkinnedPiece.Stitch(transform, piece, _wornBones));
             _worn = index;
         }
 
@@ -61,18 +67,31 @@ namespace Forge.Play
         {
             foreach (var renderer in _wornRenderers)
             {
-                if (renderer == null)
-                    continue;
-                // Gone at once while it plays, where Destroy waits for the frame's end.
-                renderer.gameObject.SetActive(false);
-                if (Application.isPlaying)
-                    Destroy(renderer.gameObject);
-                else
-                    DestroyImmediate(renderer.gameObject);
+                if (renderer != null)
+                    Remove(renderer.transform);
+            }
+
+            // Off the body at once too, so the next head's bones of the same names are its own.
+            for (var i = _wornBones.Count - 1; i >= 0; i--)
+            {
+                if (_wornBones[i] != null)
+                    Remove(_wornBones[i]);
             }
 
             _wornRenderers.Clear();
+            _wornBones.Clear();
             _worn = -1;
+        }
+
+        // Gone at once while it plays, where Destroy waits for the frame's end.
+        static void Remove(Transform part)
+        {
+            part.gameObject.SetActive(false);
+            part.SetParent(null, false);
+            if (Application.isPlaying)
+                Destroy(part.gameObject);
+            else
+                DestroyImmediate(part.gameObject);
         }
     }
 }

@@ -160,7 +160,7 @@ namespace Forge.Play.Hud
             _characterView.AddToClassList(CharacterViewClass);
             frame.Add(_characterView);
             if (character != null)
-                _characterView.Show(character, holder => _look = Build(holder, character));
+                _characterView.Show(character, holder => _look = Build(holder, character, () => _characterView.Viewer));
 
             var footer = Make<VisualElement>(_root, FooterClass);
             Make<Label>(footer, HintClass).text = "Drag: Turn   ·   Right-drag: Move   ·   Wheel: Zoom   ·   Double-click: Face On";
@@ -337,11 +337,18 @@ namespace Forge.Play.Hud
             throw new ArgumentException($"No control '{control}' on face part '{part}'.", nameof(control));
         }
 
-        // A rigged character stands still in its idle; a head alone (a bust, no rig) is shown as it is.
-        static GameObject Build(Transform holder, GameObject prefab) =>
-            prefab.GetComponentInChildren<Animator>(true) != null
-                ? CharacterModel.StandingStill(holder, prefab).Root
-                : UnityEngine.Object.Instantiate(prefab, holder, false);
+        // A rigged character stands still in its idle, its eyes on whoever looks at it (viewer); a head alone (a bust, no
+        // rig) is shown as it is.
+        static GameObject Build(Transform holder, GameObject prefab, Func<Vector3?> viewer)
+        {
+            if (prefab.GetComponentInChildren<Animator>(true) == null)
+                return UnityEngine.Object.Instantiate(prefab, holder, false);
+            var model = CharacterModel.StandingStill(holder, prefab);
+            // Bound to its pose, it goes with it.
+            if (model.TryGetEyeHeight(out var eyeHeight))
+                _ = new EyeLook(model, eyeHeight, viewer);
+            return model.Root;
+        }
 
         static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
 

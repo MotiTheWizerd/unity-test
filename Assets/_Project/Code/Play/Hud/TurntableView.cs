@@ -34,6 +34,9 @@ namespace Forge.Play.Hud
         /// </summary>
         public void Show(object subject, Func<Transform, GameObject> build, bool keepTurn = false) => _preview.Show(subject, build, keepTurn);
 
+        /// <summary>Where the picture is seen from (<see cref="TurntablePreview.Viewer"/>).</summary>
+        public Vector3 Viewer => _preview.Viewer;
+
         /// <summary>Turns and draws the picture for <paramref name="deltaTime"/> seconds; call it each frame it is on screen.</summary>
         public void Tick(float deltaTime)
         {
