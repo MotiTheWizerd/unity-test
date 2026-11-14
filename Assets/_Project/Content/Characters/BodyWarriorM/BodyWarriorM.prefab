@@ -2172,6 +2172,7 @@ MonoBehaviour:
   _heads:
   - {fileID: 1772516357251315927, guid: 35aeaec47991c4043a35ea31cbc2b2b5, type: 3}
   - {fileID: 5575297879837871738, guid: c4571f851a2f7764699208857a23c4d0, type: 3}
+  - {fileID: 8308152535702051024, guid: 68afbf0f70951154598afd86aa66914b, type: 3}
   _worn: 1
   _wornRenderers:
   - {fileID: 8541639325787033615}
