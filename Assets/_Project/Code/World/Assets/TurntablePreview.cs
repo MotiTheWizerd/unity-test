@@ -121,7 +121,8 @@ namespace Forge.World.Assets
 
             TurntableFraming.Swept(_extents, Turn.Tilt, out var reach, out var halfHeight);
             var distance = TurntableFraming.Distance(reach, halfHeight, FieldOfView, (float)_target.width / _target.height, Turn.Zoom, Turn.Pitch);
-            var pose = TurntableFraming.CameraPose(_turntable.position, distance, Turn.Pitch);
+            var aim = TurntableFraming.Aim(_turntable.position, reach, halfHeight, Turn.Pan);
+            var pose = TurntableFraming.CameraPose(aim, distance, Turn.Pitch);
             var camera = _studio.Camera;
             camera.transform.SetPositionAndRotation(pose.position, pose.rotation);
             var radius = _extents.magnitude;

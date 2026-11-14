@@ -144,5 +144,26 @@ namespace Forge.Tests.World
             Assert.That(upHeight, Is.EqualTo(0.5f).Within(1e-4f));
             Assert.That(upReach, Is.EqualTo(new Vector2(0.05f, 0.02f).magnitude).Within(1e-4f));
         }
+
+        // Moved to look at a man's face: the aim goes up toward his head, never off him, and Reset centres it again.
+        [Test]
+        public void Pan_AimsAtAPartOfIt_NeverOffIt_AndResetsToItsMiddle()
+        {
+            var turn = PreviewTurn.Character();
+            Assert.That(turn.Pan, Is.EqualTo(Vector2.zero));
+
+            turn.PanBy(new Vector2(0f, 0.8f));
+            Assert.That(turn.Pan.y, Is.EqualTo(0.8f).Within(1e-5f));
+            turn.PanBy(new Vector2(-3f, 3f));
+            Assert.That(turn.Pan, Is.EqualTo(new Vector2(-1f, 1f)), "kept on him");
+
+            var centre = new Vector3(0f, 0.9f, 0f);
+            var aim = TurntableFraming.Aim(centre, 0.4f, 0.9f, turn.Pan);
+            Assert.That(aim.y, Is.EqualTo(1.8f).Within(1e-5f), "his top");
+            Assert.That(aim.x, Is.EqualTo(-0.4f).Within(1e-5f), "the viewer's left");
+
+            turn.Reset();
+            Assert.That(turn.Pan, Is.EqualTo(Vector2.zero));
+        }
     }
 }

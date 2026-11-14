@@ -22,7 +22,9 @@ namespace Forge.World.Assets
         public const float Margin = 1.1f;
 
         public const float MinZoom = 0.6f;
-        public const float MaxZoom = 3f;
+
+        /// <summary>The nearest zoom: a man's face fills the view (about an eighth of his height), moved to it by hand.</summary>
+        public const float MaxZoom = 8f;
 
         /// <summary>
         /// The camera's distance from the centre of a thing reaching <paramref name="reach"/> m around its axis and
@@ -71,5 +73,13 @@ namespace Forge.World.Assets
             var rotation = Quaternion.Euler(pitchDegrees, 0f, 0f);
             return new Pose(centre - rotation * Vector3.forward * distance, rotation);
         }
+
+        /// <summary>
+        /// Where the camera aims at a thing centred at <paramref name="centre"/>, reaching <paramref name="reach"/> m round
+        /// its axis and <paramref name="halfHeight"/> m up and down, moved by <paramref name="pan"/> (<see cref="PreviewTurn.Pan"/>:
+        /// shares of the reach across, the viewer's right, and of the half height up).
+        /// </summary>
+        public static Vector3 Aim(Vector3 centre, float reach, float halfHeight, Vector2 pan) =>
+            centre + Vector3.right * (pan.x * reach) + Vector3.up * (pan.y * halfHeight);
     }
 }

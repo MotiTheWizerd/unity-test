@@ -163,7 +163,7 @@ namespace Forge.Play.Hud
                 _characterView.Show(character, holder => _look = Build(holder, character));
 
             var footer = Make<VisualElement>(_root, FooterClass);
-            Make<Label>(footer, HintClass).text = "Drag: Turn   ·   Wheel: Zoom   ·   Double-click: Face On";
+            Make<Label>(footer, HintClass).text = "Drag: Turn   ·   Right-drag: Move   ·   Wheel: Zoom   ·   Double-click: Face On";
             Button(footer, "Randomize", Randomize);
             Button(footer, "Reset", Reset);
             Button(footer, "Done", () => { }).AddToClassList(ButtonPrimaryClass);

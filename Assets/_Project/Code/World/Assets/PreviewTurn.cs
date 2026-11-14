@@ -86,6 +86,16 @@ namespace Forge.World.Assets
             Tilt = Quaternion.Normalize(Tilt);
         }
 
+        /// <summary>
+        /// Where the view aims, off the subject's middle: across (x, right positive) as a share of how far it reaches
+        /// round its axis, up (y) as a share of its half height; each within -1 to 1, so it never leaves the view.
+        /// </summary>
+        public Vector2 Pan { get; private set; }
+
+        /// <summary>Moves the view's aim by <paramref name="by"/> (<see cref="Pan"/>'s shares), kept on the subject.</summary>
+        public void PanBy(Vector2 by) =>
+            Pan = new Vector2(Mathf.Clamp(Pan.x + by.x, -1f, 1f), Mathf.Clamp(Pan.y + by.y, -1f, 1f));
+
         /// <summary>Zooms in by <paramref name="notches"/> (out when negative).</summary>
         public void ZoomBy(float notches) =>
             Zoom = Mathf.Clamp(Zoom * Mathf.Pow(ZoomStep, notches), TurntableFraming.MinZoom, TurntableFraming.MaxZoom);
@@ -103,6 +113,7 @@ namespace Forge.World.Assets
             Spin = _startSpin;
             Tilt = Quaternion.identity;
             Zoom = 1f;
+            Pan = Vector2.zero;
         }
     }
 }
