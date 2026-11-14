@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Forge.World.Assets
@@ -23,8 +24,8 @@ namespace Forge.World.Assets
 
         readonly PreviewStudio _studio;
         readonly Transform _turntable;
+        readonly List<Renderer> _renderers = new List<Renderer>();
         GameObject _subject;
-        Renderer[] _renderers = Array.Empty<Renderer>();
         Animator[] _animators = Array.Empty<Animator>();
         RenderTexture _target;
         Vector3 _extents;
@@ -154,7 +155,6 @@ namespace Forge.World.Assets
                 PreviewStudio.Discard(collider);
             }
 
-            _renderers = subject.GetComponentsInChildren<Renderer>(true);
             _animators = subject.GetComponentsInChildren<Animator>(true);
             foreach (var animator in _animators)
             {
@@ -167,8 +167,13 @@ namespace Forge.World.Assets
             Draw(false);
         }
 
+        // What it draws is read as it is drawn: a subject may change what it wears while it is shown (another head put on
+        // in the face editor), what it took off gone and what it put on drawn only here, as the rest of it is.
         void Draw(bool drawn)
         {
+            if (_subject == null)
+                return;
+            _subject.GetComponentsInChildren(true, _renderers);
             foreach (var renderer in _renderers)
                 renderer.forceRenderingOff = !drawn;
         }
@@ -178,7 +183,7 @@ namespace Forge.World.Assets
             if (_subject != null)
                 PreviewStudio.Discard(_subject);
             _subject = null;
-            _renderers = Array.Empty<Renderer>();
+            _renderers.Clear();
             _animators = Array.Empty<Animator>();
             Shown = null;
             Wipe();
