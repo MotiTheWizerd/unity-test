@@ -121,6 +121,58 @@ namespace Forge.Tests.Content
             }
         }
 
+        [Test]
+        public void WarriorM_Blinks_NowAndThen_ShuttingHisLids_ButNotOnceFallen()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BodyPath);
+            var holder = new GameObject("Body");
+            try
+            {
+                var model = new CharacterModel(holder.transform, prefab);
+                var heads = model.Root.GetComponentInChildren<CharacterHeads>();
+                var awake = true;
+                var blink = new EyeBlink(model, 7, () => awake);
+                Assert.That(blink.LidCount, Is.EqualTo(1), "WarriorM's head shuts its eyes");
+                var head = heads.WornRenderers.Single();
+                var shape = head.sharedMesh.GetBlendShapeIndex(EyeBlink.Shape);
+
+                // A minute, a frame at a time: blinks start LeastGap to MostGap apart (or TwiceGap, a double), each shut.
+                const float frame = 0.01f;
+                var starts = new System.Collections.Generic.List<float>();
+                var wasOpen = true;
+                var mostShut = 0f;
+                for (var t = 0f; t < 60f; t += frame)
+                {
+                    blink.Blink(frame);
+                    Assert.That(head.GetBlendShapeWeight(shape), Is.EqualTo(blink.Shut * 100f).Within(1e-3f));
+                    if (wasOpen && blink.Shut > 0f)
+                        starts.Add(t);
+                    wasOpen = blink.Shut <= 0f;
+                    mostShut = Mathf.Max(mostShut, blink.Shut);
+                }
+
+                Assert.That(mostShut, Is.EqualTo(1f).Within(0.01f), "shut all the way");
+                Assert.That(starts.Count, Is.InRange(60 / (int)(EyeBlink.MostGap + 1), 60 / (int)EyeBlink.LeastGap + 4));
+                for (var i = 1; i < starts.Count; i++)
+                {
+                    var gap = starts[i] - starts[i - 1] - EyeBlink.Length;
+                    Assert.That(gap, Is.InRange(EyeBlink.TwiceGap - 2 * frame, EyeBlink.MostGap + 2 * frame), $"gap {i}");
+                }
+
+                awake = false;
+                blink.Blink(frame);
+                Assert.That(head.GetBlendShapeWeight(shape), Is.EqualTo(0f), "a body's eyes stay as they are");
+
+                heads.Wear(Enumerable.Range(0, heads.Count).Single(i => heads.NameOf(i) == "BodyWarriorM"));
+                Assert.That(blink.LidCount, Is.EqualTo(0), "the body's own head has no lids of its own");
+                blink.Dispose();
+            }
+            finally
+            {
+                Object.DestroyImmediate(holder);
+            }
+        }
+
         // How many of a skinned mesh's vertices a bone carries wholly.
         static int Carried(SkinnedMeshRenderer skinned, Transform bone)
         {

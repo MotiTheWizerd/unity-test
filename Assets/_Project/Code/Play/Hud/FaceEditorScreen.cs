@@ -337,16 +337,17 @@ namespace Forge.Play.Hud
             throw new ArgumentException($"No control '{control}' on face part '{part}'.", nameof(control));
         }
 
-        // A rigged character stands still in its idle, its eyes on whoever looks at it (viewer); a head alone (a bust, no
-        // rig) is shown as it is.
+        // A rigged character stands still in its idle, its eyes on whoever looks at it (viewer), blinking; a head alone (a
+        // bust, no rig) is shown as it is.
         static GameObject Build(Transform holder, GameObject prefab, Func<Vector3?> viewer)
         {
             if (prefab.GetComponentInChildren<Animator>(true) == null)
                 return UnityEngine.Object.Instantiate(prefab, holder, false);
             var model = CharacterModel.StandingStill(holder, prefab);
-            // Bound to its pose, it goes with it.
+            // Bound to its pose, they go with it.
             if (model.TryGetEyeHeight(out var eyeHeight))
                 _ = new EyeLook(model, eyeHeight, viewer);
+            _ = new EyeBlink(model, prefab.name.GetHashCode());
             return model.Root;
         }
 

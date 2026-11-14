@@ -814,8 +814,16 @@ from any camera, so both cameras read the same player.
   ahead over 0.12 s; the eyes are the worn head's added bones (found again when another is put on), else the
   humanoid's. `PlayedActor` binds one after its `HeadLook`, on whom it looks at; the face editor's character looks
   at the viewer (`TurntablePreview.Viewer`). Seen live: at 8x, his head 40° off the viewer, his eyes held on it;
-  `ReplaceableBodyContentTests` turns WarriorM's own to within 0.5° of a point. To come: hand-made shapes, a portrait
-  framing, eyes that blink, Eyes' Colour. The rim is laid on the outline in its order round the hole (each vertex as
+  `ReplaceableBodyContentTests` turns WarriorM's own to within 0.5° of a point. They **blink** (`EyeBlink`, Play): a
+  `Blink` blend shape (`eyes.py` `blink`: each lid turned about its eyeball's middle on the axis across the face, the
+  upper down and the lower a quarter of the way up, by as much as the opening is tall at each place, the upper 8% past
+  the meeting; the lid's skin weighed by its angle past the rim (35° upper, 15° lower) and its height off the eyeball
+  (4 to 9 mm: the lid, not the brow), then relaxed toward its neighbours so the upper lid's sculpted fold lies smooth
+  shut; never into the cornea wherever the eye looks) driven 2 to 6 s apart by chance (12% twice running), shut in
+  0.07 s, held 0.04 s, open in 0.13 s, each character seeded its own; not once fallen. `PlayedActor` binds one; the
+  face editor's character blinks. Shut and still (sleep, death, to come) the lid shows the paint the AI laid for an open
+  eye (its lashes and the crease's shadow as dark bands at a distance); in a blink it is never seen. To come:
+  hand-made shapes, a portrait framing, Eyes' Colour. The rim is laid on the outline in its order round the hole (each vertex as
   far along the outline as it was along the cut's staircase edge; corners where the hole touched itself split, scraps
   of skin left in the opening taken away), its depth from the skin as it was whole, and each face's corner there
   draws its own texture island: a corner given another island's texture stretched its face across the map, the

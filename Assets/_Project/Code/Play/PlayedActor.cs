@@ -58,6 +58,7 @@ namespace Forge.Play
         ArrowFlights _arrows;
         HeadLook _headLook;
         EyeLook _eyeLook;
+        EyeBlink _eyeBlink;
         FootstepView _footsteps;
 
         /// <param name="stage">The game it stands in.</param>
@@ -267,6 +268,7 @@ namespace Forge.Play
             // Last on the pose: the head turns once the upper body is set (a stance kept, a bow's aim), and its eyes after.
             _headLook = new HeadLook(_model, Rules.EyeHeight, LookedAt);
             _eyeLook = new EyeLook(_model, Rules.EyeHeight, LookedAt);
+            _eyeBlink = new EyeBlink(_model, Id.GetHashCode(), () => !Fallen);
             if (Stage.Sounds != null)
                 _footsteps = new FootstepView(_model, Stage.Sounds, Stage.Surfaces, Rules.Locomotion.Settings);
             Show(0f);
@@ -367,6 +369,8 @@ namespace Forge.Play
             _headLook = null;
             _eyeLook?.Dispose();
             _eyeLook = null;
+            _eyeBlink?.Dispose();
+            _eyeBlink = null;
             _combatView?.Dispose();
             _combatView = null;
             _guardView = null;
