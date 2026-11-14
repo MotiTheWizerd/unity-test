@@ -6,10 +6,17 @@ namespace Forge.Play.Hud
     /// What the face editor's controls do to the head shown: a slider drives the blend shape named by its part and its
     /// name without spaces ("Nose" "Width": NoseWidth; "Jaw" "Chin": JawChin), from the other way at 0 through none at
     /// <see cref="FaceEditorScreen.Middle"/> to all of it at 100, so a shape made in Blender is a working slider with no
-    /// code; Skin's Tone tints the skin, pale to deep brown. A control the head has no shape for changes nothing.
+    /// code; Skin's Tone tints the skin, pale to deep brown; Head's Face puts on another of the body's heads
+    /// (<see cref="CharacterHeads"/>). A control the head has no shape for changes nothing.
     /// </summary>
     public static class FaceLook
     {
+        /// <summary>The part whose <see cref="FaceControl"/> chooses the head.</summary>
+        public const string HeadPart = "Head";
+
+        /// <summary>The choice of the body's heads (<see cref="CharacterHeads"/>), on the <see cref="HeadPart"/>.</summary>
+        public const string FaceControl = "Face";
+
         /// <summary>The tint's colour property in URP Lit, multiplied into its base map.</summary>
         static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
 
@@ -33,6 +40,14 @@ namespace Forge.Play.Hud
         {
             if (look == null)
                 return;
+
+            if (part == HeadPart && control == FaceControl)
+            {
+                var heads = look.GetComponentInChildren<CharacterHeads>(true);
+                if (heads != null)
+                    heads.Wear(value);
+                return;
+            }
 
             if (part == "Skin" && control == "Tone")
             {

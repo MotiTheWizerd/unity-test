@@ -9,7 +9,8 @@ namespace Forge.Play.Hud
 {
     /// <summary>
     /// The player's face, made before play, as Skyrim's race menu: a column of the face's parts on the left (Head, Eyes,
-    /// Brows, Nose, Mouth, Jaw, Skin, Hair), the chosen part's sliders and choices beside it, the character standing large
+    /// Brows, Nose, Mouth, Jaw, Skin, Hair; on a body with heads to choose from, the Head part's Face first:
+    /// <see cref="PartsFor"/>), the chosen part's sliders and choices beside it, the character standing large
     /// on the right (a <see cref="TurntableView"/>: drag to turn it, the wheel to zoom), and Randomize, Reset and Done
     /// along the bottom; each change shows on the head at once (<see cref="FaceLook"/>). Drawn by FaceEditorScreen.uss. Whatever hosts it ticks it while it is on screen.
     /// </summary>
@@ -44,10 +45,18 @@ namespace Forge.Play.Hud
         /// <summary>One thing to set on a part: a slider from 0 to 100, or one of a few named choices.</summary>
         public sealed class Control
         {
+            /// <summary>A slider starting at <see cref="Middle"/>, or, given choices, a choice starting at the first.</summary>
             public Control(string name, params string[] choices)
+                : this(name, choices.Length > 0 ? 0 : Middle, choices)
+            {
+            }
+
+            /// <summary>A choice starting at choice <paramref name="start"/>.</summary>
+            public Control(string name, int start, string[] choices)
             {
                 Name = name;
                 Choices = choices;
+                Start = start;
             }
 
             public string Name { get; }
@@ -56,6 +65,9 @@ namespace Forge.Play.Hud
             public string[] Choices { get; }
 
             public bool IsChoice => Choices.Length > 0;
+
+            /// <summary>Its value until set, and again on Reset: a slider's 0 to 100, a choice's index.</summary>
+            public int Start { get; }
         }
 
         /// <summary>A part of the face and what can be set on it.</summary>
@@ -71,7 +83,7 @@ namespace Forge.Play.Hud
             public Control[] Controls { get; }
         }
 
-        /// <summary>The parts, top to bottom, and what each sets.</summary>
+        /// <summary>The parts, top to bottom, and what each sets on every face.</summary>
         public static readonly IReadOnlyList<Part> Parts = new[]
         {
             new Part("Head", new Control("Width"), new Control("Height"), new Control("Roundness"), new Control("Cheekbones"), new Control("Cheeks")),
@@ -84,6 +96,28 @@ namespace Forge.Play.Hud
             new Part("Hair", new Control("Style", "None", "Bob"), new Control("Colour"), new Control("Lightness")),
         };
 
+        /// <summary>
+        /// The parts made on <paramref name="character"/>: <see cref="Parts"/>, and when its body can wear more than one
+        /// head (<see cref="CharacterHeads"/>), the head's Face first, a choice of them starting at the one it wears.
+        /// </summary>
+        public static IReadOnlyList<Part> PartsFor(GameObject character)
+        {
+            var heads = character != null ? character.GetComponentInChildren<CharacterHeads>(true) : null;
+            if (heads == null || heads.Count < 2)
+                return Parts;
+
+            var names = new string[heads.Count];
+            for (var i = 0; i < names.Length; i++)
+                names[i] = heads.NameOf(i);
+            var parts = new List<Part>(Parts);
+            var head = parts.FindIndex(p => p.Name == FaceLook.HeadPart);
+            var controls = new List<Control> { new Control(FaceLook.FaceControl, Math.Max(heads.Worn, 0), names) };
+            controls.AddRange(parts[head].Controls);
+            parts[head] = new Part(FaceLook.HeadPart, controls.ToArray());
+            return parts;
+        }
+
+        readonly IReadOnlyList<Part> _parts;
         readonly VisualElement _root;
         readonly List<Label> _partViews = new List<Label>();
         readonly Label _controlsTitle;
@@ -102,13 +136,14 @@ namespace Forge.Play.Hud
             if (parent == null)
                 throw new ArgumentNullException(nameof(parent));
 
+            _parts = PartsFor(character);
             _root = Make<VisualElement>(parent, UssClass);
             _root.name = "face-editor";
             Make<Label>(_root, TitleClass).text = "Your Face";
             var frame = Make<VisualElement>(_root, FrameClass);
 
             var parts = Make<VisualElement>(frame, PartsClass);
-            foreach (var part in Parts)
+            foreach (var part in _parts)
             {
                 var view = Make<Label>(parts, PartClass);
                 view.text = part.Name;
@@ -133,7 +168,7 @@ namespace Forge.Play.Hud
             Button(footer, "Reset", Reset);
             Button(footer, "Done", () => { }).AddToClassList(ButtonPrimaryClass);
 
-            _part = Parts[0];
+            _part = _parts[0];
         }
 
         /// <summary>The part whose controls are shown.</summary>
@@ -142,14 +177,14 @@ namespace Forge.Play.Hud
         /// <summary>How many controls the shown part has on screen, once drawn.</summary>
         public int ShownControls => _controls.contentContainer.childCount;
 
-        /// <summary>A control's value: a slider's 0 to 100, a choice's index; <see cref="Middle"/> or the first choice until set.</summary>
+        /// <summary>A control's value: a slider's 0 to 100, a choice's index; its <see cref="Control.Start"/> until set.</summary>
         public int Value(string part, string control) =>
-            _values.TryGetValue((part, control), out var value) ? value : Start(Find(part, control));
+            _values.TryGetValue((part, control), out var value) ? value : Find(part, control).Start;
 
         /// <summary>Shows <paramref name="part"/>'s controls from the next tick.</summary>
         public void Choose(string part)
         {
-            foreach (var candidate in Parts)
+            foreach (var candidate in _parts)
             {
                 if (candidate.Name == part)
                 {
@@ -178,7 +213,7 @@ namespace Forge.Play.Hud
 
         void Randomize()
         {
-            foreach (var part in Parts)
+            foreach (var part in _parts)
             {
                 foreach (var control in part.Controls)
                     _values[(part.Name, control.Name)] = control.IsChoice ? _random.Next(control.Choices.Length) : _random.Next(101);
@@ -196,10 +231,11 @@ namespace Forge.Play.Hud
             _dirty = true;
         }
 
-        // Every control's value on the head.
+        // Every control's value on the head: the head chosen first (the Face leads the Head part, the first), so the rest
+        // shape the head it wears.
         void ShowAll()
         {
-            foreach (var part in Parts)
+            foreach (var part in _parts)
             {
                 foreach (var control in part.Controls)
                     FaceLook.Apply(_look, part.Name, control.Name, Value(part.Name, control.Name));
@@ -209,15 +245,19 @@ namespace Forge.Play.Hud
         void Set(Part part, Control control, int value)
         {
             _values[(part.Name, control.Name)] = value;
-            FaceLook.Apply(_look, part.Name, control.Name, value);
+            // Another head takes every value the face has.
+            if (part.Name == FaceLook.HeadPart && control.Name == FaceLook.FaceControl)
+                ShowAll();
+            else
+                FaceLook.Apply(_look, part.Name, control.Name, value);
         }
 
         // Drawn at the next tick, never inside the click that asked.
         void Draw()
         {
             _dirty = false;
-            for (var i = 0; i < Parts.Count; i++)
-                _partViews[i].EnableInClassList(PartActiveClass, Parts[i] == _part);
+            for (var i = 0; i < _parts.Count; i++)
+                _partViews[i].EnableInClassList(PartActiveClass, _parts[i] == _part);
 
             _controlsTitle.text = _part.Name.ToUpperInvariant();
             _controls.Clear();
@@ -281,9 +321,9 @@ namespace Forge.Play.Hud
             return row;
         }
 
-        static Control Find(string part, string control)
+        Control Find(string part, string control)
         {
-            foreach (var candidate in Parts)
+            foreach (var candidate in _parts)
             {
                 if (candidate.Name != part)
                     continue;
@@ -302,8 +342,6 @@ namespace Forge.Play.Hud
             prefab.GetComponentInChildren<Animator>(true) != null
                 ? CharacterModel.StandingStill(holder, prefab).Root
                 : UnityEngine.Object.Instantiate(prefab, holder, false);
-
-        static int Start(Control control) => control.IsChoice ? 0 : Middle;
 
         static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
 

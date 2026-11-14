@@ -38,7 +38,8 @@ Assets/_Project/
   UI/            EditorPanel.uxml/.uss (runtime editor UI), ForgeRuntimeTheme.tss, ForgePanelSettings
   Content/       PrefabCatalog.asset (asset key → prefab), GroundLayerCatalog.asset (asset key → terrain layer);
                  Placeholder/ holds generated placeholder prefabs + materials; Ground/ the ground textures (CC0);
-                 Characters/ one folder per rigged character (model, texture, built material and prefab);
+                 Characters/ one folder per rigged character (model, texture, built material and prefab; a
+                 replaceable body's Heads/ the heads it can wear, each model, maps, material and prefab);
                  Models/ one folder per static model (the real art: model, textures, built material and prefab)
                  Heads/ the face editor's base heads (model, maps, built material and prefab; in no catalog)
   Shaders/       GizmoOverlay.shader (always-on-top gizmos), PlacementGhost.shader (see-through place preview), Water.shader (sea and lakes), Sky.shader (the skybox), Terrain/ (the ground: URP Terrain Lit with its tiling broken up)
@@ -794,7 +795,10 @@ from any camera, so both cameras read the same player.
   is measured by its bounds, not baked (`RendererBounds.TryGetPosed`: a bone-less bake is empty until it has drawn).
   The other characters have no blend shapes and no face bones, and the rest of the controls change nothing yet (see
   Shortcuts). The stage shows WarriorM on his body: **BodyWarriorM**, the first replaceable body (see Characters),
-  whose Head piece is this head, so the sliders shape the face of a man standing in his idle. To come: hand-made
+  whose head is this head, so the sliders shape the face of a man standing in his idle. On a body with heads to
+  choose from (`CharacterHeads`), the Head part leads with **Face**, a choice of them starting at the one it wears
+  (`FaceEditorScreen.PartsFor`); choosing one puts it on (`FaceLook`: `CharacterHeads.Wear`) and every other value is
+  given again to the new head (a slider at 100 stays at 100), Reset puts the built head back. To come: hand-made
   shapes, a portrait framing; the tone darkens the eyes' whites too.
 - **Turntables** (`TurntablePreview`, World/Assets; `TurntableView`, Play.Hud): a thing shown live in a
   `PreviewStudio`, as Skyrim shows the chosen item and the character carrying it. Whoever shows it builds it
@@ -890,13 +894,24 @@ from any camera, so both cameras read the same player.
   model is cut into the pieces equipment replaces, each a mesh of its own on its one skeleton: `Body` (torso, arms,
   legs), `Head`, `Hands`, `Feet`. blender-tests `ai_models/pieces.py` cuts them after Mixamo, at seams found from the
   rig's own bones (low on the neck, above the wrists and the ankles), both sides of a seam the same vertices, normals
-  and weights, so no line shows. The Head piece is the face editor's head (`ai_models/neck.py`): seated by its chin
-  where the body's own head was, cut on the neck, its lower neck laid onto the body's, and a collar down to the seam
-  whose last ring is the body's seam ring; weighed from the body's own head, its sliders kept as blend shapes (the
-  Head mesh's), its skin matched to the body's and faded into it on the neck. One material: the body's maps on the
-  left half of the texture, the head's on the right (8192 × 4096, `"textureSize": 8192`). It is built as any
-  character is. **BodyWarriorM** (1.80 m) is the first, the male base body wearing WarriorM's head at the body's own
-  head size (×1.108 of a real head's, which looked small on his neck); nothing replaces a piece yet.
+  and weights, so no line shows. **The head is a piece of its own**, any of the body's heads in its place: the body's
+  model holds `Body`, `Hands` and `Feet`; each head is a model of its own on a copy of the skeleton
+  (`<Name>/Heads/<Head>.fbx`): the body's own head as cut, and each face editor head `ai_models/neck.py` seated on the
+  neck (by its chin where the body's own head was, its chin to its crown as long as the body's own head's, cut on
+  the neck, its lower neck laid onto the body's, a collar down to the seam whose last ring is the body's seam ring;
+  weighed from the body's own head, its sliders kept as blend shapes, its skin matched to the body's and faded into it
+  on the neck). A head draws two materials: its collar the body's (it lies on the body's neck, so the seam is one
+  texture), the rest its own maps (`<Head>_Color.png`, `_Normal.png`), told apart by name (the material named as the
+  head is its own: Unity orders a mesh's parts its own way, not by the file's slots). Head models import with their
+  bones and material names and no avatar (`CharacterImport`). *Build Characters* builds each head into a prefab,
+  lists them on the character (`CharacterHeads`) and puts on the one its `{Name}.json` names (`"head"`), so the
+  prefab stands whole; a head is put on by **stitching** (`SkinnedPiece.Stitch`, Play): a new renderer under the
+  body, drawn by the body's bones of its bones' names, as armour will be. The bones stood where the body's stand when
+  both were made, so a head lies where it was made to within 0.001 mm (`ReplaceableBodyContentTests`). Worn heads
+  are drawn under the look like the body's own meshes, so the hitboxes and the headless first person take them; a
+  head changed after they are made is not theirs yet (only the face editor changes it so far). **BodyWarriorM**
+  (1.80 m) is the first, the male base body: its own head and WarriorM's, wearing WarriorM's (maps 4096 each,
+  `"textureSize": 4096`); no armour replaces a piece yet.
 - **Animations** (`Content/Animations/<Set>/<Folder>/<Move>.fbx`): one Mixamo clip per move (FBX for Unity, 30 fps,
   without skin, travel left in), named after its move, a name of its own across the set, and sorted by what it is: the
   folder says (`HumanoidMoves.RoleOf` → `MoveRole`): `Locomotion/` the ground moves (Idle, Walk, Run, Sprint blended
@@ -2011,4 +2026,4 @@ and the condition for removing it, and is listed here.
 | `EditorApp/Agent/ImageClipboard.cs` (`ForThisPlatform`) | Pasting a picture into the agent's message works on Windows only; elsewhere the clipboard has no picture | Forge runs on Windows today, and Unity's clipboard carries text only | Forge ships on macOS or Linux → a clipboard reader for that platform |
 | `Agent/Memory/SemantixMemory.cs` (`Origin`) | The agent's Semantix memory is made with origin `user`, so Semantix Studio doesn't list it under Your Agents | The server knows no `forge` origin yet, and one memory for all of Forge needs no picker | Users make memories at will → a `forge` origin on the server and a Forge group in Your Agents |
 | `Play/GameSession.cs` (`OnKilled`) | Killed, the player wakes up whole at once where it fell (`Revival.WakeUp`), its fight settled | Fights are being tested; Moti: "let it wake up with full power, stop fighting" | The game has a death (a load, a menu) → the player falls as a character does |
-| `Play/Hud/FaceEditorScreen.cs` | The face lives in the screen (no record, Done does nothing), and only Nose Width, Jaw Width, Jaw Chin and Skin Tone change the head; the rest change nothing | Moti asked for the UI first; the base head has three landmark shapes so far | The face's record arrives and the head has a shape for every slider (the new game's start hosts the screen) |
+| `Play/Hud/FaceEditorScreen.cs` | The face lives in the screen (no record, Done does nothing: the player plays in the head its prefab is built with), and only the Face, Nose Width, Jaw Width, Jaw Chin and Skin Tone change the head; the rest change nothing | Moti asked for the UI first; the base head has three landmark shapes so far | The face's record arrives and the head has a shape for every slider (the new game's start hosts the screen) |

@@ -49,7 +49,7 @@ namespace Forge.UnityEditor.Content
                     Debug.Log($"[Forge] {name}: the forearm takes its whole roll.");
                 var settings = SettingsOf(folder, name);
                 var prefab = BuildCharacter(folder, name, MoveSetOf(name, settings, moveSets), settings.textureSize > 0 ? settings.textureSize : TextureSize,
-                    settings.voice);
+                    settings.voice, settings.head);
                 if (prefab == null)
                     continue;
                 // An NPC is placed in the world from the catalog, as a model is.
@@ -77,7 +77,7 @@ namespace Forge.UnityEditor.Content
             }
         }
 
-        // A character folder's optional {Name}.json: { "moves": "Guard", "textureSize": 4096, "voice": "female" }.
+        // A character folder's optional {Name}.json: { "moves": "Guard", "textureSize": 4096, "voice": "female", "head": "WarriorM" }.
         static CharacterSettings SettingsOf(string folder, string name)
         {
             var settingsPath = $"{folder}/{name}.json";
@@ -107,15 +107,18 @@ namespace Forge.UnityEditor.Content
             public int textureSize;
             // The voice its own sounds are made in (CharacterVoice); none: the sounds as they are.
             public string voice;
+            // A replaceable body's: the head it is made with, of its Heads (by name); none: the first.
+            public string head;
         }
 
         /// <summary>
         /// The prefab built for the character folder <paramref name="folder"/>, playing <paramref name="animations"/>
         /// (none: it stands in its rest pose), its textures at most <paramref name="textureSize"/>, speaking in
-        /// <paramref name="voice"/> (<see cref="CharacterVoice"/>; none: no voice of its own), or null when it isn't a character.
+        /// <paramref name="voice"/> (<see cref="CharacterVoice"/>; none: no voice of its own), wearing the head
+        /// <paramref name="head"/> of its Heads when it has some (<see cref="WearHeads"/>), or null when it isn't a character.
         /// </summary>
         public static GameObject BuildCharacter(string folder, string name, RuntimeAnimatorController animations, int textureSize = TextureSize,
-            string voice = null)
+            string voice = null, string head = null)
         {
             var modelPath = $"{folder}/{name}.fbx";
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
@@ -143,6 +146,8 @@ namespace Forge.UnityEditor.Content
                     renderer.shadowCastingMode = ShadowCastingMode.On;
                 }
 
+                WearHeads(instance, folder, name, material, textureSize, head);
+
                 if (!instance.TryGetComponent<Animator>(out var animator))
                     animator = instance.AddComponent<Animator>();
                 animator.avatar = avatar;
@@ -165,6 +170,92 @@ namespace Forge.UnityEditor.Content
                 // After the animator: binding it puts the bones back as the file has them.
                 foreach (var skinned in instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
                     RestInBindPose(skinned);
+                return PrefabUtility.SaveAsPrefabAsset(instance, $"{folder}/{name}.prefab");
+            }
+            finally
+            {
+                EditorSceneManager.ClosePreviewScene(scene);
+            }
+        }
+
+        /// <summary>
+        /// A replaceable body's heads ({folder}/Heads/{Head}.fbx, blender-tests pieces.py: the body's own and each face
+        /// editor head seated on its neck), each built into a prefab of its own (<see cref="BuildHead"/>) and listed on
+        /// the character (<see cref="CharacterHeads"/>), which wears <paramref name="worn"/> (none: the first), so its
+        /// prefab stands whole. A folder without heads wears its model's own meshes.
+        /// </summary>
+        static void WearHeads(GameObject instance, string folder, string name, Material body, int textureSize, string worn)
+        {
+            var headsFolder = $"{folder}/{CharacterImport.HeadsFolder}";
+            if (!Directory.Exists(headsFolder))
+                return;
+            var names = Directory.GetFiles(headsFolder, "*.fbx").Select(Path.GetFileNameWithoutExtension)
+                .OrderBy(n => n, System.StringComparer.Ordinal).ToList();
+            if (names.Count == 0)
+                return;
+
+            var heads = names.Select(head => BuildHead(headsFolder, head, body, textureSize)).ToList();
+            if (heads.Contains(null))
+            {
+                Debug.LogError($"[Forge] {name}: a head under {headsFolder} did not build; it wears none.");
+                return;
+            }
+
+            var wearer = instance.AddComponent<CharacterHeads>();
+            wearer.SetHeads(heads);
+            var index = string.IsNullOrWhiteSpace(worn) ? 0 : names.IndexOf(worn.Trim());
+            if (index < 0)
+            {
+                Debug.LogWarning($"[Forge] {name} wears the head '{worn}', which is not under {headsFolder}; it wears {names[0]}.");
+                index = 0;
+            }
+
+            wearer.Wear(index);
+        }
+
+        /// <summary>
+        /// The prefab of the head {folder}/{name}.fbx, a variant of its model: the slot of its material named as the
+        /// head draws its own maps, {name}_Color.png and {name}_Normal.png, in a material {name}.mat; every other slot
+        /// draws <paramref name="body"/> (its collar, on the body's neck; all of the body's own head, which has no maps
+        /// of its own). By name, as the import keeps them: Unity orders a mesh's parts its own way, not by the file's
+        /// slots. Null when it isn't there.
+        /// </summary>
+        static GameObject BuildHead(string folder, string name, Material body, int textureSize)
+        {
+            var modelPath = $"{folder}/{name}.fbx";
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+            if (model == null)
+            {
+                Debug.LogError($"[Forge] {modelPath} did not import.");
+                return null;
+            }
+
+            var own = File.Exists($"{folder}/{name}_Color.png") ? BuildMaterial(folder, name, textureSize) : null;
+            var scene = EditorSceneManager.NewPreviewScene();
+            try
+            {
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(model, scene);
+                var drawsOwn = false;
+                foreach (var renderer in instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    var materials = renderer.sharedMaterials;
+                    for (var i = 0; i < materials.Length; i++)
+                    {
+                        var itsOwn = own != null && materials[i] != null && materials[i].name == name;
+                        drawsOwn |= itsOwn;
+                        materials[i] = itsOwn ? own : body;
+                    }
+
+                    renderer.sharedMaterials = materials;
+                    renderer.shadowCastingMode = ShadowCastingMode.On;
+                }
+
+                if (own != null && !drawsOwn)
+                {
+                    Debug.LogError($"[Forge] {modelPath} has maps of its own but no material named {name} to draw them.");
+                    return null;
+                }
+
                 return PrefabUtility.SaveAsPrefabAsset(instance, $"{folder}/{name}.prefab");
             }
             finally
