@@ -12,14 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ed3f8f89ceee8a41b2e612b6b0baf29, type: 3}
   m_Name: PlayerProfile
   m_EditorClassIdentifier: Forge.Play::Forge.Play.PlayerProfile
-  _height: 1.85
+  _height: 1.8
   _radius: 0.3
   _guardRadius: 0.45
   _eyeHeight: 1.72
   _crouchHeight: 1
   _stepHeight: 0.4
   _slopeLimit: 50
-  _model: {fileID: 6738044124541388394, guid: 4108fd9475ebc3e4c830ce4bb53245bc, type: 3}
+  _model: {fileID: 2414651281906343737, guid: ac0bddb9a13c47946818ddb297941efb, type: 3}
   _looks:
   - {fileID: 2414651281906343737, guid: ac0bddb9a13c47946818ddb297941efb, type: 3}
   - {fileID: 5378621275931057250, guid: c658d8c05932fd446a210998c9b6ace0, type: 3}
@@ -45,7 +45,7 @@ MonoBehaviour:
   _cameraMaxDistance: 8
   _cameraZoomStep: 0.6
   _cameraZoomEase: 0.12
-  _cameraPivotHeight: 1.6
+  _cameraPivotHeight: 1.56
   _cameraShoulderOffset: 0.35
   _cameraRadius: 0.2
   _cameraReturnSpeed: 6

@@ -860,8 +860,11 @@ from any camera, so both cameras read the same player.
   the right shoulder that draws from it, crossing a bow there in an X and lying on it), at the first slot of their fit (a two-hander in the right hand; a slot with no bone shows
   nothing); `EquipmentView` keeps that in step with an `ActorEquipment` (the player's while spawned), and the
   inventory's character is dressed anew whenever the equipment changes (turned as it was: `TurntablePreview.Show`
-  with `keepTurn`). The player is the **Viking hero** (`Content/Characters/VikingHero`, 1.85 m, eyes at 1.72 m), the first
-  real character, from the `blender-tests` art repo (see its CREDITS.md). Before him it wore a placeholder mannequin
+  with `keepTurn`). The player is **BodyWarriorM** (`Content/Characters/BodyWarriorM`, the replaceable body wearing the face
+  editor's WarriorM head, 1.80 m: the profile's height and its camera pivot, 1.56 m, are set to his; the capsule is
+  still the profile's for every look, where the world's characters size theirs by their eyes). Before him it was
+  VikingF1, before her the **Viking hero** (`Content/Characters/VikingHero`, the first real character, from the
+  `blender-tests` art repo, see its CREDITS.md). Before him it wore a placeholder mannequin
   (`player_mannequin`, built from primitives by `PlaceholderCharacters` through *Forge → Generate Placeholder Player*,
   which gives it to a profile with no model); it stays as the fallback.
 - **Characters** (`Content/Characters/<Name>/`): the rigged model `<Name>.fbx` (feet at the origin, facing +Z, meters),
