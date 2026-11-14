@@ -798,8 +798,16 @@ from any camera, so both cameras read the same player.
   whose head is this head, so the sliders shape the face of a man standing in his idle. On a body with heads to
   choose from (`CharacterHeads`), the Head part leads with **Face**, a choice of them starting at the one it wears
   (`FaceEditorScreen.PartsFor`); choosing one puts it on (`FaceLook`: `CharacterHeads.Wear`) and every other value is
-  given again to the new head (a slider at 100 stays at 100), Reset puts the built head back. To come: hand-made
-  shapes, a portrait framing; the tone darkens the eyes' whites too.
+  given again to the new head (a slider at 100 stays at 100), Reset puts the built head back. **Eyes of their own**:
+  a face editor head has eyeballs, not paint (blender-tests `ai_models/eyes.py`, run by `head.py`): each painted eye's
+  opening is found from the paint (ray-cast from the front, what is not warm skin, flooded from the iris) and cut, its
+  rim laid on the outline, the lids' inside a band into the eyeball; the eyeball is a sphere fitted to the painted
+  eye (the AI sculpts one under the paint: WarriorM's 11.9 and 11.3 mm in radius, a real eye's 12), its cornea rising
+  over an iris painted by code in the painted iris's colour. They are a third slot of the head's mesh, a material
+  named `{Head}Eyes` with its own colour map and a wet `_MetallicSmoothness` map (0.9), and ride the Head bone (Mixamo's
+  skeleton has no eye bones: eyes that look about will bring their own). Skin's Tone leaves them as made
+  (`FaceLook.IsEyes`: tinting slot by slot). To come: hand-made shapes, a portrait framing, eyes that look and blink,
+  Eyes' Colour.
 - **Turntables** (`TurntablePreview`, World/Assets; `TurntableView`, Play.Hud): a thing shown live in a
   `PreviewStudio`, as Skyrim shows the chosen item and the character carrying it. Whoever shows it builds it
   (`Show(subject, build)`): an item from its asset key through the world's `IAssetCatalog` (`Show(assets, key)`;
@@ -900,9 +908,10 @@ from any camera, so both cameras read the same player.
   neck (by its chin where the body's own head was, its chin to its crown as long as the body's own head's, cut on
   the neck, its lower neck laid onto the body's, a collar down to the seam whose last ring is the body's seam ring;
   weighed from the body's own head, its sliders kept as blend shapes, its skin matched to the body's and faded into it
-  on the neck). A head draws two materials: its collar the body's (it lies on the body's neck, so the seam is one
-  texture), the rest its own maps (`<Head>_Color.png`, `_Normal.png`), told apart by name (the material named as the
-  head is its own: Unity orders a mesh's parts its own way, not by the file's slots). Head models import with their
+  on the neck). A head draws its materials by name: a slot whose material is named X draws the maps `{X}_Color.png`
+  (`_Normal.png`, `_MetallicSmoothness.png`) beside it, its own skin (`<Head>`) and its eyes (`<Head>Eyes`); a slot
+  with no maps of its name, its collar, draws the body's (it lies on the body's neck, so the seam is one texture).
+  By name because Unity orders a mesh's parts its own way, not by the file's slots. Head models import with their
   bones and material names and no avatar (`CharacterImport`). *Build Characters* builds each head into a prefab,
   lists them on the character (`CharacterHeads`) and puts on the one its `{Name}.json` names (`"head"`), so the
   prefab stands whole; a head is put on by **stitching** (`SkinnedPiece.Stitch`, Play): a new renderer under the
@@ -2026,4 +2035,4 @@ and the condition for removing it, and is listed here.
 | `EditorApp/Agent/ImageClipboard.cs` (`ForThisPlatform`) | Pasting a picture into the agent's message works on Windows only; elsewhere the clipboard has no picture | Forge runs on Windows today, and Unity's clipboard carries text only | Forge ships on macOS or Linux → a clipboard reader for that platform |
 | `Agent/Memory/SemantixMemory.cs` (`Origin`) | The agent's Semantix memory is made with origin `user`, so Semantix Studio doesn't list it under Your Agents | The server knows no `forge` origin yet, and one memory for all of Forge needs no picker | Users make memories at will → a `forge` origin on the server and a Forge group in Your Agents |
 | `Play/GameSession.cs` (`OnKilled`) | Killed, the player wakes up whole at once where it fell (`Revival.WakeUp`), its fight settled | Fights are being tested; Moti: "let it wake up with full power, stop fighting" | The game has a death (a load, a menu) → the player falls as a character does |
-| `Play/Hud/FaceEditorScreen.cs` | The face lives in the screen (no record, Done does nothing: the player plays in the head its prefab is built with), and only the Face, Nose Width, Jaw Width, Jaw Chin and Skin Tone change the head; the rest change nothing | Moti asked for the UI first; the base head has three landmark shapes so far | The face's record arrives and the head has a shape for every slider (the new game's start hosts the screen) |
+| `Play/Hud/FaceEditorScreen.cs` | The face lives in the screen (no record, Done does nothing: the player plays in the head its prefab is built with), and only the Face, Nose Width, Jaw Width, Jaw Chin and Skin Tone change the head; the rest change nothing (Eyes' Colour too, though the eyes are eyeballs now) | Moti asked for the UI first; the base head has three landmark shapes so far | The face's record arrives and the head has a shape for every slider (the new game's start hosts the screen) |

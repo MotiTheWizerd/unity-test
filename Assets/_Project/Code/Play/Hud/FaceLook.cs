@@ -6,7 +6,7 @@ namespace Forge.Play.Hud
     /// What the face editor's controls do to the head shown: a slider drives the blend shape named by its part and its
     /// name without spaces ("Nose" "Width": NoseWidth; "Jaw" "Chin": JawChin), from the other way at 0 through none at
     /// <see cref="FaceEditorScreen.Middle"/> to all of it at 100, so a shape made in Blender is a working slider with no
-    /// code; Skin's Tone tints the skin, pale to deep brown; Head's Face puts on another of the body's heads
+    /// code; Skin's Tone tints the skin (not the eyes: <see cref="IsEyes"/>), pale to deep brown; Head's Face puts on another of the body's heads
     /// (<see cref="CharacterHeads"/>). A control the head has no shape for changes nothing.
     /// </summary>
     public static class FaceLook
@@ -22,6 +22,13 @@ namespace Forge.Play.Hud
 
         static readonly Color Pale = new Color(1.06f, 1.03f, 1f);
         static readonly Color Deep = new Color(0.42f, 0.3f, 0.24f);
+
+        /// <summary>
+        /// Whether <paramref name="material"/> draws eyes: a head's eyes are a material named for them, "{Head}Eyes"
+        /// (blender-tests eyes.py), which Skin's Tone leaves as it is.
+        /// </summary>
+        public static bool IsEyes(Material material) =>
+            material != null && material.name.EndsWith("Eyes", System.StringComparison.Ordinal);
 
         /// <summary>The blend shape a control drives: its part and its name, spaces gone ("JawChin").</summary>
         public static string ShapeName(string part, string control) => (part + control).Replace(" ", string.Empty);
@@ -51,12 +58,17 @@ namespace Forge.Play.Hud
 
             if (part == "Skin" && control == "Tone")
             {
+                // Slot by slot: a head's eyes are a slot of its mesh, and the tone leaves them as they are.
                 var block = new MaterialPropertyBlock();
                 foreach (var renderer in look.GetComponentsInChildren<Renderer>(true))
                 {
-                    renderer.GetPropertyBlock(block);
-                    block.SetColor(BaseColor, SkinTint(value));
-                    renderer.SetPropertyBlock(block);
+                    var materials = renderer.sharedMaterials;
+                    for (var i = 0; i < materials.Length; i++)
+                    {
+                        renderer.GetPropertyBlock(block, i);
+                        block.SetColor(BaseColor, IsEyes(materials[i]) ? Color.white : SkinTint(value));
+                        renderer.SetPropertyBlock(block, i);
+                    }
                 }
 
                 return;

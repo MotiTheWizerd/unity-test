@@ -214,11 +214,11 @@ namespace Forge.UnityEditor.Content
         }
 
         /// <summary>
-        /// The prefab of the head {folder}/{name}.fbx, a variant of its model: the slot of its material named as the
-        /// head draws its own maps, {name}_Color.png and {name}_Normal.png, in a material {name}.mat; every other slot
-        /// draws <paramref name="body"/> (its collar, on the body's neck; all of the body's own head, which has no maps
-        /// of its own). By name, as the import keeps them: Unity orders a mesh's parts its own way, not by the file's
-        /// slots. Null when it isn't there.
+        /// The prefab of the head {folder}/{name}.fbx, a variant of its model: a slot whose material is named X draws
+        /// the maps {X}_Color.png (and _Normal.png, _MetallicSmoothness.png) beside it, in a material {X}.mat: the
+        /// head's own skin ({name}) and its eyes ({name}Eyes); a slot with no maps of its name draws
+        /// <paramref name="body"/> (its collar, on the body's neck; all of the body's own head). By name, as the import
+        /// keeps them: Unity orders a mesh's parts its own way, not by the file's slots. Null when it isn't there.
         /// </summary>
         static GameObject BuildHead(string folder, string name, Material body, int textureSize)
         {
@@ -230,27 +230,28 @@ namespace Forge.UnityEditor.Content
                 return null;
             }
 
-            var own = File.Exists($"{folder}/{name}_Color.png") ? BuildMaterial(folder, name, textureSize) : null;
+            var built = new Dictionary<string, Material>();
+            Material Drawing(Material slot)
+            {
+                var slotName = slot != null ? slot.name : null;
+                if (slotName == null || !File.Exists($"{folder}/{slotName}_Color.png"))
+                    return body;
+                if (!built.TryGetValue(slotName, out var material))
+                    built[slotName] = material = BuildMaterial(folder, slotName, textureSize);
+                return material;
+            }
+
             var scene = EditorSceneManager.NewPreviewScene();
             try
             {
                 var instance = (GameObject)PrefabUtility.InstantiatePrefab(model, scene);
-                var drawsOwn = false;
                 foreach (var renderer in instance.GetComponentsInChildren<SkinnedMeshRenderer>(true))
                 {
-                    var materials = renderer.sharedMaterials;
-                    for (var i = 0; i < materials.Length; i++)
-                    {
-                        var itsOwn = own != null && materials[i] != null && materials[i].name == name;
-                        drawsOwn |= itsOwn;
-                        materials[i] = itsOwn ? own : body;
-                    }
-
-                    renderer.sharedMaterials = materials;
+                    renderer.sharedMaterials = renderer.sharedMaterials.Select(Drawing).ToArray();
                     renderer.shadowCastingMode = ShadowCastingMode.On;
                 }
 
-                if (own != null && !drawsOwn)
+                if (File.Exists($"{folder}/{name}_Color.png") && !built.ContainsKey(name))
                 {
                     Debug.LogError($"[Forge] {modelPath} has maps of its own but no material named {name} to draw them.");
                     return null;
@@ -291,12 +292,16 @@ namespace Forge.UnityEditor.Content
         {
             var colorPath = $"{folder}/{name}_Color.png";
             var normalPath = $"{folder}/{name}_Normal.png";
+            var metalPath = $"{folder}/{name}_MetallicSmoothness.png";
             var hasColor = File.Exists(colorPath);
             var hasNormal = File.Exists(normalPath);
+            var hasMetal = File.Exists(metalPath);
             if (hasColor)
                 TextureMaps.Configure(colorPath, TextureImporterType.Default, sRGB: true, textureSize);
             if (hasNormal)
                 TextureMaps.Configure(normalPath, TextureImporterType.NormalMap, sRGB: false, textureSize);
+            if (hasMetal)
+                TextureMaps.Configure(metalPath, TextureImporterType.Default, sRGB: false, textureSize);
 
             var path = $"{folder}/{name}.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -313,8 +318,11 @@ namespace Forge.UnityEditor.Content
             else
                 material.DisableKeyword("_NORMALMAP");
             material.SetFloat("_Metallic", 0f);
-            // Cloth, leather and skin: matte, no wet sheen.
-            material.SetFloat("_Smoothness", 0.25f);
+            // With {name}_MetallicSmoothness.png (an eye's, wet), its smoothness is the map's alpha (scaled by this);
+            // without, cloth, leather and skin: matte, no wet sheen.
+            material.SetTexture("_MetallicGlossMap", hasMetal ? AssetDatabase.LoadAssetAtPath<Texture2D>(metalPath) : null);
+            MaterialBuilder.SetKeyword(material, "_METALLICSPECGLOSSMAP", hasMetal);
+            material.SetFloat("_Smoothness", hasMetal ? 1f : 0.25f);
             EditorUtility.SetDirty(material);
             return material;
         }
