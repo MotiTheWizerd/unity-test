@@ -277,7 +277,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c574e6ea92476f44ca39b3c9807e98c3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Forge.Play::Forge.Play.Hud.FaceEditorStage
-  _character: {fileID: 2817324063903843312, guid: a3e2fdb8590ea394092ce0ca46c07468, type: 3}
+  _character: {fileID: 2414651281906343737, guid: ac0bddb9a13c47946818ddb297941efb, type: 3}
 --- !u!114 &1558119413
 MonoBehaviour:
   m_ObjectHideFlags: 0
